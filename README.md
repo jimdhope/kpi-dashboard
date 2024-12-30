@@ -18,6 +18,15 @@ I should point out here that I have no idea where to start when it comes to codi
 - Date-based filtering
 - Random team assignment functionality
 
+## Roadmap
+
+- Admin login 
+- OAuth integration
+- Microsoft 365 intigration
+- - Button in teams where the users score for that button increases
+- - Auto post to selected teams chat or channel on change of table
+- Search for User function for adding points
+
 ## Installation
 
 1. Clone the repository to your web server
