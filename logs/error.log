@@ -1,0 +1,153 @@
+[30-Dec-2024 14:17:51 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:17:51 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:17:51 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:17:51 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:17:51 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:17:51 UTC] Bootstrap: Session started
+[30-Dec-2024 14:17:51 UTC] Teams Query: 
+    SELECT t.*, c.name as competition_name, 
+           GROUP_CONCAT(CONCAT(u.first_name, ' ', u.last_name) SEPARATOR ', ') as members
+    FROM teams t
+    LEFT JOIN competitions c ON t.competition_id = c.id
+    LEFT JOIN user_team ut ON t.id = ut.team_id
+    LEFT JOIN users u ON ut.user_id = u.id GROUP BY t.id, t.name, t.competition_id, c.name ORDER BY c.name, t.name
+[30-Dec-2024 14:17:51 UTC] Params: Array
+(
+)
+
+[30-Dec-2024 14:17:52 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:17:52 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:17:52 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:17:52 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:17:52 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:17:52 UTC] Bootstrap: Session started
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:21:41 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:21:41 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Session started
+[30-Dec-2024 14:21:41 UTC] Teams Query: 
+    SELECT t.*, c.name as competition_name, 
+           GROUP_CONCAT(CONCAT(u.first_name, ' ', u.last_name) SEPARATOR ', ') as members
+    FROM teams t
+    LEFT JOIN competitions c ON t.competition_id = c.id
+    LEFT JOIN user_team ut ON t.id = ut.team_id
+    LEFT JOIN users u ON ut.user_id = u.id GROUP BY t.id, t.name, t.competition_id, c.name ORDER BY c.name, t.name
+[30-Dec-2024 14:21:41 UTC] Params: Array
+(
+)
+
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:21:41 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:21:41 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:21:41 UTC] Bootstrap: Session started
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:21:48 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:21:48 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Session started
+[30-Dec-2024 14:21:48 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method Database::beginTransaction() in C:\WebDeveloper\Websites\kpi.internal\webroot\public\admin\pages\teams.php:16
+Stack trace:
+#0 C:\WebDeveloper\Websites\kpi.internal\webroot\public\admin\pages\teams.php(65): randomlyAssignPodToTeams()
+#1 {main}
+  thrown in C:\WebDeveloper\Websites\kpi.internal\webroot\public\admin\pages\teams.php on line 16
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:21:48 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:21:48 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:21:48 UTC] Bootstrap: Session started
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:26:34 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:26:34 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Session started
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:26:34 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:26:34 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Session started
+[30-Dec-2024 14:26:34 UTC] Teams Query: 
+    SELECT t.*, c.name as competition_name, 
+           GROUP_CONCAT(CONCAT(u.first_name, ' ', u.last_name) SEPARATOR ', ') as members
+    FROM teams t
+    LEFT JOIN competitions c ON t.competition_id = c.id
+    LEFT JOIN user_team ut ON t.id = ut.team_id
+    LEFT JOIN users u ON ut.user_id = u.id WHERE t.competition_id = ? GROUP BY t.id, t.name, t.competition_id, c.name ORDER BY c.name, t.name
+[30-Dec-2024 14:26:34 UTC] Params: Array
+(
+    [0] => 4
+)
+
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:26:34 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:26:34 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:26:34 UTC] Bootstrap: Session started
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:27:40 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:27:40 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Session started
+[30-Dec-2024 14:27:40 UTC] Teams Query: 
+    SELECT t.*, c.name as competition_name, 
+           GROUP_CONCAT(CONCAT(u.first_name, ' ', u.last_name) SEPARATOR ', ') as members
+    FROM teams t
+    LEFT JOIN competitions c ON t.competition_id = c.id
+    LEFT JOIN user_team ut ON t.id = ut.team_id
+    LEFT JOIN users u ON ut.user_id = u.id WHERE t.competition_id = ? GROUP BY t.id, t.name, t.competition_id, c.name ORDER BY c.name, t.name
+[30-Dec-2024 14:27:40 UTC] Params: Array
+(
+    [0] => 4
+)
+
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:27:40 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:27:40 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:27:40 UTC] Bootstrap: Session started
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:29:38 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:29:38 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Session started
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:29:38 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:29:38 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:29:38 UTC] Bootstrap: Session started
+[30-Dec-2024 14:29:41 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:29:41 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:29:42 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:29:42 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:29:42 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:29:42 UTC] Bootstrap: Session started
+[30-Dec-2024 14:29:42 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:29:42 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:29:42 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:29:42 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:29:42 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:29:42 UTC] Bootstrap: Session started
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:29:44 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:29:44 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Session started
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Starting initialization
+[30-Dec-2024 14:29:44 UTC] Attempting to load class: Database from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/Database.php
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Database connected
+[30-Dec-2024 14:29:44 UTC] Attempting to load class: ConfigManager from C:\WebDeveloper\Websites\kpi.internal\webroot/includes/classes/ConfigManager.php
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Settings loaded
+[30-Dec-2024 14:29:44 UTC] Bootstrap: Session started

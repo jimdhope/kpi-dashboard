@@ -1,0 +1,791 @@
+/* Theme Variables */
+:root {
+    --theme-color1: <?php echo htmlspecialchars($settings['APP_THEME_COLOR1'] ?? '#00B945'); ?>;
+    --theme-color2: <?php echo htmlspecialchars($settings['APP_THEME_COLOR2'] ?? '#332648'); ?>;
+    --theme-color3: <?php echo htmlspecialchars($settings['APP_THEME_COLOR3'] ?? '#625fc3'); ?>;
+    --theme-color4: <?php echo htmlspecialchars($settings['APP_THEME_COLOR4'] ?? '#ffd000'); ?>;
+    --theme-color5: <?php echo htmlspecialchars($settings['APP_THEME_COLOR5'] ?? '#272729'); ?>;
+    --theme-color6: <?php echo htmlspecialchars($settings['APP_THEME_COLOR6'] ?? '#333333'); ?>;
+    --text-color: var(--theme-color6);
+    --background-color: <?php echo htmlspecialchars($settings['APP_BACKGROUND_COLOR'] ?? '#272729'); ?>;
+    --border-radius: 0.5rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 2rem;
+    --text-h1-color: var(--theme-color1);
+    --text-h2-color: var(--theme-color1);
+    --text-h3-color: var(--theme-color1);
+    --text-h4-color: var(--theme-color1);
+    --text-h5-color: var(--theme-color1);
+    --text-h6-color: var(--theme-color1);
+    --text-p-color: var(--theme-color6);
+    --input-background: #eeeeee;
+}
+
+/* Base Styles */
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Layout */
+.container {
+    padding: var(--spacing-lg) var(--spacing-md);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--theme-color1);
+    margin-bottom: var(--spacing-md);
+}
+
+h1 { color: var(--text-h1-color); }
+h2 { color: var(--text-h2-color); }
+h3 { color: var(--text-h3-color); }
+h4 { color: var(--text-h4-color); }
+h5 { color: var(--text-h5-color); }
+h6 { color: var(--text-h6-color); }
+p { color: var(--text-p-color); }
+
+/* Components */
+.card {
+    background-color: var(--theme-color2);
+    border: 1px solid var(--theme-color3);
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+    margin-bottom: var(--spacing-md);
+    transition: border-color 0.2s ease;
+}
+
+.card:hover {
+    border-color: var(--theme-color1);
+}
+
+.card-header {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--theme-color3);
+    padding: var(--spacing-md);
+}
+
+.card-body {
+    padding: var(--spacing-md);
+}
+
+.btn-primary {
+    background-color: var(--theme-color1);
+    border-color: var(--theme-color1);
+    color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+    background-color: color-mix(in srgb, var(--theme-color1) 80%, black);
+}
+
+/* Medal Positions */
+.gold-position {
+    background-color: color-mix(in srgb, #ffd700 30%, var(--theme-color2)) !important;
+}
+
+.silver-position {
+    background-color: color-mix(in srgb, #c0c0c0 30%, var(--theme-color2)) !important;
+}
+
+.bronze-position {
+    background-color: color-mix(in srgb, #cd7f32 30%, var(--theme-color2)) !important;
+}
+
+/* Form Styles */
+.form-control {
+    background-color: var(--background-color);
+    border: 1px solid var(--theme-color3);
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--theme-color1);
+    box-shadow: 0 0 0 2px rgba(0, 185, 69, 0.25);
+}
+
+.form-select {
+    background-color: var(--background-color);
+    border: 1px solid var(--theme-color3);
+    color: var(--text-color);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+    background-color: var(--input-background);
+    border: 1px solid var(--theme-color3);
+    color: var(--theme-color5);
+}
+
+/* Form Elements */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+select,
+textarea,
+.form-control {
+    background-color: #eeeeee !important;
+    border: 1px solid var(--theme-color3);
+    border-radius: var(--border-radius);
+    color: var(--theme-color5);
+    padding: var(--spacing-sm);
+}
+
+input[type="color"] {
+    min-height: 38px !important;
+    padding: 2px !important;
+}
+
+.color-input {
+    height: 38px !important;
+    width: 60px !important;
+}
+
+.input-group .color-input {
+    min-height: 38px !important;
+    padding: 2px !important;
+}
+
+.input-group .form-control {
+    background-color: #eeeeee !important;
+}
+
+/* Override Bootstrap Default */
+.form-control:focus {
+    background-color: #eeeeee !important;
+}
+
+/* Add all other styles from the original files */
+
+/* Utilities */
+.bg-primary { background-color: var(--theme-color1) !important; }
+.bg-secondary { background-color: var(--theme-color2) !important; }
+.bg-accent1 { background-color: var(--theme-color3) !important; }
+.bg-accent2 { background-color: var(--theme-color4) !important; }
+.bg-dark { background-color: var(--theme-color5) !important; }
+.bg-main { background-color: var(--background-color) !important; }
+
+.text-primary { color: var(--theme-color1) !important; }
+.text-secondary { color: var(--theme-color2) !important; }
+.text-accent1 { color: var(--theme-color3) !important; }
+.text-accent2 { color: var(--theme-color4) !important; }
+.text-dark { color: var(--theme-color5) !important; }
+
+/* Competition specific styles */
+.competition-card {
+    background-color: var(--theme-color2);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+}
+
+.score-input {
+    max-width: 80px;
+    text-align: center;
+}
+
+/* Tables */
+.table {
+    color: var(--text-color);
+    margin-bottom: var(--spacing-md);
+}
+
+.table th {
+    border-bottom: 2px solid var(--theme-color3);
+    color: var (--theme-color1);
+}
+
+.table td {
+    border-bottom: 1px solid var(--theme-color3);
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* Alerts */
+.alert {
+    background-color: var(--theme-color2);
+    border: 1px solid transparent;
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+}
+
+.alert-success {
+    border-color: var(--theme-color1);
+    color: var(--theme-color1);
+}
+
+.alert-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+/* Buttons */
+.btn {
+    border-radius: var(--border-radius);
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+/* Weekly Scorecard Styles */
+.weekly-scorecard {
+    margin-bottom: var(--spacing-md);
+}
+
+.team-table {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    position: relative;
+    padding: 0;
+    margin-bottom: 0.25rem;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: #f5f5f5;
+}
+
+.team-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    justify-content: center;
+    flex: 1;
+}
+
+.points-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1.5rem;
+    color: var(--text-h1-color);
+    font-size: 1.5rem;
+    font-weight: bold;
+    min-width: 120px;
+    position: relative;
+    z-index: 2;
+    background-color: rgba(0, 0, 0, 0.05);
+    margin: -0.75rem -0.75rem -0.75rem 0;
+}
+
+.leaderboard-table {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    padding: 0;
+    margin-bottom: 0rem;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    /*min-height: 45px;*/
+    background-color: #f5f5f5;
+}
+
+.person-name {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    flex: 1;
+}
+
+.team-table,
+.leaderboard-table {
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--theme-color3);
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+}
+
+.team-name,
+.person-name {
+    font-weight: bold;
+    color: var(--theme-color1);
+    margin-bottom: var(--spacing-sm);
+}
+
+.team-members {
+    font-size: 0.9em;
+    color: var(--theme-color3);
+}
+
+.team-members {
+    color: var(--text-h2-color);
+    font-size: 1.3rem;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.points-cell {
+    text-align: right;
+    font-weight: bold;
+    color: var(--theme-color4);
+}
+
+.list-group-item {
+    background-color: #eeeeee;
+    border-color: var(--theme-color3);
+}
+
+.list-group-flush {
+    border-radius: 0;
+}
+
+.team-table:nth-child(1),
+.leaderboard-table:nth-child(1) {
+    background-color: #9f8f5e;
+}
+
+.team-table:nth-child(2),
+.leaderboard-table:nth-child(2) {
+    background-color: #969696;
+}
+
+.team-table:nth-child(3),
+.leaderboard-table:nth-child(3) {
+    background-color: #996b4f;
+}
+
+/* Adjust text color for better visibility on darker backgrounds */
+.team-table:nth-child(-n+3) .team-info,
+.leaderboard-table:nth-child(-n+3) .person-name,
+.team-table:nth-child(-n+3) .points-cell,
+.leaderboard-table:nth-child(-n+3) .points-cell {
+    color: #ffffff;
+}
+
+/* Leaderboard Position Styles */
+.position-1 {
+    background-color: #9f8f5e !important;
+}
+
+.position-2 {
+    background-color: #969696 !important;
+}
+
+.position-3 {
+    background-color: #996b4f !important;
+}
+
+/* Position Text Colors */
+.position-1 .team-info,
+.position-1 .person-name,
+.position-1 .points-cell,
+.position-2 .team-info,
+.position-2 .person-name,
+.position-2 .points-cell,
+.position-3 .team-info,
+.position-3 .person-name,
+.position-3 .points-cell {
+    color: #ffffff !important;
+}
+
+.position-1 .points-cell {
+    background-color: rgba(159, 143, 94, 0.8);  /* Darker #9f8f5e */
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.position-2 .points-cell {
+    background-color: rgba(150, 150, 150, 0.8);  /* Darker #969696 */
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.position-3 .points-cell {
+    background-color: rgba(153, 107, 79, 0.8);  /* Darker #996b4f */
+    border-radius: 0 var(--border-radius) var (--border-radius) 0;
+}
+
+/* Position Styles */
+.position-1, .position-2, .position-3 {
+    background-color: var(--podium-color);
+}
+
+.position-1 { --podium-color: #9f8f5e; }
+.position-2 { --podium-color: #969696; }
+.position-3 { --podium-color: #996b4f; }
+
+.position-1 .team-name,
+.position-2 .team-name,
+.position-3 .team-name,
+.position-1 .team-members,
+.position-2 .team-members,
+.position-3 .team-members,
+.position-1 .points-cell,
+.position-2 .points-cell,
+.position-3 .points-cell,
+.position-1 .person-name,
+.position-2 .person-name,
+.position-3 .person-name {
+    color: #ffffff !important;
+}
+
+/* Non-podium position text colors */
+.team-table:not(.position-1):not(.position-2):not(.position-3) .team-info,
+.team-table:not(.position-1):not(.position-2):not(.position-3) .points-cell,
+.leaderboard-table:not(.position-1):not(.position-2):not(.position-3) .person-name,
+.leaderboard-table:not(.position-1):not(.position-2):not(.position-3) .points-cell {
+    color: #272729 !important;
+}
+
+.team-name {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: var(--text-h1-color);
+}
+
+.weekly-scorecard .card-body {
+    padding: 0.5rem;
+}
+
+.team-table, .leaderboard-table {
+    padding: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Form Controls Text Color */
+select.form-select,
+select.form-control,
+input.form-control,
+textarea.form-control,
+.form-select,
+.form-control {
+    color: #272729 !important;
+}
+
+/* Dropdown Options Text Color */
+select.form-select option,
+select.form-control option {
+    color: #272729 !important;
+    background-color: #eeeeee;
+}
+
+.performer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pod-name {
+    font-size: 1rem;
+    color: inherit;
+    opacity: 0.9;
+}
+
+/* Dashboard specific card adjustments */
+.dashboard .leaderboard-table {
+    margin-bottom: 0;
+    height: 100%;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.date-selector {
+    min-width: 200px;
+}
+
+.date-selector .form-label {
+    margin-bottom: 0.25rem;
+    color: var(--text-h6-color);
+}
+
+.date-selector .form-control {
+    background-color: #eeeeee;
+    border: 1px solid var(--theme-color3);
+    color: #272729;
+    padding: 0.375rem 0.75rem;
+}
+
+.date-range-group {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.date-input-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.date-selector {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.date-selector .form-group {
+    margin-bottom: 0;
+}
+
+.date-selector .form-control {
+    width: 200px;
+}
+
+.section-header {
+    text-align: center;
+}
+
+.section-header h2 {
+    color: var(--text-h2-color);
+    margin-bottom: 0.5rem;
+}
+
+.section-header h3 {
+    color: var(--text-h3-color);
+    font-size: 1.25rem;
+    font-weight: normal;
+}
+
+.rule-card {
+    background-color: var(--theme-color2);
+    border-radius: var(--border-radius);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.rule-content {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}
+
+.rule-name {
+    color: var(--text-h3-color);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.occurrence-count {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--text-h1-color);
+    text-align: center;
+}
+
+/* New Rules Management Styles */
+.rules-card {
+    background-color: var(--theme-color2);
+    border: 1px solid var(--theme-color3);
+    border-radius: var(--border-radius);
+}
+
+.rules-card .card-body {
+    background-color: var(--theme-color2);
+}
+
+.rules-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.rules-list .list-group-item {
+    background-color: #ffffff;
+    border: 1px solid var(--theme-color3);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+    padding: 1rem;
+}
+
+.rules-list .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.rule-emoji {
+    font-size: 1.2rem;
+    margin-right: 0.5rem;
+}
+
+.rule-name {
+    color: #272729;
+    font-weight: 500;
+    margin-right: 1rem;
+}
+
+.rule-points {
+    color: var(--theme-color1);
+    margin-right: 1rem;
+}
+
+.rule-competition {
+    color: #666;
+    font-style: italic;
+}
+
+.rules-list .btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.rules-list .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
+.navbar {
+    padding: 0.5rem 1rem;
+}
+
+.navbar-nav {
+    padding: 0.5rem 0;
+}
+
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background-color: var(--theme-color2);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        margin-top: 0.5rem;
+    }
+
+    .navbar-nav .nav-item {
+        padding: 0.25rem 0;
+    }
+
+    .dropdown-menu {
+        background-color: transparent;
+        border: none;
+        padding: 0 0 0 1rem;
+        margin: 0;
+    }
+
+    .dropdown-item {
+        color: rgba(255, 255, 255, 0.8) !important;
+        padding: 0.5rem 1rem;
+    }
+
+    .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff !important;
+    }
+}
+
+/* Position Base Styles */
+.team-table, .leaderboard-table {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+}
+
+/* Medal Position Colors */
+.position-1 { --podium-color: #9f8f5e; }
+.position-2 { --podium-color: #969696; }
+.position-3 { --podium-color: #996b4f; }
+
+.position-1, .position-2, .position-3 {
+    background-color: var(--podium-color);
+}
+
+/* Points Cell Overlay */
+.position-1 .points-cell,
+.position-2 .points-cell,
+.position-3 .points-cell {
+    position: relative;
+    background-color: rgba(0, 0, 0, 0.15);
+    margin: -0.75rem -0.75rem -0.75rem 0;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    z-index: 1;
+}
+
+/* Text Colors for Medal Positions */
+.position-1 .team-info,
+.position-2 .team-info,
+.position-3 .team-info,
+.position-1 .person-name,
+.position-2 .person-name,
+.position-3 .person-name,
+.position-1 .points-cell,
+.position-2 .points-cell,
+.position-3 .points-cell {
+    color: #ffffff !important;
+}
+
+/* Base Table Styles */
+.team-table,
+.leaderboard-table {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    position: relative;
+    padding: 0;
+    margin-bottom: 0.25rem;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: #f5f5f5;
+}
+
+/* Medal Position Colors */
+.position-1 { background-color: #9f8f5e; }
+.position-2 { background-color: #969696; }
+.position-3 { background-color: #996b4f; }
+
+/* Medal Position Text Colors */
+.position-1 *,
+.position-2 *,
+.position-3 * {
+    color: #ffffff !important;
+}
+
+/* Points Cell Positioning */
+.points-cell {
+    position: relative;
+    z-index: 2;
+}
+
+/* Add to existing CSS */
+.stats-summary {
+    padding: 1.5rem;
+    background-color: var(--theme-color2);
+    border-radius: var(--border-radius);
+}
+
+.stats-summary h3 {
+    color: var(--theme-color1);
+    margin-bottom: 1rem;
+}
+
+.stats-total {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: var(--theme-color1);
+    margin-bottom: 0.5rem;
+}
+
+.stats-activities {
+    font-size: 1.25rem;
+    color: var(--theme-color3);
+}

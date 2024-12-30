@@ -1,0 +1,28 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# Base directory
+RewriteBase /
+
+# Allow access to setup directory during installation
+RewriteCond %{REQUEST_URI} ^/setup/
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Redirect everything else to public directory
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteCond %{REQUEST_URI} !^/setup/
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Basic security headers
+<IfModule mod_headers.c>
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+# Protect sensitive files
+<FilesMatch "^(config\.php|database\.sql)$">
+    Order deny,allow
+    Deny from all
+</FilesMatch> 
