@@ -2,6 +2,12 @@
 
 A web-based KPI tracking system for managing competitions, teams, and performance metrics across different pods and users.
 
+## Background
+
+I help run a few competition across various teams at work. I t was getting a little unwieldly trying to manage all of these in an excel workbook so I decided that I would give creating my own a go. 
+
+I should point out here that I have no idea where to start when it comes to coding so this app was builit with alot of help from various AIs in VS Code. So there's one thing I can almost gaurentee, the code is not pretty and could probably be slimmed down... but I have no idea where to start.
+
 ## Features
 
 - Competition management
