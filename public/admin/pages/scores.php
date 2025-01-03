@@ -47,7 +47,7 @@ if ($selectedPod) {
         JOIN pod_assignments pa ON u.id = pa.staff_id
         JOIN pods p ON pa.pod_id = p.id 
         WHERE pa.pod_id = ?
-        ORDER BY u.first_name DESC"; // Added ORDER BY clause to sort by first name in descending order
+        ORDER BY u.first_name ASC"; // Changed ORDER BY clause to sort by first name in ascending order
     
     $users = $db->query($usersQuery, [$selectedPod])->fetchAll(PDO::FETCH_ASSOC);
 
