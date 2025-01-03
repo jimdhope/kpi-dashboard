@@ -813,7 +813,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' &&
     }
 }
 
-// Add this handler for target updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && 
     isset($_POST['action']) && $_POST['action'] === 'update_targets') {
     try {

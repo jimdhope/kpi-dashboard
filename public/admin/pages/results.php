@@ -210,7 +210,7 @@ if ($selectedPod && !empty($results)) {
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title">Target Settings</h5>
-                <form id="targetForm" method="POST">
+                <form id="targetForm" method="POST" action="/path/to/functions.php">
                     <input type="hidden" name="action" value="update_targets">
                     <input type="hidden" name="pod_id" value="<?php echo $selectedPod; ?>">
                     <input type="hidden" name="date" value="<?php echo $selectedDate; ?>">
