@@ -1,9 +1,9 @@
 <?php
-define('DB_HOST', 'localhost');
-define('DB_PORT', '3306');
-define('DB_NAME', 'competition_tracker');
-define('DB_USER', 'your_username');
-define('DB_PASS', 'your_password');
+define('DB_HOST', 'DB HOST');
+define('DB_PORT', 'DB PORT');
+define('DB_NAME', 'DB NAME');
+define('DB_USER', 'DB USER');
+define('DB_PASS', 'BP PASSWORD');
 define('APP_NAME', 'Competition Tracker');
 define('APP_TIMEZONE', 'UTC');
 ?>

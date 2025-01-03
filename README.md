@@ -93,7 +93,20 @@ Select the dashboard database from the list on the left ahdn side of PHPMyAdmin 
 
 5. ### Update Database Deatils
 
-Edit the /includes/app_config.php in your favorite editor (sudo nano /var/wwww/html/includes/app_config.php) and update the relevant section with the details you setup in PHPMyAdmin
+Copy the app_config_example.php file rename it app_config.php and Edit the /includes/app_config.php in your favorite editor and update the relevant section with the details you setup in PHPMyAdmin
+
+sudo cp /var/www/html/inlcudes/app_config_example.php /var/www/html/includes/app_config.php
+sudo nano /var/wwww/html/includes/app_config.php
+
+<?php
+define('DB_HOST', 'DB HOST');
+define('DB_PORT', 'DB PORT');
+define('DB_NAME', 'DB NAME');
+define('DB_USER', 'DB USER');
+define('DB_PASS', 'BP PASSWORD');
+define('APP_NAME', 'Competition Tracker');
+define('APP_TIMEZONE', 'UTC');
+?>
 
 7. Set folder permissions:
 This may have got muddled during the whole process of setting up so always worth double checking the folder permsisions.
