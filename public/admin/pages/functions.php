@@ -812,3 +812,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' &&
         exit();
     }
 }
+
+// Add this handler for target updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && 
+    isset($_POST['action']) && $_POST['action'] === 'update_targets') {
+    try {
+        $podId = intval($_POST['pod_id']);
+        $date = $_POST['date'];
+        $rule1Id = !empty($_POST['rule1']) ? intval($_POST['rule1']) : null;
+        $rule2Id = !empty($_POST['rule2']) ? intval($_POST['rule2']) : null;
+        $target1 = isset($_POST['target1']) ? intval($_POST['target1']) : null;
+        $target2 = isset($_POST['target2']) ? intval($_POST['target2']) : null;
+
+        $db->beginTransaction();
+        
+        // Delete existing targets for this pod
+        $stmt = $db->prepare("DELETE FROM pod_targets WHERE pod_id = ? AND date = ?");
+        $stmt->execute([$podId, $date]);
+        
+        // Insert new targets
+        $stmt = $db->prepare("
+            INSERT INTO pod_targets (pod_id, rule_id, target_value, date) 
+            VALUES (?, ?, ?, ?)
+        ");
+        
+        if ($rule1Id && $target1 !== null) {
+            $stmt->execute([$podId, $rule1Id, $target1, $date]);
+        }
+        if ($rule2Id && $target2 !== null) {
+            $stmt->execute([$podId, $rule2Id, $target2, $date]);
+        }
+
+        $db->commit();
+        echo json_encode(['success' => true]);
+        exit();
+        
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Target update error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit();
+    }
+}
