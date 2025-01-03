@@ -34,17 +34,19 @@ This app has been developed across the latest offical php, mariadb and phpmyadmi
 
 1. ### install the webserver
 some of these fetaures may not be required but has become park of my standard web deployment!
-
+```
 apt update && apt upgrade -y && apt install -y nano curl wget zip unzip apache2 php php-json php-mysqli php-curl php-dom php-exif php-fileinfo php-igbinary php-imagick php-intl php-mbstring php-xml php-zip php-apcu php-memcached php-opcache php-redis php-iconv php-shmop php-simplexml php-xmlreader php-ssh2 php-ftp php-sockets
-
+```
 Enable redirects in /etc/apache2/apache2.conf 
+```
 <Directory /var/www/>
         Options Indexes FollowSymLinks
         AllowOverride All
         Require all granted
 </Directory>
-
+```
 and make sure to setup the Virtual host file in /etc/apache2/sites-enabled/000-default.conf
+```
 <VirtualHost *:80>
     ServerName kpi.internal
     DocumentRoot /var/www/html
@@ -75,7 +77,7 @@ and make sure to setup the Virtual host file in /etc/apache2/sites-enabled/000-d
         SetHandler application/x-httpd-php
     </FilesMatch>
 </VirtualHost>
-
+```
 2. ### Clone the repository
 
 Clone the Repo to your webroot. I have found the easiest way to get this part setup it to first delete the html/ folder in the /var/www/ folder, clone the repo and rename the new folder.
@@ -94,7 +96,7 @@ Select the dashboard database from the list on the left ahdn side of PHPMyAdmin 
 5. ### Update Database Deatils
 
 Copy the app_config_example.php file rename it app_config.php and Edit the /includes/app_config.php in your favorite editor and update the relevant section with the details you setup in PHPMyAdmin
-
+```
 sudo cp /var/www/html/inlcudes/app_config_example.php /var/www/html/includes/app_config.php
 sudo nano /var/wwww/html/includes/app_config.php
 
@@ -107,14 +109,13 @@ define('DB_PASS', 'BP PASSWORD');
 define('APP_NAME', 'Competition Tracker');
 define('APP_TIMEZONE', 'UTC');
 ?>
-
+```
 7. Set folder permissions:
 This may have got muddled during the whole process of setting up so always worth double checking the folder permsisions.
-
+```
 chmod 755 /var/www/html/
 chmod 644 /var/www/.htaccess
 ```
-
 8. Access the application through your web browser
 
 You should now be able to point your browser to your instance and see the homepage of the KPI Dashboard app.
