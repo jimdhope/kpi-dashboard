@@ -46,10 +46,11 @@ if ($selectedPod) {
         FROM users u 
         JOIN pod_assignments pa ON u.id = pa.staff_id
         JOIN pods p ON pa.pod_id = p.id 
-        WHERE pa.pod_id = ?";
+        WHERE pa.pod_id = ?
+        ORDER BY u.first_name DESC"; // Added ORDER BY clause to sort by first name in descending order
     
     $users = $db->query($usersQuery, [$selectedPod])->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Get team and competition info for this pod
     $teamInfo = $db->query("
         SELECT DISTINCT t.id as team_id, t.name as team_name, c.id as competition_id, c.name as competition_name
