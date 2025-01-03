@@ -29,45 +29,82 @@ I should point out here that I have no idea where to start when it comes to codi
 
 ## Installation
 
-1. Clone the repository to your web server
+This setup assumes you have a lampstack setup already on whichever platform you intend to use. 
+This app has been developed across the latest offical php, mariadb and phpmyadmin containers on docker.
+
+1. ### install the webserver
+some of these fetaures may not be required but has become park of my standard web deployment!
+
+apt update && apt upgrade -y && apt install -y nano curl wget zip unzip apache2 php php-json php-mysqli php-curl php-dom php-exif php-fileinfo php-igbinary php-imagick php-intl php-mbstring php-xml php-zip php-apcu php-memcached php-opcache php-redis php-iconv php-shmop php-simplexml php-xmlreader php-ssh2 php-ftp php-sockets
+
+Enable redirects in /etc/apache2/apache2.conf 
+<Directory /var/www/>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+</Directory>
+
+and make sure to setup the Virtual host file in /etc/apache2/sites-enabled/000-default.conf
+<VirtualHost *:80>
+    ServerName kpi.internal
+    DocumentRoot /var/www/html
+
+    # Main directory settings
+    <Directory /var/www/html>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        # Enable .htaccess files
+        DirectoryIndex index.php
+    </Directory>
+
+    # Public directory settings
+    <Directory /var/www/html/public>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    # Error handling
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+    # PHP settings
+    <FilesMatch \.php$>
+        SetHandler application/x-httpd-php
+    </FilesMatch>
+</VirtualHost>
+
+2. ### Clone the repository
+
+Clone the Repo to your webroot. I have found the easiest way to get this part setup it to first delete the html/ folder in the /var/www/ folder, clone the repo and rename the new folder.
 ```
-git clone [repository-url]
+cd /var/www/ && git clone https://github.com/jimdhope/kpi-dashboard && rm -r -d html && mv kpi-dashboard/ html/
 ```
 
-2. Create a MySQL database named 'dashboard'
+3. ### Create User and Database
 
-3. Import the database structure:
-```
-mysql -u [username] -p dashboard < 
+In PHPMyAdmin create a new user in the User Accounts Tab of the main dashboard and make sure to tick the **Create database with same name and grant all privileges** box.
 
-dashboard.sql
+4. ### Import the Database
 
+Select the dashboard database from the list on the left ahdn side of PHPMyAdmin and then head over to the imports tab. Download the (databse.sql)[https://raw.githubusercontent.com/jimdhope/kpi-dashboard/refs/heads/main/dashboard.sql] file. Import the newly downloaded database.sql file scroll to the bottom and click import
 
-```
+5. ### Update Database Deatils
 
-4. Configure database connection:
-- Navigate to `/includes/classes/`
-- Copy `Database.example.php` to `Database.php`
-- Update with your database credentials:
-```php
-private $host = 'localhost';
-private $dbname = 'dashboard';
-private $username = 'your_username';
-private $password = 'your_password';
+Edit the /includes/app_config.php in your favorite editor (sudo nano /var/wwww/html/includes/app_config.php) and update the relevant section with the details you setup in PHPMyAdmin
+
+7. Set folder permissions:
+This may have got muddled during the whole process of setting up so always worth double checking the folder permsisions.
+
+chmod 755 /var/www/html/
+chmod 644 /var/www/.htaccess
 ```
 
-5. Set up web server:
-- Point document root to `/webroot/` directory
-- Ensure PHP 8.0+ is installed
-- Enable PDO and MySQL extensions
+8. Access the application through your web browser
 
-6. Set folder permissions:
-```bash
-chmod 755 /webroot
-chmod 644 /webroot/.htaccess
-```
-
-7. Access the application through your web browser
+You should now be able to point your browser to your instance and see the homepage of the KPI Dashboard app.
 
 ## Requirements
 
