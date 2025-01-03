@@ -38,19 +38,19 @@ if ($selectedPod) {
 }
 
 // Only save if target values have been explicitly set
-if ($selectedPod && isset($_GET['target1']) || isset($_GET['target2'])) {
+if ($selectedPod && (isset($_GET['target1']) || isset($_GET['target2']))) {
     $dbConnection = $db->getConnection();
     $stmt = $dbConnection->prepare("
-        INSERT INTO pod_targets (pod_id, rule_id, target_value)
-        VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE target_value = VALUES(target_value)
+        INSERT INTO pod_targets (pod_id, rule_id, target_value, date)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE target_value = VALUES(target_value), date = VALUES(date)
     ");
     
     if ($selectedRule1 && isset($_GET['target1'])) {
-        $stmt->execute([$selectedPod, $selectedRule1, $target1]);
+        $stmt->execute([$selectedPod, $selectedRule1, $target1, $selectedDate]);
     }
     if ($selectedRule2 && isset($_GET['target2'])) {
-        $stmt->execute([$selectedPod, $selectedRule2, $target2]);
+        $stmt->execute([$selectedPod, $selectedRule2, $target2, $selectedDate]);
     }
 }
 

@@ -556,89 +556,43 @@ function getPodTargets($podId, $selectedRules = []) {
 
 // Update the target update handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_targets') {
-    header('Content-Type: application/json');
-    
     try {
-        $podId = $_POST['pod_id'] ?? null;
-        $rule1Id = $_POST['rule1'] ?? null;
-        $rule2Id = $_POST['rule2'] ?? null;
+        $podId = intval($_POST['pod_id']);
+        $date = $_POST['date'];
+        $rule1Id = !empty($_POST['rule1']) ? intval($_POST['rule1']) : null;
+        $rule2Id = !empty($_POST['rule2']) ? intval($_POST['rule2']) : null;
         $target1 = isset($_POST['target1']) ? intval($_POST['target1']) : null;
         $target2 = isset($_POST['target2']) ? intval($_POST['target2']) : null;
+
+        $db->beginTransaction();
         
-        $dbConnection = Database::getInstance()->getConnection();
+        // Delete existing targets for this pod and date
+        $stmt = $db->prepare("DELETE FROM pod_targets WHERE pod_id = ? AND date = ?");
+        $stmt->execute([$podId, $date]);
         
-        // Start transaction
-        $dbConnection->beginTransaction();
+        // Insert new targets with date
+        $stmt = $db->prepare("
+            INSERT INTO pod_targets (pod_id, rule_id, target_value, date) 
+            VALUES (?, ?, ?, ?)
+        ");
         
-        try {
-            // First delete existing targets
-            $stmt = $dbConnection->prepare("DELETE FROM pod_targets WHERE pod_id = ?");
-            $stmt->execute([$podId]);
-            
-            // Prepare insert statement
-            $stmt = $dbConnection->prepare("
-                INSERT INTO pod_targets (pod_id, rule_id, target_value) 
-                VALUES (?, ?, ?)
-            ");
-            
-            // Insert new targets
-            if ($rule1Id && $target1 !== null) {
-                $stmt->execute([$podId, $rule1Id, $target1]);
-            }
-            
-            if ($rule2Id && $target2 !== null) {
-                $stmt->execute([$podId, $rule2Id, $target2]);
-            }
-            
-            // Commit transaction
-            $dbConnection->commit();
-            
-            // Get updated totals
-            $ruleTotals = [];
-            if ($rule1Id || $rule2Id) {
-                $rules = array_filter([$rule1Id, $rule2Id]);
-                $placeholders = str_repeat('?,', count($rules) - 1) . '?';
-                
-                $stmt = $dbConnection->prepare("
-                    SELECT cr.id, cr.name, pt.target_value,
-                           COALESCE(SUM(ds.score), 0) as current_score
-                    FROM competition_rules cr
-                    LEFT JOIN pod_targets pt ON cr.id = pt.rule_id AND pt.pod_id = ?
-                    LEFT JOIN daily_scores ds ON cr.id = ds.rule_id AND ds.pod_id = ?
-                    WHERE cr.id IN ({$placeholders})
-                    GROUP BY cr.id, cr.name, pt.target_value
-                ");
-                
-                $params = array_merge([$podId, $podId], $rules);
-                $stmt->execute($params);
-                
-                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $ruleTotals[$row['id']] = [
-                        'name' => $row['name'],
-                        'target' => $row['target_value'],
-                        'current' => $row['current_score']
-                    ];
-                }
-            }
-            
-            echo json_encode([
-                'success' => true,
-                'ruleTotals' => $ruleTotals
-            ]);
-            
-        } catch (Exception $e) {
-            $dbConnection->rollBack();
-            throw $e;
+        if ($rule1Id && $target1 !== null) {
+            $stmt->execute([$podId, $rule1Id, $target1, $date]);
         }
+        if ($rule2Id && $target2 !== null) {
+            $stmt->execute([$podId, $rule2Id, $target2, $date]);
+        }
+
+        $db->commit();
+        echo json_encode(['success' => true]);
+        exit();
         
     } catch (Exception $e) {
+        $db->rollBack();
         error_log("Target update error: " . $e->getMessage());
-        echo json_encode([
-            'success' => false,
-            'error' => $e->getMessage()
-        ]);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit();
     }
-    exit;
 }
 
 function calculateRuleTotals($podId, $ruleIds) {
