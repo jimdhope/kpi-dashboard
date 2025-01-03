@@ -778,3 +778,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' &&
         exit();
     }
 }
+
+// Handle user submissions (add/edit)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && 
+    isset($_POST['first_name']) && isset($_POST['last_name'])) {
+    try {
+        $firstName = $_POST['first_name'];
+        $lastName = $_POST['last_name'];
+        $editId = isset($_POST['edit_id']) ? intval($_POST['edit_id']) : null;
+
+        if ($editId) {
+            // Update existing user
+            $stmt = $db->prepare("
+                UPDATE users 
+                SET first_name = ?, last_name = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$firstName, $lastName, $editId]);
+        } else {
+            // Insert new user
+            $stmt = $db->prepare("
+                INSERT INTO users (first_name, last_name) 
+                VALUES (?, ?)
+            ");
+            $stmt->execute([$firstName, $lastName]);
+        }
+
+        header("Location: /public/admin/pages/people.php?message=User saved successfully");
+        exit();
+    } catch (PDOException $e) {
+        error_log("Error saving user: " . $e->getMessage());
+        header("Location: /public/admin/pages/people.php?error=Failed to save user");
+        exit();
+    }
+}
