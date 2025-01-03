@@ -826,11 +826,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' &&
 
         $db->beginTransaction();
         
-        // Delete existing targets for this pod
+        // Delete existing targets for this pod and date
         $stmt = $db->prepare("DELETE FROM pod_targets WHERE pod_id = ? AND date = ?");
         $stmt->execute([$podId, $date]);
         
-        // Insert new targets
+        // Insert new targets with date
         $stmt = $db->prepare("
             INSERT INTO pod_targets (pod_id, rule_id, target_value, date) 
             VALUES (?, ?, ?, ?)
