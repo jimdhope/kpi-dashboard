@@ -12,8 +12,9 @@ import {
   SidebarMenuButton,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarSeparator, // Import SidebarSeparator
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, ShieldCheck, Settings } from 'lucide-react';
+import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound } from 'lucide-react'; // Import new icons
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 
@@ -42,21 +43,47 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <span>Dashboard</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+
+            <SidebarSeparator /> {/* Add separator */}
+
              <SidebarGroup>
-              <SidebarGroupLabel>Teams & Pods</SidebarGroupLabel>
-               <SidebarMenuItem>
+              <SidebarGroupLabel>Competitions</SidebarGroupLabel> {/* Renamed */}
+              <SidebarMenuItem>
+                <SidebarMenuButton href="#" tooltip="Competitions">
+                  <Trophy /> {/* Updated icon */}
+                  <span>Competitions</span> {/* Updated text */}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton href="#" tooltip="Teams">
                   <Users />
                   <span>Teams</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Management</SidebarGroupLabel> {/* New Section */}
+               <SidebarMenuItem>
+                <SidebarMenuButton href="#" tooltip="Campaigns">
+                  <Megaphone />
+                  <span>Campaigns</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton href="#" tooltip="Pods">
-                  <ShieldCheck /> {/* Using ShieldCheck as a proxy for Pod */}
+                   <ShieldCheck /> {/* Re-using ShieldCheck for Pods management */}
                   <span>Pods</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton href="#" tooltip="Users">
+                  <UsersRound />
+                  <span>Users</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarGroup>
+
             <SidebarGroup>
                <SidebarGroupLabel>Analytics</SidebarGroupLabel>
                <SidebarMenuItem>
