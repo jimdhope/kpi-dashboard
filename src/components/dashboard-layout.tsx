@@ -12,9 +12,9 @@ import {
   SidebarMenuButton,
   SidebarGroup,
   SidebarGroupLabel,
-  SidebarSeparator, // Import SidebarSeparator
+  SidebarSeparator, // Keep SidebarSeparator import if used elsewhere
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound } from 'lucide-react'; // Import new icons
+import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award } from 'lucide-react'; // Import Award icon
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 
@@ -44,14 +44,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </SidebarMenuButton>
             </SidebarMenuItem>
 
-            <SidebarSeparator /> {/* Add separator */}
+            {/* Removed SidebarSeparator here */}
 
              <SidebarGroup>
-              <SidebarGroupLabel>Competitions</SidebarGroupLabel> {/* Renamed */}
+              <SidebarGroupLabel>Competitions</SidebarGroupLabel>
               <SidebarMenuItem>
                 <SidebarMenuButton href="#" tooltip="Competitions">
-                  <Trophy /> {/* Updated icon */}
-                  <span>Competitions</span> {/* Updated text */}
+                  <Trophy />
+                  <span>Competitions</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton href="#" tooltip="Achievements">
+                  <Award /> {/* Added Award icon */}
+                  <span>Achievements</span> {/* Added Achievements link */}
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -63,7 +69,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </SidebarGroup>
 
             <SidebarGroup>
-              <SidebarGroupLabel>Management</SidebarGroupLabel> {/* New Section */}
+              <SidebarGroupLabel>Management</SidebarGroupLabel>
                <SidebarMenuItem>
                 <SidebarMenuButton href="#" tooltip="Campaigns">
                   <Megaphone />
@@ -72,7 +78,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton href="#" tooltip="Pods">
-                   <ShieldCheck /> {/* Re-using ShieldCheck for Pods management */}
+                   <ShieldCheck />
                   <span>Pods</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
