@@ -18,10 +18,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Required for Genkit flow server actions
+  // Required for Genkit flow server actions, might be needed if interacting with Firebase Functions via actions
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:9002"], // Adjust port if necessary
+        // Add your Firebase project's auth domain if needed for server actions interacting with Firebase
+       allowedOrigins: ["localhost:9002", process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ""].filter(Boolean) as string[],
     },
   },
 };

@@ -1,14 +1,15 @@
 'use client'; // Add use client directive
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/dashboard-layout';
+// No need to import DashboardLayout here, it's handled by layout.tsx
 import { KpiCard } from '@/components/kpi-card';
 import { Leaderboard } from '@/components/leaderboard';
 import { MotivationCard } from '@/components/motivation-card';
 import { getKPIs, KPI, Group } from '@/services/kpi'; // Import getKPIs and types
 import { generateMotivationMessage } from '@/ai/flows/generate-motivation-message'; // Import AI flow
 import { DollarSign, Target, Users, ShieldCheck, BarChart3 } from 'lucide-react'; // Import icons
-import { Card, CardHeader, CardContent } from "@/components/ui/card"; // Import Card components
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"; // Import Card components
+import { Skeleton } from '@/components/ui/skeleton'; // Import skeleton
 
 // Mock data for leaderboards - replace with actual data fetching
 const teamLeaderboardEntries = [
@@ -27,7 +28,7 @@ const individualLeaderboardEntries = [
 
 // Mock group and user IDs - replace with actual context/auth
 const MOCK_GROUP_ID = 'pod-bravo-123';
-const MOCK_USER_ID = 'user-charlie-456';
+const MOCK_USER_ID = 'user-charlie-456'; // This might represent the admin or a selected user context
 
 const kpiIcons: { [key: string]: React.ReactNode } = {
   'Sales': <DollarSign className="h-4 w-4" />,
@@ -35,53 +36,57 @@ const kpiIcons: { [key: string]: React.ReactNode } = {
   // Add more icons as needed
 };
 
-export default function Home() {
+export default function AdminDashboardPage() {
   const [kpis, setKpis] = useState<KPI[]>([]);
   const [motivationMessage, setMotivationMessage] = useState<string | null>(null);
   const [isLoadingMotivation, setIsLoadingMotivation] = useState<boolean>(true);
-  const [kpisLoading, setKpisLoading] = useState<boolean>(true); // Added loading state for KPIs
+  const [kpisLoading, setKpisLoading] = useState<boolean>(true);
 
   // Fetch KPIs
   useEffect(() => {
     const fetchKpis = async () => {
+      setKpisLoading(true); // Ensure loading state is true at start
       try {
-        // Replace with actual group data fetching or context
-        const currentGroup: Group = { id: MOCK_GROUP_ID, name: 'Pod Bravo' };
+        // In admin view, we might fetch KPIs for a specific group or aggregated data
+        // For now, stick with the mock group
+        const currentGroup: Group = { id: MOCK_GROUP_ID, name: 'Pod Bravo Overview' }; // Name adjusted for context
         const fetchedKpis = await getKPIs(currentGroup);
         setKpis(fetchedKpis);
       } catch (error) {
         console.error("Error fetching KPIs:", error);
         // Handle error state (e.g., show a toast notification)
       } finally {
-         setKpisLoading(false); // Set loading to false after fetching
+         setKpisLoading(false);
       }
     };
     fetchKpis();
   }, []);
 
 
-  // Fetch initial motivation message
+  // Fetch initial motivation message (maybe for the admin or a general message)
   const fetchMotivation = useCallback(async () => {
     setIsLoadingMotivation(true);
     try {
-      const result = await generateMotivationMessage({ groupId: MOCK_GROUP_ID, userId: MOCK_USER_ID });
+       // Admin might see a general motivation or one based on overall performance
+      const result = await generateMotivationMessage({ groupId: MOCK_GROUP_ID, userId: MOCK_USER_ID }); // Using mock IDs for now
       setMotivationMessage(result.message);
     } catch (error) {
       console.error("Error generating motivation message:", error);
-      setMotivationMessage("Could not generate motivation message. Keep up the great work!");
+      setMotivationMessage("Monitor team progress and keep the motivation high!"); // Admin-specific fallback
       // Optionally show a toast notification for the error
     } finally {
       setIsLoadingMotivation(false);
     }
-  }, []); // Empty dependency array, fetch only once on mount or when refreshed
+  }, []);
 
   useEffect(() => {
     fetchMotivation();
-  }, [fetchMotivation]); // Run once on mount
+  }, [fetchMotivation]);
 
 
   return (
-    <DashboardLayout>
+    // DashboardLayout is applied by the layout.tsx file
+    <>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {/* KPI Cards */}
          {kpisLoading ? (
@@ -89,13 +94,13 @@ export default function Home() {
            Array.from({ length: 2 }).map((_, index) => (
              <Card key={index} className="shadow-md">
                <CardHeader className="pb-2">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                 <Skeleton className="h-4 w-1/2 rounded" />
                </CardHeader>
                <CardContent>
-                 <div className="h-8 bg-gray-300 rounded w-1/4 animate-pulse mb-2"></div>
-                 <div className="h-3 bg-gray-200 rounded w-1/3 animate-pulse mb-3"></div>
-                 <div className="h-2 bg-gray-200 rounded w-full animate-pulse mb-1"></div>
-                 <div className="h-3 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+                 <Skeleton className="h-8 w-1/4 rounded mb-2" />
+                 <Skeleton className="h-3 w-1/3 rounded mb-3" />
+                 <Skeleton className="h-2 w-full rounded mb-1" />
+                 <Skeleton className="h-3 w-1/4 rounded" />
                </CardContent>
              </Card>
            ))
@@ -117,10 +122,9 @@ export default function Home() {
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         {/* Leaderboards */}
-        <Leaderboard title="Team Leaderboard" entries={teamLeaderboardEntries} description="Pod Bravo Rankings" />
-        <Leaderboard title="Individual Leaderboard" entries={individualLeaderboardEntries} description="Your Performance" />
+        <Leaderboard title="Team Leaderboard" entries={teamLeaderboardEntries} description="Overall Pod Rankings" />
+        <Leaderboard title="Individual Leaderboard" entries={individualLeaderboardEntries} description="Top Agent Performance" />
       </div>
-
-    </DashboardLayout>
+    </>
   );
 }
