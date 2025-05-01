@@ -43,7 +43,7 @@ body {
     --sidebar-ring: 180 100% 25%; /* Teal */
   }
   .dark {
-    /* Define dark mode colors if needed, keeping consistency */
+    /* Define dark mode colors */
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;

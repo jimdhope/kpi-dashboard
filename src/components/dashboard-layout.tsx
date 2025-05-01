@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Home, Users, BarChart3, ShieldCheck, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -85,8 +86,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </Sidebar>
       <SidebarInset className="flex flex-col">
          <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background md:px-6">
-            <SidebarTrigger className="md:hidden" />
-            <h2 className="text-lg font-semibold flex-1 text-center mr-8 md:mr-0">Dashboard Overview</h2>
+            <div className="flex items-center gap-2"> {/* Wrapper div */}
+              <SidebarTrigger className="md:hidden" />
+              <h2 className="text-lg font-semibold hidden md:block">Dashboard Overview</h2> {/* Hide on small screens */}
+            </div>
+            <div className="flex items-center gap-4"> {/* Right side content */}
+               <ThemeToggle /> {/* Add Theme Toggle button */}
+            </div>
           </header>
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
           {children}
