@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
-// Removed GeistMono as it was causing an error and potentially not needed
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
@@ -16,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning> {/* Add suppressHydrationWarning for next-themes */}
-      <body className={`${GeistSans.variable} antialiased`}> {/* Removed GeistMono variable */}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${GeistSans.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -25,7 +24,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Toaster /> {/* Add Toaster component here */}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
