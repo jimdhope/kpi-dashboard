@@ -8,6 +8,7 @@ import { MotivationCard } from '@/components/motivation-card';
 import { getKPIs, KPI, Group } from '@/services/kpi'; // Import getKPIs and types
 import { generateMotivationMessage } from '@/ai/flows/generate-motivation-message'; // Import AI flow
 import { DollarSign, Target, Users, ShieldCheck, BarChart3 } from 'lucide-react'; // Import icons
+import { Card, CardHeader, CardContent } from "@/components/ui/card"; // Import Card components
 
 // Mock data for leaderboards - replace with actual data fetching
 const teamLeaderboardEntries = [
