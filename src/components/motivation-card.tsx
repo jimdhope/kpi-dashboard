@@ -1,7 +1,8 @@
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from 'lucide-react'; // Using Sparkles for motivation/AI
-import React from 'react'; // Import React for useState and useEffect
+import { Sparkles, RefreshCw } from 'lucide-react'; // Using Sparkles for motivation/AI, RefreshCw for refresh
+import React from 'react'; // Import React
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
 interface MotivationCardProps {
   message: string | null;
@@ -11,30 +12,38 @@ interface MotivationCardProps {
 
 export function MotivationCard({ message, isLoading, onRefresh }: MotivationCardProps) {
   return (
-    <Card className="shadow-md bg-gradient-to-br from-teal-50 via-white to-yellow-50">
+    // Removed fixed gradient, use standard card background which adapts to theme
+    <Card className="shadow-md h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-teal-800">Your Daily Boost</CardTitle>
-        <Sparkles className="h-4 w-4 text-yellow-500" />
+        {/* Use theme-based text color */}
+        <CardTitle className="text-sm font-medium text-primary">Your Daily Boost</CardTitle>
+        {/* Use theme-based icon color */}
+        <Sparkles className="h-4 w-4 text-primary" />
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-             <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-             <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-           </div>
-        ) : (
-          <p className="text-sm text-gray-700 leading-relaxed min-h-[40px]">
-             {message || "Let's check your progress and get you motivated!"}
-           </p>
-        )}
+      <CardContent className="flex flex-col flex-grow">
+        <div className="flex-grow">
+          {isLoading ? (
+            <div className="space-y-2">
+              {/* Use Skeleton for loading state */}
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ) : (
+             // Use theme-based text color (foreground)
+            <p className="text-sm text-foreground leading-relaxed min-h-[40px]">
+              {message || "Let's check your progress and get you motivated!"}
+            </p>
+          )}
+        </div>
         <Button
-          variant="outline"
+          variant="outline" // Use standard outline variant which adapts better
           size="sm"
-          className="mt-4 border-teal-200 text-teal-700 hover:bg-teal-100"
+          className="mt-4 w-full sm:w-auto self-start" // Adjust width for responsiveness
           onClick={onRefresh}
           disabled={isLoading}
         >
-          {isLoading ? 'Generating...' : 'Refresh Motivation'}
+          <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> {/* Add Refresh icon */}
+          {isLoading ? 'Generating...' : 'Refresh'} {/* Shorten button text */}
         </Button>
       </CardContent>
     </Card>
