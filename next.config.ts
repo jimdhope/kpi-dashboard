@@ -18,6 +18,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Required for Genkit flow server actions
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["localhost:9002"], // Adjust port if necessary
+    },
+  },
 };
 
 export default nextConfig;
