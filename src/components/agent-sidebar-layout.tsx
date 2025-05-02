@@ -1,5 +1,7 @@
 'use client';
 import React from 'react';
+import Link from 'next/link'; // Import Link
+import { usePathname } from 'next/navigation'; // Import usePathname
 import {
   SidebarProvider,
   Sidebar,
@@ -11,11 +13,13 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  // Removed Group related imports as they are not used
 } from '@/components/ui/sidebar';
 import { Home, Award, Settings } from 'lucide-react'; // Icons for agent view
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
+import { Button } from '@/components/ui/button'; // Import Button for Logout
+import { getAuth } from 'firebase/auth'; // Import getAuth for Logout
+import { app } from '@/lib/firebase'; // Import app for Logout
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
@@ -29,6 +33,8 @@ const MOCK_AGENT_USER = {
 };
 
 export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
+  const currentPath = usePathname(); // Get current route
+
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar>
@@ -45,18 +51,22 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
         <SidebarContent className="flex-1 overflow-y-auto p-4">
           <SidebarMenu>
             <SidebarMenuItem>
-              {/* TODO: Update href and isActive based on routing */}
-              <SidebarMenuButton href="/agent" tooltip="Dashboard" isActive={true}>
-                <Home />
-                <span>My Dashboard</span>
-              </SidebarMenuButton>
+               {/* Use Link for navigation, pass href, set isActive */}
+              <Link href="/agent" passHref>
+                <SidebarMenuButton tooltip="Dashboard" isActive={currentPath === '/agent'}>
+                  <Home />
+                  <span>My Dashboard</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-               {/* TODO: Update href and isActive based on routing */}
-              <SidebarMenuButton href="/agent/achievements" tooltip="Achievements">
-                <Award />
-                <span>My Achievements</span>
-              </SidebarMenuButton>
+               {/* Use Link for navigation */}
+               <Link href="/agent/achievements" passHref>
+                  <SidebarMenuButton tooltip="Achievements" isActive={currentPath === '/agent/achievements'}>
+                    <Award />
+                    <span>My Achievements</span>
+                  </SidebarMenuButton>
+               </Link>
             </SidebarMenuItem>
              {/* Add other agent-specific links here if needed */}
           </SidebarMenu>
@@ -72,9 +82,11 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
               <p className="text-xs text-muted-foreground truncate">{MOCK_AGENT_USER.email}</p>
             </div>
              {/* TODO: Link to agent settings page */}
-            <SidebarMenuButton href="#" tooltip="Settings" size="sm" variant="ghost" className="ml-auto">
-              <Settings />
-            </SidebarMenuButton>
+            <Link href="#" passHref> {/* Update href later */}
+                <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/agent/settings'}> {/* Update isActive path later */}
+                    <Settings />
+                </SidebarMenuButton>
+            </Link>
           </div>
         </SidebarFooter>
       </Sidebar>
@@ -87,6 +99,8 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
             </div>
             <div className="flex items-center gap-4">
                <ThemeToggle />
+               {/* Logout Button for Agent */}
+               <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>
           </header>
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">

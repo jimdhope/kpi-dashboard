@@ -1,4 +1,6 @@
 import React from 'react';
+import Link from 'next/link'; // Import Link
+import { usePathname } from 'next/navigation'; // Keep usePathname
 import {
   SidebarProvider,
   Sidebar,
@@ -13,13 +15,12 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare } from 'lucide-react'; // Added CheckSquare
+import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
-import { Button } from '@/components/ui/button'; // Import Button
-import { getAuth } from 'firebase/auth'; // Import getAuth
-import { app } from '@/lib/firebase'; // Import app
-import { usePathname } from 'next/navigation'; // Import usePathname
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Button } from '@/components/ui/button';
+import { getAuth } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -52,57 +53,73 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <SidebarContent className="flex-1 overflow-y-auto p-4">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="/admin" tooltip="Dashboard" isActive={currentPath === '/admin'}>
-                <Home />
-                <span>Dashboard</span>
-              </SidebarMenuButton>
+              {/* Use Link for navigation, pass href to Link, set isActive based on currentPath */}
+              <Link href="/admin" passHref>
+                <SidebarMenuButton tooltip="Dashboard" isActive={currentPath === '/admin'}>
+                  <Home />
+                  <span>Dashboard</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
              <SidebarMenuItem>
-                <SidebarMenuButton href="/admin/achievements" tooltip="Achievements Log" isActive={currentPath === '/admin/achievements'}>
-                  <CheckSquare /> {/* Changed icon */}
-                  <span>Achievements Log</span> {/* Changed text */}
-                </SidebarMenuButton>
+                {/* Use Link for navigation */}
+                <Link href="/admin/achievements" passHref>
+                    <SidebarMenuButton tooltip="Achievements Log" isActive={currentPath === '/admin/achievements'}>
+                      <CheckSquare />
+                      <span>Achievements Log</span>
+                    </SidebarMenuButton>
+                 </Link>
               </SidebarMenuItem>
 
              <SidebarGroup>
               <SidebarGroupLabel>Competitions</SidebarGroupLabel>
               <SidebarMenuItem>
                  {/* TODO: Update href when competition page exists */}
-                <SidebarMenuButton href="#" tooltip="Competitions">
-                  <Trophy />
-                  <span>Competitions</span>
-                </SidebarMenuButton>
+                  <Link href="#" passHref> {/* Update href later */}
+                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath === '/admin/competitions'}> {/* Update isActive path later */}
+                      <Trophy />
+                      <span>Competitions</span>
+                    </SidebarMenuButton>
+                   </Link>
               </SidebarMenuItem>
                <SidebarMenuItem>
                 {/* TODO: Update href when teams page exists */}
-                <SidebarMenuButton href="#" tooltip="Teams">
-                  <Users />
-                  <span>Teams</span>
-                </SidebarMenuButton>
+                 <Link href="#" passHref> {/* Update href later */}
+                    <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}> {/* Update isActive path later */}
+                      <Users />
+                      <span>Teams</span>
+                    </SidebarMenuButton>
+                 </Link>
               </SidebarMenuItem>
             </SidebarGroup>
 
             <SidebarGroup>
               <SidebarGroupLabel>Management</SidebarGroupLabel>
                <SidebarMenuItem>
-                <SidebarMenuButton href="/admin/campaigns" tooltip="Campaigns" isActive={currentPath === '/admin/campaigns'}>
-                  <Megaphone />
-                  <span>Campaigns</span>
-                </SidebarMenuButton>
+                 <Link href="/admin/campaigns" passHref>
+                    <SidebarMenuButton tooltip="Campaigns" isActive={currentPath === '/admin/campaigns'}>
+                      <Megaphone />
+                      <span>Campaigns</span>
+                    </SidebarMenuButton>
+                 </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
                  {/* TODO: Update href when pods page exists */}
-                <SidebarMenuButton href="#" tooltip="Pods">
-                   <ShieldCheck />
-                  <span>Pods</span>
-                </SidebarMenuButton>
+                  <Link href="#" passHref> {/* Update href later */}
+                    <SidebarMenuButton tooltip="Pods" isActive={currentPath === '/admin/pods'}> {/* Update isActive path later */}
+                       <ShieldCheck />
+                      <span>Pods</span>
+                    </SidebarMenuButton>
+                  </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
                  {/* TODO: Update href when users page exists */}
-                <SidebarMenuButton href="#" tooltip="Users">
-                  <UsersRound />
-                  <span>Users</span>
-                </SidebarMenuButton>
+                  <Link href="#" passHref> {/* Update href later */}
+                    <SidebarMenuButton tooltip="Users" isActive={currentPath === '/admin/users'}> {/* Update isActive path later */}
+                      <UsersRound />
+                      <span>Users</span>
+                    </SidebarMenuButton>
+                 </Link>
               </SidebarMenuItem>
             </SidebarGroup>
 
@@ -110,10 +127,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                <SidebarGroupLabel>Analytics</SidebarGroupLabel>
                <SidebarMenuItem>
                 {/* TODO: Update href when reports page exists */}
-                 <SidebarMenuButton href="#" tooltip="KPI Reports">
-                  <BarChart3 />
-                  <span>KPI Reports</span>
-                </SidebarMenuButton>
+                  <Link href="#" passHref> {/* Update href later */}
+                     <SidebarMenuButton tooltip="KPI Reports" isActive={currentPath === '/admin/reports'}> {/* Update isActive path later */}
+                      <BarChart3 />
+                      <span>KPI Reports</span>
+                    </SidebarMenuButton>
+                 </Link>
               </SidebarMenuItem>
              </SidebarGroup>
           </SidebarMenu>
@@ -129,9 +148,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <p className="text-xs text-muted-foreground truncate">{MOCK_ADMIN_USER.email}</p>
             </div>
             {/* TODO: Link to admin settings page */}
-            <SidebarMenuButton href="#" tooltip="Settings" size="sm" variant="ghost" className="ml-auto">
-              <Settings />
-            </SidebarMenuButton>
+            <Link href="#" passHref>
+                <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/admin/settings'}> {/* Update isActive path later */}
+                    <Settings />
+                </SidebarMenuButton>
+            </Link>
           </div>
         </SidebarFooter>
       </Sidebar>
@@ -144,7 +165,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <div className="flex items-center gap-4"> {/* Right side content */}
                <ThemeToggle /> {/* Add Theme Toggle button */}
-                {/* TODO: Add Logout Button */}
                  <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>
           </header>
