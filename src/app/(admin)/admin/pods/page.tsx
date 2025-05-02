@@ -370,8 +370,17 @@ export default function AdminPodsPage() {
     <div className="space-y-6">
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-          {/* Manage Agents Dialog Triggered within the Pod Row */}
-          <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
+          {/* Separate Dialog for Managing Agents */}
+           <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
+              {selectedPodForAgents && (
+                 <ManagePodAgentsDialog
+                    pod={selectedPodForAgents}
+                    allUsers={users}
+                    onSave={handleSavePodAgents}
+                    onClose={() => { setIsManageAgentsOpen(false); setSelectedPodForAgents(null); }}
+                 />
+              )}
+           </Dialog>
 
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -394,13 +403,35 @@ export default function AdminPodsPage() {
                 )}
                 <Table>
                     <TableHeader>
-                    <TableRow><TableHead className="w-[80px]">Logo</TableHead><TableHead>Name</TableHead><TableHead>Campaign</TableHead><TableHead>Pod Manager</TableHead><TableHead>Team Leader</TableHead><TableHead>Agents</TableHead><TableHead className="text-right w-[200px]">Actions</TableHead></TableRow>
+                    <TableRow>
+                        <TableHead className="w-[80px]">Logo</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Campaign</TableHead>
+                        <TableHead>Pod Manager</TableHead>
+                        <TableHead>Team Leader</TableHead>
+                        <TableHead>Agents</TableHead>
+                        <TableHead className="text-right w-[200px]">Actions</TableHead>
+                    </TableRow>
                     </TableHeader>
                     <TableBody>
                     {isLoadingPods || isLoadingRelatedData ? (
                         // Loading Skeleton Rows
                         Array.from({ length: 3 }).map((_, index) => (
-                        <TableRow key={`loading-${index}`}><TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell><TableCell><Skeleton className="h-4 w-3/4" /></TableCell><TableCell><Skeleton className="h-4 w-1/2" /></TableCell><TableCell><Skeleton className="h-4 w-1/2" /></TableCell><TableCell><Skeleton className="h-4 w-1/2" /></TableCell><TableCell><Skeleton className="h-4 w-1/4" /></TableCell><TableCell className="text-right"><div className="flex gap-1 justify-end"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></div></TableCell></TableRow>
+                        <TableRow key={`loading-${index}`}>
+                            <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex gap-1 justify-end">
+                                    <Skeleton className="h-8 w-8" />
+                                    <Skeleton className="h-8 w-8" />
+                                    <Skeleton className="h-8 w-8" />
+                                </div>
+                            </TableCell>
+                        </TableRow>
                         ))
                     ) : pods.length === 0 && !error ? (
                         <TableRow>
@@ -436,45 +467,42 @@ export default function AdminPodsPage() {
                              </TableCell>
                             <TableCell className="text-right">
                             <div className="flex gap-1 justify-end">
-                                 {/* Manage Agents Button */}
-                                 <DialogTrigger asChild>
-                                     <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openManageAgentsDialog(pod)}
-                                        title={`Manage agents for ${pod.name}`}
-                                        disabled={isLoadingPods || isLoadingRelatedData || users.length === 0}
-                                    >
-                                        <UserPlus className="h-4 w-4" />
-                                        {/* <span className="hidden sm:inline ml-1">Agents</span> */}
-                                    </Button>
-                                 </DialogTrigger>
-                                {/* Edit Pod Button */}
+                                 {/* Manage Agents Button - Triggers the *separate* Manage Agents Dialog */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openManageAgentsDialog(pod)}
+                                    title={`Manage agents for ${pod.name}`}
+                                    disabled={isLoadingPods || isLoadingRelatedData || users.length === 0}
+                                >
+                                    <UserPlus className="h-4 w-4" />
+                                </Button>
+                                {/* Edit Pod Button - Triggers the *main* Add/Edit Pod Dialog */}
                                 <DialogTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openEditDialog(pod)}
-                                    aria-label={`Edit ${pod.name}`}
-                                    title={`Edit ${pod.name}`}
-                                    disabled={isLoadingPods || isLoadingRelatedData || campaigns.length === 0 || users.length === 0}
-                                >
-                                    <Edit className="h-4 w-4" />
-                                </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => openEditDialog(pod)}
+                                        aria-label={`Edit ${pod.name}`}
+                                        title={`Edit ${pod.name}`}
+                                        disabled={isLoadingPods || isLoadingRelatedData || campaigns.length === 0 || users.length === 0}
+                                    >
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
                                 </DialogTrigger>
-                                {/* Delete Pod Button */}
+                                {/* Delete Pod Button - Triggers the AlertDialog */}
                                 <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                                    onClick={() => openDeleteAlert(pod)}
-                                    aria-label={`Delete ${pod.name}`}
-                                    title={`Delete ${pod.name}`}
-                                    disabled={isLoadingPods || isLoadingRelatedData}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                                        onClick={() => openDeleteAlert(pod)}
+                                        aria-label={`Delete ${pod.name}`}
+                                        title={`Delete ${pod.name}`}
+                                        disabled={isLoadingPods || isLoadingRelatedData}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </AlertDialogTrigger>
                             </div>
                             </TableCell>
@@ -486,7 +514,7 @@ export default function AdminPodsPage() {
                 </CardContent>
             </Card>
 
-             {/* Pod Add/Edit Form Dialog */}
+             {/* Pod Add/Edit Form Dialog Content (inside the main Dialog) */}
              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                 <DialogTitle>{dialogMode === 'add' ? 'Add New Pod' : 'Edit Pod'}</DialogTitle>
@@ -511,17 +539,8 @@ export default function AdminPodsPage() {
                 )}
              </DialogContent>
 
-             {/* Manage Pod Agents Dialog Content */}
-              {selectedPodForAgents && (
-                 <ManagePodAgentsDialog
-                    pod={selectedPodForAgents}
-                    allUsers={users}
-                    onSave={handleSavePodAgents}
-                    onClose={() => { setIsManageAgentsOpen(false); setSelectedPodForAgents(null); }}
-                 />
-              )}
 
-            {/* Delete Confirmation Alert Dialog */}
+            {/* Delete Confirmation Alert Dialog Content (inside the AlertDialog) */}
             <AlertDialogContent>
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -538,9 +557,10 @@ export default function AdminPodsPage() {
                 </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-          </Dialog> {/* Close Manage Agents Dialog Wrapper */}
+          {/* </Dialog>  Remove this - the agent dialog is now separate */}
         </AlertDialog>
       </Dialog>
     </div>
   );
 }
+
