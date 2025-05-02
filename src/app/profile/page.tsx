@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -23,9 +24,9 @@ import { onAuthStateChanged, type User, updatePassword as updateAuthPassword, re
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db, auth as firebaseAuth } from '@/lib/firebase';
 import { AppUser } from '@/services/user';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
+// import type { Pod } from '@/app/(admin)/admin/pods/page'; // No longer needed
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Save, UserCircle, Building2, KeyRound } from 'lucide-react'; // Icons
+import { Loader2, Save, KeyRound } from 'lucide-react'; // Icons - Removed UserCircle, Building2
 import { generateInitials } from '@/lib/utils';
 import { PasswordInput } from '@/components/ui/password-input'; // Import PasswordInput
 import { Separator } from '@/components/ui/separator'; // Import Separator
@@ -66,8 +67,9 @@ type ProfileFormData = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<AppUser | null>(null);
-  const [podManagerName, setPodManagerName] = useState<string | null>(null);
-  const [teamLeaderName, setTeamLeaderName] = useState<string | null>(null);
+  // Removed state for Pod Manager and Team Leader names
+  // const [podManagerName, setPodManagerName] = useState<string | null>(null);
+  // const [teamLeaderName, setTeamLeaderName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -85,27 +87,14 @@ export default function ProfilePage() {
     mode: 'onChange',
   });
 
-   // Helper function to fetch user name by ID
-   const fetchUserName = useCallback(async (userId: string): Promise<string | null> => {
-      if (!userId) return null;
-      console.log(`Fetching user name for ID: ${userId}`);
-      try {
-         const userDocRef = doc(db, 'users', userId);
-         const userDocSnap = await getDoc(userDocRef);
-         const name = userDocSnap.exists() ? userDocSnap.data().name : 'Unknown User';
-         console.log(`Fetched name: ${name}`);
-         return name;
-      } catch (error) {
-         console.error(`Error fetching user name for ID ${userId}:`, error);
-         return 'Error Loading';
-      }
-   }, []); // No dependencies needed as db is stable
+   // Removed fetchUserName helper as it's no longer needed for this page
 
-   // Fetch user data, then pod details, then manager/leader names
+   // Fetch user data
   useEffect(() => {
      setIsLoading(true);
-     setPodManagerName(null); // Reset names on user change/load
-     setTeamLeaderName(null);
+     // Reset removed state
+     // setPodManagerName(null);
+     // setTeamLeaderName(null);
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
       if (currentUser) {
@@ -131,38 +120,7 @@ export default function ProfilePage() {
               confirmPassword: '',
             });
 
-            // --- Fetch Pod Manager and Team Leader Names ---
-             if (fetchedUserData.podId) {
-                 console.log(`User belongs to pod: ${fetchedUserData.podId}`);
-                 const podDocRef = doc(db, 'pods', fetchedUserData.podId);
-                 const podDocSnap = await getDoc(podDocRef);
-
-                 if (podDocSnap.exists()) {
-                    const fetchedPodData = podDocSnap.data() as Pod;
-                     console.log("Fetched pod data:", fetchedPodData); // Log pod data
-
-                    // Fetch names concurrently
-                    const [managerName, leaderName] = await Promise.all([
-                        fetchUserName(fetchedPodData.podManagerId),
-                        fetchUserName(fetchedPodData.teamLeaderId)
-                    ]);
-
-                     console.log("Setting Pod Manager Name:", managerName); // Log fetched names
-                     console.log("Setting Team Leader Name:", leaderName); // Log fetched names
-
-                    setPodManagerName(managerName || 'Not Assigned');
-                    setTeamLeaderName(leaderName || 'Not Assigned');
-                 } else {
-                    console.warn(`Pod document with ID ${fetchedUserData.podId} not found.`);
-                    setPodManagerName('Pod Not Found');
-                    setTeamLeaderName('Pod Not Found');
-                 }
-             } else {
-                 console.log("User not assigned to any pod.");
-                 setPodManagerName('Not Assigned to Pod');
-                 setTeamLeaderName('Not Assigned to Pod');
-             }
-             // --- End Fetch Pod Details ---
+             // --- Removed Pod Manager and Team Leader Name Fetching Logic ---
 
           } else {
             console.warn(`Firestore document for user ${currentUser.uid} not found.`);
@@ -170,31 +128,34 @@ export default function ProfilePage() {
             // Ensure a minimal userData object is set even if Firestore doc is missing
             setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [], podId: null });
             toast({ variant: "destructive", title: "Profile Data Missing", description: "Could not load full profile details." });
-            setPodManagerName('N/A');
-            setTeamLeaderName('N/A');
+             // Removed setting Pod Manager/Team Leader names
+            // setPodManagerName('N/A');
+            // setTeamLeaderName('N/A');
           }
         } catch (error) {
            console.error("Error fetching user data:", error);
            toast({ variant: "destructive", title: "Error Loading Profile", description: "Could not load profile." });
            form.reset({ name: currentUser.displayName || currentUser.email || '', avatarInitials: '', avatarBgColor: '' });
            setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [], podId: null });
-           setPodManagerName('Error Loading');
-           setTeamLeaderName('Error Loading');
+            // Removed setting Pod Manager/Team Leader names
+           // setPodManagerName('Error Loading');
+           // setTeamLeaderName('Error Loading');
         }
       } else {
          console.log("Auth state changed: No user logged in.");
         // No user logged in
         setUser(null);
         setUserData(null);
-        setPodManagerName(null);
-        setTeamLeaderName(null);
+         // Removed setting Pod Manager/Team Leader names
+        // setPodManagerName(null);
+        // setTeamLeaderName(null);
          // Optionally redirect: router.push('/login');
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-   }, [form, toast, fetchUserName]); // Added fetchUserName to dependencies
+   }, [form, toast]); // Removed fetchUserName from dependencies
 
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -349,6 +310,7 @@ export default function ProfilePage() {
                     <AvatarFallback
                       initials={previewInitials}
                       backgroundColor={previewBgColor}
+                      key={previewInitials + previewBgColor} // Add key to force re-render on change
                     >
                       {previewInitials}
                     </AvatarFallback>
@@ -412,22 +374,7 @@ export default function ProfilePage() {
                  <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
               </div>
 
-               {/* Display Pod Manager and Team Leader */}
-              <div className="space-y-4">
-                 <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Team Information</h3>
-                 <div className="flex items-center gap-2">
-                     <UserCircle className="h-5 w-5 text-primary" />
-                     <div className="text-sm">
-                        <strong>Pod Manager:</strong> {podManagerName === null ? <Skeleton className="h-4 w-32 inline-block ml-1" /> : podManagerName}
-                     </div>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-primary" />
-                     <div className="text-sm">
-                        <strong>Team Leader:</strong> {teamLeaderName === null ? <Skeleton className="h-4 w-32 inline-block ml-1" /> : teamLeaderName}
-                     </div>
-                 </div>
-              </div>
+               {/* Removed Team Information Section */}
 
               <Separator />
 
