@@ -6,6 +6,7 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Ensure all these environment variables are set in your .env file
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -15,6 +16,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional
 };
+
+// Validate that essential config values are present
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+  console.error(
+    "Firebase configuration error: Make sure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set in your environment variables (.env file)."
+  );
+}
+
 
 // Initialize Firebase
 let app;
@@ -27,17 +36,19 @@ if (!getApps().length) {
 // Initialize services
 const auth = getAuth(app);
 const db = getFirestore(app);
-let analytics;
+let analytics: any = null; // Initialize analytics as null
 
 // Check if analytics is supported (runs only in browser)
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
-    if (supported) {
+    if (supported && firebaseConfig.measurementId) { // Also check if measurementId exists
       analytics = getAnalytics(app);
       console.log("Firebase Analytics initialized");
     } else {
-       console.log("Firebase Analytics not supported in this environment.");
+       console.log("Firebase Analytics not supported or measurementId missing.");
     }
+  }).catch(error => {
+    console.error("Error checking Firebase Analytics support:", error);
   });
 }
 
