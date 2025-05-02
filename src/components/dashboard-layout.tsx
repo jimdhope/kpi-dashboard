@@ -16,6 +16,7 @@ import {
   SidebarMenuButton,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarSeparator, // Import Separator
 } from '@/components/ui/sidebar';
 import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -57,8 +58,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </SidebarHeader>
         <SidebarContent className="flex-1 overflow-y-auto p-4">
           <SidebarMenu>
+            {/* Dashboard */}
             <SidebarMenuItem>
-              {/* Use Link for navigation, pass href to Link, set isActive based on currentPath */}
               <Link href="/admin" passHref>
                 <SidebarMenuButton tooltip="Dashboard" isActive={currentPath === '/admin'}>
                   <Home />
@@ -66,8 +67,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+
+             {/* Achievements Log */}
              <SidebarMenuItem>
-                {/* Use Link for navigation */}
                 <Link href="/admin/achievements" passHref>
                     <SidebarMenuButton tooltip="Achievements Log" isActive={currentPath === '/admin/achievements'}>
                       <CheckSquare />
@@ -76,12 +78,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                  </Link>
               </SidebarMenuItem>
 
+            {/* Competitions Section */}
              <SidebarGroup>
               <SidebarGroupLabel>Competitions</SidebarGroupLabel>
-              <SidebarMenuItem>
-                 {/* TODO: Update href when competition page exists */}
-                  <Link href="#" passHref> {/* Update href later */}
-                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath === '/admin/competitions'}> {/* Update isActive path later */}
+               <SidebarMenuItem>
+                 <Link href="/admin/competitions" passHref>
+                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath === '/admin/competitions'}>
                       <Trophy />
                       <span>Competitions</span>
                     </SidebarMenuButton>
@@ -98,6 +100,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </SidebarMenuItem>
             </SidebarGroup>
 
+             {/* Management Section */}
             <SidebarGroup>
               <SidebarGroupLabel>Management</SidebarGroupLabel>
                <SidebarMenuItem>
@@ -126,6 +129,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </SidebarMenuItem>
             </SidebarGroup>
 
+            {/* Analytics Section */}
             <SidebarGroup>
                <SidebarGroupLabel>Analytics</SidebarGroupLabel>
                <SidebarMenuItem>
@@ -184,3 +188,4 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </SidebarProvider>
   );
 }
+        
