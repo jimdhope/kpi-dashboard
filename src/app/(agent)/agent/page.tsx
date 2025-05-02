@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { KpiCard } from '@/components/kpi-card';
 import { Leaderboard } from '@/components/leaderboard';
-import { MotivationCard } from '@/components/motivation-card';
+// import { MotivationCard } from '@/components/motivation-card'; // Commented out
 import { getKPIs, KPI, Group } from '@/services/kpi';
-import { generateMotivationMessage } from '@/ai/flows/generate-motivation-message';
+// import { generateMotivationMessage } from '@/ai/flows/generate-motivation-message'; // Commented out
 import { DollarSign, Target } from 'lucide-react'; // Agent-specific icons might differ later
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,8 +38,8 @@ const kpiIcons: { [key: string]: React.ReactNode } = {
 
 export default function AgentDashboardPage() {
   const [kpis, setKpis] = useState<KPI[]>([]);
-  const [motivationMessage, setMotivationMessage] = useState<string | null>(null);
-  const [isLoadingMotivation, setIsLoadingMotivation] = useState<boolean>(true);
+  // const [motivationMessage, setMotivationMessage] = useState<string | null>(null); // Commented out
+  // const [isLoadingMotivation, setIsLoadingMotivation] = useState<boolean>(true); // Commented out
   const [kpisLoading, setKpisLoading] = useState<boolean>(true);
 
   // Fetch KPIs specific to the agent or their group
@@ -61,29 +61,29 @@ export default function AgentDashboardPage() {
   }, []);
 
   // Fetch personalized motivation message for the agent
-  const fetchMotivation = useCallback(async () => {
-    setIsLoadingMotivation(true);
-    try {
-      const result = await generateMotivationMessage({ groupId: AGENT_GROUP_ID, userId: AGENT_USER_ID });
-      setMotivationMessage(result.message);
-    } catch (error) {
-      console.error("Error generating motivation message:", error);
-      setMotivationMessage("Keep pushing towards your goals! You've got this."); // Agent-specific fallback
-    } finally {
-      setIsLoadingMotivation(false);
-    }
-  }, []);
+  // const fetchMotivation = useCallback(async () => { // Commented out
+  //   setIsLoadingMotivation(true);
+  //   try {
+  //     const result = await generateMotivationMessage({ groupId: AGENT_GROUP_ID, userId: AGENT_USER_ID });
+  //     setMotivationMessage(result.message);
+  //   } catch (error) {
+  //     console.error("Error generating motivation message:", error);
+  //     setMotivationMessage("Keep pushing towards your goals! You've got this."); // Agent-specific fallback
+  //   } finally {
+  //     setIsLoadingMotivation(false);
+  //   }
+  // }, []);
 
-  useEffect(() => {
-    fetchMotivation();
-  }, [fetchMotivation]);
+  // useEffect(() => { // Commented out
+  //   fetchMotivation();
+  // }, [fetchMotivation]);
 
   return (
     // AgentSidebarLayout applied by layout.tsx
     <>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid cols */}
         {kpisLoading ? (
-           Array.from({ length: 2 }).map((_, index) => (
+           Array.from({ length: 3 }).map((_, index) => ( // Show 3 skeletons
              <Card key={index} className="shadow-md">
                <CardHeader className="pb-2">
                  <Skeleton className="h-4 w-1/2 rounded" />
@@ -102,6 +102,8 @@ export default function AgentDashboardPage() {
           ))
         )}
 
+        {/* Motivation Card - Commented Out */}
+        {/*
         <div className="md:col-span-2 lg:col-span-1">
           <MotivationCard
             message={motivationMessage}
@@ -109,6 +111,7 @@ export default function AgentDashboardPage() {
             onRefresh={fetchMotivation}
           />
         </div>
+        */}
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">

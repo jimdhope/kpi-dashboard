@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 // No need to import DashboardLayout here, it's handled by layout.tsx
 import { KpiCard } from '@/components/kpi-card';
 import { Leaderboard } from '@/components/leaderboard';
-import { MotivationCard } from '@/components/motivation-card';
+// import { MotivationCard } from '@/components/motivation-card'; // Commented out
 import { getKPIs, KPI, Group } from '@/services/kpi'; // Import getKPIs and types
-import { generateMotivationMessage } from '@/ai/flows/generate-motivation-message'; // Import AI flow
+// import { generateMotivationMessage } from '@/ai/flows/generate-motivation-message'; // Commented out
 import { DollarSign, Target, Users, ShieldCheck, BarChart3 } from 'lucide-react'; // Import icons
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"; // Import Card components
 import { Skeleton } from '@/components/ui/skeleton'; // Import skeleton
@@ -38,8 +38,8 @@ const kpiIcons: { [key: string]: React.ReactNode } = {
 
 export default function AdminDashboardPage() {
   const [kpis, setKpis] = useState<KPI[]>([]);
-  const [motivationMessage, setMotivationMessage] = useState<string | null>(null);
-  const [isLoadingMotivation, setIsLoadingMotivation] = useState<boolean>(true);
+  // const [motivationMessage, setMotivationMessage] = useState<string | null>(null); // Commented out
+  // const [isLoadingMotivation, setIsLoadingMotivation] = useState<boolean>(true); // Commented out
   const [kpisLoading, setKpisLoading] = useState<boolean>(true);
 
   // Fetch KPIs
@@ -64,24 +64,24 @@ export default function AdminDashboardPage() {
 
 
   // Fetch initial motivation message (maybe for the admin or a general message)
-  const fetchMotivation = useCallback(async () => {
-    setIsLoadingMotivation(true);
-    try {
-       // Admin might see a general motivation or one based on overall performance
-      const result = await generateMotivationMessage({ groupId: MOCK_GROUP_ID, userId: MOCK_USER_ID }); // Using mock IDs for now
-      setMotivationMessage(result.message);
-    } catch (error) {
-      console.error("Error generating motivation message:", error);
-      setMotivationMessage("Monitor team progress and keep the motivation high!"); // Admin-specific fallback
-      // Optionally show a toast notification for the error
-    } finally {
-      setIsLoadingMotivation(false);
-    }
-  }, []);
+  // const fetchMotivation = useCallback(async () => { // Commented out
+  //   setIsLoadingMotivation(true);
+  //   try {
+  //      // Admin might see a general motivation or one based on overall performance
+  //     const result = await generateMotivationMessage({ groupId: MOCK_GROUP_ID, userId: MOCK_USER_ID }); // Using mock IDs for now
+  //     setMotivationMessage(result.message);
+  //   } catch (error) {
+  //     console.error("Error generating motivation message:", error);
+  //     setMotivationMessage("Monitor team progress and keep the motivation high!"); // Admin-specific fallback
+  //     // Optionally show a toast notification for the error
+  //   } finally {
+  //     setIsLoadingMotivation(false);
+  //   }
+  // }, []);
 
-  useEffect(() => {
-    fetchMotivation();
-  }, [fetchMotivation]);
+  // useEffect(() => { // Commented out
+  //   fetchMotivation();
+  // }, [fetchMotivation]);
 
 
   return (
@@ -91,7 +91,7 @@ export default function AdminDashboardPage() {
         {/* KPI Cards */}
          {kpisLoading ? (
            // Show skeleton loaders while KPIs are loading
-           Array.from({ length: 2 }).map((_, index) => (
+           Array.from({ length: 4 }).map((_, index) => ( // Show 4 skeletons to fill space
              <Card key={index} className="shadow-md">
                <CardHeader className="pb-2">
                  <Skeleton className="h-4 w-1/2 rounded" />
@@ -110,7 +110,8 @@ export default function AdminDashboardPage() {
           ))
          )}
 
-         {/* Motivation Card - Span 2 columns on smaller screens, 1 on larger */}
+         {/* Motivation Card - Commented Out */}
+         {/*
          <div className="md:col-span-2 lg:col-span-1">
           <MotivationCard
             message={motivationMessage}
@@ -118,6 +119,7 @@ export default function AdminDashboardPage() {
             onRefresh={fetchMotivation} // Pass the refresh function
           />
         </div>
+         */}
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
