@@ -1,5 +1,5 @@
 
-import { collection, addDoc, getDocs, query, where, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { db, app } from '@/lib/firebase'; // Import Firestore and Auth instances
 
@@ -13,6 +13,7 @@ export interface AppUser {
     name: string;
     email: string;
     role: string; // e.g., 'admin', 'podManager', 'teamLeader', 'agent'
+    avatarUrl?: string; // Optional field for user avatar
     // Add other relevant user fields as needed: podId, teamId, campaignId, etc.
 }
 
@@ -63,6 +64,7 @@ export async function createUser(name: string, email: string, password: string, 
             name: name,
             email: email, // Store email for easier display/querying
             role: role,
+            avatarUrl: `https://picsum.photos/seed/${user.uid}/40`, // Default avatar placeholder
             // Initialize other fields as needed (e.g., podId: null)
         };
         // Use the Auth UID as the Firestore document ID
@@ -90,8 +92,8 @@ export async function createUser(name: string, email: string, password: string, 
 }
 
 /**
- * Fetches all users from Firestore.
- * Consider adding pagination and filtering (e.g., by role) for large user bases in production.
+ * Fetches all users from Firestore using getDocs (single fetch).
+ * Consider using onSnapshot if real-time updates are needed across the app.
  * @returns A promise that resolves to an array of AppUser objects.
  */
 export async function getAllUsers(): Promise<AppUser[]> {

@@ -112,9 +112,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                 {/* TODO: Update href when users page exists */}
-                  <Link href="#" passHref> {/* Update href later */}
-                    <SidebarMenuButton tooltip="Users" isActive={currentPath === '/admin/users'}> {/* Update isActive path later */}
+                  <Link href="/admin/users" passHref>
+                    <SidebarMenuButton tooltip="Users" isActive={currentPath === '/admin/users'}>
                       <UsersRound />
                       <span>Users</span>
                     </SidebarMenuButton>

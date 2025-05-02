@@ -1,0 +1,466 @@
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  Unsubscribe,
+  QuerySnapshot,
+  DocumentData,
+  doc,
+  deleteDoc,
+  setDoc, // Used for updating/setting with specific ID
+  updateDoc,
+} from 'firebase/firestore';
+import { db, auth as firebaseAuth } from '@/lib/firebase'; // Import Firestore and Auth
+import { deleteUser as deleteAuthUser, updatePassword, updateEmail } from 'firebase/auth'; // Firebase Auth functions
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Edit, Trash2, PlusCircle, Loader2, ShieldCheck, UserCog, UserRound, Briefcase } from 'lucide-react'; // Added role icons
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { UserForm, UserFormData, USER_ROLES, UserRole } from '@/components/user-form'; // Import UserForm and types
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AppUser, createUser, getAllUsers } from '@/services/user'; // Import user service functions and type
+
+const usersCollectionRef = collection(db, 'users');
+
+// Role Icons Map
+const roleIcons: Record<UserRole, React.ReactNode> = {
+  admin: <UserCog className="h-4 w-4 text-red-600" title="Admin"/>,
+  podManager: <Briefcase className="h-4 w-4 text-blue-600" title="Pod Manager"/>,
+  teamLeader: <ShieldCheck className="h-4 w-4 text-green-600" title="Team Leader"/>,
+  agent: <UserRound className="h-4 w-4 text-gray-500" title="Agent"/>,
+};
+
+// Simple role display formatter
+const formatRole = (role: UserRole) => {
+     return role.charAt(0).toUpperCase() + role.slice(1).replace('Manager', ' Manager').replace('Leader', ' Leader');
+}
+
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+  const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
+  const { toast } = useToast();
+
+  // Fetch Users with real-time updates
+  useEffect(() => {
+    setIsLoadingUsers(true);
+    setError(null);
+
+    const q = query(usersCollectionRef, orderBy('name'));
+
+    const unsubscribe: Unsubscribe = onSnapshot(q, (querySnapshot: QuerySnapshot<DocumentData>) => {
+      const fetchedUsers: AppUser[] = querySnapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<AppUser, 'id'>;
+        return {
+          id: doc.id, // Firestore document ID (should match Auth UID)
+          ...data,
+        };
+      });
+      setUsers(fetchedUsers);
+      setIsLoadingUsers(false);
+      setError(null);
+    }, (err) => {
+      console.error("Error fetching users with snapshot:", err);
+      setError("Failed to fetch users. Please check your connection or permissions.");
+      toast({
+        variant: "destructive",
+        title: "Error Loading Users",
+        description: "Could not load the user list.",
+      });
+      setIsLoadingUsers(false);
+    });
+
+    // Cleanup listener on component unmount
+    return () => unsubscribe();
+  }, [toast]);
+
+  const openAddDialog = () => {
+    setSelectedUser(null);
+    setDialogMode('add');
+    setIsFormOpen(true);
+  };
+
+  const openEditDialog = (user: AppUser) => {
+    setSelectedUser(user);
+    setDialogMode('edit');
+    setIsFormOpen(true);
+  };
+
+  const openDeleteAlert = (user: AppUser) => {
+    setSelectedUser(user);
+    setIsAlertOpen(true);
+  };
+
+   // Handle User Form Submission (Add & Edit)
+   const handleFormSubmit = async (data: UserFormData) => {
+     console.log("Submitting user form:", data, "Mode:", dialogMode);
+     if (dialogMode === 'add') {
+       try {
+         // Use the createUser service function (handles Auth + Firestore)
+         const newUser = await createUser(data.name, data.email, data.password!, data.role); // Non-null assertion for password in add mode
+         toast({
+           title: "User Created",
+           description: `User "${newUser.name}" (${newUser.role}) has been successfully created.`,
+         });
+         setIsFormOpen(false); // Close dialog on success
+       } catch (err: any) {
+         console.error("Error creating user:", err);
+         toast({
+           variant: "destructive",
+           title: "Error Creating User",
+           // Use error message from createUser or a default
+           description: err.message || `Failed to create user "${data.name}". Check console.`,
+         });
+         // Keep dialog open on error
+       }
+     } else if (dialogMode === 'edit' && selectedUser) {
+       // --- Edit User Logic ---
+       try {
+         const userDocRef = doc(db, 'users', selectedUser.id!); // Use ID (Auth UID)
+         const updates: Partial<AppUser> = {
+           name: data.name,
+           role: data.role,
+           // Email updates need special handling in Auth
+           // Password updates need special handling in Auth
+         };
+
+         // 1. Update Firestore Document (name, role, etc.)
+         await updateDoc(userDocRef, updates);
+
+         // 2. Update Firebase Auth Email (if changed)
+         // WARNING: Requires recent user login for security. May fail.
+         // Consider alternatives like sending a verification email.
+         if (data.email !== selectedUser.email) {
+             console.warn(`Attempting to update email for ${selectedUser.email} to ${data.email}. This requires recent authentication and might fail.`);
+             // This requires the ADMIN SDK on the backend for reliable updates without re-authentication.
+             // The client-side `updateEmail` is highly restricted.
+             // For this example, we'll log a warning instead of attempting a likely failing client-side update.
+             toast({
+                 title: "Email Update Skipped",
+                 description: `Email update from ${selectedUser.email} to ${data.email} requires backend implementation (Admin SDK) for reliability. Firestore record updated.`,
+                 variant: "default", // More like a warning
+                 duration: 10000,
+             });
+             // If you HAVE to try client-side (not recommended for admin updates):
+             // try {
+             //   const currentUserAuth = firebaseAuth.currentUser; // Get the currently *logged-in* admin user
+             //   if (currentUserAuth && currentUserAuth.uid === selectedUser.uid) { // CAN ONLY UPDATE YOURSELF EASILY
+             //     await updateEmail(currentUserAuth, data.email);
+             //     await updateDoc(userDocRef, { email: data.email }); // Update email in Firestore too
+             //     console.log("Auth email updated successfully for current user.");
+             //   } else {
+             //     // Finding and updating *another* user's email client-side is generally not possible/secure.
+             //     throw new Error("Client-side email update for other users is not supported/secure. Use Admin SDK.");
+             //   }
+             // } catch (authError: any) {
+             //    console.error("Error updating Auth email:", authError);
+             //    toast({ variant: "destructive", title: "Auth Email Update Failed", description: authError.message });
+             //    // Decide if you want to revert Firestore changes or inform the admin
+             // }
+         }
+
+
+         // 3. Update Firebase Auth Password (if provided)
+         // WARNING: Requires recent user login. Best handled via "Forgot Password" flows for users
+         // or Admin SDK for backend resets.
+         if (data.password) {
+             console.warn(`Attempting to update password for ${selectedUser.email}. This requires recent authentication or Admin SDK.`);
+             // Client-side password updates for *other* users are not directly possible.
+             // Admins typically *reset* passwords using the Admin SDK, sending a reset link.
+              toast({
+                 title: "Password Update Skipped",
+                 description: `Password update requires backend implementation (Admin SDK) for reliability. Firestore record updated.`,
+                 variant: "default", // Warning
+                 duration: 10000,
+             });
+             // If attempting to update the *currently logged-in admin's* password:
+             // try {
+             //   const currentUserAuth = firebaseAuth.currentUser;
+             //   if (currentUserAuth && currentUserAuth.uid === selectedUser.uid) {
+             //     await updatePassword(currentUserAuth, data.password);
+             //     console.log("Auth password updated successfully for current user.");
+             //   } else {
+             //      throw new Error("Client-side password update for other users is not supported. Use Admin SDK for resets.");
+             //   }
+             // } catch (authError: any) {
+             //   console.error("Error updating Auth password:", authError);
+             //   toast({ variant: "destructive", title: "Auth Password Update Failed", description: authError.message });
+             // }
+         }
+
+         toast({
+           title: "User Updated",
+           description: `User "${data.name}" has been successfully updated. (Auth email/password updates may require backend implementation).`,
+         });
+         setIsFormOpen(false); // Close dialog on success
+         setSelectedUser(null); // Reset selection
+       } catch (err: any) {
+         console.error("Error updating user:", err);
+         toast({
+           variant: "destructive",
+           title: "Error Updating User",
+           description: err.message || `Failed to update user "${selectedUser.name}". Check console.`,
+         });
+         // Keep dialog open on error
+       }
+     }
+   };
+
+
+   // Handle User Deletion
+    const handleConfirmDelete = async () => {
+        if (!selectedUser || !selectedUser.id) {
+            toast({ variant: "destructive", title: "Error", description: "No user selected for deletion." });
+            return;
+        }
+
+        const userIdToDelete = selectedUser.id; // This is the Auth UID / Firestore Doc ID
+        const userEmail = selectedUser.email;
+
+        console.log(`Attempting to delete user: ${userEmail} (ID: ${userIdToDelete})`);
+
+        try {
+            // 1. Delete Firestore Document
+            const userDocRef = doc(db, 'users', userIdToDelete);
+            await deleteDoc(userDocRef);
+            console.log(`Firestore document deleted for user: ${userEmail}`);
+
+            // 2. Delete Firebase Auth User
+            // !!! IMPORTANT SECURITY NOTE !!!
+            // Deleting Firebase Auth users directly from the client-side is HIGHLY INSECURE
+            // and generally NOT POSSIBLE for users other than the currently logged-in one
+            // without custom backend logic (e.g., Firebase Functions with Admin SDK).
+            // An admin should NOT be able to delete other users' Auth accounts from the browser.
+            // The correct approach is to use a Firebase Function (HTTP callable or triggered)
+            // that utilizes the Firebase Admin SDK to perform the deletion securely on the server.
+
+            // --- SIMULATION / PLACEHOLDER ---
+            // In a real app, this next block would be replaced by a call to a Firebase Function.
+            console.warn(`ACTION REQUIRED: Deleting Auth user (${userEmail}) needs backend implementation using Firebase Admin SDK for security. Skipping client-side Auth deletion.`);
+            toast({
+                title: "Firestore Record Deleted",
+                description: `User "${selectedUser.name}" removed from database. Auth account deletion requires backend action.`,
+                variant: "default", // Use default/warning style
+                duration: 10000, // Longer duration
+            });
+            // --- END SIMULATION ---
+
+            /* --- Example of how it might look calling a Cloud Function ---
+            try {
+                const deleteUserFunction = httpsCallable(functions, 'deleteUserAuth'); // 'deleteUserAuth' is your function name
+                await deleteUserFunction({ uid: userIdToDelete });
+                console.log(`Auth user deleted successfully: ${userEmail}`);
+                toast({
+                    variant: "destructive",
+                    title: "User Deleted",
+                    description: `User "${selectedUser.name}" has been deleted from Auth and Firestore.`,
+                });
+            } catch (funcError: any) {
+                 console.error(`Error deleting Auth user via function for ${userEmail}:`, funcError);
+                 // Attempt to restore Firestore document? Or notify admin?
+                  await setDoc(userDocRef, selectedUser); // Attempt rollback Firestore
+                 toast({
+                    variant: "destructive",
+                    title: "Auth Deletion Failed",
+                    description: `Failed to delete Auth account for ${userEmail}. Firestore deletion reverted. Error: ${funcError.message}`,
+                 });
+            }
+            */
+
+
+        } catch (err: any) {
+            console.error(`Error deleting Firestore document for user ${userEmail}:`, err);
+            toast({
+                variant: "destructive",
+                title: "Error Deleting User",
+                description: err.message || `Failed to delete Firestore data for "${selectedUser.name}".`,
+            });
+        } finally {
+             setIsAlertOpen(false); // Close the alert dialog
+             setSelectedUser(null); // Reset selection
+        }
+    };
+
+
+  return (
+    <div className="space-y-6">
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Manage Users</CardTitle>
+                <CardDescription>View, add, edit, or delete user accounts.</CardDescription>
+              </div>
+              <DialogTrigger asChild>
+                <Button onClick={openAddDialog} disabled={isLoadingUsers}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add User
+                </Button>
+              </DialogTrigger>
+            </CardHeader>
+            <CardContent>
+              {error && !isLoadingUsers && (
+                <div className="mb-4 text-center text-destructive">{error}</div>
+              )}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60px]">Avatar</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="text-right w-[150px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingUsers ? (
+                    // Loading Skeleton Rows
+                    Array.from({ length: 4 }).map((_, index) => (
+                      <TableRow key={`loading-${index}`}>
+                        <TableCell>
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                        </TableCell>
+                        <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : users.length === 0 && !error ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        No users found. Add a user to get started.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <Avatar className="h-10 w-10">
+                             {/* TODO: Add actual avatar URL field to user data */}
+                            <AvatarImage src={user.avatarUrl || `https://picsum.photos/seed/${user.uid}/40`} alt={`${user.name} avatar`} data-ai-hint="user avatar"/>
+                            <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                        <TableCell>
+                           <span className="flex items-center gap-1.5 text-muted-foreground">
+                             {roleIcons[user.role as UserRole] || <UserRound className="h-4 w-4"/>}
+                             {formatRole(user.role as UserRole)}
+                            </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(user)}
+                                aria-label={`Edit ${user.name}`}
+                                title={`Edit ${user.name}`}
+                                disabled={isLoadingUsers}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                                onClick={() => openDeleteAlert(user)}
+                                aria-label={`Delete ${user.name}`}
+                                title={`Delete ${user.name}`}
+                                disabled={isLoadingUsers || firebaseAuth.currentUser?.uid === user.uid} // Disable deleting yourself
+                                // TODO: Add tooltip explaining why delete might be disabled
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* User Add/Edit Form Dialog */}
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{dialogMode === 'add' ? 'Add New User' : 'Edit User'}</DialogTitle>
+              <DialogDescription>
+                {dialogMode === 'add' ? 'Enter the details for the new user.' : `Make changes to ${selectedUser?.name || 'the user'}. Email and password changes require backend setup for security.`}
+              </DialogDescription>
+            </DialogHeader>
+            {/* Ensure UserForm receives the correct mode */}
+            <UserForm
+                onSubmit={handleFormSubmit}
+                onCancel={() => setIsFormOpen(false)}
+                initialData={selectedUser ?? undefined}
+                mode={dialogMode} // Pass the mode explicitly
+                key={selectedUser?.id ?? 'add'} // Force re-render on mode/user change
+            />
+          </DialogContent>
+
+          {/* Delete Confirmation Alert Dialog */}
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will delete the user
+                <span className="font-semibold"> "{selectedUser?.name}" </span>
+                 from the application database (Firestore). Deleting the underlying authentication account requires backend setup (Firebase Admin SDK) for security.
+                 Are you sure you want to proceed with deleting the database record?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setSelectedUser(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({ variant: "destructive" })}>
+                Delete User Record
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </Dialog>
+    </div>
+  );
+}
