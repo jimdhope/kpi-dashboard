@@ -126,7 +126,8 @@ export default function AdminTeamsPage() {
   const [selectedPodId, setSelectedPodId] = useState<string>('');
   const [teams, setTeams] = useState<Team[]>([]);
   const [unassignedAgents, setUnassignedAgents] = useState<AppUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // General loading for initial data
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false); // Specific loading for team data
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null); // Store ID of dragged agent
@@ -151,51 +152,61 @@ export default function AdminTeamsPage() {
 
   // Fetch initial data (competitions, pods, users)
   useEffect(() => {
-    setIsLoading(true);
+    setIsLoading(true); // Start initial loading
     setError(null);
     const unsubscribes: Unsubscribe[] = [];
+    let isMounted = true; // Track mount status
 
     const fetchAllData = async () => {
       try {
         // Fetch Competitions
         const compQuery = query(competitionsCollectionRef, orderBy('startDate', 'desc'));
         unsubscribes.push(onSnapshot(compQuery, (snapshot) => {
-          const fetchedCompetitions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
-          setCompetitions(fetchedCompetitions);
-        }, (err) => { console.error("Error fetching competitions:", err); setError("Failed to load competitions."); }));
+            if (!isMounted) return;
+            const fetchedCompetitions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
+            setCompetitions(fetchedCompetitions);
+        }, (err) => { if(isMounted) { console.error("Error fetching competitions:", err); setError("Failed to load competitions."); } }));
 
         // Fetch Pods
         const podQuery = query(podsCollectionRef, orderBy('name'));
         unsubscribes.push(onSnapshot(podQuery, (snapshot) => {
-          const fetchedPods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod));
-          setPods(fetchedPods);
-        }, (err) => { console.error("Error fetching pods:", err); setError("Failed to load pods."); }));
+             if (!isMounted) return;
+             const fetchedPods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod));
+             setPods(fetchedPods);
+        }, (err) => { if(isMounted) { console.error("Error fetching pods:", err); setError("Failed to load pods."); } }));
 
 
         // Fetch Users
         const userQuery = query(usersCollectionRef, orderBy('name'));
         unsubscribes.push(onSnapshot(userQuery, (snapshot) => {
+             if (!isMounted) return;
             const fetchedUsers = snapshot.docs.map(doc => ({
                 id: doc.id,
                  uid: doc.data().uid || doc.id,
                  ...doc.data()
              } as AppUser));
             setUsers(fetchedUsers);
-        }, (err) => { console.error("Error fetching users:", err); setError("Failed to load users."); }));
+             // Initial data load complete once users are fetched
+            setIsLoading(false);
+        }, (err) => { if(isMounted) { console.error("Error fetching users:", err); setError("Failed to load users."); setIsLoading(false); } }));
 
 
       } catch (err) {
-        console.error("Error fetching initial data:", err);
-        setError("Failed to load necessary data.");
-      } finally {
-        setIsLoading(false); // Move loading false here
+        if(isMounted){
+            console.error("Error fetching initial data:", err);
+            setError("Failed to load necessary data.");
+            setIsLoading(false); // Stop loading even on error
+        }
       }
     };
 
     fetchAllData();
 
-    // Cleanup listeners
-    return () => unsubscribes.forEach(unsub => unsub());
+    // Cleanup listeners and mount status
+     return () => {
+         isMounted = false;
+         unsubscribes.forEach(unsub => unsub());
+     };
   }, []);
 
   // Effect to load agents and existing teams when competition and pod are selected
@@ -204,16 +215,17 @@ export default function AdminTeamsPage() {
             if (!selectedCompetitionId || !selectedPodId) {
                  setTeams([]);
                  setUnassignedAgents([]);
+                 setIsLoadingTeams(false); // Ensure loading state is reset
                  return;
             }
 
-            setIsLoading(true); // Indicate loading team/agent data
+            // Only set loading if we are actually fetching
+            setIsLoadingTeams(true);
             setError(null);
 
             try {
                 // 1. Get the selected pod's agent IDs
                 const selectedPod = pods.find(p => p.id === selectedPodId);
-                 // Ensure agentIds exist and is an array
                  const podAgentIds = Array.isArray(selectedPod?.agentIds) ? selectedPod.agentIds : [];
 
 
@@ -226,14 +238,12 @@ export default function AdminTeamsPage() {
 
                 if (compDocSnap.exists()) {
                     const compData = compDocSnap.data() as Competition & { teams?: Team[] }; // Type assertion for teams
-                     // Ensure teams have IDs from the start
                      const existingTeams: Team[] = (compData.teams || []).map((team, index) => ({
                          ...team,
-                         id: team.id || `team-${index + 1}-${Date.now()}`, // Generate ID if missing
-                         agentIds: Array.isArray(team.agentIds) ? team.agentIds : [], // Ensure agentIds is array
+                         id: team.id || `team-${index + 1}-${Date.now()}`,
+                         agentIds: Array.isArray(team.agentIds) ? team.agentIds : [],
                      }));
 
-                     // Default to 3 empty teams if none exist in the document
                      const teamsToUse = existingTeams.length > 0 ? existingTeams : [
                         { id: `team-1-${Date.now()}`, name: 'Team 1', agentIds: [] },
                         { id: `team-2-${Date.now()}`, name: 'Team 2', agentIds: [] },
@@ -244,9 +254,9 @@ export default function AdminTeamsPage() {
                     const assignedAgentIds = new Set(teamsToUse.flatMap(t => t.agentIds));
                     const currentUnassignedAgents = podAgents.filter(agent => agent.id && !assignedAgentIds.has(agent.id));
 
-
                     setTeams(teamsToUse);
                     setUnassignedAgents(currentUnassignedAgents);
+                    setError(null); // Clear error on success
                 } else {
                     setError(`Competition with ID ${selectedCompetitionId} not found.`);
                     setTeams([]);
@@ -259,19 +269,20 @@ export default function AdminTeamsPage() {
                  setTeams([]);
                  setUnassignedAgents([]);
             } finally {
-                setIsLoading(false);
+                setIsLoadingTeams(false); // Always set loading false after attempt
             }
         };
 
         // Ensure users and pods are loaded before attempting to load team data
          if (users.length > 0 && pods.length > 0) {
             loadTeamData();
-         } else if (!isLoading) { // If main loading is done but no users/pods, set team loading false
-             setIsLoading(false);
+         } else if (!isLoading) { // If initial loading is done but no users/pods, set team loading false
+             setIsLoadingTeams(false);
              setTeams([]);
              setUnassignedAgents([]);
          }
-    }, [selectedCompetitionId, selectedPodId, pods, users, isLoading]); // Rerun when selections or base data change
+         // Dependency array: run when selections or base data (users, pods) change
+    }, [selectedCompetitionId, selectedPodId, pods, users, isLoading]);
 
 
   // --- Memoized Derived Data ---
@@ -310,10 +321,12 @@ export default function AdminTeamsPage() {
     setSelectedPodId(''); // Reset pod selection when competition changes
     setTeams([]);
     setUnassignedAgents([]);
+     setIsLoadingTeams(true); // Set loading while new data is fetched by useEffect
   };
 
   const handlePodChange = (id: string) => {
     setSelectedPodId(id);
+     setIsLoadingTeams(true); // Set loading while new data is fetched by useEffect
      // Data loading is handled by the useEffect hook
   };
 
@@ -463,7 +476,11 @@ export default function AdminTeamsPage() {
             if (activeContainerId === UNASSIGNED_CONTAINER_ID) {
                 setUnassignedAgents(prev => {
                     const oldIndex = prev.findIndex(a => a.id === activeId);
-                    const newIndex = prev.findIndex(a => a.id === overId);
+                    // If dropped over the container itself, overId will be the container ID
+                    // If dropped over an item, overId will be the item's ID
+                    const newIndex = overId === UNASSIGNED_CONTAINER_ID
+                        ? prev.length // If dropped on container, move to end (or handle differently if needed)
+                        : prev.findIndex(a => a.id === overId);
                     if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return prev;
                     return arrayMove(prev, oldIndex, newIndex);
                 });
@@ -471,7 +488,9 @@ export default function AdminTeamsPage() {
                 setTeams(prev => prev.map(team => {
                     if (team.id === activeContainerId) {
                         const oldIndex = team.agentIds.indexOf(activeId);
-                        const newIndex = team.agentIds.indexOf(overId);
+                        const newIndex = overId === activeContainerId
+                            ? team.agentIds.length // Move to end if dropped on container
+                            : team.agentIds.indexOf(overId);
                         if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return team;
                         return { ...team, agentIds: arrayMove(team.agentIds, oldIndex, newIndex) };
                     }
@@ -498,30 +517,36 @@ export default function AdminTeamsPage() {
             // 2. Add to destination container
             if (overContainerId === UNASSIGNED_CONTAINER_ID) {
                 setUnassignedAgents(prev => {
-                    // Find insertion index based on where it was dropped over (or end)
-                    const overAgentIndex = prev.findIndex(a => a.id === overId);
-                    const newUnassigned = [...prev];
-                    newUnassigned.splice(overAgentIndex >= 0 ? overAgentIndex : newUnassigned.length, 0, agentToMove);
+                     // Find insertion index based on where it was dropped over (or end)
+                     const overAgentIndex = prev.findIndex(a => a.id === overId);
+                     // If dropped on container itself, append to end
+                     const insertionIndex = overId === UNASSIGNED_CONTAINER_ID ? prev.length : (overAgentIndex >= 0 ? overAgentIndex : prev.length);
+                     const newUnassigned = [...prev];
+                    newUnassigned.splice(insertionIndex, 0, agentToMove);
                     return newUnassigned;
                 });
             } else {
                 // Find the target team and the index to insert at
-                const targetTeam = teams.find(t => t.id === overContainerId);
-                if (targetTeam) {
-                    targetAgentIds = [...targetTeam.agentIds];
-                    targetIndex = targetAgentIds.indexOf(overId); // Index of the item dropped onto
-                     // If dropped onto the container itself (not an item), overId is the containerId
-                    if (overId === overContainerId) {
-                        targetIndex = targetAgentIds.length; // Add to the end
-                    }
+                const targetTeamIndex = teams.findIndex(t => t.id === overContainerId);
+                if (targetTeamIndex !== -1) {
+                    setTeams(prev => {
+                        const newTeams = [...prev];
+                        const targetTeam = newTeams[targetTeamIndex];
+                        targetAgentIds = [...targetTeam.agentIds];
 
-                    targetAgentIds.splice(targetIndex >= 0 ? targetIndex : targetAgentIds.length, 0, activeId);
+                        // If dropped onto the container itself (overId is containerId), add to the end
+                        if (overId === overContainerId) {
+                            targetIndex = targetAgentIds.length;
+                        } else {
+                            // Otherwise, find the index of the item dropped onto
+                            targetIndex = targetAgentIds.indexOf(overId);
+                        }
+                        // Insert at the calculated index (or end if item not found)
+                        targetAgentIds.splice(targetIndex >= 0 ? targetIndex : targetAgentIds.length, 0, activeId);
+                        newTeams[targetTeamIndex] = { ...targetTeam, agentIds: targetAgentIds };
+                        return newTeams;
+                    });
 
-                    setTeams(prev => prev.map(team =>
-                        team.id === overContainerId
-                            ? { ...team, agentIds: targetAgentIds }
-                            : team
-                    ));
                 } else {
                      console.warn(`Drag End: Target team with ID ${overContainerId} not found.`);
                      // Optionally: revert the removal from source if target not found
@@ -590,8 +615,8 @@ export default function AdminTeamsPage() {
 
             {error && <p className="text-destructive text-center mb-4">{error}</p>}
 
-            {/* Team Management Area (Conditional Render) */}
-            {selectedCompetitionId && selectedPodId && !isLoading && (
+            {/* Team Management Area (Conditional Render based on selections AND team data loading state) */}
+            {selectedCompetitionId && selectedPodId && !isLoadingTeams && !isLoading && (
                 <div className="space-y-6">
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2 justify-end">
@@ -621,24 +646,25 @@ export default function AdminTeamsPage() {
                              <CardHeader className="p-4">
                                  <CardTitle className="text-base">Unassigned Agents ({unassignedAgents.length})</CardTitle>
                              </CardHeader>
-                             <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
-                                <SortableContext items={unassignedAgents.map(a => a.id!)} strategy={verticalListSortingStrategy} id={UNASSIGNED_CONTAINER_ID}>
-                                    <div className="space-y-2">
-                                        {unassignedAgents.length === 0 ? (
-                                             <p className="text-sm text-muted-foreground text-center py-4">All agents assigned.</p>
-                                        ) : (
-                                            unassignedAgents.map(agent => (
-                                                agent.id ? <SortableAgentItem key={agent.id} agent={agent} /> : null
-                                            ))
-                                        )}
-                                    </div>
-                                </SortableContext>
-                             </ScrollArea>
+                              {/* Make the SortableContext cover the scrollable area */}
+                             <SortableContext items={unassignedAgents.map(a => a.id!)} strategy={verticalListSortingStrategy} id={UNASSIGNED_CONTAINER_ID}>
+                                 <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
+                                        <div className="space-y-2">
+                                            {unassignedAgents.length === 0 ? (
+                                                <p className="text-sm text-muted-foreground text-center py-4">All agents assigned.</p>
+                                            ) : (
+                                                unassignedAgents.map(agent => (
+                                                    agent.id ? <SortableAgentItem key={agent.id} agent={agent} /> : null
+                                                ))
+                                            )}
+                                        </div>
+                                 </ScrollArea>
+                             </SortableContext>
                          </Card>
 
                          {/* --- Team Columns --- */}
                         {teams.map((team) => (
-                            <Card key={team.id} className="flex flex-col">
+                             <Card key={team.id} className="flex flex-col">
                                 <CardHeader className="p-4">
                                     <Label htmlFor={`team-name-${team.id}`} className="sr-only">Team Name</Label>
                                     <Input
@@ -651,28 +677,29 @@ export default function AdminTeamsPage() {
                                     />
                                     <CardDescription>({team.agentIds.length} Agents)</CardDescription>
                                 </CardHeader>
-                                 <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
-                                      <SortableContext items={team.agentIds} strategy={verticalListSortingStrategy} id={team.id}>
-                                          <div className="space-y-2">
-                                                {team.agentIds.length === 0 ? (
-                                                    <p className="text-sm text-muted-foreground text-center py-4">Drag agents here</p>
-                                                ) : (
-                                                    team.agentIds.map(agentId => {
-                                                        const agent = getAgentById(agentId);
-                                                        return agent ? <SortableAgentItem key={agentId} agent={agent} /> : null;
-                                                    })
-                                                )}
-                                            </div>
-                                        </SortableContext>
-                                </ScrollArea>
-                            </Card>
+                                 {/* Make the SortableContext cover the scrollable area */}
+                                 <SortableContext items={team.agentIds} strategy={verticalListSortingStrategy} id={team.id}>
+                                     <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
+                                            <div className="space-y-2">
+                                                    {team.agentIds.length === 0 ? (
+                                                        <p className="text-sm text-muted-foreground text-center py-4">Drag agents here</p>
+                                                    ) : (
+                                                        team.agentIds.map(agentId => {
+                                                            const agent = getAgentById(agentId);
+                                                            return agent ? <SortableAgentItem key={agentId} agent={agent} /> : null;
+                                                        })
+                                                    )}
+                                                </div>
+                                     </ScrollArea>
+                                 </SortableContext>
+                             </Card>
                         ))}
                     </div>
                 </div>
             )}
 
             {/* Loading State for Team Data */}
-            {selectedCompetitionId && selectedPodId && isLoading && (
+            {(isLoadingTeams || isLoading) && selectedCompetitionId && selectedPodId && (
                 <div className="mt-6 space-y-4">
                     <div className="flex justify-end gap-2">
                         <Skeleton className="h-9 w-36" />
@@ -707,4 +734,3 @@ export default function AdminTeamsPage() {
     </DndContext>
   );
 }
-
