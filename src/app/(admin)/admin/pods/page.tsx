@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -408,19 +409,19 @@ export default function AdminPodsPage() {
                         // Loading Skeleton Rows
                         Array.from({ length: 3 }).map((_, index) => (
                         <TableRow key={`loading-${index}`}>
-                            <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-1/4" /></TableCell> {/* Skeleton for Agents count */}
-                            <TableCell className="text-right">
-                            <div className="flex gap-1 justify-end">
-                                <Skeleton className="h-8 w-8" />
-                                <Skeleton className="h-8 w-8" />
-                                <Skeleton className="h-8 w-8" /> {/* Skeleton for Manage Agents button */}
-                            </div>
-                            </TableCell>
+                          <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-1/4" /></TableCell> {/* Skeleton for Agents count */}
+                          <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                  <Skeleton className="h-8 w-8" />
+                                  <Skeleton className="h-8 w-8" />
+                                  <Skeleton className="h-8 w-8" /> {/* Skeleton for Manage Agents button */}
+                              </div>
+                          </TableCell>
                         </TableRow>
                         ))
                     ) : pods.length === 0 && !error ? (
