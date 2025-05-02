@@ -1,4 +1,3 @@
-
 'use client'; // Add 'use client' directive
 import React from 'react';
 import Link from 'next/link'; // Import Link
@@ -90,9 +89,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                    </Link>
               </SidebarMenuItem>
                <SidebarMenuItem>
-                {/* TODO: Update href when teams page exists */}
-                 <Link href="#" passHref> {/* Update href later */}
-                    <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}> {/* Update isActive path later */}
+                 <Link href="/admin/teams" passHref>
+                    <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}>
                       <Users />
                       <span>Teams</span>
                     </SidebarMenuButton>
