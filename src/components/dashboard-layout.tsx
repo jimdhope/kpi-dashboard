@@ -19,6 +19,7 @@ import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 import { Button } from '@/components/ui/button'; // Import Button
 import { getAuth } from 'firebase/auth'; // Import getAuth
 import { app } from '@/lib/firebase'; // Import app
+import { usePathname } from 'next/navigation'; // Import usePathname
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -33,8 +34,7 @@ const MOCK_ADMIN_USER = {
 
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  // TODO: Get current route to set active state dynamically
-  const currentPath = '/admin'; // Placeholder
+  const currentPath = usePathname(); // Get current route
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -57,6 +57,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <span>Dashboard</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton href="/admin/achievements" tooltip="Achievements Log" isActive={currentPath === '/admin/achievements'}>
+                  <CheckSquare /> {/* Changed icon */}
+                  <span>Achievements Log</span> {/* Changed text */}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
              <SidebarGroup>
               <SidebarGroupLabel>Competitions</SidebarGroupLabel>
@@ -74,19 +80,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <span>Teams</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-                <SidebarMenuItem>
-                <SidebarMenuButton href="/admin/achievements" tooltip="Achievements Log" isActive={currentPath === '/admin/achievements'}>
-                  <CheckSquare /> {/* Changed icon */}
-                  <span>Achievements Log</span> {/* Changed text */}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarGroup>
 
             <SidebarGroup>
               <SidebarGroupLabel>Management</SidebarGroupLabel>
                <SidebarMenuItem>
-                 {/* TODO: Update href when campaigns page exists */}
-                <SidebarMenuButton href="#" tooltip="Campaigns">
+                <SidebarMenuButton href="/admin/campaigns" tooltip="Campaigns" isActive={currentPath === '/admin/campaigns'}>
                   <Megaphone />
                   <span>Campaigns</span>
                 </SidebarMenuButton>
