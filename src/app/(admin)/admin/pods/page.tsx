@@ -148,7 +148,7 @@ export default function AdminPodsPage() {
 
     const unsubscribe: Unsubscribe = onSnapshot(q, (querySnapshot: QuerySnapshot<DocumentData>) => {
       const fetchedPods: Pod[] = querySnapshot.docs.map((doc) => {
-        const data = doc.data() as Omit<Pod, 'id' | 'agentNames'>; // Exclude derived agentNames
+        const data = doc.data() as Omit<Pod, 'id' | 'campaignName' | 'podManagerName' | 'teamLeaderName' | 'agentNames'>; // Exclude derived agentNames
         const campaign = campaigns.find(c => c.id === data.campaignId);
         const podManager = users.find(u => u.id === data.podManagerId);
         const teamLeader = users.find(u => u.id === data.teamLeaderId);
@@ -256,6 +256,8 @@ export default function AdminPodsPage() {
             });
             return;
         }
+
+        const initialData = dialogMode === 'edit' ? selectedPod : null; // Get initial data for agentIds preservation
 
         const podDataToSave: Omit<Pod, 'id' | 'campaignName' | 'podManagerName' | 'teamLeaderName' | 'agentNames'> = {
             name: data.name,
@@ -392,15 +394,7 @@ export default function AdminPodsPage() {
                 )}
                 <Table>
                     <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[80px]">Logo</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Campaign</TableHead>
-                        <TableHead>Pod Manager</TableHead>
-                        <TableHead>Team Leader</TableHead>
-                        <TableHead>Agents</TableHead>
-                        <TableHead className="text-right w-[200px]">Actions</TableHead> {/* Increased width */}
-                    </TableRow>
+                    <TableRow><TableHead className="w-[80px]">Logo</TableHead><TableHead>Name</TableHead><TableHead>Campaign</TableHead><TableHead>Pod Manager</TableHead><TableHead>Team Leader</TableHead><TableHead>Agents</TableHead><TableHead className="text-right w-[200px]">Actions</TableHead></TableRow>
                     </TableHeader>
                     <TableBody>
                     {isLoadingPods || isLoadingRelatedData ? (
