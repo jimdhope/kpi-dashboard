@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   collection,
   doc,
@@ -25,17 +26,93 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Users, Shuffle, Save, AlertCircle } from 'lucide-react';
+import { Loader2, Users, Shuffle, Save, AlertCircle, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
 
 interface Team {
   id: string;
   name: string;
   agentIds: string[];
+}
+
+// Component for individual draggable agent card
+interface DraggableAgentProps {
+    agent: AppUser;
+    isOverlay?: boolean; // To style the drag overlay differently if needed
+}
+
+const DraggableAgent = React.forwardRef<HTMLDivElement, DraggableAgentProps>(
+    ({ agent, isOverlay, ...props }, ref) => {
+    return (
+        <Card
+            ref={ref}
+            className={cn(
+                "p-2 text-sm bg-card shadow-sm flex items-center gap-2 cursor-grab",
+                isOverlay && "shadow-lg opacity-80 cursor-grabbing" // Style when dragging
+            )}
+            {...props} // Spread listeners and style from useSortable
+            >
+            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="flex-grow truncate">{agent.name}</span>
+            {/* <span className="text-xs text-muted-foreground truncate">({agent.email})</span> */}
+        </Card>
+    );
+});
+DraggableAgent.displayName = 'DraggableAgent';
+
+
+// Component that uses useSortable hook for the agent card
+function SortableAgentItem({ agent }: { agent: AppUser }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging, // Use isDragging to style the original item when dragged
+  } = useSortable({ id: agent.id! });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1, // Make original item semi-transparent while dragging
+    zIndex: isDragging ? 10 : undefined, // Ensure dragged item is on top
+  };
+
+  return (
+      <DraggableAgent
+          ref={setNodeRef}
+          style={style}
+          agent={agent}
+          isOverlay={isDragging}
+          {...attributes}
+          {...listeners}
+       />
+  );
 }
 
 export default function AdminTeamsPage() {
@@ -49,11 +126,25 @@ export default function AdminTeamsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+   const [activeId, setActiveId] = useState<string | null>(null); // Store ID of dragged agent
   const { toast } = useToast();
 
   const competitionsCollectionRef = collection(db, 'competitions');
   const podsCollectionRef = collection(db, 'pods');
   const usersCollectionRef = collection(db, 'users');
+
+    // --- dnd-kit Setup ---
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            // Require the mouse to move by 10 pixels before activating
+            activationConstraint: {
+                distance: 10,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
   // Fetch initial data (competitions, pods, users)
   useEffect(() => {
@@ -94,8 +185,6 @@ export default function AdminTeamsPage() {
         console.error("Error fetching initial data:", err);
         setError("Failed to load necessary data.");
       } finally {
-         // Consider loading complete when all initial fetches/listeners are setup
-         // This might need adjustment depending on how critical each dataset is initially
         setIsLoading(false);
       }
     };
@@ -133,25 +222,25 @@ export default function AdminTeamsPage() {
 
                 if (compDocSnap.exists()) {
                     const compData = compDocSnap.data() as Competition & { teams?: Team[] }; // Type assertion for teams
-                    const existingTeams: Team[] = compData.teams || [
-                        { id: 'team-1', name: 'Team 1', agentIds: [] },
-                        { id: 'team-2', name: 'Team 2', agentIds: [] },
-                        { id: 'team-3', name: 'Team 3', agentIds: [] },
-                     ]; // Default to 3 empty teams if none exist
-
-
-                    // 4. Determine unassigned agents
-                    const assignedAgentIds = new Set(existingTeams.flatMap(t => t.agentIds));
-                    const currentUnassignedAgents = podAgents.filter(agent => !assignedAgentIds.has(agent.id!));
-
-                     // Ensure teams have IDs
-                     const teamsWithIds = existingTeams.map((team, index) => ({
+                     // Ensure teams have IDs from the start
+                     const existingTeams: Team[] = (compData.teams || []).map((team, index) => ({
                          ...team,
                          id: team.id || `team-${index + 1}-${Date.now()}` // Generate ID if missing
                      }));
 
+                     // Default to 3 empty teams if none exist in the document
+                     const teamsToUse = existingTeams.length > 0 ? existingTeams : [
+                        { id: `team-1-${Date.now()}`, name: 'Team 1', agentIds: [] },
+                        { id: `team-2-${Date.now()}`, name: 'Team 2', agentIds: [] },
+                        { id: `team-3-${Date.now()}`, name: 'Team 3', agentIds: [] },
+                     ];
 
-                    setTeams(teamsWithIds);
+                    // 4. Determine unassigned agents
+                    const assignedAgentIds = new Set(teamsToUse.flatMap(t => t.agentIds));
+                    const currentUnassignedAgents = podAgents.filter(agent => !assignedAgentIds.has(agent.id!));
+
+
+                    setTeams(teamsToUse);
                     setUnassignedAgents(currentUnassignedAgents);
                 } else {
                     setError(`Competition with ID ${selectedCompetitionId} not found.`);
@@ -186,6 +275,23 @@ export default function AdminTeamsPage() {
       return pods.filter(pod => pod.campaignId === selectedCompetition.campaignId);
   }, [pods, selectedCompetition]);
 
+  // Agents available in the selected pod (memoized)
+  const podAgents = useMemo(() => {
+      if (!selectedPod) return [];
+      return users.filter(user => selectedPod.agentIds?.includes(user.id!));
+  }, [selectedPod, users]);
+
+  // Get the full agent object being dragged
+  const draggedAgent = useMemo(() => {
+     if (!activeId) return null;
+     // Find in unassigned or any team
+     return unassignedAgents.find(a => a.id === activeId) ||
+            teams.flatMap(t => t.agentIds)
+                 .map(agentId => users.find(u => u.id === agentId))
+                 .find(agent => agent?.id === activeId) ||
+            null;
+  }, [activeId, unassignedAgents, teams, users]);
+
 
   // --- Event Handlers ---
   const handleCompetitionChange = (id: string) => {
@@ -208,30 +314,27 @@ export default function AdminTeamsPage() {
     );
   };
 
-   const handleRandomAssignment = () => {
-     if (!selectedPod) return;
+   const handleRandomAssignment = useCallback(() => {
+       if (podAgents.length === 0 || teams.length === 0) {
+         toast({ variant: "destructive", title: "Assignment Error", description: "No agents in the pod or no teams defined." });
+         return;
+       }
 
-     const podAgents = users.filter(user => selectedPod.agentIds?.includes(user.id!));
-     if (podAgents.length === 0 || teams.length === 0) {
-       toast({ variant: "destructive", title: "Assignment Error", description: "No agents in the pod or no teams defined." });
-       return;
-     }
+       // Shuffle agents randomly
+       const shuffledAgents = [...podAgents].sort(() => Math.random() - 0.5);
 
-     // Shuffle agents randomly
-     const shuffledAgents = [...podAgents].sort(() => Math.random() - 0.5);
+       // Create new teams structure with reset agentIds
+       const newTeams: Team[] = teams.map(team => ({ ...team, agentIds: [] }));
 
-     // Create new teams structure with reset agentIds
-     const newTeams: Team[] = teams.map(team => ({ ...team, agentIds: [] }));
+       // Distribute agents round-robin
+       shuffledAgents.forEach((agent, index) => {
+         newTeams[index % newTeams.length].agentIds.push(agent.id!);
+       });
 
-     // Distribute agents round-robin
-     shuffledAgents.forEach((agent, index) => {
-       newTeams[index % newTeams.length].agentIds.push(agent.id!);
-     });
-
-     setTeams(newTeams);
-     setUnassignedAgents([]); // All agents are assigned
-     toast({ title: "Agents Assigned", description: "Agents have been randomly assigned to teams." });
-   };
+       setTeams(newTeams);
+       setUnassignedAgents([]); // All agents are assigned
+       toast({ title: "Agents Assigned", description: "Agents have been randomly assigned to teams." });
+     }, [podAgents, teams, toast]);
 
    const handleSaveTeams = async () => {
       if (!selectedCompetitionId) {
@@ -265,180 +368,348 @@ export default function AdminTeamsPage() {
       }
   };
 
-  // --- Drag and Drop Placeholder ---
-  // TODO: Implement drag and drop functionality
-  const handleDragEnd = (result: any) => {
-      console.log("Drag ended:", result);
-       toast({ title: "Drag & Drop", description: "Drag and drop functionality is not yet implemented." });
-      // Placeholder for react-beautiful-dnd or dnd-kit logic
-      // - Check if destination is valid
-      // - Find the dragged agent
-      // - Find source and destination columns (unassigned or team)
-      // - Update state (unassignedAgents and teams arrays)
-  };
+   // --- Drag and Drop Handlers ---
+
+    const findContainer = (id: string): string | null => {
+        if (id === 'unassigned' || unassignedAgents.some(agent => agent.id === id)) {
+        return 'unassigned';
+        }
+        for (const team of teams) {
+            if (team.id === id || team.agentIds.includes(id)) {
+                return team.id;
+            }
+        }
+        return null;
+    };
+
+   const handleDragStart = (event: DragStartEvent) => {
+       setActiveId(event.active.id as string);
+       console.log("Drag Start:", event.active.id);
+   };
+
+    const handleDragOver = (event: DragOverEvent) => {
+        const { active, over } = event;
+        if (!over) return;
+
+        const activeId = active.id as string;
+        const overId = over.id as string;
+
+        if (activeId === overId) return;
+
+        const activeContainerId = findContainer(activeId);
+        const overContainerId = findContainer(overId);
+
+        console.log(`Drag Over: Active ${activeId} (in ${activeContainerId}) -> Over ${overId} (in ${overContainerId})`);
+
+
+        if (!activeContainerId || !overContainerId || activeContainerId === overContainerId) {
+            return;
+        }
+
+        setTeams(prevTeams => {
+            const nextTeams = [...prevTeams];
+            const activeTeamIndex = nextTeams.findIndex(t => t.id === activeContainerId);
+            const overTeamIndex = nextTeams.findIndex(t => t.id === overContainerId);
+
+            // Moving from a team
+            if (activeTeamIndex !== -1) {
+                 const activeItemIndex = nextTeams[activeTeamIndex].agentIds.indexOf(activeId);
+                 nextTeams[activeTeamIndex].agentIds.splice(activeItemIndex, 1);
+            } else {
+                // Moving from unassigned
+                 setUnassignedAgents(prev => prev.filter(agent => agent.id !== activeId));
+            }
+
+            // Moving to a team
+            if (overTeamIndex !== -1) {
+                 const overItemIndex = nextTeams[overTeamIndex].agentIds.indexOf(overId);
+                 // Insert at the position of the item being dragged over
+                 nextTeams[overTeamIndex].agentIds.splice(overItemIndex >= 0 ? overItemIndex : nextTeams[overTeamIndex].agentIds.length, 0, activeId);
+            } else {
+                 // Moving to unassigned
+                 const agentToAdd = users.find(u => u.id === activeId);
+                 if (agentToAdd) {
+                    // Check if not already in unassigned to prevent duplicates during drag over
+                    if (!unassignedAgents.some(a => a.id === activeId)) {
+                        setUnassignedAgents(prev => {
+                           const overItemIndex = prev.findIndex(a => a.id === overId);
+                            const newUnassigned = [...prev];
+                             newUnassigned.splice(overItemIndex >= 0 ? overItemIndex : newUnassigned.length, 0, agentToAdd);
+                             return newUnassigned;
+                        });
+                    }
+                 }
+            }
+            return nextTeams;
+        });
+    };
+
+
+   const handleDragEnd = (event: DragEndEvent) => {
+     const { active, over } = event;
+     setActiveId(null); // Clear active drag ID
+
+     if (!over) {
+         console.log("Drag End: No target");
+         return;
+     }
+
+     const activeId = active.id as string;
+     const overId = over.id as string; // Can be a container ID ('unassigned', team ID) or another agent ID
+
+      const activeContainerId = findContainer(activeId);
+     const overContainerId = findContainer(overId); // Find the container of the item being dropped onto
+
+
+      console.log(`Drag End: Active ${activeId} (from ${activeContainerId}) -> Over ${overId} (in ${overContainerId})`);
+
+
+     if (!activeContainerId || !overContainerId) {
+         console.log("Drag End: Invalid source or target container");
+         return;
+     }
+
+
+     // --- Logic to update state based on drop target ---
+       if (activeContainerId !== overContainerId) {
+           // --- Moving between containers ---
+            const agentToMove = users.find(u => u.id === activeId);
+           if (!agentToMove) return;
+
+            // Remove from source
+            if (activeContainerId === 'unassigned') {
+                setUnassignedAgents(prev => prev.filter(a => a.id !== activeId));
+            } else {
+                setTeams(prev => prev.map(team =>
+                    team.id === activeContainerId
+                        ? { ...team, agentIds: team.agentIds.filter(id => id !== activeId) }
+                        : team
+                ));
+            }
+
+            // Add to destination
+            if (overContainerId === 'unassigned') {
+                 setUnassignedAgents(prev => {
+                     // Find insertion index based on where it was dropped over
+                     const overIndex = prev.findIndex(a => a.id === overId);
+                     const newAgents = [...prev];
+                     newAgents.splice(overIndex >= 0 ? overIndex : newAgents.length, 0, agentToMove);
+                     return newAgents;
+                 });
+            } else {
+                setTeams(prev => prev.map(team => {
+                    if (team.id === overContainerId) {
+                        const overIndex = team.agentIds.indexOf(overId);
+                        const newAgentIds = [...team.agentIds];
+                         // Insert at the position dragged over, or at the end if dropped on container
+                         newAgentIds.splice(overIndex >= 0 ? overIndex : newAgentIds.length, 0, activeId);
+                        return { ...team, agentIds: newAgentIds };
+                    }
+                    return team;
+                }));
+            }
+
+       } else {
+           // --- Reordering within the same container ---
+            if (activeContainerId === 'unassigned') {
+                setUnassignedAgents(prev => {
+                    const oldIndex = prev.findIndex(a => a.id === activeId);
+                    const newIndex = prev.findIndex(a => a.id === overId);
+                    if (oldIndex === -1 || newIndex === -1) return prev; // Should not happen
+                    return arrayMove(prev, oldIndex, newIndex);
+                });
+            } else {
+                 setTeams(prev => prev.map(team => {
+                    if (team.id === activeContainerId) {
+                        const oldIndex = team.agentIds.indexOf(activeId);
+                        const newIndex = team.agentIds.indexOf(overId);
+                         if (oldIndex === -1 || newIndex === -1) return team; // Should not happen
+                        return { ...team, agentIds: arrayMove(team.agentIds, oldIndex, newIndex) };
+                    }
+                    return team;
+                 }));
+            }
+       }
+
+   };
+
+
+    // Function to get agent object by ID
+    const getAgentById = (id: string): AppUser | undefined => users.find(u => u.id === id);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Competition Teams</CardTitle>
-          <CardDescription>Select a competition and pod, then create teams and assign agents.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Selections */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Competition Select */}
-            <div className="grid gap-2">
-              <Label htmlFor="competition-select">Competition</Label>
-              <Select onValueChange={handleCompetitionChange} value={selectedCompetitionId} disabled={isLoading || isSubmitting}>
-                <SelectTrigger id="competition-select">
-                  <SelectValue placeholder="Select a competition" />
-                </SelectTrigger>
-                <SelectContent>
-                  {competitions.length === 0 && !isLoading && <SelectItem value="-" disabled>No competitions found</SelectItem>}
-                  {isLoading && <SelectItem value="-" disabled>Loading...</SelectItem>}
-                  {competitions.map(comp => (
-                    <SelectItem key={comp.id} value={comp.id}>
-                      {comp.name} ({comp.startDate ? comp.startDate.toDate().toLocaleDateString() : 'N/A'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+     <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+    >
+        <div className="space-y-6">
+        <Card>
+            <CardHeader>
+            <CardTitle>Manage Competition Teams</CardTitle>
+            <CardDescription>Select a competition and pod, then create teams and assign agents.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            {/* Selections */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Competition Select */}
+                <div className="grid gap-2">
+                <Label htmlFor="competition-select">Competition</Label>
+                <Select onValueChange={handleCompetitionChange} value={selectedCompetitionId} disabled={isLoading || isSubmitting}>
+                    <SelectTrigger id="competition-select">
+                    <SelectValue placeholder="Select a competition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {competitions.length === 0 && !isLoading && <SelectItem value="-" disabled>No competitions found</SelectItem>}
+                    {isLoading && <SelectItem value="-" disabled>Loading...</SelectItem>}
+                    {competitions.map(comp => (
+                        <SelectItem key={comp.id} value={comp.id}>
+                        {comp.name} ({comp.startDate ? comp.startDate.toDate().toLocaleDateString() : 'N/A'})
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                </div>
+
+                {/* Pod Select (Filtered) */}
+                <div className="grid gap-2">
+                <Label htmlFor="pod-select">Pod</Label>
+                <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading || isSubmitting || !selectedCompetitionId}>
+                    <SelectTrigger id="pod-select">
+                    <SelectValue placeholder={!selectedCompetitionId ? "Select competition first" : "Select a pod"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {!selectedCompetitionId && <SelectItem value="-" disabled>Select competition first</SelectItem>}
+                    {selectedCompetitionId && availablePods.length === 0 && !isLoading && <SelectItem value="-" disabled>No pods in campaign</SelectItem>}
+                    {isLoading && selectedCompetitionId && <SelectItem value="-" disabled>Loading pods...</SelectItem>}
+                    {availablePods.map(pod => (
+                        <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                </div>
             </div>
 
-            {/* Pod Select (Filtered) */}
-            <div className="grid gap-2">
-              <Label htmlFor="pod-select">Pod</Label>
-              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading || isSubmitting || !selectedCompetitionId}>
-                <SelectTrigger id="pod-select">
-                  <SelectValue placeholder={!selectedCompetitionId ? "Select competition first" : "Select a pod"} />
-                </SelectTrigger>
-                <SelectContent>
-                   {!selectedCompetitionId && <SelectItem value="-" disabled>Select competition first</SelectItem>}
-                   {selectedCompetitionId && availablePods.length === 0 && !isLoading && <SelectItem value="-" disabled>No pods in campaign</SelectItem>}
-                   {isLoading && selectedCompetitionId && <SelectItem value="-" disabled>Loading pods...</SelectItem>}
-                  {availablePods.map(pod => (
-                    <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            {error && <p className="text-destructive text-center mb-4">{error}</p>}
 
-           {error && <p className="text-destructive text-center mb-4">{error}</p>}
+            {/* Team Management Area (Conditional Render) */}
+            {selectedCompetitionId && selectedPodId && !isLoading && (
+                <div className="space-y-6">
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 justify-end">
+                        <Button
+                        variant="outline"
+                        onClick={handleRandomAssignment}
+                        disabled={isSubmitting || teams.length === 0 || podAgents.length === 0}
+                        title={ podAgents.length === 0 ? "No agents in pod" : "Randomly assign agents"}
+                        >
+                            <Shuffle className="mr-2 h-4 w-4" /> Random Assign
+                        </Button>
+                        <Button onClick={handleSaveTeams} disabled={isSubmitting || unassignedAgents.length > 0}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Teams
+                        </Button>
+                        {unassignedAgents.length > 0 && (
+                            <p className="text-xs text-destructive flex items-center gap-1 w-full justify-end">
+                                <AlertCircle className="h-3 w-3"/> {unassignedAgents.length} agent(s) unassigned.
+                            </p>
+                        )}
+                    </div>
 
-           {/* Team Management Area (Conditional Render) */}
-           {selectedCompetitionId && selectedPodId && !isLoading && (
-              <div className="space-y-6">
-                   {/* Action Buttons */}
-                 <div className="flex flex-wrap gap-2 justify-end">
-                     <Button
-                       variant="outline"
-                       onClick={handleRandomAssignment}
-                       disabled={isSubmitting || teams.length === 0 || (selectedPod?.agentIds?.length || 0) === 0}
-                       title={ (selectedPod?.agentIds?.length || 0) === 0 ? "No agents in pod" : "Randomly assign agents"}
-                     >
-                         <Shuffle className="mr-2 h-4 w-4" /> Random Assign
-                     </Button>
-                     <Button onClick={handleSaveTeams} disabled={isSubmitting || unassignedAgents.length > 0}>
-                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                         Save Teams
-                     </Button>
-                      {unassignedAgents.length > 0 && (
-                        <p className="text-xs text-destructive flex items-center gap-1 w-full justify-end">
-                            <AlertCircle className="h-3 w-3"/> {unassignedAgents.length} agent(s) unassigned.
-                        </p>
-                      )}
-                 </div>
-
-                  {/* Team Columns - Placeholder for Drag & Drop */}
-                  {/* TODO: Replace this section with Drag & Drop implementation */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* Unassigned Agents Column */}
-                      <Card className="bg-muted/30">
-                          <CardHeader className="p-4">
-                              <CardTitle className="text-base">Unassigned Agents ({unassignedAgents.length})</CardTitle>
-                          </CardHeader>
-                           <ScrollArea className="h-60 p-4 border-t">
-                              {unassignedAgents.length === 0 ? (
-                                 <p className="text-sm text-muted-foreground text-center py-4">All agents assigned.</p>
-                              ) : (
-                                 <div className="space-y-2">
-                                     {unassignedAgents.map(agent => (
-                                         <Card key={agent.id} className="p-2 text-sm bg-card shadow-sm">
-                                             {agent.name}
-                                         </Card>
-                                     ))}
-                                 </div>
-                              )}
-                           </ScrollArea>
-                      </Card>
-
-                       {/* Team Columns */}
-                      {teams.map((team) => (
-                          <Card key={team.id} className="flex flex-col">
-                              <CardHeader className="p-4">
-                                   <Label htmlFor={`team-name-${team.id}`} className="sr-only">Team Name</Label>
-                                  <Input
-                                      id={`team-name-${team.id}`}
-                                      value={team.name}
-                                      onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                                      placeholder={`Team ${team.id.split('-')[1]}`}
-                                      className="text-base font-semibold border-0 shadow-none focus-visible:ring-0 px-0 h-auto"
-                                      disabled={isSubmitting}
-                                  />
-                                   <CardDescription>({team.agentIds.length} Agents)</CardDescription>
-                              </CardHeader>
-                              <ScrollArea className="h-60 p-4 border-t">
-                                   {team.agentIds.length === 0 ? (
-                                     <p className="text-sm text-muted-foreground text-center py-4">Drag agents here</p>
-                                  ) : (
+                    {/* Team Columns with Drag & Drop */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                         {/* --- Unassigned Agents Column --- */}
+                        <Card className="bg-muted/30 flex flex-col">
+                             <CardHeader className="p-4">
+                                 <CardTitle className="text-base">Unassigned Agents ({unassignedAgents.length})</CardTitle>
+                             </CardHeader>
+                             <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
+                                <SortableContext items={unassignedAgents.map(a => a.id!)} strategy={verticalListSortingStrategy}>
                                     <div className="space-y-2">
-                                        {team.agentIds.map(agentId => {
-                                            const agent = users.find(u => u.id === agentId);
-                                            return (
-                                                <Card key={agentId} className="p-2 text-sm bg-card shadow-sm">
-                                                    {agent?.name || `Agent ${agentId.substring(0, 5)}...`}
-                                                </Card>
-                                            );
-                                        })}
+                                        {unassignedAgents.length === 0 ? (
+                                             <p className="text-sm text-muted-foreground text-center py-4">All agents assigned.</p>
+                                        ) : (
+                                            unassignedAgents.map(agent => (
+                                                 <SortableAgentItem key={agent.id} agent={agent} />
+                                            ))
+                                        )}
                                     </div>
-                                   )}
-                              </ScrollArea>
-                          </Card>
-                      ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground text-center mt-4">Drag and drop agents between columns to assign them. (Drag & drop not yet implemented)</p>
-              </div>
-           )}
+                                </SortableContext>
+                             </ScrollArea>
+                         </Card>
 
-           {/* Loading State for Team Data */}
-           {selectedCompetitionId && selectedPodId && isLoading && (
-               <div className="mt-6 space-y-4">
-                 <div className="flex justify-end gap-2">
-                     <Skeleton className="h-9 w-36" />
-                     <Skeleton className="h-9 w-28" />
-                 </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <Skeleton className="h-80 w-full" />
-                      <Skeleton className="h-80 w-full" />
-                      <Skeleton className="h-80 w-full" />
-                      <Skeleton className="h-80 w-full" />
-                  </div>
-               </div>
-           )}
+                         {/* --- Team Columns --- */}
+                        {teams.map((team) => (
+                            <Card key={team.id} className="flex flex-col">
+                                <CardHeader className="p-4">
+                                    <Label htmlFor={`team-name-${team.id}`} className="sr-only">Team Name</Label>
+                                    <Input
+                                        id={`team-name-${team.id}`}
+                                        value={team.name}
+                                        onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
+                                        placeholder={`Team ${team.id.split('-')[1]}`}
+                                        className="text-base font-semibold border-0 shadow-none focus-visible:ring-0 px-0 h-auto"
+                                        disabled={isSubmitting}
+                                    />
+                                    <CardDescription>({team.agentIds.length} Agents)</CardDescription>
+                                </CardHeader>
+                                 <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
+                                      <SortableContext items={team.agentIds} strategy={verticalListSortingStrategy}>
+                                          <div className="space-y-2">
+                                                {team.agentIds.length === 0 ? (
+                                                    <p className="text-sm text-muted-foreground text-center py-4">Drag agents here</p>
+                                                ) : (
+                                                    team.agentIds.map(agentId => {
+                                                        const agent = getAgentById(agentId);
+                                                        return agent ? <SortableAgentItem key={agentId} agent={agent} /> : null;
+                                                    })
+                                                )}
+                                            </div>
+                                        </SortableContext>
+                                </ScrollArea>
+                            </Card>
+                        ))}
+                    </div>
 
-           {/* Initial prompt */}
-           {!selectedCompetitionId && !isLoading && (
-              <p className="text-center text-muted-foreground mt-6">Select a competition to start managing teams.</p>
-           )}
-           {selectedCompetitionId && !selectedPodId && !isLoading && (
-               <p className="text-center text-muted-foreground mt-6">Select a pod to view agents and teams.</p>
-           )}
+                     {/* Drag Overlay - Renders the item being dragged */}
+                      {/*
+                     <DragOverlay>
+                         {activeId && draggedAgent ? (
+                             <DraggableAgent agent={draggedAgent} isOverlay />
+                         ) : null}
+                     </DragOverlay>
+                     */}
+                </div>
+            )}
 
+            {/* Loading State for Team Data */}
+            {selectedCompetitionId && selectedPodId && isLoading && (
+                <div className="mt-6 space-y-4">
+                    <div className="flex justify-end gap-2">
+                        <Skeleton className="h-9 w-36" />
+                        <Skeleton className="h-9 w-28" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Skeleton className="h-80 w-full" />
+                        <Skeleton className="h-80 w-full" />
+                        <Skeleton className="h-80 w-full" />
+                        <Skeleton className="h-80 w-full" />
+                    </div>
+                </div>
+            )}
 
-        </CardContent>
-      </Card>
-    </div>
+            {/* Initial prompt */}
+            {!selectedCompetitionId && !isLoading && (
+                <p className="text-center text-muted-foreground mt-6">Select a competition to start managing teams.</p>
+            )}
+            {selectedCompetitionId && !selectedPodId && !isLoading && (
+                <p className="text-center text-muted-foreground mt-6">Select a pod to view agents and teams.</p>
+            )}
+            </CardContent>
+        </Card>
+        </div>
+    </DndContext>
   );
 }
