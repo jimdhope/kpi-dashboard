@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   DialogContent,
   DialogHeader,
@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input'; // Import Input
 
 interface ManagePodAgentsDialogProps {
   pod: Pod;
@@ -28,17 +29,32 @@ interface ManagePodAgentsDialogProps {
 export function ManagePodAgentsDialog({ pod, allUsers, onSave, onClose }: ManagePodAgentsDialogProps) {
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>(pod.agentIds || []);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // State for search term
 
-  // Filter users to show only potential agents (customize this logic if needed)
-  // For example, filter out existing managers/leaders or users already in *another* pod
-  const availableAgents = allUsers.filter(user =>
-    user.role === 'agent' // Simple role check, refine as necessary
-    // && !pod.agentIds?.includes(user.id || '') // Optionally exclude already assigned agents if checkbox logic handles it
-  );
+  // Filter users to show only potential agents
+  const availableAgents = useMemo(() => {
+      return allUsers.filter(user =>
+        user.role === 'agent' // Simple role check, refine as necessary
+      );
+  }, [allUsers]);
+
+  // Filter agents based on search term
+  const filteredAgents = useMemo(() => {
+    if (!searchTerm) {
+      return availableAgents;
+    }
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    return availableAgents.filter(agent =>
+      agent.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+      agent.email.toLowerCase().includes(lowerCaseSearchTerm)
+    );
+  }, [availableAgents, searchTerm]);
+
 
   useEffect(() => {
     // Update state if the pod prop changes (e.g., opening dialog for a different pod)
     setSelectedAgentIds(pod.agentIds || []);
+    setSearchTerm(''); // Reset search on pod change
   }, [pod]);
 
   const handleCheckboxChange = (agentId: string, checked: boolean | 'indeterminate') => {
@@ -71,27 +87,45 @@ export function ManagePodAgentsDialog({ pod, allUsers, onSave, onClose }: Manage
         </DialogDescription>
       </DialogHeader>
 
+      {/* Search Input */}
+      <div className="relative mb-4">
+         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+         <Input
+           type="search"
+           placeholder="Search agents by name or email..."
+           value={searchTerm}
+           onChange={(e) => setSearchTerm(e.target.value)}
+           className="pl-8 w-full"
+           disabled={isSaving || availableAgents.length === 0}
+         />
+      </div>
+
+
       {availableAgents.length === 0 ? (
          <p className="text-muted-foreground text-center py-4">No available agents found. Add agents with the 'agent' role first.</p>
       ) : (
-         <ScrollArea className="max-h-[400px] p-1">
+         <ScrollArea className="max-h-[300px] p-1 border rounded-md"> {/* Adjusted max height */}
             <div className="space-y-3 p-4">
-            {availableAgents.map((agent) => (
-                <div key={agent.id} className="flex items-center space-x-3">
-                <Checkbox
-                    id={`agent-${agent.id}`}
-                    checked={selectedAgentIds.includes(agent.id!)}
-                    onCheckedChange={(checked) => handleCheckboxChange(agent.id!, checked)}
-                    disabled={isSaving}
-                />
-                <Label
-                    htmlFor={`agent-${agent.id}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                    {agent.name} <span className="text-xs text-muted-foreground">({agent.email})</span>
-                </Label>
-                </div>
-            ))}
+            {filteredAgents.length > 0 ? (
+                filteredAgents.map((agent) => (
+                    <div key={agent.id} className="flex items-center space-x-3">
+                    <Checkbox
+                        id={`agent-${agent.id}`}
+                        checked={selectedAgentIds.includes(agent.id!)}
+                        onCheckedChange={(checked) => handleCheckboxChange(agent.id!, checked)}
+                        disabled={isSaving}
+                    />
+                    <Label
+                        htmlFor={`agent-${agent.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        {agent.name} <span className="text-xs text-muted-foreground">({agent.email})</span>
+                    </Label>
+                    </div>
+                ))
+            ) : (
+                 <p className="text-muted-foreground text-center py-4">No agents match your search.</p>
+            )}
             </div>
         </ScrollArea>
       )}

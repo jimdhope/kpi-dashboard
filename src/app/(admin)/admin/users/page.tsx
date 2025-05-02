@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   collection,
   query,
@@ -21,7 +21,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, Trash2, PlusCircle, Loader2, ShieldCheck, UserCog, UserRound, Briefcase } from 'lucide-react'; // Added role icons
+import { Edit, Trash2, PlusCircle, Loader2, ShieldCheck, UserCog, UserRound, Briefcase, Search } from 'lucide-react'; // Added Search icon
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,7 @@ import { UserForm, UserFormData, USER_ROLES, UserRole } from '@/components/user-
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppUser, createUser, getAllUsers } from '@/services/user'; // Import user service functions and type
+import { Input } from '@/components/ui/input'; // Import Input
 
 const usersCollectionRef = collection(db, 'users');
 
@@ -69,6 +70,7 @@ export default function AdminUsersPage() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
+  const [searchTerm, setSearchTerm] = useState(''); // State for search term
   const { toast } = useToast();
 
   // Fetch Users with real-time updates
@@ -103,6 +105,18 @@ export default function AdminUsersPage() {
     // Cleanup listener on component unmount
     return () => unsubscribe();
   }, [toast]);
+
+  // Filter users based on search term
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm) {
+      return users;
+    }
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    return users.filter(user =>
+      user.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+      user.email.toLowerCase().includes(lowerCaseSearchTerm)
+    );
+  }, [users, searchTerm]);
 
   const openAddDialog = () => {
     setSelectedUser(null);
@@ -317,16 +331,30 @@ export default function AdminUsersPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div className='flex-1'>
                 <CardTitle>Manage Users</CardTitle>
                 <CardDescription>View, add, edit, or delete user accounts.</CardDescription>
               </div>
-              <DialogTrigger asChild>
-                <Button onClick={openAddDialog} disabled={isLoadingUsers}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add User
-                </Button>
-              </DialogTrigger>
+              <div className='flex gap-2 items-start flex-wrap'>
+                {/* Search Input */}
+                <div className="relative max-w-xs flex-grow">
+                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                   <Input
+                     type="search"
+                     placeholder="Search users..."
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     className="pl-8 w-full"
+                     disabled={isLoadingUsers}
+                   />
+                </div>
+                <DialogTrigger asChild>
+                  <Button onClick={openAddDialog} disabled={isLoadingUsers}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add User
+                  </Button>
+                </DialogTrigger>
+              </div>
             </CardHeader>
             <CardContent>
               {error && !isLoadingUsers && (
@@ -361,14 +389,14 @@ export default function AdminUsersPage() {
                         </TableCell>
                       </TableRow>
                     ))
-                  ) : users.length === 0 && !error ? (
+                  ) : filteredUsers.length === 0 && !error ? (
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                        No users found. Add a user to get started.
+                        {searchTerm ? `No users found matching "${searchTerm}".` : "No users found. Add a user to get started."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map((user) => (
+                    filteredUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <Avatar className="h-10 w-10">
