@@ -363,7 +363,7 @@ export default function AdminLogAchievementsPage() {
                   <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
                 </SelectTrigger>
                 <SelectContent>
-                   <SelectItem value="" disabled={pods.length > 0}>Select Pod</SelectItem>
+                  {/* Removed the placeholder SelectItem */}
                   {pods.map(pod => (
                     <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
                   ))}
@@ -486,3 +486,4 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
+
