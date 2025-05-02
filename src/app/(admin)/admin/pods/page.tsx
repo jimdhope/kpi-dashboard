@@ -142,7 +142,7 @@ export default function AdminPodsPage() {
 
   // Fetch Pods with real-time updates and enrich data
   useEffect(() => {
-     if (isLoadingRelatedData) return;
+     if (isLoadingRelatedData) return; // Don't fetch pods until campaigns/users are loaded
 
     setIsLoadingPods(true);
     setError(null);
@@ -324,7 +324,7 @@ export default function AdminPodsPage() {
                     description: err.message || `Failed to add pod "${data.name}".`,
                 });
                  // Cleanup uploaded logo if add fails
-                 if (file && finalLogoUrl) {
+                 if (file && finalLogoUrl && finalLogoUrl.includes('firebasestorage.googleapis.com')) {
                      try {
                          const logoRef = ref(storage, finalLogoUrl);
                          await deleteObject(logoRef);
@@ -352,7 +352,7 @@ export default function AdminPodsPage() {
                     description: err.message || `Failed to update pod "${selectedPod.name}".`,
                 });
                 // Cleanup newly uploaded logo if update fails
-                 if (file && finalLogoUrl && finalLogoUrl !== selectedPod.logoUrl) {
+                 if (file && finalLogoUrl && finalLogoUrl !== selectedPod.logoUrl && finalLogoUrl.includes('firebasestorage.googleapis.com')) {
                      try {
                          const newLogoRef = ref(storage, finalLogoUrl);
                          await deleteObject(newLogoRef);
@@ -447,34 +447,35 @@ export default function AdminPodsPage() {
   return (
     <div className="space-y-6">
       {/* Main Dialog for Add/Edit Pod */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-                <DialogTitle>{dialogMode === 'add' ? 'Add New Pod' : 'Edit Pod'}</DialogTitle>
-                <DialogDescription>
-                    {dialogMode === 'add' ? 'Enter the details for the new pod. You can select existing users or create new ones.' : `Make changes to the pod "${selectedPod?.name}". Agent assignments are managed separately.`}
-                </DialogDescription>
-            </DialogHeader>
-            {!isLoadingRelatedData ? (
-                <PodForm
-                    onSubmit={handleFormSubmit}
-                    onCancel={() => setIsFormOpen(false)}
-                    initialData={initialFormData}
-                    campaigns={campaigns}
-                    users={users}
-                    key={initialFormData?.id ?? 'add'} // Key forces re-render
-                />
-            ) : (
-                <div className="p-6 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                    <p className="text-muted-foreground">Loading form data...</p>
-                </div>
-            )}
-        </DialogContent>
-      </Dialog>
+       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+           <DialogContent className="sm:max-w-lg">
+              {/* Moved header inside DialogContent */}
+              <DialogHeader>
+                   <DialogTitle>{dialogMode === 'add' ? 'Add New Pod' : 'Edit Pod'}</DialogTitle>
+                   <DialogDescription>
+                       {dialogMode === 'add' ? 'Enter the details for the new pod. You can select existing users or create new ones.' : `Make changes to the pod "${selectedPod?.name}". Agent assignments are managed separately.`}
+                   </DialogDescription>
+               </DialogHeader>
+               {!isLoadingRelatedData ? (
+                   <PodForm
+                       onSubmit={handleFormSubmit}
+                       onCancel={() => setIsFormOpen(false)}
+                       initialData={initialFormData}
+                       campaigns={campaigns}
+                       users={users}
+                       key={initialFormData?.id ?? 'add'} // Key forces re-render
+                   />
+               ) : (
+                   <div className="p-6 text-center">
+                       <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                       <p className="text-muted-foreground">Loading form data...</p>
+                   </div>
+               )}
+           </DialogContent>
+       </Dialog>
 
       {/* Separate Dialog for Managing Agents */}
-      <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
+       <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
         {selectedPodForAgents && (
             <ManagePodAgentsDialog
                 pod={selectedPodForAgents}
@@ -483,27 +484,7 @@ export default function AdminPodsPage() {
                 onClose={() => { setIsManageAgentsOpen(false); setSelectedPodForAgents(null); }}
             />
         )}
-      </Dialog>
-
-      {/* AlertDialog for Delete Confirmation */}
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the pod
-                    <span className="font-semibold"> "{selectedPod?.name}"</span> and its logo.
-                    Consider potential impact on associated teams or data.
-                </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setSelectedPod(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({ variant: "destructive" })}>
-                    Delete
-                </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-      </AlertDialog>
+       </Dialog>
 
        {/* Main Card for displaying the list of pods */}
        <Card>
@@ -512,126 +493,153 @@ export default function AdminPodsPage() {
                 <CardTitle>Manage Pods</CardTitle>
                 <CardDescription>View, add, edit, delete pods, and manage agents.</CardDescription>
             </div>
-            {/* Trigger for the Add/Edit Pod Dialog */}
-            <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Pod
-            </Button>
+             {/* Trigger for the Add/Edit Pod Dialog */}
+            <DialogTrigger asChild>
+                <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Pod
+                </Button>
+            </DialogTrigger>
             {isAddDisabled && !isLoadingRelatedData && (
                 <p className="text-xs text-muted-foreground">{addButtonTooltip}</p>
             )}
             </CardHeader>
             <CardContent>
-            {error && !(isLoadingPods || isLoadingRelatedData) && (
-                <div className="mb-4 text-center text-destructive">{error}</div>
-            )}
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[80px]">Logo</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Campaign</TableHead>
-                        <TableHead>Pod Manager</TableHead>
-                        <TableHead>Team Leader</TableHead>
-                        <TableHead>Agents</TableHead>
-                        <TableHead className="text-right w-[200px]">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                {isLoadingPods || isLoadingRelatedData ? (
-                    // Loading Skeleton Rows
-                    Array.from({ length: 3 }).map((_, index) => (
-                    <TableRow key={`loading-${index}`}>
-                        <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
-                        <TableCell className="text-right">
-                            <div className="flex gap-1 justify-end">
-                                <Skeleton className="h-8 w-8" />
-                                <Skeleton className="h-8 w-8" />
-                                <Skeleton className="h-8 w-8" />
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                    ))
-                ) : pods.length === 0 && !error ? (
-                    <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                            No pods found. Create one to get started!
-                        </TableCell>
-                    </TableRow>
-                ) : (
-                    pods.map((pod) => (
-                    <TableRow key={pod.id}>
-                        <TableCell>
-                        <Avatar className="h-10 w-10">
-                            <AvatarImage src={pod.logoUrl} alt={`${pod.name} logo`} data-ai-hint="pod logo" />
-                            <AvatarFallback>{pod.name.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        </TableCell>
-                        <TableCell className="font-medium">{pod.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{pod.campaignName}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                                <Users className="h-3 w-3" /> {pod.podManagerName}
-                            </span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                                <Shield className="h-3 w-3" /> {pod.teamLeaderName}
-                            </span>
-                        </TableCell>
-                            <TableCell className="text-muted-foreground">
-                            <span title={pod.agentNames?.join(', ') || 'No agents assigned'}>
-                                {pod.agentIds?.length || 0}
-                            </span>
-                            </TableCell>
-                        <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end">
-                                {/* Manage Agents Button - Triggers the *separate* Manage Agents Dialog */}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openManageAgentsDialog(pod)}
-                                title={`Manage agents for ${pod.name}`}
-                                disabled={isLoadingPods || isLoadingRelatedData || users.length === 0}
-                            >
-                                <UserPlus className="h-4 w-4" />
-                            </Button>
-                            {/* Edit Pod Button - Triggers the *main* Add/Edit Pod Dialog */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openEditDialog(pod)}
-                                aria-label={`Edit ${pod.name}`}
-                                title={`Edit ${pod.name}`}
-                                disabled={isLoadingPods || isLoadingRelatedData || campaigns.length === 0 || users.length === 0}
-                            >
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            {/* Delete Pod Button - Triggers the AlertDialog */}
-                            <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                                    onClick={() => openDeleteAlert(pod)}
-                                    aria-label={`Delete ${pod.name}`}
-                                    title={`Delete ${pod.name}`}
-                                    disabled={isLoadingPods || isLoadingRelatedData}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </AlertDialogTrigger>
-                        </div>
-                        </TableCell>
-                    </TableRow>
-                    ))
+                {error && !(isLoadingPods || isLoadingRelatedData) && (
+                    <div className="mb-4 text-center text-destructive">{error}</div>
                 )}
-                </TableBody>
-            </Table>
+                {/* AlertDialog wraps the Table to ensure triggers are inside */}
+                <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[80px]">Logo</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Campaign</TableHead>
+                                <TableHead>Pod Manager</TableHead>
+                                <TableHead>Team Leader</TableHead>
+                                <TableHead>Agents</TableHead>
+                                <TableHead className="text-right w-[200px]">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {isLoadingPods || isLoadingRelatedData ? (
+                            // Loading Skeleton Rows
+                            Array.from({ length: 3 }).map((_, index) => (
+                            <TableRow key={`loading-${index}`}>
+                                <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex gap-1 justify-end">
+                                        <Skeleton className="h-8 w-8" />
+                                        <Skeleton className="h-8 w-8" />
+                                        <Skeleton className="h-8 w-8" />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : pods.length === 0 && !error ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                    No pods found. Create one to get started!
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            pods.map((pod) => (
+                            <TableRow key={pod.id}>
+                                <TableCell>
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={pod.logoUrl} alt={`${pod.name} logo`} data-ai-hint="pod logo" />
+                                    <AvatarFallback>{pod.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                </TableCell>
+                                <TableCell className="font-medium">{pod.name}</TableCell>
+                                <TableCell className="text-muted-foreground">{pod.campaignName}</TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                        <Users className="h-3 w-3" /> {pod.podManagerName}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                        <Shield className="h-3 w-3" /> {pod.teamLeaderName}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    <span title={pod.agentNames?.join(', ') || 'No agents assigned'}>
+                                        {pod.agentIds?.length || 0}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                <div className="flex gap-1 justify-end">
+                                        {/* Manage Agents Button - Triggers the *separate* Manage Agents Dialog */}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openManageAgentsDialog(pod)}
+                                        title={`Manage agents for ${pod.name}`}
+                                        disabled={isLoadingPods || isLoadingRelatedData || users.length === 0}
+                                    >
+                                        <UserPlus className="h-4 w-4" />
+                                    </Button>
+                                     {/* Edit Pod Button - Triggers the *main* Add/Edit Pod Dialog */}
+                                     {/* DialogTrigger needs to be inside Dialog context */}
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openEditDialog(pod)}
+                                            aria-label={`Edit ${pod.name}`}
+                                            title={`Edit ${pod.name}`}
+                                            disabled={isLoadingPods || isLoadingRelatedData || campaigns.length === 0 || users.length === 0}
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    {/* Delete Pod Button - Triggers the AlertDialog */}
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                                            onClick={() => openDeleteAlert(pod)}
+                                            aria-label={`Delete ${pod.name}`}
+                                            title={`Delete ${pod.name}`}
+                                            disabled={isLoadingPods || isLoadingRelatedData}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                </div>
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        )}
+                        </TableBody>
+                    </Table>
+
+                     {/* AlertDialog Content for Delete Confirmation */}
+                     {/* Placed here so it's within the AlertDialog context */}
+                     <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the pod
+                            <span className="font-semibold"> "{selectedPod?.name}"</span> and its logo.
+                            Consider potential impact on associated teams or data.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setSelectedPod(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({ variant: "destructive" })}>
+                            Delete
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                     </AlertDialogContent>
+                </AlertDialog>
             </CardContent>
         </Card>
 
@@ -640,3 +648,4 @@ export default function AdminPodsPage() {
 }
 
 
+    
