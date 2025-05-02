@@ -155,9 +155,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <p className="text-sm font-medium truncate">{MOCK_ADMIN_USER.name}</p>
               <p className="text-xs text-muted-foreground truncate">{MOCK_ADMIN_USER.email}</p>
             </div>
-            {/* TODO: Link to admin settings page */}
-            <Link href="#" passHref>
-                <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/admin/settings'}> {/* Update isActive path later */}
+            {/* Link to profile page */}
+            <Link href="/profile" passHref>
+                <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/profile'}>
                     <Settings />
                 </SidebarMenuButton>
             </Link>

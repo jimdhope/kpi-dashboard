@@ -91,9 +91,9 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
               <p className="text-sm font-medium truncate">{MOCK_AGENT_USER.name}</p>
               <p className="text-xs text-muted-foreground truncate">{MOCK_AGENT_USER.email}</p>
             </div>
-             {/* TODO: Link to agent settings page */}
-            <Link href="#" passHref> {/* Update href later */}
-                <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/agent/settings'}> {/* Update isActive path later */}
+             {/* Link to profile page */}
+            <Link href="/profile" passHref>
+                <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/profile'}>
                     <Settings />
                 </SidebarMenuButton>
             </Link>
