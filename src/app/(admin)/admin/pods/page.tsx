@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -394,10 +393,19 @@ export default function AdminPodsPage() {
                 )}
                 <Table>
                     <TableHeader>
-                    <TableRow><TableHead className="w-[80px]">Logo</TableHead><TableHead>Name</TableHead><TableHead>Campaign</TableHead><TableHead>Pod Manager</TableHead><TableHead>Team Leader</TableHead><TableHead>Agents</TableHead><TableHead className="text-right w-[200px]">Actions</TableHead></TableRow>
+                    <TableRow>
+                      <TableHead className="w-[80px]">Logo</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Campaign</TableHead>
+                      <TableHead>Pod Manager</TableHead>
+                      <TableHead>Team Leader</TableHead>
+                      <TableHead>Agents</TableHead>
+                      <TableHead className="text-right w-[200px]">Actions</TableHead>
+                    </TableRow>
                     </TableHeader>
                     <TableBody>
                     {isLoadingPods || isLoadingRelatedData ? (
+                        // Loading Skeleton Rows
                         Array.from({ length: 3 }).map((_, index) => (
                         <TableRow key={`loading-${index}`}>
                             <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
