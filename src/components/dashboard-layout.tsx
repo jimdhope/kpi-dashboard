@@ -18,7 +18,7 @@ import {
 import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; // Import Button
 import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 
@@ -104,9 +104,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                  </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                 {/* TODO: Update href when pods page exists */}
-                  <Link href="#" passHref> {/* Update href later */}
-                    <SidebarMenuButton tooltip="Pods" isActive={currentPath === '/admin/pods'}> {/* Update isActive path later */}
+                 <Link href="/admin/pods" passHref>
+                    <SidebarMenuButton tooltip="Pods" isActive={currentPath === '/admin/pods'}>
                        <ShieldCheck />
                       <span>Pods</span>
                     </SidebarMenuButton>
