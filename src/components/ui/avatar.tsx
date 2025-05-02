@@ -43,20 +43,34 @@ const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,
   AvatarFallbackProps
 >(({ className, children, initials, backgroundColor, seed, style, ...props }, ref) => {
-  // Generate initials from children if not provided explicitly
-  const finalInitials = initials || (typeof children === 'string' ? generateInitials(children) : '?');
-   // Generate random color if not provided, use seed for consistency if available
-   // Note: True random color generation might cause hydration issues if not seeded consistently
-   const finalBackgroundColor = backgroundColor || generateRandomColor();
+   const [clientBackgroundColor, setClientBackgroundColor] = React.useState<string | null>(null);
+
+   // Generate initials from children if not provided explicitly
+   const finalInitials = initials || (typeof children === 'string' ? generateInitials(children) : '?');
+
+   React.useEffect(() => {
+     // Generate random color only on the client, after initial render
+     if (!backgroundColor) {
+       setClientBackgroundColor(generateRandomColor());
+     }
+   }, [backgroundColor]); // Rerun if explicitly provided background changes
+
+   // Use explicitly provided color, or client-generated color, or default to null (CSS will handle)
+   const finalBackgroundColor = backgroundColor || clientBackgroundColor;
 
   return (
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
       "flex h-full w-full items-center justify-center rounded-full font-medium text-background", // Use text-background for contrast
+      !finalBackgroundColor && "bg-muted", // Use muted background if no color is ready/provided yet
       className
     )}
-     style={{ backgroundColor: finalBackgroundColor, ...style }} // Apply background color
+     style={{
+       ...style, // Spread original style first
+       // Apply background color only if it's available (explicitly passed or generated client-side)
+       ...(finalBackgroundColor ? { backgroundColor: finalBackgroundColor } : {}),
+      }}
     {...props}
   >
     {finalInitials} {/* Display initials */}
