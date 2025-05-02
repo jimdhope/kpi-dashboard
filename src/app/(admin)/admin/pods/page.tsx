@@ -394,35 +394,13 @@ export default function AdminPodsPage() {
                 )}
                 <Table>
                     <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px]">Logo</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Campaign</TableHead>
-                      <TableHead>Pod Manager</TableHead>
-                      <TableHead>Team Leader</TableHead>
-                      <TableHead>Agents</TableHead>
-                      <TableHead className="text-right w-[200px]">Actions</TableHead>
-                    </TableRow>
+                    <TableRow><TableHead className="w-[80px]">Logo</TableHead><TableHead>Name</TableHead><TableHead>Campaign</TableHead><TableHead>Pod Manager</TableHead><TableHead>Team Leader</TableHead><TableHead>Agents</TableHead><TableHead className="text-right w-[200px]">Actions</TableHead></TableRow>
                     </TableHeader>
                     <TableBody>
                     {isLoadingPods || isLoadingRelatedData ? (
                         // Loading Skeleton Rows
                         Array.from({ length: 3 }).map((_, index) => (
-                        <TableRow key={`loading-${index}`}>
-                          <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-1/4" /></TableCell> {/* Skeleton for Agents count */}
-                          <TableCell className="text-right">
-                              <div className="flex gap-1 justify-end">
-                                  <Skeleton className="h-8 w-8" />
-                                  <Skeleton className="h-8 w-8" />
-                                  <Skeleton className="h-8 w-8" /> {/* Skeleton for Manage Agents button */}
-                              </div>
-                          </TableCell>
-                        </TableRow>
+                        <TableRow key={`loading-${index}`}><TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell><TableCell><Skeleton className="h-4 w-3/4" /></TableCell><TableCell><Skeleton className="h-4 w-1/2" /></TableCell><TableCell><Skeleton className="h-4 w-1/2" /></TableCell><TableCell><Skeleton className="h-4 w-1/2" /></TableCell><TableCell><Skeleton className="h-4 w-1/4" /></TableCell><TableCell className="text-right"><div className="flex gap-1 justify-end"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></div></TableCell></TableRow>
                         ))
                     ) : pods.length === 0 && !error ? (
                         <TableRow>
