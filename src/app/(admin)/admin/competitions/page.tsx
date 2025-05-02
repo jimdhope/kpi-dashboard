@@ -39,8 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-// TODO: Create CompetitionForm component
-// import { CompetitionForm, CompetitionFormData } from '@/components/competition-form';
+import { CompetitionForm, CompetitionFormData } from '@/components/competition-form'; // Import CompetitionForm
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns'; // For formatting dates
@@ -77,6 +76,8 @@ export default function AdminCompetitionsPage() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
+  const [isSubmitting, setIsSubmitting] = useState(false); // Added state
+  const [isDeleting, setIsDeleting] = useState(false); // Added state
   const { toast } = useToast();
 
    // Fetch Campaigns and Pods for the form dropdowns
@@ -99,6 +100,7 @@ export default function AdminCompetitionsPage() {
                 campaignId: data.campaignId,
                 podManagerId: data.podManagerId, // Keep essential fields if needed later
                 teamLeaderId: data.teamLeaderId,
+                agentIds: data.agentIds || [], // Include agentIds
                 campaignName: campaign?.name || 'Unknown Campaign', // Add campaign name for display
              } as Pod & { campaignName: string }; // Ensure Pod type includes derived campaignName if needed
         });
@@ -180,25 +182,62 @@ export default function AdminCompetitionsPage() {
     setIsAlertOpen(true);
   };
 
-  // TODO: Implement handleFormSubmit
-  const handleFormSubmit = async (/* data: CompetitionFormData */) => {
-    setIsSubmitting(true); // Need to add isSubmitting state
-    console.log('Submitting competition form...');
-    // Use CompetitionFormData type
-    // Fetch default campaign rules if adding and campaign selected
-    // Save/Update competition document in Firestore ('competitions' collection)
-    // Handle Timestamp conversion for dates
-    // Save the potentially modified rules array within the competition doc
-    toast({ title: "Placeholder", description: "Competition saving not yet implemented." });
-    setIsSubmitting(false); // Need to add isSubmitting state
-    // setIsFormOpen(false); // Close on success
+  // Handle form submission for adding/editing competitions
+  const handleFormSubmit = async (data: CompetitionFormData, rules: RuleFormData[]) => {
+    setIsSubmitting(true);
+    const competitionDataToSave = {
+        name: data.name,
+        campaignId: data.campaignId,
+        podId: data.podId,
+        startDate: Timestamp.fromDate(data.startDate), // Convert date to timestamp
+        endDate: Timestamp.fromDate(data.endDate),     // Convert date to timestamp
+        rules: rules, // Save the rules array directly
+    };
+
+    if (dialogMode === 'add') {
+        try {
+            await addDoc(competitionsCollectionRef, competitionDataToSave);
+            toast({
+                title: "Competition Added",
+                description: `"${data.name}" has been successfully added.`,
+            });
+            setIsFormOpen(false);
+        } catch (err: any) {
+            console.error("Error adding competition: ", err);
+            toast({
+                variant: "destructive",
+                title: "Error Adding Competition",
+                description: err.message || "Failed to add the competition.",
+            });
+        }
+    } else if (dialogMode === 'edit' && selectedCompetition) {
+        try {
+            const competitionDoc = doc(db, 'competitions', selectedCompetition.id);
+            await updateDoc(competitionDoc, competitionDataToSave);
+            toast({
+                title: "Competition Updated",
+                description: `"${data.name}" has been successfully updated.`,
+            });
+            setIsFormOpen(false);
+            setSelectedCompetition(null);
+        } catch (err: any) {
+            console.error("Error updating competition: ", err);
+            toast({
+                variant: "destructive",
+                title: "Error Updating Competition",
+                description: err.message || "Failed to update the competition.",
+            });
+        }
+    }
+    setIsSubmitting(false);
   };
 
-  // TODO: Implement handleConfirmDelete
+
+  // Handle confirmation of deletion
   const handleConfirmDelete = async () => {
     if (selectedCompetition) {
       const competitionToDelete = selectedCompetition;
-       setIsDeleting(true); // Need to add isDeleting state
+       setIsDeleting(true); // Set deleting state
       try {
         const competitionDoc = doc(db, 'competitions', competitionToDelete.id);
         await deleteDoc(competitionDoc);
@@ -214,19 +253,21 @@ export default function AdminCompetitionsPage() {
           description: err.message || `Failed to delete competition "${competitionToDelete.name}".`,
         });
       } finally {
-         setIsDeleting(false); // Need to add isDeleting state
+         setIsDeleting(false); // Unset deleting state
          setIsAlertOpen(false);
          setSelectedCompetition(null);
       }
     }
   };
 
-  // Placeholder states - replace later
-   const [isSubmitting, setIsSubmitting] = useState(false);
-   const [isDeleting, setIsDeleting] = useState(false);
-
    // Disable Add button if related data isn't loaded
-   const isAddDisabled = isLoading || isLoadingRelated;
+   const isAddDisabled = isLoading || isLoadingRelated || (!isLoadingRelated && (campaigns.length === 0 || pods.length === 0));
+    const addButtonTooltip = isLoadingRelated
+        ? "Loading campaigns and pods..."
+        : (!isLoadingRelated && (campaigns.length === 0 || pods.length === 0))
+        ? "Cannot add competitions until Campaigns and Pods are available."
+        : "Add a new competition";
+
 
   return (
     <div className="space-y-6">
@@ -239,12 +280,12 @@ export default function AdminCompetitionsPage() {
                 <CardDescription>Set up, view, edit, or delete weekly competitions.</CardDescription>
               </div>
               <DialogTrigger asChild>
-                <Button onClick={openAddDialog} disabled={isAddDisabled}>
+                <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
                    {isLoadingRelated ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
                    {isLoadingRelated ? 'Loading Data...' : 'Add Competition'}
                 </Button>
               </DialogTrigger>
-               {isAddDisabled && !isLoading && <p className="text-xs text-muted-foreground">Loading campaigns/pods...</p>}
+               {isAddDisabled && !isLoading && <p className="text-xs text-muted-foreground">{addButtonTooltip}</p>}
             </CardHeader>
             <CardContent>
               {error && !isLoading && (
@@ -301,7 +342,7 @@ export default function AdminCompetitionsPage() {
                                 onClick={() => openEditDialog(comp)}
                                 aria-label={`Edit ${comp.name}`}
                                 title={`Edit ${comp.name}`}
-                                disabled={isLoading || isLoadingRelated} // Disable if related data is loading
+                                disabled={isLoading || isLoadingRelated || isSubmitting} // Disable if related data is loading or submitting
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -314,7 +355,7 @@ export default function AdminCompetitionsPage() {
                                 onClick={() => openDeleteAlert(comp)}
                                 aria-label={`Delete ${comp.name}`}
                                 title={`Delete ${comp.name}`}
-                                disabled={isLoading}
+                                disabled={isLoading || isDeleting} // Disable if loading or deleting
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -337,15 +378,12 @@ export default function AdminCompetitionsPage() {
                 {dialogMode === 'add' ? 'Configure the details for the new competition.' : `Make changes to the competition "${selectedCompetition?.name}".`}
               </DialogDescription>
             </DialogHeader>
-            {/* TODO: Create and render CompetitionForm */}
-            {isLoadingRelated ? (
+             {isLoadingRelated ? (
                  <div className="p-6 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                     <p className="text-muted-foreground">Loading form data...</p>
                 </div>
-            ) : (
-                <p className="p-4 text-center text-muted-foreground">Competition Form component goes here.</p>
-                /*
+             ) : (
                 <CompetitionForm
                     onSubmit={handleFormSubmit}
                     onCancel={() => setIsFormOpen(false)}
@@ -353,10 +391,9 @@ export default function AdminCompetitionsPage() {
                     campaigns={campaigns}
                     pods={pods}
                     mode={dialogMode}
-                    key={selectedCompetition?.id ?? 'add'}
+                    key={selectedCompetition?.id ?? 'add'} // Force re-render on edit/add change
                 />
-                */
-            )}
+             )}
           </DialogContent>
 
           {/* Delete Confirmation Alert Dialog Content */}
@@ -382,4 +419,3 @@ export default function AdminCompetitionsPage() {
     </div>
   );
 }
-        

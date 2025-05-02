@@ -72,7 +72,7 @@ export type CompetitionFormData = z.infer<typeof competitionFormSchema>;
 // --- Component Props ---
 
 interface CompetitionFormProps {
-  onSubmit: (data: CompetitionFormData) => Promise<void> | void;
+  onSubmit: (data: CompetitionFormData, rules: RuleFormData[]) => Promise<void> | void; // Pass rules separately
   onCancel: () => void;
   initialData?: Competition; // Optional initial data for editing
   campaigns: Campaign[];
@@ -198,8 +198,10 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
             ...data,
             startDate: Timestamp.fromDate(data.startDate),
             endDate: Timestamp.fromDate(data.endDate),
+            // Rules are already in the correct format from the form state
         };
-        await onSubmit(dataToSend as any); // Pass data with Timestamps (cast needed due to type mismatch)
+         // Pass the rules array separately as well
+        await onSubmit(dataToSend as any, data.rules); // Pass data with Timestamps and the rules array
     } catch (error) {
         console.error("Error during competition form submission:", error);
          // Parent component's onSubmit should handle showing toast on error
@@ -333,7 +335,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmitting} // Disable past dates
+                             // Optional: Disable past dates relative to today
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmitting}
                             initialFocus
                             />
                         </PopoverContent>
@@ -375,10 +378,9 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                 mode="single"
                                 selected={field.value}
                                 onSelect={field.onChange}
-                                // Disable dates before start date or past dates relative to today
+                                // Disable dates before start date
                                 disabled={(date) =>
                                     (form.watch('startDate') && date < form.watch('startDate')!) ||
-                                    date < new Date(new Date().setHours(0,0,0,0)) ||
                                     isSubmitting
                                 }
                                 initialFocus
@@ -437,6 +439,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     name={`rules.${index}.emoji`}
                                     render={({ field: ruleField }) => (
                                         <FormItem className="w-12">
+                                         <FormLabel className="sr-only">Emoji</FormLabel> {/* Added Sr Label */}
                                         <FormControl><Input placeholder="🏆" {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
                                         <FormMessage className="text-xs" />
                                         </FormItem>
@@ -447,6 +450,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     name={`rules.${index}.name`}
                                     render={({ field: ruleField }) => (
                                         <FormItem className="flex-1">
+                                         <FormLabel className="sr-only">Rule Name</FormLabel> {/* Added Sr Label */}
                                         <FormControl><Input placeholder="Rule Name" {...ruleField} disabled={isSubmitting} className="h-9" /></FormControl>
                                         <FormMessage className="text-xs" />
                                         </FormItem>
@@ -457,6 +461,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     name={`rules.${index}.points`}
                                     render={({ field: ruleField }) => (
                                         <FormItem className="w-20">
+                                         <FormLabel className="sr-only">Points</FormLabel> {/* Added Sr Label */}
                                         <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting} className="h-9" /></FormControl>
                                         <FormMessage className="text-xs" />
                                         </FormItem>
@@ -478,7 +483,11 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                     </div>
                  )}
                   {/* Display error message for the overall rules array (e.g., "at least one rule required") */}
-                   <FormMessage>{form.formState.errors.rules?.message}</FormMessage>
+                  {/* Display error message for the overall rules array only if touched and invalid */}
+                    {form.formState.errors.rules?.root && (
+                        <p className="text-sm font-medium text-destructive">{form.formState.errors.rules.root.message}</p>
+                    )}
+
             </div>
 
 
@@ -500,4 +509,3 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     </Form>
   );
 }
-        
