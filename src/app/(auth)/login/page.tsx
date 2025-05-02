@@ -13,6 +13,8 @@ import { db } from '@/lib/firebase'; // Import Firestore instance
 import { useRouter } from 'next/navigation'; // Use App Router's router
 import { Loader2, AlertCircle, LogIn } from 'lucide-react'; // Import icons
 import type { AppUser, UserRole } from '@/services/user'; // Import user types
+import { useToast } from '@/hooks/use-toast'; // Import useToast
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,6 +24,7 @@ export default function LoginPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true); // State to track initial auth check
   const router = useRouter();
   const auth = getAuth(); // No need to pass app if initialized globally
+  const { toast } = useToast(); // Get the toast function
 
   // Redirect logged-in users immediately
   useEffect(() => {
@@ -164,9 +167,10 @@ export default function LoginPage() {
                 {loading ? 'Signing in...' : 'Login'}
              </Button>
             </form>
-            <p className="mt-4 text-center text-xs text-muted-foreground">
+            {/* Removed the paragraph below */}
+            {/* <p className="mt-4 text-center text-xs text-muted-foreground">
                 Login with any valid Firebase user.
-            </p>
+            </p> */}
         </CardContent>
          <CardFooter className="text-center text-sm text-muted-foreground">
            {/* Optional: Add forgot password link */}
@@ -177,9 +181,3 @@ export default function LoginPage() {
     </div>
   );
 }
-// Helper function for toast (assuming useToast hook exists)
-// If not, replace with your actual toast implementation
-const toast = (options: { title: string; description: string; variant?: "default" | "destructive" }) => {
-  console.log(`Toast: ${options.title} - ${options.description}`);
-  // Replace with actual toast call, e.g., from useToast() hook
-};
