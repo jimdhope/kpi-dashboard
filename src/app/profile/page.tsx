@@ -51,8 +51,8 @@ export default function ProfilePage() {
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: '',
-      avatarInitials: '',
-      avatarBgColor: '',
+      avatarInitials: '', // Ensure defined default
+      avatarBgColor: '', // Ensure defined default
     },
     mode: 'onChange',
   });
@@ -84,7 +84,11 @@ export default function ProfilePage() {
             console.warn(`Firestore document for user ${currentUser.uid} not found.`);
             // Optionally create a basic document here if needed
             // For now, set form defaults from Auth user if available
-            form.reset({ name: currentUser.displayName || currentUser.email || '' });
+            form.reset({
+                name: currentUser.displayName || currentUser.email || '',
+                avatarInitials: '', // Ensure defined reset value
+                avatarBgColor: '', // Ensure defined reset value
+             });
             // Ensure basic userData state even if Firestore doc missing
             setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [] });
              toast({
@@ -101,7 +105,11 @@ export default function ProfilePage() {
              description: "Could not load your profile information.",
            });
              // Set basic defaults even on error
-             form.reset({ name: currentUser.displayName || currentUser.email || '' });
+             form.reset({
+                 name: currentUser.displayName || currentUser.email || '',
+                 avatarInitials: '', // Ensure defined reset value
+                 avatarBgColor: '', // Ensure defined reset value
+                });
               // Ensure basic userData state even on error
              setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [] });
         }
@@ -236,7 +244,15 @@ export default function ProfilePage() {
                                 <FormLabel>Custom Initials (Optional)</FormLabel>
                                 <FormDescription>Max 2 chars. Uses your name if blank.</FormDescription>
                                 <FormControl>
-                                    <Input placeholder={generateInitials(userData?.name || '?')} {...field} disabled={isSubmitting} maxLength={2} className="max-w-xs" />
+                                    {/* Ensure value is always a string */}
+                                    <Input
+                                        placeholder={generateInitials(userData?.name || '?')}
+                                        {...field}
+                                        value={field.value ?? ''} // Ensure value is never undefined
+                                        disabled={isSubmitting}
+                                        maxLength={2}
+                                        className="max-w-xs"
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -255,6 +271,7 @@ export default function ProfilePage() {
                                             type="text"
                                             placeholder="#008080" // Example color
                                             {...field}
+                                            value={field.value ?? ''} // Ensure value is never undefined
                                             disabled={isSubmitting}
                                             maxLength={7}
                                             className="w-32"
