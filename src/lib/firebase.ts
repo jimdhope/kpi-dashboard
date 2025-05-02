@@ -3,6 +3,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -36,6 +37,7 @@ if (!getApps().length) {
 // Initialize services
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app); // Initialize Storage
 let analytics: any = null; // Initialize analytics as null
 
 // Check if analytics is supported (runs only in browser)
@@ -53,4 +55,4 @@ if (typeof window !== 'undefined') {
 }
 
 
-export { app, auth, db, analytics };
+export { app, auth, db, storage, analytics }; // Export storage
