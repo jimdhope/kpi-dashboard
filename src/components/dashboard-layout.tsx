@@ -16,6 +16,9 @@ import {
 import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare } from 'lucide-react'; // Added CheckSquare
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
+import { Button } from '@/components/ui/button'; // Import Button
+import { getAuth } from 'firebase/auth'; // Import getAuth
+import { app } from '@/lib/firebase'; // Import app
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
