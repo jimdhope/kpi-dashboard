@@ -1,11 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase'; // Import Firestore instance
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, Trash2, PlusCircle } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,31 +38,56 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { CampaignForm, CampaignFormData } from '@/components/campaign-form'; // Import the new form component
-import { useToast } from '@/hooks/use-toast'; // Import useToast for feedback
+import { CampaignForm, CampaignFormData } from '@/components/campaign-form';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
-// Keep Campaign type definition here or move to a shared types file
+// Campaign type definition
 export interface Campaign {
   id: string;
   name: string;
-  logoUrl: string; // URL for the campaign logo
+  logoUrl: string;
 }
 
-// Mock data - In a real app, this would come from a service/API
-const initialCampaigns: Campaign[] = [
-  { id: 'camp-1', name: 'Q3 Sales Drive', logoUrl: 'https://picsum.photos/seed/q3sales/40' },
-  { id: 'camp-2', name: 'New Product Launch', logoUrl: 'https://picsum.photos/seed/productlaunch/40' },
-  { id: 'camp-3', name: 'Summer Fest Challenge', logoUrl: 'https://picsum.photos/seed/summerfest/40' },
-  { id: 'camp-4', name: 'End of Year Push', logoUrl: 'https://picsum.photos/seed/eoypush/40' },
-];
+const campaignsCollectionRef = collection(db, 'campaigns'); // Reference to the 'campaigns' collection
 
 export default function AdminCampaignsPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
   const { toast } = useToast();
+
+  const fetchCampaigns = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const q = query(campaignsCollectionRef, orderBy('name')); // Order by name
+      const data = await getDocs(q);
+      const fetchedCampaigns: Campaign[] = data.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Campaign, 'id'>),
+      }));
+      setCampaigns(fetchedCampaigns);
+    } catch (err) {
+      console.error("Error fetching campaigns:", err);
+      setError("Failed to fetch campaigns. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not load campaigns.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]); // Add toast as dependency
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, [fetchCampaigns]); // Fetch campaigns on component mount
 
   const openAddDialog = () => {
     setSelectedCampaign(null);
@@ -70,41 +106,73 @@ export default function AdminCampaignsPage() {
     setIsAlertOpen(true);
   };
 
-  const handleFormSubmit = (data: CampaignFormData) => {
+  const handleFormSubmit = async (data: CampaignFormData) => {
     if (dialogMode === 'add') {
-      // Add new campaign (simulate adding to a backend)
-      const newCampaign: Campaign = {
-        id: `camp-${Date.now()}`, // Generate a simple unique ID
-        ...data,
-      };
-      setCampaigns([...campaigns, newCampaign]);
-       toast({
+      try {
+        const docRef = await addDoc(campaignsCollectionRef, data);
+        // No need to manually add to state, refetch will update
+        // const newCampaign: Campaign = { id: docRef.id, ...data };
+        // setCampaigns([...campaigns, newCampaign]);
+        toast({
           title: "Campaign Added",
-          description: `"${newCampaign.name}" has been successfully added.`,
-      });
+          description: `"${data.name}" has been successfully added.`,
+        });
+        fetchCampaigns(); // Refetch campaigns after adding
+      } catch (err) {
+        console.error("Error adding campaign: ", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Failed to add campaign "${data.name}".`,
+        });
+      }
     } else if (dialogMode === 'edit' && selectedCampaign) {
-      // Edit existing campaign (simulate updating in a backend)
-      setCampaigns(campaigns.map(c =>
-        c.id === selectedCampaign.id ? { ...c, ...data } : c
-      ));
-       toast({
+      try {
+        const campaignDoc = doc(db, 'campaigns', selectedCampaign.id);
+        await updateDoc(campaignDoc, data);
+        // No need to manually update state, refetch will update
+        // setCampaigns(campaigns.map(c =>
+        //   c.id === selectedCampaign.id ? { ...c, ...data } : c
+        // ));
+        toast({
           title: "Campaign Updated",
           description: `"${data.name}" has been successfully updated.`,
-       });
+        });
+        fetchCampaigns(); // Refetch campaigns after updating
+      } catch (err) {
+        console.error("Error updating campaign: ", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Failed to update campaign "${selectedCampaign.name}".`,
+        });
+      }
     }
     setIsFormOpen(false); // Close the dialog
     setSelectedCampaign(null); // Reset selection
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedCampaign) {
-      // Delete campaign (simulate deleting from a backend)
-      setCampaigns(campaigns.filter(c => c.id !== selectedCampaign.id));
-       toast({
+      try {
+        const campaignDoc = doc(db, 'campaigns', selectedCampaign.id);
+        await deleteDoc(campaignDoc);
+        // No need to manually delete from state, refetch will update
+        // setCampaigns(campaigns.filter(c => c.id !== selectedCampaign.id));
+        toast({
           variant: "destructive",
           title: "Campaign Deleted",
           description: `"${selectedCampaign.name}" has been deleted.`,
-       });
+        });
+        fetchCampaigns(); // Refetch campaigns after deleting
+      } catch (err) {
+        console.error("Error deleting campaign: ", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Failed to delete campaign "${selectedCampaign.name}".`,
+        });
+      }
       setIsAlertOpen(false); // Close the alert dialog
       setSelectedCampaign(null); // Reset selection
     }
@@ -127,6 +195,9 @@ export default function AdminCampaignsPage() {
               </DialogTrigger>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="mb-4 text-center text-destructive">{error}</div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -136,7 +207,25 @@ export default function AdminCampaignsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {campaigns.length === 0 ? (
+                  {isLoading ? (
+                    // Loading Skeleton Rows
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <TableRow key={`loading-${index}`}>
+                        <TableCell>
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-3/4" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : campaigns.length === 0 && !error ? (
                     <TableRow>
                       <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                         No campaigns found. Create one to get started!
@@ -161,6 +250,7 @@ export default function AdminCampaignsPage() {
                                 onClick={() => openEditDialog(campaign)}
                                 aria-label={`Edit ${campaign.name}`}
                                 title={`Edit ${campaign.name}`}
+                                disabled={isLoading} // Disable while loading
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -173,6 +263,7 @@ export default function AdminCampaignsPage() {
                                 onClick={() => openDeleteAlert(campaign)}
                                 aria-label={`Delete ${campaign.name}`}
                                 title={`Delete ${campaign.name}`}
+                                disabled={isLoading} // Disable while loading
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -211,7 +302,7 @@ export default function AdminCampaignsPage() {
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the campaign
-                <span className="font-semibold"> "{selectedCampaign?.name}"</span>.
+                <span className="font-semibold"> "{selectedCampaign?.name}"</span> from the database.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -226,6 +317,7 @@ export default function AdminCampaignsPage() {
     </div>
   );
 }
+
 // Helper function for button variants - needed if using programmatically like above
 const buttonVariants = ({ variant }: { variant: "destructive" | "default" | null | undefined }) => {
     if (variant === "destructive") {
