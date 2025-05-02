@@ -24,24 +24,62 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
-import type { Pod, User } from '@/app/(admin)/admin/pods/page'; // Import Pod and User types
+import type { Pod } from '@/app/(admin)/admin/pods/page'; // Keep Pod type
+import type { AppUser } from '@/services/user'; // Import AppUser type
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
 import { Loader2 } from 'lucide-react';
+import { PasswordInput } from './ui/password-input'; // Import PasswordInput
 
 // Define the validation schema using Zod
-// Ensure IDs are non-empty strings if selected
+// Ensure IDs are non-empty strings if selected, or handle 'create_new'
+// Add conditional validation for user creation fields
 const podFormSchema = z.object({
   name: z.string().min(3, { message: 'Pod name must be at least 3 characters.' }).max(50, { message: 'Pod name must be 50 characters or less.' }),
-  logoUrl: z.string().url({ message: 'Please enter a valid URL for the logo.' }).or(z.literal('')),
+  logoUrl: z.string().url({ message: 'Please enter a valid URL for the logo.' }).or(z.literal('')).optional(),
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
-  podManagerId: z.string().min(1, { message: 'Please select a Pod Manager.' }),
-  teamLeaderId: z.string().min(1, { message: 'Please select a Team Leader.' }),
-  // TODO: Add fields for potentially creating new users (optional)
-  // createPodManagerName: z.string().optional(),
-  // createPodManagerEmail: z.string().email().optional(),
-  // createTeamLeaderName: z.string().optional(),
-  // createTeamLeaderEmail: z.string().email().optional(),
+  podManagerId: z.string().min(1, { message: 'Please select or create a Pod Manager.' }),
+  teamLeaderId: z.string().min(1, { message: 'Please select or create a Team Leader.' }),
+
+  // Fields for creating a new Pod Manager (optional)
+  createPodManagerName: z.string().optional(),
+  createPodManagerEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')), // Allow empty string for optional
+  createPodManagerPassword: z.string().min(6, { message: "Password must be at least 6 characters."}).optional().or(z.literal('')),
+
+  // Fields for creating a new Team Leader (optional)
+  createTeamLeaderName: z.string().optional(),
+  createTeamLeaderEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')), // Allow empty string for optional
+  createTeamLeaderPassword: z.string().min(6, { message: "Password must be at least 6 characters."}).optional().or(z.literal('')),
+}).superRefine((data, ctx) => {
+    // Validate Pod Manager creation fields if 'create_new' is selected
+    if (data.podManagerId === 'create_new') {
+        if (!data.createPodManagerName) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Manager name is required.', path: ['createPodManagerName'] });
+        }
+        if (!data.createPodManagerEmail) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Manager email is required.', path: ['createPodManagerEmail'] });
+        }
+         if (!data.createPodManagerPassword) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Manager password is required.', path: ['createPodManagerPassword'] });
+        } else if (data.createPodManagerPassword.length < 6) {
+             ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Manager password must be at least 6 characters.', path: ['createPodManagerPassword'] });
+        }
+    }
+     // Validate Team Leader creation fields if 'create_new' is selected
+     if (data.teamLeaderId === 'create_new') {
+        if (!data.createTeamLeaderName) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Leader name is required.', path: ['createTeamLeaderName'] });
+        }
+        if (!data.createTeamLeaderEmail) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Leader email is required.', path: ['createTeamLeaderEmail'] });
+        }
+         if (!data.createTeamLeaderPassword) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Leader password is required.', path: ['createTeamLeaderPassword'] });
+         } else if (data.createTeamLeaderPassword.length < 6) {
+             ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Leader password must be at least 6 characters.', path: ['createTeamLeaderPassword'] });
+        }
+    }
 });
+
 
 // Type for form data based on the schema
 export type PodFormData = z.infer<typeof podFormSchema>;
@@ -51,7 +89,7 @@ interface PodFormProps {
   onCancel: () => void;
   initialData?: Pod; // Optional initial data for editing
   campaigns: Campaign[];
-  users: User[]; // Pass the list of users
+  users: AppUser[]; // Use AppUser type
 }
 
 export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: PodFormProps) {
@@ -59,20 +97,27 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
     const form = useForm<PodFormData>({
         resolver: zodResolver(podFormSchema),
         defaultValues: {
-        name: initialData?.name || '',
-        logoUrl: initialData?.logoUrl || '', // Default to empty, handle placeholder in submit logic
-        campaignId: initialData?.campaignId || '',
-        podManagerId: initialData?.podManagerId || '',
-        teamLeaderId: initialData?.teamLeaderId || '',
-        // Initialize create user fields if added
-        // createPodManagerName: '',
-        // createPodManagerEmail: '',
-        // createTeamLeaderName: '',
-        // createTeamLeaderEmail: '',
+            name: initialData?.name || '',
+            logoUrl: initialData?.logoUrl || '', // Default to empty, handle placeholder in submit logic
+            campaignId: initialData?.campaignId || '',
+            podManagerId: initialData?.podManagerId || '',
+            teamLeaderId: initialData?.teamLeaderId || '',
+            // Initialize create user fields
+            createPodManagerName: '',
+            createPodManagerEmail: '',
+            createPodManagerPassword: '',
+            createTeamLeaderName: '',
+            createTeamLeaderEmail: '',
+            createTeamLeaderPassword: '',
         },
+        mode: 'onChange', // Validate on change for better UX with conditional fields
     });
 
-  // Reset form if initialData changes
+    // Watch selected IDs to conditionally show/hide creation forms
+    const watchPodManagerId = form.watch('podManagerId');
+    const watchTeamLeaderId = form.watch('teamLeaderId');
+
+  // Reset form if initialData changes (for edit mode)
   useEffect(() => {
     if (initialData) {
       form.reset({
@@ -81,38 +126,40 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
         campaignId: initialData.campaignId,
         podManagerId: initialData.podManagerId,
         teamLeaderId: initialData.teamLeaderId,
+         // Clear creation fields when editing existing pod
+         createPodManagerName: '',
+         createPodManagerEmail: '',
+         createPodManagerPassword: '',
+         createTeamLeaderName: '',
+         createTeamLeaderEmail: '',
+         createTeamLeaderPassword: '',
       });
     } else {
+        // Reset for add mode
         form.reset({
             name: '',
             logoUrl: '',
             campaignId: '',
             podManagerId: '',
             teamLeaderId: '',
+            createPodManagerName: '',
+            createPodManagerEmail: '',
+            createPodManagerPassword: '',
+            createTeamLeaderName: '',
+            createTeamLeaderEmail: '',
+            createTeamLeaderPassword: '',
         });
     }
   }, [initialData, form]);
 
-   const handleSubmit = async (data: PodFormData) => {
+   const handleFormSubmit = async (data: PodFormData) => {
         setIsSubmitting(true);
         try {
-            // Handle potential user creation logic here before submitting pod data
-            // For example, if createPodManagerName and createPodManagerEmail are filled,
-            // call a function to create the user in Firebase Auth and Firestore, get the ID,
-            // and use that ID for data.podManagerId. Similar logic for team leader.
-            // This requires significant changes to user management structure.
-
-            // Use placeholder logo if URL is empty
-             const finalData = {
-                ...data,
-                logoUrl: data.logoUrl || `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`,
-             };
-
-            await onSubmit(finalData);
-            form.reset(); // Reset form after successful submission
+            await onSubmit(data); // Call the onSubmit passed from parent
+            // Don't reset form here, let parent decide based on success/failure
         } catch (error) {
-            // Error handling is likely done in the parent component's onSubmit
              console.error("Error during form submission process:", error);
+             // Error handling should be primarily in the parent's onSubmit
         } finally {
              setIsSubmitting(false);
         }
@@ -121,11 +168,11 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
   // Filter users based on potential roles (adapt as needed)
   // TODO: Implement proper role filtering when roles are defined in the User type/Firestore
   const potentialManagers = users; //.filter(u => u.role === 'podManager' || u.role === 'admin');
-  const potentialLeaders = users; //.filter(u => u.role === 'teamLeader' || u.role === 'podManager'); // Managers could also be leaders?
+  const potentialLeaders = users; //.filter(u => u.role === 'teamLeader' || u.role === 'podManager');
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4">
         {/* Pod Name */}
         <FormField
           control={form.control}
@@ -134,7 +181,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             <FormItem>
               <FormLabel>Pod Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Alpha Pod" {...field} />
+                <Input placeholder="e.g., Alpha Pod" {...field} disabled={isSubmitting}/>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -152,13 +199,13 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                 <Input
                   placeholder="https://example.com/pod-logo.png"
                    {...field}
+                   disabled={isSubmitting}
                    />
               </FormControl>
                <FormMessage />
             </FormItem>
           )}
         />
-        {/* TODO: Add file upload later */}
 
         {/* Campaign Selection */}
         <FormField
@@ -167,7 +214,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
           render={({ field }) => (
             <FormItem>
               <FormLabel>Campaign</FormLabel>
-               <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+               <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isSubmitting}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a campaign" />
@@ -195,16 +242,15 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
           render={({ field }) => (
             <FormItem>
               <FormLabel>Pod Manager</FormLabel>
-               {/* TODO: Add option to create new user */}
-               <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+               <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isSubmitting}>
                  <FormControl>
                    <SelectTrigger>
-                     <SelectValue placeholder="Select a Pod Manager" />
+                     <SelectValue placeholder="Select or Create Manager" />
                    </SelectTrigger>
                  </FormControl>
                  <SelectContent>
-                    <SelectItem value="" disabled>Select a Pod Manager</SelectItem>
-                    {/* <SelectItem value="create_new">-- Create New Manager --</SelectItem> */}
+                    <SelectItem value="" disabled>Select or Create Manager</SelectItem>
+                    <SelectItem value="create_new">-- Create New Manager --</SelectItem>
                      {potentialManagers.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
                      {potentialManagers.map((user) => (
                          <SelectItem key={user.id} value={user.id}>
@@ -217,8 +263,47 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             </FormItem>
           )}
         />
-         {/* TODO: Show fields to create new manager if 'create_new' is selected */}
-         {/* {form.watch('podManagerId') === 'create_new' && ( ... fields for name/email ... )} */}
+
+         {/* --- Create New Pod Manager Fields (Conditional) --- */}
+         {watchPodManagerId === 'create_new' && (
+            <div className="pl-4 border-l-2 border-primary ml-2 space-y-3 mt-2 mb-4 pt-2 pb-3">
+                 <p className="text-sm font-medium text-primary">Create New Pod Manager</p>
+                 <FormField
+                    control={form.control}
+                    name="createPodManagerName"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Manager Name</FormLabel>
+                        <FormControl><Input placeholder="Full Name" {...field} disabled={isSubmitting}/></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+                <FormField
+                    control={form.control}
+                    name="createPodManagerEmail"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Manager Email</FormLabel>
+                        <FormControl><Input type="email" placeholder="email@example.com" {...field} disabled={isSubmitting}/></FormControl>
+                         <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="createPodManagerPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Temporary Password</FormLabel>
+                         {/* Use PasswordInput component */}
+                        <FormControl><PasswordInput placeholder="Min. 6 characters" {...field} disabled={isSubmitting}/></FormControl>
+                         <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+            </div>
+         )}
 
 
          {/* Team Leader Selection */}
@@ -228,15 +313,15 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
           render={({ field }) => (
             <FormItem>
               <FormLabel>Team Leader</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isSubmitting}>
                  <FormControl>
                    <SelectTrigger>
-                     <SelectValue placeholder="Select a Team Leader" />
+                     <SelectValue placeholder="Select or Create Leader" />
                    </SelectTrigger>
                  </FormControl>
                  <SelectContent>
-                    <SelectItem value="" disabled>Select a Team Leader</SelectItem>
-                    {/* <SelectItem value="create_new">-- Create New Leader --</SelectItem> */}
+                    <SelectItem value="" disabled>Select or Create Leader</SelectItem>
+                    <SelectItem value="create_new">-- Create New Leader --</SelectItem>
                      {potentialLeaders.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
                      {potentialLeaders.map((user) => (
                          <SelectItem key={user.id} value={user.id}>
@@ -249,7 +334,46 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             </FormItem>
           )}
         />
-         {/* TODO: Show fields to create new leader if 'create_new' is selected */}
+
+        {/* --- Create New Team Leader Fields (Conditional) --- */}
+         {watchTeamLeaderId === 'create_new' && (
+            <div className="pl-4 border-l-2 border-primary ml-2 space-y-3 mt-2 mb-4 pt-2 pb-3">
+                 <p className="text-sm font-medium text-primary">Create New Team Leader</p>
+                  <FormField
+                    control={form.control}
+                    name="createTeamLeaderName"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Leader Name</FormLabel>
+                        <FormControl><Input placeholder="Full Name" {...field} disabled={isSubmitting}/></FormControl>
+                         <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="createTeamLeaderEmail"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Leader Email</FormLabel>
+                        <FormControl><Input type="email" placeholder="email@example.com" {...field} disabled={isSubmitting}/></FormControl>
+                         <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+                <FormField
+                    control={form.control}
+                    name="createTeamLeaderPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Temporary Password</FormLabel>
+                         <FormControl><PasswordInput placeholder="Min. 6 characters" {...field} disabled={isSubmitting}/></FormControl>
+                         <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+            </div>
+         )}
 
 
           <DialogFooter>

@@ -47,15 +47,8 @@ import { PodForm, PodFormData } from '@/components/pod-form'; // Create this for
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
+import { createUser, AppUser } from '@/services/user'; // Import user service and type
 
-// User type definition (simplified for now)
-// TODO: Enhance this based on actual user management implementation
-export interface User {
-    id: string;
-    name: string;
-    email: string; // Needed for display?
-    role: string; // e.g., 'podManager', 'teamLeader', 'agent'
-}
 
 // Pod type definition
 export interface Pod {
@@ -78,8 +71,9 @@ const usersCollectionRef = collection(db, 'users'); // Assuming a 'users' collec
 export default function AdminPodsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers] = useState<AppUser[]>([]); // Use AppUser type
+  const [isLoadingPods, setIsLoadingPods] = useState(true); // Loading state for pods
+  const [isLoadingRelatedData, setIsLoadingRelatedData] = useState(true); // Loading state for campaigns/users
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -87,43 +81,67 @@ export default function AdminPodsPage() {
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
   const { toast } = useToast();
 
-  // Fetch Campaigns and Users (run once)
+  // Fetch Campaigns and Users (run once or when needed)
   useEffect(() => {
       const fetchRelatedData = async () => {
-          setIsLoading(true);
+          setIsLoadingRelatedData(true);
+          setError(null); // Reset error for related data fetch
           try {
               // Fetch campaigns
               const campaignSnapshot = await getDocs(query(campaignsCollectionRef, orderBy('name')));
               const fetchedCampaigns = campaignSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign));
               setCampaigns(fetchedCampaigns);
 
-              // Fetch users (consider filtering by role if needed)
-              // TODO: Add proper role filtering when user roles are implemented
-              const userSnapshot = await getDocs(query(usersCollectionRef, orderBy('name')));
-              const fetchedUsers = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-              setUsers(fetchedUsers);
+              // Fetch users (using onSnapshot for potential real-time updates if users are added elsewhere)
+              const usersQuery = query(usersCollectionRef, orderBy('name'));
+              const unsubscribeUsers = onSnapshot(usersQuery, (userSnapshot) => {
+                  const fetchedUsers = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+                  setUsers(fetchedUsers);
+                  setError(null); // Clear error if fetch succeeds
+                   setIsLoadingRelatedData(false); // Set loading false *after* users are fetched
+              }, (err) => {
+                   console.error("Error fetching users with snapshot:", err);
+                   setError("Failed to load users data. Pod management may be limited.");
+                    toast({
+                        variant: "destructive",
+                        title: "Data Loading Error",
+                        description: "Could not load users.",
+                    });
+                    setIsLoadingRelatedData(false); // Set loading false on error too
+              });
 
-              setError(null); // Clear error if fetch succeeds
+              // Return the unsubscribe function for users
+              return unsubscribeUsers;
 
           } catch (err) {
-              console.error("Error fetching related data (campaigns/users):", err);
-              setError("Failed to load necessary data (campaigns or users). Pod management may be limited.");
+              console.error("Error fetching initial related data (campaigns):", err);
+              setError("Failed to load necessary data (campaigns). Pod management may be limited.");
               toast({
                   variant: "destructive",
                   title: "Data Loading Error",
-                  description: "Could not load campaigns or users.",
+                  description: "Could not load campaigns.",
               });
-          } finally {
-            // Don't set loading to false here, let the pods fetch handle it
+               setIsLoadingRelatedData(false); // Set loading false on error
+               return () => {}; // Return empty unsubscribe if campaign fetch fails
           }
       };
-      fetchRelatedData();
+
+     const unsubscribe = fetchRelatedData();
+
+     // Cleanup function to unsubscribe from users listener
+     return () => {
+         unsubscribe.then(unsub => unsub()).catch(err => console.error("Error unsubscribing from users", err));
+     };
+
   }, [toast]); // Dependencies
 
 
   // Fetch Pods with real-time updates and enrich data
   useEffect(() => {
-    setIsLoading(true);
+     // Only fetch pods if related data isn't loading anymore
+     if (isLoadingRelatedData) return;
+
+    setIsLoadingPods(true);
     setError(null); // Reset error for pods fetch
 
     const q = query(podsCollectionRef, orderBy('name'));
@@ -140,12 +158,12 @@ export default function AdminPodsPage() {
           id: doc.id,
           ...data,
           campaignName: campaign?.name || 'Unknown Campaign',
-          podManagerName: podManager?.name || 'Unknown Manager',
-          teamLeaderName: teamLeader?.name || 'Unknown Leader',
+          podManagerName: podManager?.name || 'N/A', // More specific fallback
+          teamLeaderName: teamLeader?.name || 'N/A', // More specific fallback
         };
       });
       setPods(fetchedPods);
-      setIsLoading(false); // Set loading false after pods (and derived data) are processed
+      setIsLoadingPods(false); // Set loading false after pods (and derived data) are processed
       setError(null);
     }, (err) => {
       console.error("Error fetching pods with snapshot:", err);
@@ -155,11 +173,12 @@ export default function AdminPodsPage() {
         title: "Error",
         description: "Could not load pods.",
       });
-      setIsLoading(false); // Set loading false on error too
+      setIsLoadingPods(false); // Set loading false on error too
     });
 
     return () => unsubscribe();
-  }, [toast, campaigns, users]); // Re-run if campaigns or users data changes to re-enrich pods
+    // Re-run if related data changes to re-enrich pods, or if loading state changes
+  }, [toast, campaigns, users, isLoadingRelatedData]);
 
 
   const openAddDialog = () => {
@@ -180,11 +199,52 @@ export default function AdminPodsPage() {
   };
 
    const handleFormSubmit = async (data: PodFormData) => {
-        // TODO: Handle user creation if necessary (needs more complex logic)
         console.log("Form Data Received:", data);
 
-        // Ensure essential IDs are present (campaign, manager, leader)
-        if (!data.campaignId || !data.podManagerId || !data.teamLeaderId) {
+        let finalPodManagerId = data.podManagerId;
+        let finalTeamLeaderId = data.teamLeaderId;
+
+        // --- User Creation Logic ---
+        try {
+            // Create Pod Manager if requested
+            if (data.podManagerId === 'create_new' && data.createPodManagerName && data.createPodManagerEmail && data.createPodManagerPassword) {
+                toast({ title: "Creating Pod Manager...", description: "Please wait." });
+                const newManager = await createUser(
+                    data.createPodManagerName,
+                    data.createPodManagerEmail,
+                    data.createPodManagerPassword,
+                    'podManager' // Assign role
+                );
+                finalPodManagerId = newManager.id!; // Use the new user's ID (Auth UID is used as Firestore ID)
+                 toast({ title: "Pod Manager Created", description: `${newManager.name} added.` });
+            }
+
+            // Create Team Leader if requested
+             if (data.teamLeaderId === 'create_new' && data.createTeamLeaderName && data.createTeamLeaderEmail && data.createTeamLeaderPassword) {
+                 toast({ title: "Creating Team Leader...", description: "Please wait." });
+                 const newLeader = await createUser(
+                     data.createTeamLeaderName,
+                     data.createTeamLeaderEmail,
+                     data.createTeamLeaderPassword,
+                     'teamLeader' // Assign role
+                 );
+                 finalTeamLeaderId = newLeader.id!; // Use the new user's ID
+                 toast({ title: "Team Leader Created", description: `${newLeader.name} added.` });
+            }
+        } catch (userCreationError: any) {
+             console.error("Error creating user during pod submission:", userCreationError);
+             toast({
+                variant: "destructive",
+                title: "User Creation Failed",
+                description: userCreationError.message || "Could not create the specified user.",
+            });
+            return; // Stop pod creation if user creation fails
+        }
+        // --- End User Creation Logic ---
+
+
+        // Ensure essential IDs are present after potential user creation
+        if (!data.campaignId || !finalPodManagerId || !finalTeamLeaderId) {
              toast({
                 variant: "destructive",
                 title: "Missing Information",
@@ -197,10 +257,12 @@ export default function AdminPodsPage() {
             name: data.name,
             logoUrl: data.logoUrl || `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`, // Default logo
             campaignId: data.campaignId,
-            podManagerId: data.podManagerId,
-            teamLeaderId: data.teamLeaderId,
+            podManagerId: finalPodManagerId, // Use potentially updated ID
+            teamLeaderId: finalTeamLeaderId,   // Use potentially updated ID
         };
 
+
+        // --- Pod Save/Update Logic ---
         if (dialogMode === 'add') {
             try {
                 await addDoc(podsCollectionRef, podDataToSave);
@@ -208,6 +270,8 @@ export default function AdminPodsPage() {
                     title: "Pod Added",
                     description: `"${data.name}" has been successfully added.`,
                 });
+                 setIsFormOpen(false); // Close dialog on success
+                 setSelectedPod(null);
             } catch (err: any) {
                 console.error("Error adding pod: ", err);
                 toast({
@@ -224,6 +288,8 @@ export default function AdminPodsPage() {
                     title: "Pod Updated",
                     description: `"${data.name}" has been successfully updated.`,
                 });
+                 setIsFormOpen(false); // Close dialog on success
+                 setSelectedPod(null);
             } catch (err: any) {
                 console.error("Error updating pod: ", err);
                 toast({
@@ -233,8 +299,7 @@ export default function AdminPodsPage() {
                 });
             }
         }
-        setIsFormOpen(false);
-        setSelectedPod(null);
+        // No need to reset form here, handled by PodForm's onSubmit wrapper
     };
 
   const handleConfirmDelete = async () => {
@@ -260,6 +325,15 @@ export default function AdminPodsPage() {
     }
   };
 
+   // Determine if the add button should be disabled
+   const isAddDisabled = isLoadingRelatedData || isLoadingPods || (!isLoadingRelatedData && (campaigns.length === 0 || users.length === 0));
+   const addButtonTooltip = isLoadingRelatedData
+        ? "Loading campaigns and users..."
+        : (!isLoadingRelatedData && (campaigns.length === 0 || users.length === 0))
+        ? "Cannot add pods until Campaigns and Users are available."
+        : "Add a new pod";
+
+
   return (
     <div className="space-y-6">
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -271,16 +345,17 @@ export default function AdminPodsPage() {
                 <CardDescription>View, add, edit, or delete pods.</CardDescription>
               </div>
               <DialogTrigger asChild>
-                <Button onClick={openAddDialog} disabled={isLoading || campaigns.length === 0 || users.length === 0}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Pod
-                </Button>
+                 <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
+                   <PlusCircle className="mr-2 h-4 w-4" /> Add Pod
+                 </Button>
               </DialogTrigger>
-               {(campaigns.length === 0 || users.length === 0) && !isLoading && (
-                    <p className="text-xs text-destructive">Cannot add pods until Campaigns and Users are available.</p>
+               {/* Informative message when button is disabled */}
+                {isAddDisabled && !isLoadingRelatedData && (
+                   <p className="text-xs text-muted-foreground">{addButtonTooltip}</p>
                 )}
             </CardHeader>
             <CardContent>
-              {error && !isLoading && (
+              {error && !(isLoadingPods || isLoadingRelatedData) && ( // Show error only when not loading
                 <div className="mb-4 text-center text-destructive">{error}</div>
               )}
               <Table>
@@ -295,7 +370,7 @@ export default function AdminPodsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
+                  {isLoadingPods || isLoadingRelatedData ? ( // Show skeleton if either is loading
                     Array.from({ length: 3 }).map((_, index) => (
                       <TableRow key={`loading-${index}`}>
                         <TableCell>
@@ -349,7 +424,7 @@ export default function AdminPodsPage() {
                                 onClick={() => openEditDialog(pod)}
                                 aria-label={`Edit ${pod.name}`}
                                 title={`Edit ${pod.name}`}
-                                disabled={isLoading || campaigns.length === 0 || users.length === 0}
+                                disabled={isLoadingPods || isLoadingRelatedData || campaigns.length === 0 || users.length === 0} // Disable edit if dependencies missing
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -362,7 +437,7 @@ export default function AdminPodsPage() {
                                 onClick={() => openDeleteAlert(pod)}
                                 aria-label={`Delete ${pod.name}`}
                                 title={`Delete ${pod.name}`}
-                                disabled={isLoading}
+                                disabled={isLoadingPods || isLoadingRelatedData} // Disable while loading
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -378,22 +453,29 @@ export default function AdminPodsPage() {
           </Card>
 
           {/* Pod Add/Edit Form Dialog */}
-          <DialogContent className="sm:max-w-md"> {/* Wider dialog */}
+          <DialogContent className="sm:max-w-lg"> {/* Wider dialog */}
             <DialogHeader>
               <DialogTitle>{dialogMode === 'add' ? 'Add New Pod' : 'Edit Pod'}</DialogTitle>
               <DialogDescription>
-                {dialogMode === 'add' ? 'Enter the details for the new pod.' : `Make changes to the pod "${selectedPod?.name}".`}
+                {dialogMode === 'add' ? 'Enter the details for the new pod. You can select existing users or create new ones.' : `Make changes to the pod "${selectedPod?.name}".`}
               </DialogDescription>
             </DialogHeader>
-            {/* Pass campaigns and users lists to the form */}
-            <PodForm
-              onSubmit={handleFormSubmit}
-              onCancel={() => setIsFormOpen(false)}
-              initialData={selectedPod ?? undefined}
-              campaigns={campaigns}
-              users={users} // Pass users list
-              key={selectedPod?.id ?? 'add'}
-            />
+            {/* Render form only when dependencies are loaded */}
+            {!isLoadingRelatedData ? (
+                 <PodForm
+                    onSubmit={handleFormSubmit}
+                    onCancel={() => setIsFormOpen(false)}
+                    initialData={selectedPod ?? undefined}
+                    campaigns={campaigns}
+                    users={users} // Pass users list
+                    key={selectedPod?.id ?? 'add'} // Re-render form on mode change
+                />
+            ) : (
+                <div className="p-6 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                    <p className="text-muted-foreground">Loading form data...</p>
+                 </div>
+             )}
           </DialogContent>
 
           {/* Delete Confirmation Alert Dialog */}
