@@ -31,10 +31,10 @@ export function ManagePodAgentsDialog({ pod, allUsers, onSave, onClose }: Manage
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); // State for search term
 
-  // Filter users to show only potential agents
+  // Filter users to show only potential agents (users with 'agent' role, potentially among others)
   const availableAgents = useMemo(() => {
       return allUsers.filter(user =>
-        user.role === 'agent' // Simple role check, refine as necessary
+        user.roles?.includes('agent') // Check if 'roles' array includes 'agent'
       );
   }, [allUsers]);
 
@@ -83,7 +83,7 @@ export function ManagePodAgentsDialog({ pod, allUsers, onSave, onClose }: Manage
       <DialogHeader>
         <DialogTitle>Manage Agents for {pod.name}</DialogTitle>
         <DialogDescription>
-          Select the agents assigned to this pod.
+          Select the agents assigned to this pod. Only users with the 'agent' role are shown.
         </DialogDescription>
       </DialogHeader>
 
@@ -102,7 +102,7 @@ export function ManagePodAgentsDialog({ pod, allUsers, onSave, onClose }: Manage
 
 
       {availableAgents.length === 0 ? (
-         <p className="text-muted-foreground text-center py-4">No available agents found. Add agents with the 'agent' role first.</p>
+         <p className="text-muted-foreground text-center py-4">No available agents found. Add users with the 'agent' role first.</p>
       ) : (
          <ScrollArea className="max-h-[300px] p-1 border rounded-md"> {/* Adjusted max height */}
             <div className="space-y-3 p-4">
