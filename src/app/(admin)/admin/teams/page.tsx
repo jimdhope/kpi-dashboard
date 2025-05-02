@@ -41,7 +41,8 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
-  DragOverEvent,
+  DragOverEvent, // Keep DragOverEvent if needed for visual feedback later
+  DragOverlay, // Import DragOverlay
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -71,14 +72,13 @@ const DraggableAgent = React.forwardRef<HTMLDivElement, DraggableAgentProps>(
         <Card
             ref={ref}
             className={cn(
-                "p-2 text-sm bg-card shadow-sm flex items-center gap-2 cursor-grab",
-                isOverlay && "shadow-lg opacity-80 cursor-grabbing" // Style when dragging
+                "p-2 text-sm bg-card shadow-sm flex items-center gap-2 touch-none", // Added touch-none
+                isOverlay ? "shadow-lg opacity-90 cursor-grabbing z-50" : "cursor-grab" // Style when dragging
             )}
             {...props} // Spread listeners and style from useSortable
             >
             <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span className="flex-grow truncate">{agent.name}</span>
-            {/* <span className="text-xs text-muted-foreground truncate">({agent.email})</span> */}
         </Card>
     );
 });
@@ -100,7 +100,7 @@ function SortableAgentItem({ agent }: { agent: AppUser }) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1, // Make original item semi-transparent while dragging
-    zIndex: isDragging ? 10 : undefined, // Ensure dragged item is on top
+    zIndex: isDragging ? 10 : undefined, // Ensure dragged item is on top if needed (usually overlay handles this)
   };
 
   return (
@@ -108,12 +108,15 @@ function SortableAgentItem({ agent }: { agent: AppUser }) {
           ref={setNodeRef}
           style={style}
           agent={agent}
-          isOverlay={isDragging}
+        //   isOverlay={isDragging} // Overlay is handled separately now
           {...attributes}
           {...listeners}
        />
   );
 }
+
+// Define container IDs
+const UNASSIGNED_CONTAINER_ID = 'unassigned-agents';
 
 export default function AdminTeamsPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -126,7 +129,7 @@ export default function AdminTeamsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-   const [activeId, setActiveId] = useState<string | null>(null); // Store ID of dragged agent
+  const [activeId, setActiveId] = useState<string | null>(null); // Store ID of dragged agent
   const { toast } = useToast();
 
   const competitionsCollectionRef = collection(db, 'competitions');
@@ -137,9 +140,9 @@ export default function AdminTeamsPage() {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             // Require the mouse to move by 10 pixels before activating
-            activationConstraint: {
-                distance: 10,
-            },
+             activationConstraint: {
+                distance: 5, // Reduced distance slightly
+             },
         }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
@@ -185,7 +188,7 @@ export default function AdminTeamsPage() {
         console.error("Error fetching initial data:", err);
         setError("Failed to load necessary data.");
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Move loading false here
       }
     };
 
@@ -210,11 +213,12 @@ export default function AdminTeamsPage() {
             try {
                 // 1. Get the selected pod's agent IDs
                 const selectedPod = pods.find(p => p.id === selectedPodId);
-                const podAgentIds = selectedPod?.agentIds || [];
+                 // Ensure agentIds exist and is an array
+                 const podAgentIds = Array.isArray(selectedPod?.agentIds) ? selectedPod.agentIds : [];
 
-                // 2. Get the full agent user objects
-                 const podAgents = users.filter(user => podAgentIds.includes(user.id!));
 
+                 // 2. Get the full agent user objects from the main 'users' state
+                 const podAgents = users.filter(user => user.id && podAgentIds.includes(user.id));
 
                 // 3. Get the selected competition's data, including existing teams
                 const compDocRef = doc(db, 'competitions', selectedCompetitionId);
@@ -225,7 +229,8 @@ export default function AdminTeamsPage() {
                      // Ensure teams have IDs from the start
                      const existingTeams: Team[] = (compData.teams || []).map((team, index) => ({
                          ...team,
-                         id: team.id || `team-${index + 1}-${Date.now()}` // Generate ID if missing
+                         id: team.id || `team-${index + 1}-${Date.now()}`, // Generate ID if missing
+                         agentIds: Array.isArray(team.agentIds) ? team.agentIds : [], // Ensure agentIds is array
                      }));
 
                      // Default to 3 empty teams if none exist in the document
@@ -237,7 +242,7 @@ export default function AdminTeamsPage() {
 
                     // 4. Determine unassigned agents
                     const assignedAgentIds = new Set(teamsToUse.flatMap(t => t.agentIds));
-                    const currentUnassignedAgents = podAgents.filter(agent => !assignedAgentIds.has(agent.id!));
+                    const currentUnassignedAgents = podAgents.filter(agent => agent.id && !assignedAgentIds.has(agent.id));
 
 
                     setTeams(teamsToUse);
@@ -258,8 +263,16 @@ export default function AdminTeamsPage() {
             }
         };
 
-        loadTeamData();
-    }, [selectedCompetitionId, selectedPodId, pods, users]); // Rerun when selections or base data change
+        // Ensure users and pods are loaded before attempting to load team data
+         if (users.length > 0 && pods.length > 0) {
+            loadTeamData();
+         } else if (!isLoading) { // If main loading is done but no users/pods, set team loading false
+             setIsLoading(false);
+             setTeams([]);
+             setUnassignedAgents([]);
+         }
+    }, [selectedCompetitionId, selectedPodId, pods, users, isLoading]); // Rerun when selections or base data change
+
 
   // --- Memoized Derived Data ---
   const selectedCompetition = useMemo(() => competitions.find(c => c.id === selectedCompetitionId), [competitions, selectedCompetitionId]);
@@ -277,20 +290,18 @@ export default function AdminTeamsPage() {
 
   // Agents available in the selected pod (memoized)
   const podAgents = useMemo(() => {
-      if (!selectedPod) return [];
-      return users.filter(user => selectedPod.agentIds?.includes(user.id!));
-  }, [selectedPod, users]);
+    if (!selectedPod || !Array.isArray(selectedPod.agentIds)) return [];
+    // Ensure users have IDs before filtering
+    return users.filter(user => user.id && selectedPod.agentIds!.includes(user.id));
+}, [selectedPod, users]);
+
 
   // Get the full agent object being dragged
   const draggedAgent = useMemo(() => {
      if (!activeId) return null;
      // Find in unassigned or any team
-     return unassignedAgents.find(a => a.id === activeId) ||
-            teams.flatMap(t => t.agentIds)
-                 .map(agentId => users.find(u => u.id === agentId))
-                 .find(agent => agent?.id === activeId) ||
-            null;
-  }, [activeId, unassignedAgents, teams, users]);
+     return users.find(u => u.id === activeId) || null; // Simpler find in all users
+  }, [activeId, users]);
 
 
   // --- Event Handlers ---
@@ -328,7 +339,9 @@ export default function AdminTeamsPage() {
 
        // Distribute agents round-robin
        shuffledAgents.forEach((agent, index) => {
-         newTeams[index % newTeams.length].agentIds.push(agent.id!);
+         if (agent.id) { // Check if agent.id is defined
+            newTeams[index % newTeams.length].agentIds.push(agent.id);
+         }
        });
 
        setTeams(newTeams);
@@ -370,9 +383,10 @@ export default function AdminTeamsPage() {
 
    // --- Drag and Drop Handlers ---
 
-    const findContainer = (id: string): string | null => {
-        if (id === 'unassigned' || unassignedAgents.some(agent => agent.id === id)) {
-        return 'unassigned';
+    const findContainer = (id: string | null): string | null => {
+        if (!id) return null;
+        if (id === UNASSIGNED_CONTAINER_ID || unassignedAgents.some(agent => agent.id === id)) {
+            return UNASSIGNED_CONTAINER_ID;
         }
         for (const team of teams) {
             if (team.id === id || team.agentIds.includes(id)) {
@@ -387,97 +401,91 @@ export default function AdminTeamsPage() {
        console.log("Drag Start:", event.active.id);
    };
 
+    // handleDragOver is mainly for visual feedback while dragging over containers.
+    // The actual state update logic is consolidated in handleDragEnd.
+    // You might re-introduce handleDragOver later if complex visual cues are needed.
+    /*
     const handleDragOver = (event: DragOverEvent) => {
         const { active, over } = event;
-        if (!over) return;
-
-        const activeId = active.id as string;
-        const overId = over.id as string;
-
-        if (activeId === overId) return;
+        if (!over || !activeId) return;
 
         const activeContainerId = findContainer(activeId);
-        const overContainerId = findContainer(overId);
-
-        console.log(`Drag Over: Active ${activeId} (in ${activeContainerId}) -> Over ${overId} (in ${overContainerId})`);
-
+        // over.id might be a container ID or an item ID within a container
+        const overContainerId = findContainer(over.id as string);
 
         if (!activeContainerId || !overContainerId || activeContainerId === overContainerId) {
+             console.log(`Drag Over Skip: active=${activeId}, over=${over.id}, activeContainer=${activeContainerId}, overContainer=${overContainerId}`);
+            return; // No need to update state if dragging within the same container or invalid containers
+        }
+
+         console.log(`Drag Over Action: Moving ${activeId} from ${activeContainerId} to ${overContainerId}`);
+
+        // --- Simplified state update preview (optional, main logic in handleDragEnd) ---
+        // This part could be used for optimistic UI updates during drag, but can be complex.
+        // For simplicity, we rely on handleDragEnd for the definitive state change.
+    };
+    */
+
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveId(null); // Clear active drag ID
+
+        if (!over || !active.id) {
+            console.log("Drag End: No target or active item ID");
             return;
         }
 
-        setTeams(prevTeams => {
-            const nextTeams = [...prevTeams];
-            const activeTeamIndex = nextTeams.findIndex(t => t.id === activeContainerId);
-            const overTeamIndex = nextTeams.findIndex(t => t.id === overContainerId);
+        const activeId = active.id as string;
+        const overId = over.id as string; // This ID can be a container (team.id, UNASSIGNED_CONTAINER_ID) or another item (agent.id)
 
-            // Moving from a team
-            if (activeTeamIndex !== -1) {
-                 const activeItemIndex = nextTeams[activeTeamIndex].agentIds.indexOf(activeId);
-                 nextTeams[activeTeamIndex].agentIds.splice(activeItemIndex, 1);
-            } else {
-                // Moving from unassigned
-                 setUnassignedAgents(prev => prev.filter(agent => agent.id !== activeId));
-            }
+        const activeContainerId = findContainer(activeId);
+        // Determine the target container ID. If 'overId' is an agent, find *that agent's* container.
+        const overContainerId = findContainer(overId);
 
-            // Moving to a team
-            if (overTeamIndex !== -1) {
-                 const overItemIndex = nextTeams[overTeamIndex].agentIds.indexOf(overId);
-                 // Insert at the position of the item being dragged over
-                 nextTeams[overTeamIndex].agentIds.splice(overItemIndex >= 0 ? overItemIndex : nextTeams[overTeamIndex].agentIds.length, 0, activeId);
+        console.log(`Drag End: Active ${activeId} (from ${activeContainerId}) -> Over ${overId} (target container: ${overContainerId})`);
+
+        if (!activeContainerId || !overContainerId) {
+            console.warn("Drag End: Could not determine source or target container.");
+            return;
+        }
+
+        const agentToMove = users.find(u => u.id === activeId);
+        if (!agentToMove) {
+            console.warn(`Drag End: Agent with ID ${activeId} not found.`);
+            return;
+        }
+
+        // --- Logic to update state based on drop target ---
+        if (activeContainerId === overContainerId) {
+            // --- Reordering within the same container ---
+            console.log(`Reordering ${activeId} within ${activeContainerId}`);
+            if (activeContainerId === UNASSIGNED_CONTAINER_ID) {
+                setUnassignedAgents(prev => {
+                    const oldIndex = prev.findIndex(a => a.id === activeId);
+                    const newIndex = prev.findIndex(a => a.id === overId);
+                    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return prev;
+                    return arrayMove(prev, oldIndex, newIndex);
+                });
             } else {
-                 // Moving to unassigned
-                 const agentToAdd = users.find(u => u.id === activeId);
-                 if (agentToAdd) {
-                    // Check if not already in unassigned to prevent duplicates during drag over
-                    if (!unassignedAgents.some(a => a.id === activeId)) {
-                        setUnassignedAgents(prev => {
-                           const overItemIndex = prev.findIndex(a => a.id === overId);
-                            const newUnassigned = [...prev];
-                             newUnassigned.splice(overItemIndex >= 0 ? overItemIndex : newUnassigned.length, 0, agentToAdd);
-                             return newUnassigned;
-                        });
+                setTeams(prev => prev.map(team => {
+                    if (team.id === activeContainerId) {
+                        const oldIndex = team.agentIds.indexOf(activeId);
+                        const newIndex = team.agentIds.indexOf(overId);
+                        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return team;
+                        return { ...team, agentIds: arrayMove(team.agentIds, oldIndex, newIndex) };
                     }
-                 }
+                    return team;
+                }));
             }
-            return nextTeams;
-        });
-    };
+        } else {
+            // --- Moving between containers ---
+            console.log(`Moving ${activeId} from ${activeContainerId} to ${overContainerId}`);
+            let targetAgentIds: string[] = [];
+            let targetIndex = -1;
 
-
-   const handleDragEnd = (event: DragEndEvent) => {
-     const { active, over } = event;
-     setActiveId(null); // Clear active drag ID
-
-     if (!over) {
-         console.log("Drag End: No target");
-         return;
-     }
-
-     const activeId = active.id as string;
-     const overId = over.id as string; // Can be a container ID ('unassigned', team ID) or another agent ID
-
-      const activeContainerId = findContainer(activeId);
-     const overContainerId = findContainer(overId); // Find the container of the item being dropped onto
-
-
-      console.log(`Drag End: Active ${activeId} (from ${activeContainerId}) -> Over ${overId} (in ${overContainerId})`);
-
-
-     if (!activeContainerId || !overContainerId) {
-         console.log("Drag End: Invalid source or target container");
-         return;
-     }
-
-
-     // --- Logic to update state based on drop target ---
-       if (activeContainerId !== overContainerId) {
-           // --- Moving between containers ---
-            const agentToMove = users.find(u => u.id === activeId);
-           if (!agentToMove) return;
-
-            // Remove from source
-            if (activeContainerId === 'unassigned') {
+            // 1. Remove from source container
+            if (activeContainerId === UNASSIGNED_CONTAINER_ID) {
                 setUnassignedAgents(prev => prev.filter(a => a.id !== activeId));
             } else {
                 setTeams(prev => prev.map(team =>
@@ -487,52 +495,40 @@ export default function AdminTeamsPage() {
                 ));
             }
 
-            // Add to destination
-            if (overContainerId === 'unassigned') {
-                 setUnassignedAgents(prev => {
-                     // Find insertion index based on where it was dropped over
-                     const overIndex = prev.findIndex(a => a.id === overId);
-                     const newAgents = [...prev];
-                     newAgents.splice(overIndex >= 0 ? overIndex : newAgents.length, 0, agentToMove);
-                     return newAgents;
-                 });
-            } else {
-                setTeams(prev => prev.map(team => {
-                    if (team.id === overContainerId) {
-                        const overIndex = team.agentIds.indexOf(overId);
-                        const newAgentIds = [...team.agentIds];
-                         // Insert at the position dragged over, or at the end if dropped on container
-                         newAgentIds.splice(overIndex >= 0 ? overIndex : newAgentIds.length, 0, activeId);
-                        return { ...team, agentIds: newAgentIds };
-                    }
-                    return team;
-                }));
-            }
-
-       } else {
-           // --- Reordering within the same container ---
-            if (activeContainerId === 'unassigned') {
+            // 2. Add to destination container
+            if (overContainerId === UNASSIGNED_CONTAINER_ID) {
                 setUnassignedAgents(prev => {
-                    const oldIndex = prev.findIndex(a => a.id === activeId);
-                    const newIndex = prev.findIndex(a => a.id === overId);
-                    if (oldIndex === -1 || newIndex === -1) return prev; // Should not happen
-                    return arrayMove(prev, oldIndex, newIndex);
+                    // Find insertion index based on where it was dropped over (or end)
+                    const overAgentIndex = prev.findIndex(a => a.id === overId);
+                    const newUnassigned = [...prev];
+                    newUnassigned.splice(overAgentIndex >= 0 ? overAgentIndex : newUnassigned.length, 0, agentToMove);
+                    return newUnassigned;
                 });
             } else {
-                 setTeams(prev => prev.map(team => {
-                    if (team.id === activeContainerId) {
-                        const oldIndex = team.agentIds.indexOf(activeId);
-                        const newIndex = team.agentIds.indexOf(overId);
-                         if (oldIndex === -1 || newIndex === -1) return team; // Should not happen
-                        return { ...team, agentIds: arrayMove(team.agentIds, oldIndex, newIndex) };
+                // Find the target team and the index to insert at
+                const targetTeam = teams.find(t => t.id === overContainerId);
+                if (targetTeam) {
+                    targetAgentIds = [...targetTeam.agentIds];
+                    targetIndex = targetAgentIds.indexOf(overId); // Index of the item dropped onto
+                     // If dropped onto the container itself (not an item), overId is the containerId
+                    if (overId === overContainerId) {
+                        targetIndex = targetAgentIds.length; // Add to the end
                     }
-                    return team;
-                 }));
+
+                    targetAgentIds.splice(targetIndex >= 0 ? targetIndex : targetAgentIds.length, 0, activeId);
+
+                    setTeams(prev => prev.map(team =>
+                        team.id === overContainerId
+                            ? { ...team, agentIds: targetAgentIds }
+                            : team
+                    ));
+                } else {
+                     console.warn(`Drag End: Target team with ID ${overContainerId} not found.`);
+                     // Optionally: revert the removal from source if target not found
+                }
             }
-       }
-
-   };
-
+        }
+    };
 
     // Function to get agent object by ID
     const getAgentById = (id: string): AppUser | undefined => users.find(u => u.id === id);
@@ -542,7 +538,7 @@ export default function AdminTeamsPage() {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
+        // onDragOver={handleDragOver} // Keep commented out for now unless needed for visual feedback
         onDragEnd={handleDragEnd}
     >
         <div className="space-y-6">
@@ -626,13 +622,13 @@ export default function AdminTeamsPage() {
                                  <CardTitle className="text-base">Unassigned Agents ({unassignedAgents.length})</CardTitle>
                              </CardHeader>
                              <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
-                                <SortableContext items={unassignedAgents.map(a => a.id!)} strategy={verticalListSortingStrategy}>
+                                <SortableContext items={unassignedAgents.map(a => a.id!)} strategy={verticalListSortingStrategy} id={UNASSIGNED_CONTAINER_ID}>
                                     <div className="space-y-2">
                                         {unassignedAgents.length === 0 ? (
                                              <p className="text-sm text-muted-foreground text-center py-4">All agents assigned.</p>
                                         ) : (
                                             unassignedAgents.map(agent => (
-                                                 <SortableAgentItem key={agent.id} agent={agent} />
+                                                agent.id ? <SortableAgentItem key={agent.id} agent={agent} /> : null
                                             ))
                                         )}
                                     </div>
@@ -656,7 +652,7 @@ export default function AdminTeamsPage() {
                                     <CardDescription>({team.agentIds.length} Agents)</CardDescription>
                                 </CardHeader>
                                  <ScrollArea className="flex-grow p-4 border-t min-h-[200px]">
-                                      <SortableContext items={team.agentIds} strategy={verticalListSortingStrategy}>
+                                      <SortableContext items={team.agentIds} strategy={verticalListSortingStrategy} id={team.id}>
                                           <div className="space-y-2">
                                                 {team.agentIds.length === 0 ? (
                                                     <p className="text-sm text-muted-foreground text-center py-4">Drag agents here</p>
@@ -672,15 +668,6 @@ export default function AdminTeamsPage() {
                             </Card>
                         ))}
                     </div>
-
-                     {/* Drag Overlay - Renders the item being dragged */}
-                      {/*
-                     <DragOverlay>
-                         {activeId && draggedAgent ? (
-                             <DraggableAgent agent={draggedAgent} isOverlay />
-                         ) : null}
-                     </DragOverlay>
-                     */}
                 </div>
             )}
 
@@ -710,6 +697,14 @@ export default function AdminTeamsPage() {
             </CardContent>
         </Card>
         </div>
+
+         {/* Drag Overlay - Renders the item being dragged */}
+         <DragOverlay>
+             {activeId && draggedAgent ? (
+                 <DraggableAgent agent={draggedAgent} isOverlay />
+             ) : null}
+         </DragOverlay>
     </DndContext>
   );
 }
+
