@@ -7,14 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Keep Label for general use if needed
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Label } from '@/components/ui/label'; // Keep Label
+import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 import {
   Form,
   FormControl,
@@ -24,35 +18,31 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { PasswordInput } from './ui/password-input'; // Import PasswordInput
+import { PasswordInput } from './ui/password-input';
 import { Loader2 } from 'lucide-react';
-import type { AppUser } from '@/services/user'; // Import AppUser type
+import type { AppUser } from '@/services/user';
 
-// Define available user roles
+// Define available user roles (remains the same)
 export const USER_ROLES = ['admin', 'podManager', 'teamLeader', 'agent'] as const;
 export type UserRole = typeof USER_ROLES[number];
 
+// Helper function for display formatting
+const formatRoleForDisplay = (role: UserRole) => {
+    return role.charAt(0).toUpperCase() + role.slice(1).replace('Manager', ' Manager').replace('Leader', ' Leader');
+};
+
 // Define the validation schema using Zod
-// Add 'mode' field to distinguish between 'add' and 'edit'
+// roles is now an array of enums, required to have at least one role
 const userFormSchemaBase = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters.' }).max(50, { message: 'Name must be 50 characters or less.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
-  role: z.enum(USER_ROLES, { required_error: 'Please select a role.' }),
-  // Password is required only in 'add' mode
+  roles: z.array(z.enum(USER_ROLES)).min(1, { message: 'Please select at least one role.' }),
   password: z.string().optional(),
-  // Add other user fields if needed (e.g., avatarUrl)
+  // Add other user fields if needed
 });
 
 // Conditional validation for password based on mode
 const userFormSchema = userFormSchemaBase.superRefine((data, ctx) => {
-    // In a real 'edit' mode, password wouldn't typically be required or possibly even shown.
-    // For 'add' mode simulation here, we make it required.
-    // A more robust solution would pass the mode ('add' or 'edit') to the form.
-    // For simplicity now, let's assume this form is primarily for 'add'.
-    // Check if password exists and meets length requirement only if it's provided or in add mode
-    // This refinement logic needs adjustment to properly reflect add/edit mode.
-    // Let's simplify: If a password IS provided, it must be >= 6 chars.
-    // The required nature for 'add' mode should ideally be handled by a mode-specific schema.
     if (data.password && data.password.length < 6) {
          ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -60,10 +50,7 @@ const userFormSchema = userFormSchemaBase.superRefine((data, ctx) => {
             path: ['password'],
          });
     }
-    // Example: If mode was passed, enforce password requirement for 'add' mode
-    // if (mode === 'add' && (!data.password || data.password.length < 6)) { ... }
 });
-
 
 // Type for form data based on the schema
 export type UserFormData = z.infer<typeof userFormSchema>;
@@ -78,7 +65,7 @@ interface UserFormProps {
 export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Adjust schema based on mode
+    // Adjust schema based on mode for password requirement
     const dynamicSchema = mode === 'add'
         ? userFormSchemaBase.extend({
             password: z.string().min(6, { message: 'Password is required and must be at least 6 characters.' }),
@@ -86,45 +73,49 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
         : userFormSchemaBase; // Password is optional for edit
 
     const form = useForm<UserFormData>({
-        resolver: zodResolver(dynamicSchema), // Apply conditional schema
+        resolver: zodResolver(dynamicSchema),
         defaultValues: {
             name: initialData?.name || '',
             email: initialData?.email || '',
-            role: initialData?.role as UserRole || undefined, // Cast role
+            roles: initialData?.roles || [], // Initialize roles as empty array or from initialData
             password: '', // Always clear password field initially
         },
         mode: 'onChange', // Validate on change
     });
 
-  // Reset form if initialData changes (for edit mode)
+  // Reset form if initialData or mode changes
   useEffect(() => {
     if (initialData && mode === 'edit') {
       form.reset({
         name: initialData.name,
         email: initialData.email,
-        role: initialData.role as UserRole,
+        roles: initialData.roles || [],
         password: '', // Don't pre-fill password in edit mode
       });
     } else if (mode === 'add') {
         form.reset({
             name: '',
             email: '',
-            role: undefined,
+            roles: [],
             password: '',
         });
     }
-    // Adjust schema resolver based on mode if needed here
   }, [initialData, mode, form]);
 
    const handleFormSubmit = async (data: UserFormData) => {
         setIsSubmitting(true);
         try {
-            // If editing, don't send password if it wasn't changed (or handle password update separately)
-            const dataToSend = mode === 'edit' && !data.password ? { ...data, password: undefined } : data;
-            await onSubmit(dataToSend as UserFormData); // Adjust type if password becomes optional for edit
+            // Ensure roles is always an array
+            const rolesToSend = Array.isArray(data.roles) ? data.roles : [];
+            const dataToSend: UserFormData = {
+                ...data,
+                roles: rolesToSend,
+                // Conditionally remove password if editing and it's empty
+                ...(mode === 'edit' && !data.password && { password: undefined }),
+            };
+            await onSubmit(dataToSend);
         } catch (error) {
              console.error("Error during user form submission:", error);
-             // Error should be handled in the parent component's onSubmit callback
         } finally {
              setIsSubmitting(false);
         }
@@ -132,7 +123,7 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4"> {/* Increased gap */}
         {/* User Name */}
         <FormField
           control={form.control}
@@ -157,61 +148,71 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
               <FormLabel>Email Address</FormLabel>
               <FormControl>
                 <Input type="email" placeholder="agent@kpiquest.com" {...field} disabled={isSubmitting || mode === 'edit'} />
-                 {/* Optionally disable email editing */}
               </FormControl>
                <FormMessage />
             </FormItem>
           )}
         />
 
-         {/* User Role Selection */}
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Role</FormLabel>
-               <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isSubmitting}>
-                <FormControl>
-                  <SelectTrigger>
-                    {/* The placeholder is displayed when value is undefined/empty */}
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                    {/* Removed the SelectItem with value="" */}
-                    {USER_ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {/* Simple capitalization for display */}
-                        {role.charAt(0).toUpperCase() + role.slice(1).replace('Manager', ' Manager').replace('Leader', ' Leader')}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-
-         {/* User Password (Required for Add mode) */}
-             <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>{mode === 'add' ? 'Password' : 'New Password (Optional)'}</FormLabel>
-                    <FormControl>
-                         <PasswordInput placeholder="Min. 6 characters" {...field} disabled={isSubmitting}/>
-                    </FormControl>
-                    {mode === 'edit' && <p className="text-xs text-muted-foreground">Leave blank to keep current password.</p>}
-                    <FormMessage />
-                    </FormItem>
-                )}
+         {/* User Roles Checkboxes */}
+         <FormField
+            control={form.control}
+            name="roles"
+            render={() => ( // No field needed directly, we manage checkboxes individually
+                <FormItem>
+                    <FormLabel>Roles</FormLabel>
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                        {USER_ROLES.map((role) => (
+                            <FormField
+                                key={role}
+                                control={form.control}
+                                name="roles"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value?.includes(role)}
+                                                onCheckedChange={(checked) => {
+                                                    const currentRoles = field.value || [];
+                                                    return checked
+                                                        ? field.onChange([...currentRoles, role])
+                                                        : field.onChange(currentRoles.filter((value) => value !== role));
+                                                }}
+                                                disabled={isSubmitting}
+                                            />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                            {formatRoleForDisplay(role)}
+                                        </FormLabel>
+                                    </FormItem>
+                                )}
+                            />
+                        ))}
+                    </div>
+                    <FormMessage /> {/* Show validation message for the roles array */}
+                </FormItem>
+            )}
             />
 
 
-          <DialogFooter>
+         {/* User Password */}
+         <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>{mode === 'add' ? 'Password' : 'New Password (Optional)'}</FormLabel>
+                <FormControl>
+                     <PasswordInput placeholder="Min. 6 characters" {...field} disabled={isSubmitting}/>
+                </FormControl>
+                {mode === 'edit' && <p className="text-xs text-muted-foreground">Leave blank to keep current password.</p>}
+                <FormMessage />
+                </FormItem>
+            )}
+        />
+
+
+          <DialogFooter className="pt-4"> {/* Add padding top */}
              <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                     Cancel
@@ -226,5 +227,3 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
     </Form>
   );
 }
-
-    

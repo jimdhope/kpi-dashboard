@@ -2,6 +2,7 @@
 import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { db, app } from '@/lib/firebase'; // Import Firestore and Auth instances
+import { USER_ROLES, UserRole } from '@/components/user-form'; // Import roles definitions
 
 const usersCollectionRef = collection(db, 'users');
 const auth = getAuth(app);
@@ -12,7 +13,7 @@ export interface AppUser {
     uid: string; // Firebase Auth UID
     name: string;
     email: string;
-    role: string; // e.g., 'admin', 'podManager', 'teamLeader', 'agent'
+    roles: UserRole[]; // Changed from role: string to roles: UserRole[]
     avatarUrl?: string; // Optional field for user avatar
     // Add other relevant user fields as needed: podId, teamId, campaignId, etc.
 }
@@ -29,28 +30,26 @@ export interface AppUser {
  * @param name User's full name
  * @param email User's email address
  * @param password User's password (should be temporary and user prompted to change)
- * @param role User's role ('admin', 'podManager', 'teamLeader', 'agent')
+ * @param roles Array of user roles (e.g., ['admin', 'agent'])
  * @returns The created AppUser object (including Firestore ID which is the Auth UID)
  * @throws Error if creation fails (e.g., email already exists, weak password)
  */
-export async function createUser(name: string, email: string, password: string, role: string): Promise<AppUser> {
-    // Basic validation (consider more robust validation)
-    if (!name || !email || !password || !role) {
-        throw new Error("Missing required user information (name, email, password, role).");
+export async function createUser(name: string, email: string, password: string, roles: UserRole[]): Promise<AppUser> {
+    // Basic validation
+    if (!name || !email || !password || !roles || roles.length === 0) {
+        throw new Error("Missing required user information (name, email, password, roles).");
     }
      if (password.length < 6) {
         throw new Error("Password must be at least 6 characters long.");
     }
-     // Basic role validation (adjust roles as needed)
-    const validRoles = ['admin', 'podManager', 'teamLeader', 'agent'];
-    if (!validRoles.includes(role)) {
-        throw new Error(`Invalid role specified: ${role}. Valid roles are: ${validRoles.join(', ')}.`);
+     // Basic role validation
+    if (!roles.every(role => USER_ROLES.includes(role))) {
+        throw new Error(`Invalid role specified. Valid roles are: ${USER_ROLES.join(', ')}.`);
     }
 
 
     try {
         // 1. Create user in Firebase Authentication
-        // IMPORTANT: This happens client-side in this implementation.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
@@ -63,15 +62,14 @@ export async function createUser(name: string, email: string, password: string, 
             uid: user.uid,
             name: name,
             email: email, // Store email for easier display/querying
-            role: role,
+            roles: roles, // Save the array of roles
             avatarUrl: `https://picsum.photos/seed/${user.uid}/40`, // Default avatar placeholder
-            // Initialize other fields as needed (e.g., podId: null)
         };
         // Use the Auth UID as the Firestore document ID
         const userDocRef = doc(db, 'users', user.uid);
         await setDoc(userDocRef, newUser);
 
-        console.log(`User created successfully in Auth and Firestore: ${email} (Role: ${role}, UID: ${user.uid})`);
+        console.log(`User created successfully in Auth and Firestore: ${email} (Roles: ${roles.join(', ')}, UID: ${user.uid})`);
 
         // Return the full user object, using uid as the id
         return { id: user.uid, ...newUser };
@@ -114,3 +112,4 @@ export async function getAllUsers(): Promise<AppUser[]> {
 //   // Requires deleting from Firestore AND Firebase Auth (potentially using Admin SDK)
 // }
 // export async function getUsersByRole(role: string): Promise<AppUser[]> { ... }
+
