@@ -300,11 +300,17 @@ export default function ProfilePage() {
                      <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Team Information</h3>
                      <div className="flex items-center gap-2">
                          <UserCircle className="h-5 w-5 text-primary" />
-                         <p><strong>Pod Manager:</strong> {podManagerName || <Skeleton className="h-4 w-32 inline-block" />}</p>
+                         {/* Changed p to div */}
+                         <div className="text-sm">
+                           <strong>Pod Manager:</strong> {podManagerName || <Skeleton className="h-4 w-32 inline-block ml-1" />}
+                         </div>
                      </div>
                      <div className="flex items-center gap-2">
                         <Building2 className="h-5 w-5 text-primary" />
-                         <p><strong>Team Leader:</strong> {teamLeaderName || <Skeleton className="h-4 w-32 inline-block" />}</p>
+                         {/* Changed p to div */}
+                         <div className="text-sm">
+                           <strong>Team Leader:</strong> {teamLeaderName || <Skeleton className="h-4 w-32 inline-block ml-1" />}
+                         </div>
                     </div>
                  </div>
 
@@ -320,3 +326,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
