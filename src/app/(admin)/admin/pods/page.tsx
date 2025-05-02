@@ -47,13 +47,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
 import { createUser, AppUser } from '@/services/user';
 import { Input } from '@/components/ui/input'; // Import Input
+import { generateInitials } from '@/lib/utils'; // Import generateInitials
 
-
-// Pod type definition
+// Pod type definition - Added logoInitials and logoBgColor
 export interface Pod {
   id: string;
   name: string;
-  logoUrl: string; // Store logo URL
+  logoUrl?: string; // Optional URL
+  logoInitials?: string; // Optional custom initials
+  logoBgColor?: string; // Optional custom background color
   campaignId: string;
   podManagerId: string;
   teamLeaderId: string;
@@ -168,8 +170,10 @@ export default function AdminPodsPage() {
           podManagerName: podManager?.name || 'N/A',
           teamLeaderName: teamLeader?.name || 'N/A',
           agentNames: agentNames,
-           // Fallback logic for logoUrl
-           logoUrl: data.logoUrl || `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`,
+          // Keep logoUrl, logoInitials, logoBgColor as they are from Firestore
+          logoUrl: data.logoUrl,
+          logoInitials: data.logoInitials,
+          logoBgColor: data.logoBgColor,
         };
       });
       setPods(fetchedPods);
@@ -220,7 +224,7 @@ export default function AdminPodsPage() {
      setIsManageAgentsOpen(true);
    };
 
-   // Updated Pod Form Submission Handler using logoUrl
+   // Updated Pod Form Submission Handler using logoUrl, logoInitials, logoBgColor
    const handleFormSubmit = async (data: PodFormData) => {
         console.log("Pod Form Data Received:", data);
         let finalLogoUrl = data.logoUrl || ''; // Start with provided URL
@@ -264,11 +268,12 @@ export default function AdminPodsPage() {
         }
 
         // --- 2. Handle Logo URL (No Upload Needed) ---
-        if (!finalLogoUrl) { // Use fallback only if no URL provided
-            finalLogoUrl = `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`;
-             console.log(`No logo URL provided, using fallback: ${finalLogoUrl}`);
+        // Logo URL takes precedence if provided
+        if (finalLogoUrl) {
+            console.log(`Using provided logo URL: ${finalLogoUrl}`);
+        } else {
+            console.log("No logo URL provided. Using fallback avatar (initials/color).");
         }
-
 
         // --- 3. Prepare Data for Firestore ---
          if (!data.campaignId || !finalPodManagerId || !finalTeamLeaderId) {
@@ -280,9 +285,12 @@ export default function AdminPodsPage() {
             return;
         }
 
+        // Include new logo customization fields
         const podDataToSave: Omit<Pod, 'id' | 'campaignName' | 'podManagerName' | 'teamLeaderName' | 'agentNames'> = {
             name: data.name,
-            logoUrl: finalLogoUrl, // Use the final URL
+            logoUrl: finalLogoUrl || undefined, // Save URL or undefined if empty
+            logoInitials: data.logoInitials || undefined, // Save custom initials or undefined
+            logoBgColor: data.logoBgColor || undefined, // Save custom color or undefined
             campaignId: data.campaignId,
             podManagerId: finalPodManagerId,
             teamLeaderId: finalTeamLeaderId,
@@ -311,7 +319,18 @@ export default function AdminPodsPage() {
         } else if (dialogMode === 'edit' && selectedPod) {
             try {
                 const podDoc = doc(db, 'pods', selectedPod.id);
-                await updateDoc(podDoc, podDataToSave as Partial<Pod>); // Cast as Firestore allows partial updates
+                // Update only the fields that might have changed, including logo customization
+                 const updates: Partial<Pod> = {
+                    name: data.name,
+                    logoUrl: finalLogoUrl || undefined, // Update or remove URL
+                    logoInitials: data.logoInitials || undefined, // Update or remove initials
+                    logoBgColor: data.logoBgColor || undefined, // Update or remove color
+                    campaignId: data.campaignId,
+                    podManagerId: finalPodManagerId,
+                    teamLeaderId: finalTeamLeaderId,
+                    // agentIds are managed separately
+                };
+                await updateDoc(podDoc, updates);
                 toast({
                     title: "Pod Updated",
                     description: `"${data.name}" has been successfully updated.`,
@@ -387,6 +406,7 @@ export default function AdminPodsPage() {
         ? "Cannot add pods until Campaigns and Users are available."
         : "Add a new pod";
 
+    // Pass the full Pod object to the form for editing, including logo fields
     const initialFormData = dialogMode === 'edit' ? selectedPod : undefined;
 
 
@@ -395,10 +415,8 @@ export default function AdminPodsPage() {
       {/* Wrap everything in the Dialog and AlertDialog providers */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-
-            {/* Separate Dialog for Managing Agents (Content moved inside the main Dialog provider is fine) */}
+            {/* Dialog for Managing Agents */}
              <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
-                {/* Trigger is the button in the table row */}
                  {selectedPodForAgents && (
                     <ManagePodAgentsDialog
                         pod={selectedPodForAgents}
@@ -429,7 +447,7 @@ export default function AdminPodsPage() {
                                  disabled={isLoadingPods || isLoadingRelatedData}
                              />
                          </div>
-                          {/* Trigger for the Add/Edit Pod Dialog */}
+                          {/* Trigger for the Add/Edit Pod Dialog (inside the Dialog context) */}
                          <DialogTrigger asChild>
                             <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Pod
@@ -488,9 +506,18 @@ export default function AdminPodsPage() {
                             <TableRow key={pod.id}>
                                 <TableCell>
                                 <Avatar className="h-10 w-10">
-                                    {/* Use pod.logoUrl which now includes fallback */}
-                                    <AvatarImage src={pod.logoUrl} alt={`${pod.name} logo`} data-ai-hint="pod logo" />
-                                    <AvatarFallback>{pod.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                    {/* Use pod.logoUrl if available, otherwise use Fallback */}
+                                     {pod.logoUrl ? (
+                                        <AvatarImage src={pod.logoUrl} alt={`${pod.name} logo`} data-ai-hint="pod logo" />
+                                     ) : null}
+                                    {/* Pass custom initials/color to Fallback */}
+                                    <AvatarFallback
+                                        initials={pod.logoInitials || generateInitials(pod.name)}
+                                        backgroundColor={pod.logoBgColor} // Pass custom color
+                                    >
+                                       {/* Default initials if no custom/generated initials */}
+                                       {!pod.logoInitials && generateInitials(pod.name)}
+                                    </AvatarFallback>
                                 </Avatar>
                                 </TableCell>
                                 <TableCell className="font-medium">{pod.name}</TableCell>
@@ -589,7 +616,7 @@ export default function AdminPodsPage() {
                             <PodForm
                                 onSubmit={handleFormSubmit}
                                 onCancel={() => setIsFormOpen(false)}
-                                initialData={initialFormData}
+                                initialData={initialFormData} // Pass initial data including logo fields
                                 campaigns={campaigns}
                                 users={users}
                                 key={initialFormData?.id ?? 'add'} // Key forces re-render

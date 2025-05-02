@@ -21,22 +21,22 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
 import type { Pod } from '@/app/(admin)/admin/pods/page'; // Keep Pod type
 import type { AppUser } from '@/services/user'; // Import AppUser type
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
-import { Loader2 } from 'lucide-react';
+import { Loader2, Palette } from 'lucide-react'; // Import Palette for color picker icon
 import { PasswordInput } from './ui/password-input'; // Import PasswordInput
 
 
 // Define the validation schema using Zod
-// Ensure IDs are non-empty strings if selected, or handle 'create_new'
-// Add conditional validation for user creation fields
-// Revert logo validation back to URL
 const podFormSchema = z.object({
   name: z.string().min(3, { message: 'Pod name must be at least 3 characters.' }).max(50, { message: 'Pod name must be 50 characters or less.' }),
   logoUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')), // Optional URL
+  logoInitials: z.string().max(2, { message: "Initials can be max 2 characters."}).optional(), // Optional custom initials (max 2 chars)
+  logoBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')), // Optional hex color
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
   podManagerId: z.string().min(1, { message: 'Please select or create a Pod Manager.' }),
   teamLeaderId: z.string().min(1, { message: 'Please select or create a Team Leader.' }),
@@ -87,7 +87,7 @@ export type PodFormData = z.infer<typeof podFormSchema>;
 
 
 interface PodFormProps {
-  onSubmit: (data: PodFormData) => Promise<void> | void; // No file needed
+  onSubmit: (data: PodFormData) => Promise<void> | void;
   onCancel: () => void;
   initialData?: Pod; // Optional initial data for editing
   campaigns: Campaign[];
@@ -102,6 +102,8 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
         defaultValues: {
             name: initialData?.name || '',
             logoUrl: initialData?.logoUrl || '', // Use initial URL
+            logoInitials: initialData?.logoInitials || '', // Use initial initials
+            logoBgColor: initialData?.logoBgColor || '', // Use initial color
             campaignId: initialData?.campaignId || '',
             podManagerId: initialData?.podManagerId || '',
             teamLeaderId: initialData?.teamLeaderId || '',
@@ -119,6 +121,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
     // Watch selected IDs to conditionally show/hide creation forms
     const watchPodManagerId = form.watch('podManagerId');
     const watchTeamLeaderId = form.watch('teamLeaderId');
+    const watchLogoUrl = form.watch('logoUrl'); // Watch logoUrl to disable custom options
 
 
   // Reset form if initialData changes (for edit mode)
@@ -126,7 +129,9 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
     if (initialData) {
       form.reset({
         name: initialData.name,
-        logoUrl: initialData.logoUrl,
+        logoUrl: initialData.logoUrl || '',
+        logoInitials: initialData.logoInitials || '',
+        logoBgColor: initialData.logoBgColor || '',
         campaignId: initialData.campaignId,
         podManagerId: initialData.podManagerId,
         teamLeaderId: initialData.teamLeaderId,
@@ -143,6 +148,8 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
         form.reset({
             name: '',
             logoUrl: '',
+            logoInitials: '',
+            logoBgColor: '',
             campaignId: '',
             podManagerId: '',
             teamLeaderId: '',
@@ -159,10 +166,12 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
    const handleFormSubmit = async (data: PodFormData) => {
         setIsSubmitting(true);
 
-         // Ensure logoUrl is empty string if undefined or null, but allow actual URL
+         // Ensure optional fields are empty strings if falsy
          const submitData = {
             ...data,
             logoUrl: data.logoUrl || '',
+            logoInitials: data.logoInitials || '',
+            logoBgColor: data.logoBgColor || '',
          };
 
         try {
@@ -175,9 +184,10 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
     };
 
   // Filter users based on potential roles (adapt as needed)
-  // TODO: Implement proper role filtering when roles are defined in the User type/Firestore
   const potentialManagers = users; //.filter(u => u.role === 'podManager' || u.role === 'admin');
   const potentialLeaders = users; //.filter(u => u.role === 'teamLeader' || u.role === 'podManager');
+  const isCustomLogoDisabled = !!watchLogoUrl; // Disable custom options if URL is present
+
 
   return (
     <Form {...form}>
@@ -204,6 +214,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             render={({ field }) => (
                 <FormItem>
                     <FormLabel>Logo URL (Optional)</FormLabel>
+                     <FormDescription>Overrides custom initials/color if provided.</FormDescription>
                     <FormControl>
                         <Input type="url" placeholder="https://example.com/logo.png" {...field} disabled={isSubmitting} />
                     </FormControl>
@@ -211,6 +222,64 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                 </FormItem>
             )}
             />
+
+        {/* Custom Logo Options - Only enabled if logoUrl is empty */}
+        <div className={`space-y-4 rounded-md border p-4 ${isCustomLogoDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <p className="text-sm font-medium text-muted-foreground">
+                 Custom Fallback Avatar {isCustomLogoDisabled ? '(Disabled by Logo URL)' : ''}
+            </p>
+             <FormField
+                control={form.control}
+                name="logoInitials"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Logo Initials</FormLabel>
+                         <FormDescription>Max 2 characters (e.g., AP for Alpha Pod). Uses pod name if blank.</FormDescription>
+                        <FormControl>
+                            <Input placeholder="e.g., AP" {...field} disabled={isSubmitting || isCustomLogoDisabled} maxLength={2} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+                />
+             <FormField
+                control={form.control}
+                name="logoBgColor"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Background Color</FormLabel>
+                        <FormDescription>Uses a random color if blank.</FormDescription>
+                        <div className="flex items-center gap-2">
+                             <FormControl>
+                                <Input
+                                    type="text" // Keep text input for hex code
+                                    placeholder="#008080"
+                                     {...field}
+                                     disabled={isSubmitting || isCustomLogoDisabled}
+                                     maxLength={7}
+                                     className="w-32"
+                                 />
+                             </FormControl>
+                            {/* Simple Color Picker using HTML5 input type="color" */}
+                            <Input
+                                type="color"
+                                value={field.value || '#008080'} // Default value for picker
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="h-10 w-10 p-1 cursor-pointer" // Basic styling
+                                disabled={isSubmitting || isCustomLogoDisabled}
+                                title="Select background color"
+                            />
+                             <div
+                                className="h-10 w-10 rounded-md border"
+                                style={{ backgroundColor: field.value || 'transparent' }}
+                                title="Color Preview"
+                            />
+                        </div>
+                        <FormMessage />
+                    </FormItem>
+                )}
+                />
+        </div>
 
 
         {/* Campaign Selection */}
@@ -227,6 +296,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                    {/* <SelectItem value="" disabled>Select a campaign</SelectItem> */} {/* Placeholder handled by SelectValue */}
                     {campaigns.length === 0 && <SelectItem value="loading" disabled>Loading campaigns...</SelectItem>}
                     {campaigns.map((campaign) => (
                       <SelectItem key={campaign.id} value={campaign.id}>
@@ -254,6 +324,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                    </SelectTrigger>
                  </FormControl>
                  <SelectContent>
+                     {/* <SelectItem value="" disabled>Select or Create Manager</SelectItem> */} {/* Placeholder handled by SelectValue */}
                     <SelectItem value="create_new">-- Create New Manager --</SelectItem>
                      {potentialManagers.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
                      {potentialManagers.map((user) => (
@@ -324,6 +395,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                    </SelectTrigger>
                  </FormControl>
                  <SelectContent>
+                    {/* <SelectItem value="" disabled>Select or Create Leader</SelectItem> */} {/* Placeholder handled by SelectValue */}
                     <SelectItem value="create_new">-- Create New Leader --</SelectItem>
                      {potentialLeaders.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
                      {potentialLeaders.map((user) => (

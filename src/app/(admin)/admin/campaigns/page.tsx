@@ -40,12 +40,15 @@ import {
 import { CampaignForm, CampaignFormData } from '@/components/campaign-form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { generateInitials } from '@/lib/utils'; // Import generateInitials
 
-// Campaign type definition
+// Campaign type definition - Added logoInitials and logoBgColor
 export interface Campaign {
   id: string;
   name: string;
-  logoUrl: string; // URL to the logo image
+  logoUrl?: string; // Optional URL to the logo image
+  logoInitials?: string; // Optional custom initials
+  logoBgColor?: string; // Optional custom background color
 }
 
 const campaignsCollectionRef = collection(db, 'campaigns'); // Reference to the 'campaigns' collection
@@ -72,6 +75,10 @@ export default function AdminCampaignsPage() {
       const fetchedCampaigns: Campaign[] = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Omit<Campaign, 'id'>),
+        // Ensure optional fields exist
+        logoUrl: doc.data().logoUrl,
+        logoInitials: doc.data().logoInitials,
+        logoBgColor: doc.data().logoBgColor,
       }));
       setCampaigns(fetchedCampaigns);
       setIsLoading(false);
@@ -109,20 +116,16 @@ export default function AdminCampaignsPage() {
     setIsAlertOpen(true);
   };
 
-  // Handle form submission using logoUrl
+  // Handle form submission including logo customization
   const handleFormSubmit = async (data: CampaignFormData) => {
-    let logoUrlToSave = data.logoUrl || ''; // Get URL from form
+    let finalLogoUrl = data.logoUrl || ''; // Get URL from form
 
-    // If no URL provided, generate a fallback placeholder
-    if (!logoUrlToSave) {
-        logoUrlToSave = `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`;
-        console.log(`No logo URL provided, using fallback: ${logoUrlToSave}`);
-    }
-
-    // Prepare data for Firestore
-    const campaignDataToSave = {
+    // Prepare data for Firestore, including custom logo fields
+    const campaignDataToSave: Omit<Campaign, 'id'> = {
       name: data.name,
-      logoUrl: logoUrlToSave, // Use the final logoUrl
+      logoUrl: finalLogoUrl || undefined, // Use URL or undefined
+      logoInitials: data.logoInitials || undefined, // Use custom initials or undefined
+      logoBgColor: data.logoBgColor || undefined, // Use custom color or undefined
     };
 
     // Add or Update Firestore document
@@ -145,7 +148,14 @@ export default function AdminCampaignsPage() {
     } else if (dialogMode === 'edit' && selectedCampaign) {
       try {
         const campaignDoc = doc(db, 'campaigns', selectedCampaign.id);
-        await updateDoc(campaignDoc, campaignDataToSave);
+         // Update only the fields that might have changed
+         const updates: Partial<Campaign> = {
+             name: data.name,
+             logoUrl: finalLogoUrl || undefined,
+             logoInitials: data.logoInitials || undefined,
+             logoBgColor: data.logoBgColor || undefined,
+         };
+        await updateDoc(campaignDoc, updates);
         toast({
           title: "Campaign Updated",
           description: `"${data.name}" has been successfully updated.`,
@@ -172,8 +182,6 @@ export default function AdminCampaignsPage() {
         const campaignDoc = doc(db, 'campaigns', campaignToDelete.id);
         await deleteDoc(campaignDoc);
 
-        // No need to delete from storage as we are using URLs now
-
         toast({
           variant: "destructive", // Use default or success variant if preferred
           title: "Campaign Deleted",
@@ -192,6 +200,7 @@ export default function AdminCampaignsPage() {
     }
   };
 
+  // Pass full Campaign object (including logo customization) to form
   const initialData = dialogMode === 'edit' ? selectedCampaign : undefined;
 
 
@@ -253,8 +262,16 @@ export default function AdminCampaignsPage() {
                       <TableRow key={campaign.id}>
                         <TableCell>
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={campaign.logoUrl} alt={`${campaign.name} logo`} data-ai-hint="campaign logo"/>
-                            <AvatarFallback>{campaign.name.charAt(0).toUpperCase()}</AvatarFallback>
+                             {campaign.logoUrl ? (
+                                <AvatarImage src={campaign.logoUrl} alt={`${campaign.name} logo`} data-ai-hint="campaign logo"/>
+                             ) : null}
+                            <AvatarFallback
+                                initials={campaign.logoInitials || generateInitials(campaign.name)}
+                                backgroundColor={campaign.logoBgColor}
+                             >
+                                {/* Default initials if no custom/generated initials */}
+                                {!campaign.logoInitials && generateInitials(campaign.name)}
+                             </AvatarFallback>
                           </Avatar>
                         </TableCell>
                         <TableCell className="font-medium">{campaign.name}</TableCell>
@@ -307,7 +324,7 @@ export default function AdminCampaignsPage() {
             <CampaignForm
               onSubmit={handleFormSubmit}
               onCancel={() => setIsFormOpen(false)}
-              initialData={initialData} // Pass initial data for editing
+              initialData={initialData} // Pass initial data including logo fields
               key={initialData?.id ?? 'add'} // Force re-render on edit
             />
           </DialogContent>
