@@ -49,13 +49,19 @@ const userFormSchema = userFormSchemaBase.superRefine((data, ctx) => {
     // For 'add' mode simulation here, we make it required.
     // A more robust solution would pass the mode ('add' or 'edit') to the form.
     // For simplicity now, let's assume this form is primarily for 'add'.
-    if (!data.password || data.password.length < 6) {
+    // Check if password exists and meets length requirement only if it's provided or in add mode
+    // This refinement logic needs adjustment to properly reflect add/edit mode.
+    // Let's simplify: If a password IS provided, it must be >= 6 chars.
+    // The required nature for 'add' mode should ideally be handled by a mode-specific schema.
+    if (data.password && data.password.length < 6) {
          ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Password is required and must be at least 6 characters.',
+            message: 'Password must be at least 6 characters.',
             path: ['password'],
          });
     }
+    // Example: If mode was passed, enforce password requirement for 'add' mode
+    // if (mode === 'add' && (!data.password || data.password.length < 6)) { ... }
 });
 
 
@@ -71,8 +77,16 @@ interface UserFormProps {
 
 export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Adjust schema based on mode
+    const dynamicSchema = mode === 'add'
+        ? userFormSchemaBase.extend({
+            password: z.string().min(6, { message: 'Password is required and must be at least 6 characters.' }),
+          })
+        : userFormSchemaBase; // Password is optional for edit
+
     const form = useForm<UserFormData>({
-        resolver: zodResolver(userFormSchema), // Apply conditional schema if needed based on mode
+        resolver: zodResolver(dynamicSchema), // Apply conditional schema
         defaultValues: {
             name: initialData?.name || '',
             email: initialData?.email || '',
@@ -160,11 +174,12 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isSubmitting}>
                 <FormControl>
                   <SelectTrigger>
+                    {/* The placeholder is displayed when value is undefined/empty */}
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                    <SelectItem value="" disabled>Select a role</SelectItem>
+                    {/* Removed the SelectItem with value="" */}
                     {USER_ROLES.map((role) => (
                       <SelectItem key={role} value={role}>
                         {/* Simple capitalization for display */}
@@ -180,8 +195,6 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
 
 
          {/* User Password (Required for Add mode) */}
-         {/* Conditionally render or adjust requirement based on mode */}
-         {/* {mode === 'add' && ( */}
              <FormField
                 control={form.control}
                 name="password"
@@ -196,7 +209,6 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
                     </FormItem>
                 )}
             />
-         {/* )} */}
 
 
           <DialogFooter>
@@ -214,3 +226,5 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
     </Form>
   );
 }
+
+    
