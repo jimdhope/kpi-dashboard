@@ -221,7 +221,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                    <SelectItem value="" disabled>Select a campaign</SelectItem>
+                    {/* Remove SelectItem with value="" */}
                     {campaigns.length === 0 && <SelectItem value="loading" disabled>Loading campaigns...</SelectItem>}
                     {campaigns.map((campaign) => (
                       <SelectItem key={campaign.id} value={campaign.id}>
@@ -249,7 +249,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                    </SelectTrigger>
                  </FormControl>
                  <SelectContent>
-                    <SelectItem value="" disabled>Select or Create Manager</SelectItem>
+                     {/* Remove SelectItem with value="" */}
                     <SelectItem value="create_new">-- Create New Manager --</SelectItem>
                      {potentialManagers.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
                      {potentialManagers.map((user) => (
@@ -320,7 +320,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                    </SelectTrigger>
                  </FormControl>
                  <SelectContent>
-                    <SelectItem value="" disabled>Select or Create Leader</SelectItem>
+                     {/* Remove SelectItem with value="" */}
                     <SelectItem value="create_new">-- Create New Leader --</SelectItem>
                      {potentialLeaders.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
                      {potentialLeaders.map((user) => (
@@ -391,3 +391,5 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
     </Form>
   );
 }
+
+    
