@@ -52,6 +52,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { generateInitials } from '@/lib/utils'; // Import generateInitials
 
 
 const usersCollectionRef = collection(db, 'users');
@@ -178,6 +179,7 @@ export default function AdminUsersPage() {
          const updates: Partial<AppUser> = {
            name: data.name,
            roles: data.roles, // Update roles array
+           // AvatarURL might be updated here if we add that to the form later
          };
 
          // 1. Update Firestore Document (name, roles, etc.)
@@ -345,9 +347,19 @@ export default function AdminUsersPage() {
                         filteredUsers.map((user) => (
                         <TableRow key={user.id}>
                             <TableCell>
-                            <Avatar className="h-10 w-10">
-                                <AvatarImage src={user.avatarUrl || `https://picsum.photos/seed/${user.uid}/40`} alt={`${user.name} avatar`} data-ai-hint="user avatar"/>
-                                <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                             <Avatar className="h-10 w-10">
+                                {/* Use AvatarImage if user.avatarUrl exists */}
+                                {user.avatarUrl ? (
+                                    <AvatarImage src={user.avatarUrl} alt={`${user.name} avatar`} data-ai-hint="user avatar"/>
+                                ) : null }
+                                {/* AvatarFallback handles initials and background color */}
+                                <AvatarFallback
+                                     initials={user.avatarInitials || generateInitials(user.name)}
+                                     backgroundColor={user.avatarBgColor} // Pass potential custom color
+                                 >
+                                     {/* Only render default if no custom/generated */}
+                                    {!user.avatarInitials && generateInitials(user.name)}
+                                </AvatarFallback>
                             </Avatar>
                             </TableCell>
                             <TableCell className="font-medium">{user.name}</TableCell>

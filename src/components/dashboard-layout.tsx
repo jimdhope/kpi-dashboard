@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Link from 'next/link'; // Import Link
 import { usePathname } from 'next/navigation'; // Keep usePathname
@@ -21,6 +22,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
 import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
+import { generateInitials } from '@/lib/utils'; // Import generateInitials
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -30,7 +32,9 @@ interface DashboardLayoutProps {
 const MOCK_ADMIN_USER = {
     name: "Admin User",
     email: "admin@kpiquest.com",
-    avatar: "https://picsum.photos/seed/admin/100" // Generic admin avatar
+    avatarUrl: "https://picsum.photos/seed/admin/100", // Generic admin avatar
+    avatarInitials: '', // Example: Add if needed
+    avatarBgColor: '', // Example: Add if needed
 };
 
 
@@ -138,8 +142,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <SidebarFooter className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={MOCK_ADMIN_USER.avatar} alt="Admin Avatar" data-ai-hint="admin avatar" />
-              <AvatarFallback>{MOCK_ADMIN_USER.name.charAt(0).toUpperCase()}</AvatarFallback>
+              {MOCK_ADMIN_USER.avatarUrl ? (
+                <AvatarImage src={MOCK_ADMIN_USER.avatarUrl} alt="Admin Avatar" data-ai-hint="admin avatar" />
+               ) : null}
+              <AvatarFallback
+                   initials={MOCK_ADMIN_USER.avatarInitials || generateInitials(MOCK_ADMIN_USER.name)}
+                   backgroundColor={MOCK_ADMIN_USER.avatarBgColor}
+               >
+                   {!MOCK_ADMIN_USER.avatarInitials && generateInitials(MOCK_ADMIN_USER.name)}
+               </AvatarFallback>
             </Avatar>
             <div className="flex-1 overflow-hidden">
               <p className="text-sm font-medium truncate">{MOCK_ADMIN_USER.name}</p>

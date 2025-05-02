@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import Link from 'next/link'; // Import Link
@@ -20,6 +21,7 @@ import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 import { Button } from '@/components/ui/button'; // Import Button for Logout
 import { getAuth } from 'firebase/auth'; // Import getAuth for Logout
 import { app } from '@/lib/firebase'; // Import app for Logout
+import { generateInitials } from '@/lib/utils'; // Import generateInitials
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
@@ -29,7 +31,9 @@ interface AgentSidebarLayoutProps {
 const MOCK_AGENT_USER = {
     name: "Agent Charlie",
     email: "charlie.agent@kpiquest.com",
-    avatar: "https://picsum.photos/seed/charlie_b/100"
+    avatarUrl: "https://picsum.photos/seed/charlie_b/100",
+    avatarInitials: '', // Example: Add if needed
+    avatarBgColor: '', // Example: Add if needed
 };
 
 export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
@@ -74,8 +78,15 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
         <SidebarFooter className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={MOCK_AGENT_USER.avatar} alt="User Avatar" data-ai-hint="agent avatar" />
-              <AvatarFallback>{MOCK_AGENT_USER.name.charAt(0).toUpperCase()}</AvatarFallback>
+              {MOCK_AGENT_USER.avatarUrl ? (
+                 <AvatarImage src={MOCK_AGENT_USER.avatarUrl} alt="User Avatar" data-ai-hint="agent avatar" />
+              ) : null}
+              <AvatarFallback
+                 initials={MOCK_AGENT_USER.avatarInitials || generateInitials(MOCK_AGENT_USER.name)}
+                 backgroundColor={MOCK_AGENT_USER.avatarBgColor}
+               >
+                   {!MOCK_AGENT_USER.avatarInitials && generateInitials(MOCK_AGENT_USER.name)}
+               </AvatarFallback>
             </Avatar>
             <div className="flex-1 overflow-hidden">
               <p className="text-sm font-medium truncate">{MOCK_AGENT_USER.name}</p>

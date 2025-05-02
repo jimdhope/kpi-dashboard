@@ -14,7 +14,9 @@ export interface AppUser {
     name: string;
     email: string;
     roles: UserRole[]; // Changed from role: string to roles: UserRole[]
-    avatarUrl?: string; // Optional field for user avatar
+    avatarUrl?: string; // Optional field for user avatar (URL)
+    avatarInitials?: string; // Optional custom initials for fallback
+    avatarBgColor?: string; // Optional custom background color for fallback
     // Add other relevant user fields as needed: podId, teamId, campaignId, etc.
 }
 
@@ -63,7 +65,12 @@ export async function createUser(name: string, email: string, password: string, 
             name: name,
             email: email, // Store email for easier display/querying
             roles: roles, // Save the array of roles
-            avatarUrl: `https://picsum.photos/seed/${user.uid}/40`, // Default avatar placeholder
+            avatarUrl: '', // Initialize avatarUrl as empty string
+            avatarInitials: '', // Initialize custom initials as empty
+            avatarBgColor: '', // Initialize custom color as empty
+            // Note: A default placeholder image URL like picsum is removed.
+            // The Avatar component now handles generating initials and random colors
+            // if avatarUrl, avatarInitials, or avatarBgColor are not provided.
         };
         // Use the Auth UID as the Firestore document ID
         const userDocRef = doc(db, 'users', user.uid);
@@ -98,7 +105,13 @@ export async function getAllUsers(): Promise<AppUser[]> {
     try {
         const q = query(usersCollectionRef, orderBy('name')); // Order by name for consistency
         const userSnapshot = await getDocs(q);
-        return userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+        return userSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            avatarUrl: doc.data().avatarUrl || '', // Ensure defaults if missing
+            avatarInitials: doc.data().avatarInitials || '',
+            avatarBgColor: doc.data().avatarBgColor || '',
+        } as AppUser));
     } catch (error) {
         console.error("Error fetching users:", error);
         throw new Error("Failed to retrieve users list.");
@@ -112,4 +125,3 @@ export async function getAllUsers(): Promise<AppUser[]> {
 //   // Requires deleting from Firestore AND Firebase Auth (potentially using Admin SDK)
 // }
 // export async function getUsersByRole(role: string): Promise<AppUser[]> { ... }
-
