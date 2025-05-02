@@ -1,34 +1,30 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   collection,
-  getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
   query,
   orderBy,
-  onSnapshot, // Import onSnapshot for real-time updates
-  Unsubscribe, // Import Unsubscribe type
+  onSnapshot,
+  Unsubscribe,
 } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage'; // Import storage functions
-import { db, storage } from '@/lib/firebase'; // Import Firestore & Storage instances
+import { db } from '@/lib/firebase'; // Import Firestore instance
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Button, buttonVariants } from '@/components/ui/button'; // Import buttonVariants
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, Trash2, PlusCircle, Loader2 } from 'lucide-react';
+import { Edit, Trash2, PlusCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -43,18 +39,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CampaignForm, CampaignFormData } from '@/components/campaign-form';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { uploadFile } from '@/services/storage'; // Import the upload service
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Campaign type definition
 export interface Campaign {
   id: string;
   name: string;
-  logoUrl: string; // Still stores the URL after upload
+  logoUrl: string; // URL to the logo image
 }
 
 const campaignsCollectionRef = collection(db, 'campaigns'); // Reference to the 'campaigns' collection
-const LOGO_STORAGE_PATH = 'campaign-logos'; // Define storage path
 
 export default function AdminCampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -115,49 +109,23 @@ export default function AdminCampaignsPage() {
     setIsAlertOpen(true);
   };
 
-  // Handle form submission with file upload
-  const handleFormSubmit = async (data: CampaignFormData, file?: File) => {
-    let logoUrl = initialData?.logoUrl || data.logoUrl || ''; // Use initial URL or submitted URL as fallback
+  // Handle form submission using logoUrl
+  const handleFormSubmit = async (data: CampaignFormData) => {
+    let logoUrlToSave = data.logoUrl || ''; // Get URL from form
 
-    // 1. Upload file if provided
-    if (file) {
-        toast({ title: "Uploading logo...", description: "Please wait." });
-        try {
-            logoUrl = await uploadFile(file, LOGO_STORAGE_PATH);
-             toast({ title: "Logo Uploaded", description: "Logo successfully uploaded." });
-             // TODO: If editing, delete the old logo from storage here
-             if (dialogMode === 'edit' && selectedCampaign?.logoUrl && selectedCampaign.logoUrl !== logoUrl) {
-                 try {
-                    const oldLogoRef = ref(storage, selectedCampaign.logoUrl);
-                    await deleteObject(oldLogoRef);
-                    console.log("Old logo deleted:", selectedCampaign.logoUrl);
-                 } catch (deleteError: any) {
-                     // Log error but don't block the update process
-                     console.warn("Could not delete old logo:", deleteError);
-                 }
-             }
-        } catch (uploadError: any) {
-            console.error("Error uploading logo: ", uploadError);
-            toast({
-                variant: "destructive",
-                title: "Logo Upload Failed",
-                description: uploadError.message || "Could not upload the campaign logo.",
-            });
-            return; // Stop submission if upload fails
-        }
-    } else if (!logoUrl) {
-        // Use a default placeholder if no file and no existing URL
-        logoUrl = `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`;
+    // If no URL provided, generate a fallback placeholder
+    if (!logoUrlToSave) {
+        logoUrlToSave = `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`;
+        console.log(`No logo URL provided, using fallback: ${logoUrlToSave}`);
     }
 
-
-    // 2. Prepare data for Firestore
+    // Prepare data for Firestore
     const campaignDataToSave = {
       name: data.name,
-      logoUrl: logoUrl, // Use the potentially updated logoUrl
+      logoUrl: logoUrlToSave, // Use the final logoUrl
     };
 
-    // 3. Add or Update Firestore document
+    // Add or Update Firestore document
     if (dialogMode === 'add') {
       try {
         await addDoc(campaignsCollectionRef, campaignDataToSave);
@@ -165,7 +133,6 @@ export default function AdminCampaignsPage() {
           title: "Campaign Added",
           description: `"${data.name}" has been successfully added.`,
         });
-        // No need to refetch, onSnapshot handles updates
       } catch (err: any) {
         console.error("Error adding campaign: ", err);
         toast({
@@ -173,16 +140,6 @@ export default function AdminCampaignsPage() {
           title: "Error Adding Campaign",
           description: err.message || `Failed to add campaign "${data.name}". Check console for details.`,
         });
-         // If add fails, potentially delete uploaded logo if needed (cleanup logic)
-          if (file && logoUrl) {
-            try {
-                const logoRef = ref(storage, logoUrl);
-                await deleteObject(logoRef);
-                console.log("Uploaded logo deleted due to Firestore add failure:", logoUrl);
-            } catch (cleanupError) {
-                console.warn("Failed to cleanup uploaded logo after add error:", cleanupError);
-            }
-          }
         return; // Prevent closing dialog on failure
       }
     } else if (dialogMode === 'edit' && selectedCampaign) {
@@ -193,7 +150,6 @@ export default function AdminCampaignsPage() {
           title: "Campaign Updated",
           description: `"${data.name}" has been successfully updated.`,
         });
-         // No need to refetch, onSnapshot handles updates
       } catch (err: any) {
         console.error("Error updating campaign: ", err);
         toast({
@@ -201,16 +157,6 @@ export default function AdminCampaignsPage() {
           title: "Error Updating Campaign",
           description: err.message || `Failed to update campaign "${selectedCampaign.name}". Check console for details.`,
         });
-        // If update fails but logo was uploaded, potentially delete the *new* uploaded logo
-         if (file && logoUrl && logoUrl !== initialData?.logoUrl) {
-             try {
-                const newLogoRef = ref(storage, logoUrl);
-                await deleteObject(newLogoRef);
-                console.log("Newly uploaded logo deleted due to Firestore update failure:", logoUrl);
-            } catch (cleanupError) {
-                console.warn("Failed to cleanup newly uploaded logo after update error:", cleanupError);
-            }
-         }
         return; // Prevent closing dialog on failure
       }
     }
@@ -222,35 +168,17 @@ export default function AdminCampaignsPage() {
     if (selectedCampaign) {
       const campaignToDelete = selectedCampaign; // Store data before resetting state
       try {
-        // 1. Delete Firestore Document
+        // Delete Firestore Document
         const campaignDoc = doc(db, 'campaigns', campaignToDelete.id);
         await deleteDoc(campaignDoc);
 
-        // 2. Delete Logo from Storage (if URL exists and is a storage URL)
-        if (campaignToDelete.logoUrl && campaignToDelete.logoUrl.includes('firebasestorage.googleapis.com')) {
-             toast({ title: "Deleting logo...", description: "Please wait." });
-             try {
-                const logoRef = ref(storage, campaignToDelete.logoUrl);
-                await deleteObject(logoRef);
-                console.log("Logo deleted from storage:", campaignToDelete.logoUrl);
-             } catch (storageError: any) {
-                 // Log error but don't prevent campaign deletion confirmation
-                 console.warn("Could not delete logo from storage:", storageError);
-                 toast({
-                     variant: "default", // Use default or warning variant
-                     title: "Campaign Deleted (Logo Warning)",
-                     description: `Campaign "${campaignToDelete.name}" deleted, but its logo might remain in storage.`,
-                     duration: 7000, // Longer duration
-                 });
-             }
-        }
+        // No need to delete from storage as we are using URLs now
 
         toast({
           variant: "destructive", // Use default or success variant if preferred
           title: "Campaign Deleted",
           description: `"${campaignToDelete.name}" has been deleted.`,
         });
-         // No need to refetch, onSnapshot handles updates
       } catch (err: any) {
         console.error("Error deleting campaign: ", err);
         toast({
@@ -278,13 +206,13 @@ export default function AdminCampaignsPage() {
                 <CardDescription>View, add, edit, or delete campaigns.</CardDescription>
               </div>
               <DialogTrigger asChild>
-                <Button onClick={openAddDialog} disabled={isLoading}> {/* Disable button while loading */}
+                <Button onClick={openAddDialog} disabled={isLoading}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Campaign
                 </Button>
               </DialogTrigger>
             </CardHeader>
             <CardContent>
-              {error && !isLoading && ( // Show error only if not loading
+              {error && !isLoading && (
                 <div className="mb-4 text-center text-destructive">{error}</div>
               )}
               <Table>
@@ -382,7 +310,6 @@ export default function AdminCampaignsPage() {
               initialData={initialData} // Pass initial data for editing
               key={initialData?.id ?? 'add'} // Force re-render on edit
             />
-             {/* Footer is now part of CampaignForm */}
           </DialogContent>
 
           {/* Delete Confirmation Alert Dialog */}
@@ -391,8 +318,8 @@ export default function AdminCampaignsPage() {
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the campaign
-                <span className="font-semibold"> "{selectedCampaign?.name}"</span> and its logo from storage.
-                Associated pod data might also be affected (implement cascade logic if needed).
+                <span className="font-semibold"> "{selectedCampaign?.name}"</span>.
+                Associated pod data might also be affected.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

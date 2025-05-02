@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -29,29 +28,15 @@ import type { AppUser } from '@/services/user'; // Import AppUser type
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
 import { Loader2 } from 'lucide-react';
 import { PasswordInput } from './ui/password-input'; // Import PasswordInput
-import Image from 'next/image'; // Import Image for preview
-
-// Define the maximum file size (e.g., 2MB)
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-// Define accepted image types
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
 
 
 // Define the validation schema using Zod
 // Ensure IDs are non-empty strings if selected, or handle 'create_new'
 // Add conditional validation for user creation fields
-// Add file validation for logo
+// Revert logo validation back to URL
 const podFormSchema = z.object({
   name: z.string().min(3, { message: 'Pod name must be at least 3 characters.' }).max(50, { message: 'Pod name must be 50 characters or less.' }),
-  logoFile: z
-    .custom<FileList>()
-    .optional()
-    .refine((files) => !files || files.length === 0 || files[0]?.size <= MAX_FILE_SIZE, `Max file size is 2MB.`)
-    .refine(
-      (files) => !files || files.length === 0 || ACCEPTED_IMAGE_TYPES.includes(files[0]?.type),
-      "Only .jpg, .jpeg, .png, .webp and .gif formats are supported."
-    ),
-  logoUrl: z.string().optional(), // Keep for initial data and display
+  logoUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')), // Optional URL
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
   podManagerId: z.string().min(1, { message: 'Please select or create a Pod Manager.' }),
   teamLeaderId: z.string().min(1, { message: 'Please select or create a Team Leader.' }),
@@ -98,13 +83,11 @@ const podFormSchema = z.object({
 
 
 // Type for form data based on the schema
-export type PodFormData = Omit<z.infer<typeof podFormSchema>, 'logoFile'> & {
-  logoFile?: File | null;
-  logoUrl?: string;
-};
+export type PodFormData = z.infer<typeof podFormSchema>;
+
 
 interface PodFormProps {
-  onSubmit: (data: PodFormData, file?: File) => Promise<void> | void; // Pass file separately
+  onSubmit: (data: PodFormData) => Promise<void> | void; // No file needed
   onCancel: () => void;
   initialData?: Pod; // Optional initial data for editing
   campaigns: Campaign[];
@@ -113,14 +96,12 @@ interface PodFormProps {
 
 export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: PodFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.logoUrl || null);
 
-    const form = useForm<z.infer<typeof podFormSchema>>({
+    const form = useForm<PodFormData>({
         resolver: zodResolver(podFormSchema),
         defaultValues: {
             name: initialData?.name || '',
-            logoUrl: initialData?.logoUrl || '',
-            logoFile: undefined,
+            logoUrl: initialData?.logoUrl || '', // Use initial URL
             campaignId: initialData?.campaignId || '',
             podManagerId: initialData?.podManagerId || '',
             teamLeaderId: initialData?.teamLeaderId || '',
@@ -138,23 +119,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
     // Watch selected IDs to conditionally show/hide creation forms
     const watchPodManagerId = form.watch('podManagerId');
     const watchTeamLeaderId = form.watch('teamLeaderId');
-    const logoFileWatch = form.watch('logoFile');
 
-    useEffect(() => {
-        // Handle logo preview
-        if (logoFileWatch && logoFileWatch.length > 0) {
-            const file = logoFileWatch[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewUrl(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        } else if (!initialData?.logoUrl) {
-            setPreviewUrl(null);
-        } else {
-             setPreviewUrl(initialData.logoUrl);
-        }
-    }, [logoFileWatch, initialData?.logoUrl]);
 
   // Reset form if initialData changes (for edit mode)
   useEffect(() => {
@@ -162,7 +127,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
       form.reset({
         name: initialData.name,
         logoUrl: initialData.logoUrl,
-        logoFile: undefined,
         campaignId: initialData.campaignId,
         podManagerId: initialData.podManagerId,
         teamLeaderId: initialData.teamLeaderId,
@@ -174,13 +138,11 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
          createTeamLeaderEmail: '',
          createTeamLeaderPassword: '',
       });
-       setPreviewUrl(initialData.logoUrl || null);
     } else {
         // Reset for add mode
         form.reset({
             name: '',
             logoUrl: '',
-            logoFile: undefined,
             campaignId: '',
             podManagerId: '',
             teamLeaderId: '',
@@ -191,35 +153,22 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             createTeamLeaderEmail: '',
             createTeamLeaderPassword: '',
         });
-         setPreviewUrl(null);
     }
   }, [initialData, form]);
 
-   const handleFormSubmit = async (data: z.infer<typeof podFormSchema>) => {
+   const handleFormSubmit = async (data: PodFormData) => {
         setIsSubmitting(true);
-        const file = data.logoFile?.[0] ?? null;
 
-        // Prepare data to submit, excluding the FileList
-        const submitData: PodFormData = {
-            name: data.name,
-            campaignId: data.campaignId,
-            podManagerId: data.podManagerId,
-            teamLeaderId: data.teamLeaderId,
-            createPodManagerName: data.createPodManagerName,
-            createPodManagerEmail: data.createPodManagerEmail,
-            createPodManagerPassword: data.createPodManagerPassword,
-            createTeamLeaderName: data.createTeamLeaderName,
-            createTeamLeaderEmail: data.createTeamLeaderEmail,
-            createTeamLeaderPassword: data.createTeamLeaderPassword,
-            logoUrl: initialData?.logoUrl, // Pass existing URL for potential deletion/update
-        };
+         // Ensure logoUrl is empty string if undefined or null, but allow actual URL
+         const submitData = {
+            ...data,
+            logoUrl: data.logoUrl || '',
+         };
 
         try {
-            await onSubmit(submitData, file || undefined); // Call the onSubmit passed from parent
-            // Don't reset form here, let parent decide based on success/failure
+            await onSubmit(submitData); // Call the onSubmit passed from parent
         } catch (error) {
              console.error("Error during form submission process:", error);
-             // Error handling should be primarily in the parent's onSubmit
         } finally {
              setIsSubmitting(false);
         }
@@ -248,45 +197,20 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
           )}
         />
 
-        {/* Logo Upload */}
-        <FormField
+        {/* Logo URL */}
+         <FormField
             control={form.control}
-            name="logoFile"
-            render={({ field: { onChange, value, ...rest } }) => (
+            name="logoUrl"
+            render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Logo (Optional)</FormLabel>
+                    <FormLabel>Logo URL (Optional)</FormLabel>
                     <FormControl>
-                        <Input
-                            type="file"
-                            accept={ACCEPTED_IMAGE_TYPES.join(',')}
-                            disabled={isSubmitting}
-                            {...rest}
-                            onChange={(e) => {
-                                onChange(e.target.files); // Update form state with FileList
-                            }}
-                        />
+                        <Input type="url" placeholder="https://example.com/logo.png" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
             )}
-        />
-
-         {/* Logo Preview */}
-         {previewUrl && (
-             <FormItem>
-                <FormLabel>Preview</FormLabel>
-                <div >
-                    <Image
-                    src={previewUrl}
-                    alt="Logo preview"
-                    width={64}
-                    height={64}
-                    className="rounded-md border"
-                     data-ai-hint="logo preview"
-                    />
-                </div>
-             </FormItem>
-         )}
+            />
 
 
         {/* Campaign Selection */}
@@ -470,5 +394,3 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
     </Form>
   );
 }
-
-    

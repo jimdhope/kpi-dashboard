@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   collection,
   getDocs,
@@ -15,8 +15,7 @@ import {
   QuerySnapshot,
   DocumentData,
 } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,9 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -49,7 +46,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
 import { createUser, AppUser } from '@/services/user';
-import { uploadFile } from '@/services/storage'; // Import upload service
 import { Input } from '@/components/ui/input'; // Import Input
 
 
@@ -57,7 +53,7 @@ import { Input } from '@/components/ui/input'; // Import Input
 export interface Pod {
   id: string;
   name: string;
-  logoUrl: string; // Store logo URL from storage
+  logoUrl: string; // Store logo URL
   campaignId: string;
   podManagerId: string;
   teamLeaderId: string;
@@ -72,7 +68,6 @@ export interface Pod {
 const podsCollectionRef = collection(db, 'pods');
 const campaignsCollectionRef = collection(db, 'campaigns');
 const usersCollectionRef = collection(db, 'users');
-const POD_LOGO_STORAGE_PATH = 'pod-logos'; // Define storage path
 
 export default function AdminPodsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -173,6 +168,8 @@ export default function AdminPodsPage() {
           podManagerName: podManager?.name || 'N/A',
           teamLeaderName: teamLeader?.name || 'N/A',
           agentNames: agentNames,
+           // Fallback logic for logoUrl
+           logoUrl: data.logoUrl || `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`,
         };
       });
       setPods(fetchedPods);
@@ -223,10 +220,10 @@ export default function AdminPodsPage() {
      setIsManageAgentsOpen(true);
    };
 
-   // Updated Pod Form Submission Handler
-   const handleFormSubmit = async (data: PodFormData, file?: File) => {
+   // Updated Pod Form Submission Handler using logoUrl
+   const handleFormSubmit = async (data: PodFormData) => {
         console.log("Pod Form Data Received:", data);
-        let finalLogoUrl = selectedPod?.logoUrl || data.logoUrl || ''; // Start with existing or provided URL
+        let finalLogoUrl = data.logoUrl || ''; // Start with provided URL
 
         // --- 1. Handle User Creation ---
         let finalPodManagerId = data.podManagerId;
@@ -266,35 +263,10 @@ export default function AdminPodsPage() {
             return; // Stop if user creation fails
         }
 
-        // --- 2. Handle Logo Upload ---
-        if (file) {
-            toast({ title: "Uploading logo...", description: "Please wait." });
-            try {
-                finalLogoUrl = await uploadFile(file, POD_LOGO_STORAGE_PATH);
-                toast({ title: "Logo Uploaded", description: "Pod logo successfully uploaded." });
-
-                // If editing and a new logo was uploaded, delete the old one
-                 if (dialogMode === 'edit' && selectedPod?.logoUrl && selectedPod.logoUrl !== finalLogoUrl && selectedPod.logoUrl.includes('firebasestorage.googleapis.com')) {
-                     try {
-                        const oldLogoRef = ref(storage, selectedPod.logoUrl);
-                        await deleteObject(oldLogoRef);
-                        console.log("Old pod logo deleted:", selectedPod.logoUrl);
-                     } catch (deleteError: any) {
-                         console.warn("Could not delete old pod logo:", deleteError);
-                     }
-                 }
-            } catch (uploadError: any) {
-                console.error("Error uploading pod logo: ", uploadError);
-                toast({
-                    variant: "destructive",
-                    title: "Logo Upload Failed",
-                    description: uploadError.message || "Could not upload the pod logo.",
-                });
-                return; // Stop submission if upload fails
-            }
-        } else if (!finalLogoUrl && dialogMode === 'add') { // Only set default for adds if no logo exists
-             // Use a default placeholder if no file and no existing URL
+        // --- 2. Handle Logo URL (No Upload Needed) ---
+        if (!finalLogoUrl) { // Use fallback only if no URL provided
             finalLogoUrl = `https://picsum.photos/seed/${data.name.replace(/\s+/g, '-').toLowerCase()}/40`;
+             console.log(`No logo URL provided, using fallback: ${finalLogoUrl}`);
         }
 
 
@@ -335,16 +307,6 @@ export default function AdminPodsPage() {
                     title: "Error Adding Pod",
                     description: err.message || `Failed to add pod "${data.name}".`,
                 });
-                 // Cleanup uploaded logo if add fails
-                 if (file && finalLogoUrl && finalLogoUrl.includes('firebasestorage.googleapis.com')) {
-                     try {
-                         const logoRef = ref(storage, finalLogoUrl);
-                         await deleteObject(logoRef);
-                         console.log("Uploaded pod logo deleted due to Firestore add failure:", finalLogoUrl);
-                     } catch (cleanupError) {
-                         console.warn("Failed to cleanup uploaded pod logo after add error:", cleanupError);
-                     }
-                 }
             }
         } else if (dialogMode === 'edit' && selectedPod) {
             try {
@@ -363,16 +325,6 @@ export default function AdminPodsPage() {
                     title: "Error Updating Pod",
                     description: err.message || `Failed to update pod "${selectedPod.name}".`,
                 });
-                // Cleanup newly uploaded logo if update fails
-                 if (file && finalLogoUrl && finalLogoUrl !== selectedPod.logoUrl && finalLogoUrl.includes('firebasestorage.googleapis.com')) {
-                     try {
-                         const newLogoRef = ref(storage, finalLogoUrl);
-                         await deleteObject(newLogoRef);
-                         console.log("Newly uploaded pod logo deleted due to Firestore update failure:", finalLogoUrl);
-                     } catch (cleanupError) {
-                         console.warn("Failed to cleanup newly uploaded pod logo after update error:", cleanupError);
-                     }
-                 }
             }
         }
     };
@@ -385,27 +337,9 @@ export default function AdminPodsPage() {
         const podDoc = doc(db, 'pods', podToDelete.id);
         await deleteDoc(podDoc);
 
-         // 2. Delete Logo from Storage
-         if (podToDelete.logoUrl && podToDelete.logoUrl.includes('firebasestorage.googleapis.com')) {
-             toast({ title: "Deleting logo...", description: "Please wait." });
-             try {
-                 const logoRef = ref(storage, podToDelete.logoUrl);
-                 await deleteObject(logoRef);
-                 console.log("Pod logo deleted from storage:", podToDelete.logoUrl);
-             } catch (storageError: any) {
-                 console.warn("Could not delete pod logo from storage:", storageError);
-                  toast({
-                     variant: "default",
-                     title: "Pod Deleted (Logo Warning)",
-                     description: `Pod "${podToDelete.name}" deleted, but its logo might remain in storage.`,
-                     duration: 7000,
-                 });
-             }
-         }
-
+         // 2. No need to delete logo from Storage
 
         toast({
-          // Use default or success variant if preferred
           title: "Pod Deleted",
           description: `"${podToDelete.name}" has been deleted.`,
         });
@@ -435,7 +369,6 @@ export default function AdminPodsPage() {
        });
        setIsManageAgentsOpen(false); // Close the dialog
        setSelectedPodForAgents(null);
-       // No need to refetch, onSnapshot will update the view
      } catch (err: any) {
        console.error("Error updating pod agents:", err);
        toast({
@@ -463,44 +396,18 @@ export default function AdminPodsPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
 
-            {/* Add/Edit Pod Dialog Content */}
-            <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{dialogMode === 'add' ? 'Add New Pod' : 'Edit Pod'}</DialogTitle>
-                    <DialogDescription>
-                        {dialogMode === 'add' ? 'Enter the details for the new pod. You can select existing users or create new ones.' : `Make changes to the pod "${selectedPod?.name}". Agent assignments are managed separately.`}
-                    </DialogDescription>
-                </DialogHeader>
-                {!isLoadingRelatedData ? (
-                    <PodForm
-                        onSubmit={handleFormSubmit}
-                        onCancel={() => setIsFormOpen(false)}
-                        initialData={initialFormData}
-                        campaigns={campaigns}
-                        users={users}
-                        key={initialFormData?.id ?? 'add'} // Key forces re-render
-                    />
-                ) : (
-                    <div className="p-6 text-center">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                        <p className="text-muted-foreground">Loading form data...</p>
-                    </div>
-                )}
-            </DialogContent>
-
             {/* Separate Dialog for Managing Agents (Content moved inside the main Dialog provider is fine) */}
-            <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
+             <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
                 {/* Trigger is the button in the table row */}
-                {selectedPodForAgents && (
+                 {selectedPodForAgents && (
                     <ManagePodAgentsDialog
                         pod={selectedPodForAgents}
                         allUsers={users}
                         onSave={handleSavePodAgents}
                         onClose={() => { setIsManageAgentsOpen(false); setSelectedPodForAgents(null); }}
                     />
-                )}
-            </Dialog>
-
+                 )}
+             </Dialog>
 
             {/* Main Card for displaying the list of pods */}
             <Card>
@@ -522,7 +429,7 @@ export default function AdminPodsPage() {
                                  disabled={isLoadingPods || isLoadingRelatedData}
                              />
                          </div>
-                          {/* Trigger for the Add/Edit Pod Dialog (Now correctly nested) */}
+                          {/* Trigger for the Add/Edit Pod Dialog */}
                          <DialogTrigger asChild>
                             <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Pod
@@ -581,6 +488,7 @@ export default function AdminPodsPage() {
                             <TableRow key={pod.id}>
                                 <TableCell>
                                 <Avatar className="h-10 w-10">
+                                    {/* Use pod.logoUrl which now includes fallback */}
                                     <AvatarImage src={pod.logoUrl} alt={`${pod.name} logo`} data-ai-hint="pod logo" />
                                     <AvatarFallback>{pod.name.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
@@ -629,7 +537,7 @@ export default function AdminPodsPage() {
                                             <Edit className="h-4 w-4" />
                                         </Button>
                                     </DialogTrigger>
-                                    {/* Delete Pod Button - Triggers the AlertDialog (Now correctly nested) */}
+                                    {/* Delete Pod Button - Triggers the AlertDialog */}
                                     <AlertDialogTrigger asChild>
                                         <Button
                                             variant="ghost"
@@ -657,7 +565,7 @@ export default function AdminPodsPage() {
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 This action cannot be undone. This will permanently delete the pod
-                                <span className="font-semibold"> "{selectedPod?.name}"</span> and its logo.
+                                <span className="font-semibold"> "{selectedPod?.name}"</span>.
                                 Consider potential impact on associated teams or data.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -668,6 +576,32 @@ export default function AdminPodsPage() {
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
+
+                     {/* Add/Edit Pod Dialog Content */}
+                    <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>{dialogMode === 'add' ? 'Add New Pod' : 'Edit Pod'}</DialogTitle>
+                            <DialogDescription>
+                                {dialogMode === 'add' ? 'Enter the details for the new pod. You can select existing users or create new ones.' : `Make changes to the pod "${selectedPod?.name}". Agent assignments are managed separately.`}
+                            </DialogDescription>
+                        </DialogHeader>
+                        {!isLoadingRelatedData ? (
+                            <PodForm
+                                onSubmit={handleFormSubmit}
+                                onCancel={() => setIsFormOpen(false)}
+                                initialData={initialFormData}
+                                campaigns={campaigns}
+                                users={users}
+                                key={initialFormData?.id ?? 'add'} // Key forces re-render
+                            />
+                        ) : (
+                            <div className="p-6 text-center">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                <p className="text-muted-foreground">Loading form data...</p>
+                            </div>
+                        )}
+                    </DialogContent>
+
                 </CardContent>
             </Card>
 
