@@ -107,19 +107,26 @@ export async function getAllUsers(): Promise<AppUser[]> {
     try {
         const q = query(usersCollectionRef, orderBy('name')); // Order by name for consistency
         const userSnapshot = await getDocs(q);
-        return userSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            avatarUrl: doc.data().avatarUrl || '', // Ensure defaults if missing
-            avatarInitials: doc.data().avatarInitials || '',
-            avatarBgColor: doc.data().avatarBgColor || '',
-            podId: doc.data().podId || null, // Ensure podId exists, default to null
-        } as AppUser));
+        return userSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                uid: data.uid, // Ensure uid is included
+                name: data.name || '',
+                email: data.email || '',
+                roles: Array.isArray(data.roles) ? data.roles : [], // Ensure roles is an array
+                avatarUrl: data.avatarUrl || '', // Ensure defaults if missing
+                avatarInitials: data.avatarInitials || '',
+                avatarBgColor: data.avatarBgColor || '',
+                podId: data.podId || null, // Ensure podId exists, default to null
+            } as AppUser;
+        });
     } catch (error) {
         console.error("Error fetching users:", error);
         throw new Error("Failed to retrieve users list.");
     }
 }
+
 
 /**
  * Updates the podId for a specific user.
@@ -139,6 +146,9 @@ export async function updateUserPodAssignment(userId: string, podId: string | nu
     }
 }
 
+export { USER_ROLES }; // Export USER_ROLES const
+export type { UserRole }; // Export UserRole type
+
 
 // Potential future functions:
 // export async function getUserById(uid: string): Promise<AppUser | null> { ... }
@@ -147,3 +157,4 @@ export async function updateUserPodAssignment(userId: string, podId: string | nu
 //   // Requires deleting from Firestore AND Firebase Auth (potentially using Admin SDK)
 // }
 // export async function getUsersByRole(role: string): Promise<AppUser[]> { ... }
+

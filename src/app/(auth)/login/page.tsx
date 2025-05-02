@@ -1,24 +1,82 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth"; // Import email/password auth
-import { app } from '@/lib/firebase'; // Assuming firebase setup is in lib/firebase.ts
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
+import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+import { db } from '@/lib/firebase'; // Import Firestore instance
 import { useRouter } from 'next/navigation'; // Use App Router's router
 import { Loader2, AlertCircle, LogIn } from 'lucide-react'; // Import icons
+import type { AppUser, UserRole } from '@/services/user'; // Import user types
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true); // State to track initial auth check
   const router = useRouter();
-  const auth = getAuth(app);
+  const auth = getAuth(); // No need to pass app if initialized globally
+
+  // Redirect logged-in users immediately
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log("User already logged in, attempting redirect...");
+        await handleRedirect(user.uid); // Attempt redirect
+      }
+       setIsCheckingAuth(false); // Auth check complete
+    });
+    return () => unsubscribe(); // Cleanup listener
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+
+  // Function to fetch user roles and handle redirection
+  const handleRedirect = async (userId: string) => {
+      console.log(`Fetching roles for user ID: ${userId}`);
+      try {
+          const userDocRef = doc(db, 'users', userId);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+              const userData = userDocSnap.data() as AppUser;
+              const userRoles = userData.roles || [];
+              console.log(`User roles found: ${userRoles.join(', ')}`);
+
+              // --- Role-Based Redirection Logic ---
+              if (userRoles.includes('admin') || userRoles.includes('podManager') || userRoles.includes('teamLeader')) {
+                  console.log('Redirecting admin/manager/leader user to /admin');
+                  router.push('/admin');
+              } else if (userRoles.includes('agent')) {
+                  console.log('Redirecting agent user to /agent');
+                  router.push('/agent');
+              } else {
+                   console.warn(`User ${userId} logged in but has no defined roles for redirection. Defaulting to /agent.`);
+                   toast({
+                       title: "Redirection Issue",
+                       description: "Could not determine your role. Redirecting to default.",
+                       variant: "destructive",
+                    });
+                  router.push('/agent'); // Fallback redirection
+              }
+          } else {
+               console.error(`User document not found in Firestore for UID: ${userId}`);
+               setError("Could not find your user profile data. Please contact support.");
+               setLoading(false); // Ensure loading stops if profile not found
+          }
+      } catch (err) {
+           console.error("Error fetching user roles or redirecting:", err);
+           setError("An error occurred during login. Please try again.");
+           setLoading(false); // Ensure loading stops on error
+      }
+  };
+
 
    const handleEmailPasswordLogin = async (event: React.FormEvent) => {
     event.preventDefault(); // Prevent default form submission
@@ -30,29 +88,8 @@ export default function LoginPage() {
       const user = userCredential.user;
       console.log('Login successful for:', user.email);
 
-      // --- DEVELOPMENT ONLY: Always redirect to admin ---
-      // This bypasses the role check for easier development access.
-      // REMOVE OR REVERT THIS before deploying to production.
-      console.log('DEV MODE: Redirecting all users to /admin...');
-      router.push('/admin');
-      // -------------------------------------------------
-
-      // --- Original Role Check (Commented out for development) ---
-      // In a real app, you'd fetch the user's role from Firestore or a custom claim
-      /*
-      if (user.email === 'admin@test.com') {
-        console.log('Redirecting admin user...');
-        router.push('/admin');
-      } else if (user.email === 'agent@test.com') {
-         console.log('Redirecting agent user...');
-        router.push('/agent');
-      } else {
-        console.warn(`User ${user.email} logged in but has no defined role for redirection. Defaulting to agent.`);
-        // Decide on a default redirect or show an error if role is unknown
-        router.push('/agent');
-      }
-      */
-      // -----------------------------------
+       // Fetch roles and redirect
+       await handleRedirect(user.uid);
 
     } catch (err: any) {
       console.error("Email/Password Login Error:", err);
@@ -64,10 +101,20 @@ export default function LoginPage() {
        } else {
         setError(err.message || 'Failed to log in.');
       }
-    } finally {
-        setLoading(false);
+       setLoading(false); // Stop loading on error
     }
+    // No finally setLoading(false) here, redirect handles it or error case does
   };
+
+   // Show loading indicator while checking auth state
+   if (isCheckingAuth) {
+       return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/5 via-background to-background p-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/5 via-background to-background p-4">
@@ -118,8 +165,7 @@ export default function LoginPage() {
              </Button>
             </form>
             <p className="mt-4 text-center text-xs text-muted-foreground">
-                Login with any valid Firebase user. <br />
-                (DEV MODE: Will redirect to /admin)
+                Login with any valid Firebase user.
             </p>
         </CardContent>
          <CardFooter className="text-center text-sm text-muted-foreground">
@@ -131,3 +177,9 @@ export default function LoginPage() {
     </div>
   );
 }
+// Helper function for toast (assuming useToast hook exists)
+// If not, replace with your actual toast implementation
+const toast = (options: { title: string; description: string; variant?: "default" | "destructive" }) => {
+  console.log(`Toast: ${options.title} - ${options.description}`);
+  // Replace with actual toast call, e.g., from useToast() hook
+};
