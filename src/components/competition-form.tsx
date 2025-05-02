@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,7 +15,7 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-} from "@/components/ui/popover"; // Ensure Popover imports are correct
+} from "@/components/ui/popover";
 import {
     Select,
     SelectContent,
@@ -32,8 +33,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react'; // Ensure CalendarIcon is imported
-import { format } from 'date-fns';
+import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
+import { format, parse, isValid as isDateValid } from 'date-fns'; // Import date-fns functions
 import { cn } from "@/lib/utils";
 import { useToast } from '@/hooks/use-toast';
 import type { Competition } from '@/app/(admin)/admin/competitions/page'; // Import Competition type
@@ -43,30 +44,53 @@ import { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reu
 
 // --- Zod Schema Definition ---
 
+const DATE_FORMAT = 'dd/MM/yyyy'; // Define the expected date format
+
+// Helper function to parse DD/MM/YYYY string to Date or return invalid date
+const parseDateString = (dateString: string | undefined | null): Date | null => {
+  if (!dateString) return null;
+  const parsedDate = parse(dateString, DATE_FORMAT, new Date());
+  return isDateValid(parsedDate) ? parsedDate : null; // Return null if parsing fails
+};
+
+
 // Reusable rule schema
 const competitionRuleSchema = z.object({
   id: z.string(), // Keep ID for reference/key
   name: z.string().min(1, { message: 'Rule name is required.' }),
   emoji: z.string().optional(),
   points: z.coerce.number().int().min(0, { message: 'Points must be >= 0.' }),
-  // Add target later if needed
 });
 
-// Main competition form schema
+// Main competition form schema using z.union for date fields
 const competitionFormSchema = z.object({
   name: z.string().min(3, { message: 'Competition name required (min 3 chars).' }).max(50, { message: 'Name max 50 chars.' }),
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
   podId: z.string().min(1, { message: 'Please select a pod.' }),
-  startDate: z.date({ required_error: "Start date is required." }),
-  endDate: z.date({ required_error: "End date is required." }),
+   // Accept either a Date object or a DD/MM/YYYY string, refine later
+  startDate: z.union([z.date(), z.string()])
+    .refine(val => (val instanceof Date && isDateValid(val)) || (typeof val === 'string' && parseDateString(val) !== null), {
+      message: `Invalid date. Use ${DATE_FORMAT} format or the picker.`,
+    })
+    .transform(val => typeof val === 'string' ? parseDateString(val)! : val), // Transform valid string to Date
+  endDate: z.union([z.date(), z.string()])
+    .refine(val => (val instanceof Date && isDateValid(val)) || (typeof val === 'string' && parseDateString(val) !== null), {
+        message: `Invalid date. Use ${DATE_FORMAT} format or the picker.`,
+    })
+     .transform(val => typeof val === 'string' ? parseDateString(val)! : val), // Transform valid string to Date
   rules: z.array(competitionRuleSchema).min(1, { message: 'At least one rule is required.' }),
 }).refine(data => data.endDate >= data.startDate, {
     message: "End date cannot be before start date.",
     path: ["endDate"], // Attach error to endDate field
 });
 
-// Type for form data based on the schema
-export type CompetitionFormData = z.infer<typeof competitionFormSchema>;
+
+// Type for form data expects Dates after transform
+export type CompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
+  startDate: Date;
+  endDate: Date;
+};
+
 
 // --- Component Props ---
 
@@ -81,7 +105,6 @@ interface CompetitionFormProps {
 
 // --- Helper Functions ---
 
-// Fetch default rules for a selected campaign
 const fetchCampaignRules = async (campaignId: string): Promise<RuleFormData[]> => {
   if (!campaignId) return [];
   try {
@@ -103,6 +126,9 @@ const fetchCampaignRules = async (campaignId: string): Promise<RuleFormData[]> =
 export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, pods, mode }: CompetitionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRules, setIsLoadingRules] = useState(false); // State for loading default rules
+   // State to manage popover visibility
+   const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
+   const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<CompetitionFormData>({
@@ -111,7 +137,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
       name: initialData?.name || '',
       campaignId: initialData?.campaignId || '',
       podId: initialData?.podId || '',
-      // Convert Timestamps back to Dates for the form
+      // Initialize with Date objects if available, otherwise undefined
       startDate: initialData?.startDate?.toDate(),
       endDate: initialData?.endDate?.toDate(),
       rules: initialData?.rules || [],
@@ -119,16 +145,14 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     mode: 'onChange',
   });
 
-   // Field array for managing rules dynamically
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'rules',
-    keyName: "fieldId", // Use fieldId to avoid conflicts with rule's own 'id'
+    keyName: "fieldId",
   });
 
    // --- Effects ---
 
-   // Reset form when initialData changes (for edit mode)
    useEffect(() => {
     if (initialData && mode === 'edit') {
       form.reset({
@@ -140,20 +164,17 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
         rules: initialData.rules || [],
       });
     } else if (mode === 'add') {
-        // Reset for add mode, clearing rules initially
         form.reset({
             name: '',
             campaignId: '',
             podId: '',
             startDate: undefined,
             endDate: undefined,
-            rules: [], // Start with empty rules in add mode
+            rules: [],
         });
     }
   }, [initialData, mode, form]);
 
-
-  // Watch campaignId to load default rules in 'add' mode
   const watchedCampaignId = form.watch('campaignId');
 
   useEffect(() => {
@@ -162,61 +183,66 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
            setIsLoadingRules(true);
             try {
                 const defaultRules = await fetchCampaignRules(watchedCampaignId);
-                 // Use replace to set the fetched rules, generating new field IDs
-                 replace(defaultRules.map(rule => ({ ...rule, id: rule.id || `new-${Date.now()}-${Math.random()}` }))); // Ensure IDs exist
-                 form.trigger("rules"); // Trigger validation after replacing rules
+                 replace(defaultRules.map(rule => ({ ...rule, id: rule.id || `new-${Date.now()}-${Math.random()}` })));
+                 form.trigger("rules");
             } catch (e) {
                  toast({ variant: "destructive", title: "Error", description: "Could not load default campaign rules." });
-                 replace([]); // Clear rules on error
+                 replace([]);
             } finally {
                 setIsLoadingRules(false);
             }
        };
        loadRules();
     } else if (mode === 'add' && !watchedCampaignId) {
-        // Clear rules if campaign is deselected in add mode
         replace([]);
     }
-     // Dependency: mode, watchedCampaignId, replace, toast, form.trigger
   }, [mode, watchedCampaignId, replace, toast, form]);
 
 
   // --- Event Handlers ---
 
   const handleAddRule = () => {
-     // Add a new blank rule with a unique temporary ID
     append({ id: `new-${Date.now()}-${Math.random()}`, name: '', emoji: '', points: 0 });
   };
+
+   // Handle manual date input change
+   const handleDateInputChange = (
+     event: React.ChangeEvent<HTMLInputElement>,
+     fieldName: 'startDate' | 'endDate'
+   ) => {
+     const dateString = event.target.value;
+     const parsedDate = parseDateString(dateString);
+     if (parsedDate) {
+       form.setValue(fieldName, parsedDate, { shouldValidate: true });
+     } else {
+        // Keep the string value for validation, but clear if empty
+         form.setValue(fieldName, dateString || undefined as any, { shouldValidate: true });
+     }
+   };
 
   const handleFormSubmit = async (data: CompetitionFormData) => {
     setIsSubmitting(true);
     try {
-        // The data object already has Date objects from react-hook-form
-        // Convert Dates to Timestamps before calling onSubmit
+        // Data should already have valid Date objects due to Zod transform
         const dataToSend = {
             ...data,
             startDate: Timestamp.fromDate(data.startDate),
             endDate: Timestamp.fromDate(data.endDate),
-            // Rules are already in the correct format from the form state
         };
-         // Pass the rules array separately as well
-        await onSubmit(dataToSend as any, data.rules); // Pass data with Timestamps and the rules array
+        await onSubmit(dataToSend as any, data.rules);
     } catch (error) {
         console.error("Error during competition form submission:", error);
-         // Parent component's onSubmit should handle showing toast on error
     } finally {
         setIsSubmitting(false);
     }
   };
 
-   // Filter pods based on selected campaign
-   const filteredPods = pods.filter(pod => pod.campaignId === watchedCampaignId);
+  const filteredPods = pods.filter(pod => pod.campaignId === watchedCampaignId);
 
   return (
     <Form {...form}>
-       {/* Wrap main form content in ScrollArea */}
-      <ScrollArea className="h-[65vh] pr-6"> {/* Adjust height as needed */}
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4 pl-2 pr-1"> {/* Increased gap */}
+      <ScrollArea className="h-[65vh] pr-6">
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4 pl-2 pr-1">
 
           {/* Competition Name */}
           <FormField
@@ -241,11 +267,10 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 <Select
                     onValueChange={(value) => {
                         field.onChange(value);
-                        form.setValue('podId', ''); // Reset pod selection when campaign changes
-                        // Rules will be updated by the useEffect hook watching campaignId
+                        form.setValue('podId', '');
                     }}
                     value={field.value}
-                    disabled={isSubmitting || mode === 'edit'} // Disable campaign change in edit mode
+                    disabled={isSubmitting || mode === 'edit'}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -276,7 +301,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 <Select
                     onValueChange={field.onChange}
                     value={field.value}
-                    disabled={isSubmitting || !watchedCampaignId || mode === 'edit'} // Disable if no campaign or editing
+                    disabled={isSubmitting || !watchedCampaignId || mode === 'edit'}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -303,94 +328,113 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
             )}
           />
 
-           {/* Start Date */}
+           {/* Start Date - Combined Picker and Input */}
            <FormField
                 control={form.control}
                 name="startDate"
                 render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Start Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                    "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
-                                    !field.value && "text-muted-foreground"
-                                    )}
-                                    disabled={isSubmitting}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
-                                    {field.value ? (
-                                    format(field.value, "PPP") // Format date nicely
-                                    ) : (
-                                    <span>Pick a date</span>
-                                    )}
-                                </Button>
-                             </FormControl>
-                        </PopoverTrigger>
-                         <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange} // Changed to pass function directly
-                                // Optional: Disable past dates relative to today
-                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmitting}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                </FormItem>
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Start Date</FormLabel>
+                        <div className="flex items-center gap-2">
+                             <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-[130px] justify-start text-left font-normal", // Reduced width
+                                            !field.value && "text-muted-foreground"
+                                        )}
+                                        disabled={isSubmitting}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                                         {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value instanceof Date ? field.value : undefined}
+                                        onSelect={(date) => {
+                                            if (date) {
+                                               field.onChange(date); // Update form state with Date object
+                                               setIsStartDatePopoverOpen(false); // Close popover on selection
+                                            }
+                                        }}
+                                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || isSubmitting}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                             <Input
+                                type="text"
+                                placeholder={DATE_FORMAT}
+                                // Display formatted date if it's a Date object, otherwise show the raw string input
+                                value={field.value instanceof Date ? format(field.value, DATE_FORMAT) : field.value || ''}
+                                onChange={(e) => handleDateInputChange(e, 'startDate')}
+                                className="flex-1" // Input takes remaining space
+                                disabled={isSubmitting}
+                                maxLength={10}
+                             />
+                        </div>
+                         <FormMessage />
+                    </FormItem>
                 )}
             />
 
-            {/* End Date */}
+            {/* End Date - Combined Picker and Input */}
             <FormField
                 control={form.control}
                 name="endDate"
                 render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>End Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                             <FormControl>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                    "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
-                                    !field.value && "text-muted-foreground"
-                                    )}
-                                    disabled={isSubmitting || !form.watch('startDate')} // Disable if no start date
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
-                                    {field.value ? (
-                                    format(field.value, "PPP")
-                                    ) : (
-                                    <span>Pick a date</span>
-                                    )}
-                                </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange} // Changed to pass function directly
-                                // Disable dates before start date
-                                disabled={(date) =>
-                                    (form.watch('startDate') && date < form.watch('startDate')!) ||
-                                    isSubmitting
-                                }
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+                     <FormItem className="flex flex-col">
+                         <FormLabel>End Date</FormLabel>
+                         <div className="flex items-center gap-2">
+                            <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-[130px] justify-start text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                        )}
+                                         disabled={isSubmitting || !form.watch('startDate')}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                                         {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value instanceof Date ? field.value : undefined}
+                                        onSelect={(date) => {
+                                             if (date) {
+                                                 field.onChange(date); // Update form state with Date object
+                                                 setIsEndDatePopoverOpen(false); // Close popover on selection
+                                             }
+                                        }}
+                                         disabled={(date) =>
+                                             (form.watch('startDate') instanceof Date && date < form.watch('startDate')) || isSubmitting
+                                         }
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                              <Input
+                                 type="text"
+                                 placeholder={DATE_FORMAT}
+                                 value={field.value instanceof Date ? format(field.value, DATE_FORMAT) : field.value || ''}
+                                 onChange={(e) => handleDateInputChange(e, 'endDate')}
+                                 className="flex-1"
+                                 disabled={isSubmitting || !form.watch('startDate')}
+                                 maxLength={10}
+                              />
+                         </div>
+                         <FormMessage />
+                     </FormItem>
+                 )}
+             />
+
 
            {/* Rules Section */}
             <div className="space-y-4 rounded-md border p-4 mt-4">
@@ -439,7 +483,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     name={`rules.${index}.emoji`}
                                     render={({ field: ruleField }) => (
                                         <FormItem className="w-12">
-                                         <FormLabel className="sr-only">Emoji</FormLabel> {/* Added Sr Label */}
+                                         <FormLabel className="sr-only">Emoji</FormLabel>
                                         <FormControl><Input placeholder="🏆" {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
                                         <FormMessage className="text-xs" />
                                         </FormItem>
@@ -450,7 +494,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     name={`rules.${index}.name`}
                                     render={({ field: ruleField }) => (
                                         <FormItem className="flex-1">
-                                         <FormLabel className="sr-only">Rule Name</FormLabel> {/* Added Sr Label */}
+                                         <FormLabel className="sr-only">Rule Name</FormLabel>
                                         <FormControl><Input placeholder="Rule Name" {...ruleField} disabled={isSubmitting} className="h-9" /></FormControl>
                                         <FormMessage className="text-xs" />
                                         </FormItem>
@@ -461,7 +505,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     name={`rules.${index}.points`}
                                     render={({ field: ruleField }) => (
                                         <FormItem className="w-20">
-                                         <FormLabel className="sr-only">Points</FormLabel> {/* Added Sr Label */}
+                                         <FormLabel className="sr-only">Points</FormLabel>
                                         <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting} className="h-9" /></FormControl>
                                         <FormMessage className="text-xs" />
                                         </FormItem>
@@ -471,7 +515,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="text-destructive hover:bg-destructive/10 mt-0.5 h-9 w-9" // Adjusted margin/size
+                                    className="text-destructive hover:bg-destructive/10 mt-0.5 h-9 w-9"
                                     onClick={() => remove(index)}
                                     disabled={isSubmitting}
                                     aria-label="Remove rule"
@@ -482,8 +526,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                         ))}
                     </div>
                  )}
-                  {/* Display error message for the overall rules array (e.g., "at least one rule required") */}
-                  {/* Display error message for the overall rules array only if touched and invalid */}
+                  {/* Display error message for the overall rules array */}
                     {form.formState.errors.rules?.root && (
                         <p className="text-sm font-medium text-destructive">{form.formState.errors.rules.root.message}</p>
                     )}
@@ -509,3 +552,6 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     </Form>
   );
 }
+
+
+    
