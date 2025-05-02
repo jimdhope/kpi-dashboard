@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -67,7 +66,6 @@ type ProfileFormData = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<AppUser | null>(null);
-  // Removed podData state as we fetch names directly
   const [podManagerName, setPodManagerName] = useState<string | null>(null);
   const [teamLeaderName, setTeamLeaderName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,32 +86,38 @@ export default function ProfilePage() {
   });
 
    // Helper function to fetch user name by ID
-   const fetchUserName = async (userId: string): Promise<string | null> => {
+   const fetchUserName = useCallback(async (userId: string): Promise<string | null> => {
       if (!userId) return null;
+      console.log(`Fetching user name for ID: ${userId}`);
       try {
          const userDocRef = doc(db, 'users', userId);
          const userDocSnap = await getDoc(userDocRef);
-         return userDocSnap.exists() ? userDocSnap.data().name : 'Unknown User';
+         const name = userDocSnap.exists() ? userDocSnap.data().name : 'Unknown User';
+         console.log(`Fetched name: ${name}`);
+         return name;
       } catch (error) {
          console.error(`Error fetching user name for ID ${userId}:`, error);
          return 'Error Loading';
       }
-   };
+   }, []); // No dependencies needed as db is stable
 
    // Fetch user data, then pod details, then manager/leader names
   useEffect(() => {
      setIsLoading(true);
-     setPodManagerName(null); // Reset names on user change
+     setPodManagerName(null); // Reset names on user change/load
      setTeamLeaderName(null);
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         const userDocRef = doc(db, 'users', currentUser.uid);
+        console.log(`Auth state changed: Logged in user ${currentUser.uid}`);
         try {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const fetchedUserData = { id: userDocSnap.id, ...userDocSnap.data() } as AppUser;
+             // Ensure uid is present, fallback to id if necessary (shouldn't happen with correct setup)
+             fetchedUserData.uid = fetchedUserData.uid || fetchedUserData.id!;
             setUserData(fetchedUserData);
              console.log("Fetched user data:", fetchedUserData); // Log user data
 
@@ -143,8 +147,8 @@ export default function ProfilePage() {
                         fetchUserName(fetchedPodData.teamLeaderId)
                     ]);
 
-                     console.log("Fetched Manager Name:", managerName); // Log fetched names
-                     console.log("Fetched Leader Name:", leaderName); // Log fetched names
+                     console.log("Setting Pod Manager Name:", managerName); // Log fetched names
+                     console.log("Setting Team Leader Name:", leaderName); // Log fetched names
 
                     setPodManagerName(managerName || 'Not Assigned');
                     setTeamLeaderName(leaderName || 'Not Assigned');
@@ -163,6 +167,7 @@ export default function ProfilePage() {
           } else {
             console.warn(`Firestore document for user ${currentUser.uid} not found.`);
             form.reset({ name: currentUser.displayName || currentUser.email || '', avatarInitials: '', avatarBgColor: '' });
+            // Ensure a minimal userData object is set even if Firestore doc is missing
             setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [], podId: null });
             toast({ variant: "destructive", title: "Profile Data Missing", description: "Could not load full profile details." });
             setPodManagerName('N/A');
@@ -177,6 +182,7 @@ export default function ProfilePage() {
            setTeamLeaderName('Error Loading');
         }
       } else {
+         console.log("Auth state changed: No user logged in.");
         // No user logged in
         setUser(null);
         setUserData(null);
@@ -188,7 +194,7 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribe();
-   }, [form, toast]); // Removed router dependency for now
+   }, [form, toast, fetchUserName]); // Added fetchUserName to dependencies
 
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -412,13 +418,13 @@ export default function ProfilePage() {
                  <div className="flex items-center gap-2">
                      <UserCircle className="h-5 w-5 text-primary" />
                      <div className="text-sm">
-                        <strong>Pod Manager:</strong> {podManagerName !== null ? podManagerName : <Skeleton className="h-4 w-32 inline-block ml-1" />}
+                        <strong>Pod Manager:</strong> {podManagerName === null ? <Skeleton className="h-4 w-32 inline-block ml-1" /> : podManagerName}
                      </div>
                  </div>
                  <div className="flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-primary" />
                      <div className="text-sm">
-                        <strong>Team Leader:</strong> {teamLeaderName !== null ? teamLeaderName : <Skeleton className="h-4 w-32 inline-block ml-1" />}
+                        <strong>Team Leader:</strong> {teamLeaderName === null ? <Skeleton className="h-4 w-32 inline-block ml-1" /> : teamLeaderName}
                      </div>
                  </div>
               </div>
@@ -490,4 +496,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

@@ -1,4 +1,3 @@
-
 import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot, updateDoc } from 'firebase/firestore'; // Added updateDoc
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { db, app } from '@/lib/firebase'; // Import Firestore and Auth instances
@@ -111,14 +110,14 @@ export async function getAllUsers(): Promise<AppUser[]> {
             const data = doc.data();
             return {
                 id: doc.id,
-                uid: data.uid, // Ensure uid is included
+                uid: data.uid || doc.id, // Ensure uid is included, fallback to doc.id if needed
                 name: data.name || '',
                 email: data.email || '',
                 roles: Array.isArray(data.roles) ? data.roles : [], // Ensure roles is an array
                 avatarUrl: data.avatarUrl || '', // Ensure defaults if missing
                 avatarInitials: data.avatarInitials || '',
                 avatarBgColor: data.avatarBgColor || '',
-                podId: data.podId || null, // Ensure podId exists, default to null
+                podId: data.podId === undefined ? null : data.podId, // Explicitly handle undefined
             } as AppUser;
         });
     } catch (error) {
@@ -134,12 +133,16 @@ export async function getAllUsers(): Promise<AppUser[]> {
  * @param podId The ID of the pod to assign, or null to unassign.
  */
 export async function updateUserPodAssignment(userId: string, podId: string | null): Promise<void> {
+    if (!userId) {
+        console.error("updateUserPodAssignment called with invalid userId:", userId);
+        throw new Error("Invalid user ID provided.");
+    }
     try {
         const userDocRef = doc(db, 'users', userId);
         await updateDoc(userDocRef, {
             podId: podId // Set podId to the new value (string or null)
         });
-        console.log(`Updated pod assignment for user ${userId} to pod ${podId}`);
+        console.log(`Updated pod assignment for user ${userId} to pod ${podId === null ? 'null' : podId}`);
     } catch (error) {
         console.error(`Error updating pod assignment for user ${userId}:`, error);
         throw new Error("Failed to update user's pod assignment.");
@@ -157,4 +160,3 @@ export type { UserRole }; // Export UserRole type
 //   // Requires deleting from Firestore AND Firebase Auth (potentially using Admin SDK)
 // }
 // export async function getUsersByRole(role: string): Promise<AppUser[]> { ... }
-

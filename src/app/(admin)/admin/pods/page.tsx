@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -390,27 +389,36 @@ export default function AdminPodsPage() {
      const agentsToAdd = selectedAgentIds.filter(id => !originalAgentIds.includes(id));
      const agentsToRemove = originalAgentIds.filter(id => !selectedAgentIds.includes(id));
 
+     console.log(`Original Agents: ${originalAgentIds.join(', ')}`);
+     console.log(`Selected Agents: ${selectedAgentIds.join(', ')}`);
+     console.log(`Agents to Add: ${agentsToAdd.join(', ')}`);
+     console.log(`Agents to Remove: ${agentsToRemove.join(', ')}`);
+
      try {
        // 1. Update the pod document with the new list of agentIds
        const podDocRef = doc(db, 'pods', podId);
        await updateDoc(podDocRef, {
          agentIds: selectedAgentIds,
        });
+       console.log(`Updated pod document ${podId} with agentIds: ${selectedAgentIds.join(', ')}`);
 
        // 2. Update the podId field on each added/removed user document
        const updatePromises: Promise<void>[] = [];
 
        // Assign podId to newly added agents
        agentsToAdd.forEach(agentId => {
+         console.log(`Assigning pod ${podId} to user ${agentId}`);
          updatePromises.push(updateUserPodAssignment(agentId, podId));
        });
 
        // Remove podId from removed agents
        agentsToRemove.forEach(agentId => {
+          console.log(`Unassigning user ${agentId} from pod ${podId}`);
          updatePromises.push(updateUserPodAssignment(agentId, null)); // Pass null to unassign
        });
 
        await Promise.all(updatePromises);
+       console.log("Finished updating user pod assignments.");
 
        toast({
          title: "Agents Updated",
