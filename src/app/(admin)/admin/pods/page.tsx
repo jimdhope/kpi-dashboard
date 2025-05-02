@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -288,9 +289,9 @@ export default function AdminPodsPage() {
         // Include new logo customization fields
         const podDataToSave: Omit<Pod, 'id' | 'campaignName' | 'podManagerName' | 'teamLeaderName' | 'agentNames'> = {
             name: data.name,
-            logoUrl: finalLogoUrl || undefined, // Save URL or undefined if empty
-            logoInitials: data.logoInitials || undefined, // Save custom initials or undefined
-            logoBgColor: data.logoBgColor || undefined, // Save custom color or undefined
+            logoUrl: finalLogoUrl || '', // Save URL or empty string
+            logoInitials: data.logoInitials || '', // Save custom initials or empty string
+            logoBgColor: data.logoBgColor || '', // Save custom color or empty string
             campaignId: data.campaignId,
             podManagerId: finalPodManagerId,
             teamLeaderId: finalTeamLeaderId,
@@ -322,9 +323,9 @@ export default function AdminPodsPage() {
                 // Update only the fields that might have changed, including logo customization
                  const updates: Partial<Pod> = {
                     name: data.name,
-                    logoUrl: finalLogoUrl || undefined, // Update or remove URL
-                    logoInitials: data.logoInitials || undefined, // Update or remove initials
-                    logoBgColor: data.logoBgColor || undefined, // Update or remove color
+                    logoUrl: finalLogoUrl || '', // Update or save empty string
+                    logoInitials: data.logoInitials || '', // Update or save empty string
+                    logoBgColor: data.logoBgColor || '', // Update or save empty string
                     campaignId: data.campaignId,
                     podManagerId: finalPodManagerId,
                     teamLeaderId: finalTeamLeaderId,
@@ -414,7 +415,7 @@ export default function AdminPodsPage() {
     <div className="space-y-6">
       {/* Wrap everything in the Dialog and AlertDialog providers */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+         <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
             {/* Dialog for Managing Agents */}
              <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
                  {selectedPodForAgents && (
@@ -632,8 +633,9 @@ export default function AdminPodsPage() {
                 </CardContent>
             </Card>
 
-        </AlertDialog>
+         </AlertDialog>
       </Dialog>
     </div>
   );
 }
+
