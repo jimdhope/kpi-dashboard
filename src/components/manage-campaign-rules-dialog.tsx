@@ -135,6 +135,7 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
         points: rule.points,
       }));
 
+      // The data is saved here to Firestore
       await setDoc(rulesDocRef, { rules: rulesToSave }, { merge: true }); // Use setDoc with merge to overwrite or create
 
       toast({
@@ -170,9 +171,9 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                <div className="space-y-4 p-4">
                    {Array.from({ length: 3 }).map((_, index) => (
                        <div key={index} className="flex items-center gap-2 border p-3 rounded-md">
-                           <Skeleton className="h-8 w-12" /> {/* Adjusted width */}
+                           <Skeleton className="h-8 w-12" />
                            <Skeleton className="h-8 flex-1" />
-                           <Skeleton className="h-8 w-16" />
+                           <Skeleton className="h-8 w-16" /> {/* Skeleton for points */}
                            <Skeleton className="h-8 w-8" />
                        </div>
                    ))}
@@ -187,7 +188,7 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                  <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
                     <Label className="w-12 text-left">Emoji</Label>
                     <Label className="flex-1 text-left">Rule Name</Label>
-                    <Label className="w-16 text-left">Points</Label>
+                    <Label className="w-20 text-left">Points</Label> {/* Adjusted width */}
                     <div className="w-8" /> {/* Spacer for delete button */}
                  </div>
 
@@ -197,8 +198,8 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                       control={form.control}
                       name={`rules.${index}.emoji`}
                       render={({ field }) => (
-                        <FormItem className="w-12"> {/* Reduced width */}
-                          <FormLabel className="sr-only">Emoji</FormLabel> {/* Keep sr-only if header is enough */}
+                        <FormItem className="w-12">
+                          <FormLabel className="sr-only">Emoji</FormLabel>
                           <FormControl>
                             <Input placeholder="🏆" {...field} maxLength={4} disabled={isSaving} className="text-center" />
                           </FormControl>
@@ -210,8 +211,8 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                       control={form.control}
                       name={`rules.${index}.name`}
                       render={({ field }) => (
-                        <FormItem className="flex-1"> {/* Takes remaining space */}
-                          <FormLabel className="sr-only">Rule Name</FormLabel> {/* Keep sr-only if header is enough */}
+                        <FormItem className="flex-1">
+                          <FormLabel className="sr-only">Rule Name</FormLabel>
                           <FormControl>
                             <Input placeholder="Rule Name" {...field} disabled={isSaving} />
                           </FormControl>
@@ -223,8 +224,8 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                       control={form.control}
                       name={`rules.${index}.points`}
                       render={({ field }) => (
-                        <FormItem className="w-16"> {/* Adjusted width */}
-                          <FormLabel className="sr-only">Points</FormLabel> {/* Keep sr-only if header is enough */}
+                        <FormItem className="w-20"> {/* Adjusted width */}
+                          <FormLabel className="sr-only">Points</FormLabel>
                           <FormControl>
                             <Input type="number" placeholder="Points" {...field} min="0" step="1" disabled={isSaving} />
                           </FormControl>
@@ -236,7 +237,7 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:bg-destructive/10 mt-1" // Add margin-top to align visually
+                      className="text-destructive hover:bg-destructive/10 mt-1"
                       onClick={() => remove(index)}
                       disabled={isSaving}
                       aria-label="Remove rule"
