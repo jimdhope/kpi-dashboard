@@ -172,9 +172,9 @@ export default function AdminPodsPage() {
           teamLeaderName: teamLeader?.name || 'N/A',
           agentNames: agentNames,
           // Keep logoUrl, logoInitials, logoBgColor as they are from Firestore
-          logoUrl: data.logoUrl,
-          logoInitials: data.logoInitials,
-          logoBgColor: data.logoBgColor,
+          logoUrl: data.logoUrl || '',
+          logoInitials: data.logoInitials || '',
+          logoBgColor: data.logoBgColor || '',
         };
       });
       setPods(fetchedPods);
@@ -510,15 +510,15 @@ export default function AdminPodsPage() {
                                     {/* Use pod.logoUrl if available, otherwise use Fallback */}
                                      {pod.logoUrl ? (
                                         <AvatarImage src={pod.logoUrl} alt={`${pod.name} logo`} data-ai-hint="pod logo" />
-                                     ) : null}
-                                    {/* Pass custom initials/color to Fallback */}
-                                    <AvatarFallback
-                                        initials={pod.logoInitials || generateInitials(pod.name)}
-                                        backgroundColor={pod.logoBgColor} // Pass custom color
-                                    >
-                                       {/* Default initials if no custom/generated initials */}
-                                       {!pod.logoInitials && generateInitials(pod.name)}
-                                    </AvatarFallback>
+                                     ) : (
+                                        <AvatarFallback
+                                            initials={pod.logoInitials || generateInitials(pod.name)}
+                                            backgroundColor={pod.logoBgColor} // Pass custom color
+                                        >
+                                            {/* Render default initials only if no custom/generated */}
+                                            {!pod.logoInitials && generateInitials(pod.name)}
+                                        </AvatarFallback>
+                                     )}
                                 </Avatar>
                                 </TableCell>
                                 <TableCell className="font-medium">{pod.name}</TableCell>
@@ -541,17 +541,15 @@ export default function AdminPodsPage() {
                                 <TableCell className="text-right">
                                 <div className="flex gap-1 justify-end">
                                         {/* Manage Agents Button - Triggers the *separate* Manage Agents Dialog */}
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => openManageAgentsDialog(pod)}
-                                            title={`Manage agents for ${pod.name}`}
-                                            disabled={isLoadingPods || isLoadingRelatedData || users.length === 0}
-                                        >
-                                            <UserPlus className="h-4 w-4" />
-                                        </Button>
-                                    </DialogTrigger>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openManageAgentsDialog(pod)}
+                                        title={`Manage agents for ${pod.name}`}
+                                        disabled={isLoadingPods || isLoadingRelatedData || users.length === 0}
+                                    >
+                                        <UserPlus className="h-4 w-4" />
+                                    </Button>
                                         {/* Edit Pod Button - Triggers the *main* Add/Edit Pod Dialog */}
                                     <DialogTrigger asChild>
                                         <Button
@@ -638,4 +636,3 @@ export default function AdminPodsPage() {
     </div>
   );
 }
-

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -76,9 +77,9 @@ export default function AdminCampaignsPage() {
         id: doc.id,
         ...(doc.data() as Omit<Campaign, 'id'>),
         // Ensure optional fields exist
-        logoUrl: doc.data().logoUrl,
-        logoInitials: doc.data().logoInitials,
-        logoBgColor: doc.data().logoBgColor,
+        logoUrl: doc.data().logoUrl || '',
+        logoInitials: doc.data().logoInitials || '',
+        logoBgColor: doc.data().logoBgColor || '',
       }));
       setCampaigns(fetchedCampaigns);
       setIsLoading(false);
@@ -123,9 +124,9 @@ export default function AdminCampaignsPage() {
     // Prepare data for Firestore, including custom logo fields
     const campaignDataToSave: Omit<Campaign, 'id'> = {
       name: data.name,
-      logoUrl: finalLogoUrl || undefined, // Use URL or undefined
-      logoInitials: data.logoInitials || undefined, // Use custom initials or undefined
-      logoBgColor: data.logoBgColor || undefined, // Use custom color or undefined
+      logoUrl: finalLogoUrl || '', // Use URL or empty string
+      logoInitials: data.logoInitials || '', // Use custom initials or empty string
+      logoBgColor: data.logoBgColor || '', // Use custom color or empty string
     };
 
     // Add or Update Firestore document
@@ -151,9 +152,9 @@ export default function AdminCampaignsPage() {
          // Update only the fields that might have changed
          const updates: Partial<Campaign> = {
              name: data.name,
-             logoUrl: finalLogoUrl || undefined,
-             logoInitials: data.logoInitials || undefined,
-             logoBgColor: data.logoBgColor || undefined,
+             logoUrl: finalLogoUrl || '',
+             logoInitials: data.logoInitials || '',
+             logoBgColor: data.logoBgColor || '',
          };
         await updateDoc(campaignDoc, updates);
         toast({
@@ -264,14 +265,15 @@ export default function AdminCampaignsPage() {
                           <Avatar className="h-10 w-10">
                              {campaign.logoUrl ? (
                                 <AvatarImage src={campaign.logoUrl} alt={`${campaign.name} logo`} data-ai-hint="campaign logo"/>
-                             ) : null}
-                            <AvatarFallback
-                                initials={campaign.logoInitials || generateInitials(campaign.name)}
-                                backgroundColor={campaign.logoBgColor}
-                             >
-                                {/* Default initials if no custom/generated initials */}
-                                {!campaign.logoInitials && generateInitials(campaign.name)}
-                             </AvatarFallback>
+                             ) : (
+                                <AvatarFallback
+                                    initials={campaign.logoInitials || generateInitials(campaign.name)}
+                                    backgroundColor={campaign.logoBgColor}
+                                >
+                                    {/* Render default initials only if no custom/generated */}
+                                    {!campaign.logoInitials && generateInitials(campaign.name)}
+                                </AvatarFallback>
+                             )}
                           </Avatar>
                         </TableCell>
                         <TableCell className="font-medium">{campaign.name}</TableCell>

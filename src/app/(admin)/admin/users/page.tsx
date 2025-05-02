@@ -101,6 +101,10 @@ export default function AdminUsersPage() {
           id: doc.id, // Firestore document ID (should match Auth UID)
           ...data,
           roles: data.roles || [], // Ensure roles is always an array
+           // Ensure optional avatar fields exist or are initialized
+           avatarUrl: data.avatarUrl || '',
+           avatarInitials: data.avatarInitials || '',
+           avatarBgColor: data.avatarBgColor || '',
         };
       });
       setUsers(fetchedUsers);
@@ -179,7 +183,7 @@ export default function AdminUsersPage() {
          const updates: Partial<AppUser> = {
            name: data.name,
            roles: data.roles, // Update roles array
-           // AvatarURL might be updated here if we add that to the form later
+           // AvatarURL, avatarInitials, avatarBgColor might be updated here if added to the form later
          };
 
          // 1. Update Firestore Document (name, roles, etc.)
@@ -348,16 +352,12 @@ export default function AdminUsersPage() {
                         <TableRow key={user.id}>
                             <TableCell>
                              <Avatar className="h-10 w-10">
-                                {/* Use AvatarImage if user.avatarUrl exists */}
-                                {user.avatarUrl ? (
-                                    <AvatarImage src={user.avatarUrl} alt={`${user.name} avatar`} data-ai-hint="user avatar"/>
-                                ) : null }
                                 {/* AvatarFallback handles initials and background color */}
                                 <AvatarFallback
                                      initials={user.avatarInitials || generateInitials(user.name)}
                                      backgroundColor={user.avatarBgColor} // Pass potential custom color
                                  >
-                                     {/* Only render default if no custom/generated */}
+                                     {/* Render default initials only if no custom/generated ones exist */}
                                     {!user.avatarInitials && generateInitials(user.name)}
                                 </AvatarFallback>
                             </Avatar>

@@ -31,7 +31,7 @@ interface AgentSidebarLayoutProps {
 const MOCK_AGENT_USER = {
     name: "Agent Charlie",
     email: "charlie.agent@kpiquest.com",
-    avatarUrl: "https://picsum.photos/seed/charlie_b/100",
+    avatarUrl: "", // Keep empty if no URL
     avatarInitials: '', // Example: Add if needed
     avatarBgColor: '', // Example: Add if needed
 };
@@ -78,13 +78,12 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
         <SidebarFooter className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              {MOCK_AGENT_USER.avatarUrl ? (
-                 <AvatarImage src={MOCK_AGENT_USER.avatarUrl} alt="User Avatar" data-ai-hint="agent avatar" />
-              ) : null}
+               {/* AvatarFallback handles initials and background color */}
               <AvatarFallback
                  initials={MOCK_AGENT_USER.avatarInitials || generateInitials(MOCK_AGENT_USER.name)}
                  backgroundColor={MOCK_AGENT_USER.avatarBgColor}
                >
+                   {/* Render default initials only if no custom/generated */}
                    {!MOCK_AGENT_USER.avatarInitials && generateInitials(MOCK_AGENT_USER.name)}
                </AvatarFallback>
             </Avatar>

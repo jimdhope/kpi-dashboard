@@ -32,7 +32,7 @@ interface DashboardLayoutProps {
 const MOCK_ADMIN_USER = {
     name: "Admin User",
     email: "admin@kpiquest.com",
-    avatarUrl: "https://picsum.photos/seed/admin/100", // Generic admin avatar
+    avatarUrl: "", // Keep empty if no URL
     avatarInitials: '', // Example: Add if needed
     avatarBgColor: '', // Example: Add if needed
 };
@@ -142,13 +142,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <SidebarFooter className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              {MOCK_ADMIN_USER.avatarUrl ? (
-                <AvatarImage src={MOCK_ADMIN_USER.avatarUrl} alt="Admin Avatar" data-ai-hint="admin avatar" />
-               ) : null}
+               {/* AvatarFallback handles initials and background color */}
               <AvatarFallback
                    initials={MOCK_ADMIN_USER.avatarInitials || generateInitials(MOCK_ADMIN_USER.name)}
                    backgroundColor={MOCK_ADMIN_USER.avatarBgColor}
                >
+                    {/* Render default initials only if no custom/generated */}
                    {!MOCK_ADMIN_USER.avatarInitials && generateInitials(MOCK_ADMIN_USER.name)}
                </AvatarFallback>
             </Avatar>

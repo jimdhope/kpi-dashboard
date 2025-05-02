@@ -1,14 +1,18 @@
+
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Medal } from 'lucide-react'; // Import Medal icon
+import { generateInitials } from "@/lib/utils"; // Import generateInitials
 
 interface LeaderboardEntry {
   rank: number;
   name: string;
   score: number;
   avatarUrl?: string;
+  avatarInitials?: string; // Optional custom initials
+  avatarBgColor?: string; // Optional custom background color
   isUser?: boolean; // Flag to highlight the current user/team
 }
 
@@ -61,8 +65,16 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={entry.avatarUrl || `https://picsum.photos/seed/${entry.name}/40`} alt={entry.name} data-ai-hint="avatar person" />
-                      <AvatarFallback>{entry.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      {entry.avatarUrl ? (
+                        <AvatarImage src={entry.avatarUrl} alt={entry.name} data-ai-hint="avatar person" />
+                      ) : (
+                         <AvatarFallback
+                            initials={entry.avatarInitials || generateInitials(entry.name)}
+                            backgroundColor={entry.avatarBgColor}
+                         >
+                            {!entry.avatarInitials && generateInitials(entry.name)}
+                         </AvatarFallback>
+                      )}
                     </Avatar>
                     <span className="font-medium truncate">{entry.name}</span>
                      {entry.isUser && <Badge variant="outline">You</Badge>}
