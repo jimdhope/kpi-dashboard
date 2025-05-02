@@ -63,7 +63,7 @@ const competitionRuleSchema = z.object({
 });
 
 // Main competition form schema using z.union for date fields
-const competitionFormSchema = z.object({
+export const competitionFormSchema = z.object({
   name: z.string().min(3, { message: 'Competition name required (min 3 chars).' }).max(50, { message: 'Name max 50 chars.' }),
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
   podId: z.string().min(1, { message: 'Please select a pod.' }),
@@ -224,12 +224,12 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     setIsSubmitting(true);
     try {
         // Data should already have valid Date objects due to Zod transform
-        const dataToSend = {
-            ...data,
-            startDate: Timestamp.fromDate(data.startDate),
-            endDate: Timestamp.fromDate(data.endDate),
-        };
-        await onSubmit(dataToSend as any, data.rules);
+        // const dataToSend = {
+        //     ...data,
+        //     startDate: Timestamp.fromDate(data.startDate), // Conversion handled in parent now
+        //     endDate: Timestamp.fromDate(data.endDate), // Conversion handled in parent now
+        // };
+        await onSubmit(data, data.rules); // Pass Zod-transformed data (with Dates) and rules
     } catch (error) {
         console.error("Error during competition form submission:", error);
     } finally {

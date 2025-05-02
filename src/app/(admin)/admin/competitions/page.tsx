@@ -39,13 +39,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { CompetitionForm, CompetitionFormData } from '@/components/competition-form'; // Import CompetitionForm
+import { CompetitionForm, CompetitionFormData, competitionFormSchema } from '@/components/competition-form'; // Import CompetitionForm and schema
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns'; // For formatting dates
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
 import type { Pod } from '@/app/(admin)/admin/pods/page'; // Import Pod type
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse rule type
+import { z } from 'zod'; // Import Zod for type inference
 
 // Competition type definition
 export interface Competition {
@@ -60,6 +61,12 @@ export interface Competition {
   campaignName?: string;
   podName?: string;
 }
+
+// Type for the data received from the form after Zod transformation
+type ReceivedCompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
+    startDate: Date;
+    endDate: Date;
+};
 
 const competitionsCollectionRef = collection(db, 'competitions');
 const campaignsCollectionRef = collection(db, 'campaigns'); // Needed for form select
@@ -183,14 +190,27 @@ export default function AdminCompetitionsPage() {
   };
 
   // Handle form submission for adding/editing competitions
-  const handleFormSubmit = async (data: CompetitionFormData, rules: RuleFormData[]) => {
+  const handleFormSubmit = async (data: ReceivedCompetitionFormData, rules: RuleFormData[]) => {
     setIsSubmitting(true);
+
+    // --- Input Validation ---
+    if (!(data.startDate instanceof Date) || !(data.endDate instanceof Date)) {
+        console.error("Invalid date data received in handleFormSubmit:", data);
+        toast({
+            variant: "destructive",
+            title: "Invalid Date",
+            description: "Start date or end date is invalid. Please check your input.",
+        });
+        setIsSubmitting(false);
+        return;
+    }
+
     const competitionDataToSave = {
         name: data.name,
         campaignId: data.campaignId,
         podId: data.podId,
-        startDate: Timestamp.fromDate(data.startDate), // Convert date to timestamp
-        endDate: Timestamp.fromDate(data.endDate),     // Convert date to timestamp
+        startDate: Timestamp.fromDate(data.startDate), // Convert valid date to timestamp
+        endDate: Timestamp.fromDate(data.endDate),     // Convert valid date to timestamp
         rules: rules, // Save the rules array directly
     };
 
@@ -419,3 +439,4 @@ export default function AdminCompetitionsPage() {
     </div>
   );
 }
+
