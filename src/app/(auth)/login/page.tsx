@@ -30,8 +30,16 @@ export default function LoginPage() {
       const user = userCredential.user;
       console.log('Login successful for:', user.email);
 
-      // --- Mock Role Check for Testing ---
+      // --- DEVELOPMENT ONLY: Always redirect to admin ---
+      // This bypasses the role check for easier development access.
+      // REMOVE OR REVERT THIS before deploying to production.
+      console.log('DEV MODE: Redirecting all users to /admin...');
+      router.push('/admin');
+      // -------------------------------------------------
+
+      // --- Original Role Check (Commented out for development) ---
       // In a real app, you'd fetch the user's role from Firestore or a custom claim
+      /*
       if (user.email === 'admin@test.com') {
         console.log('Redirecting admin user...');
         router.push('/admin');
@@ -43,6 +51,7 @@ export default function LoginPage() {
         // Decide on a default redirect or show an error if role is unknown
         router.push('/agent');
       }
+      */
       // -----------------------------------
 
     } catch (err: any) {
@@ -96,6 +105,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
+                  placeholder="********" // Added placeholder
                 />
               </div>
              <Button type="submit" className="w-full" disabled={loading}>
@@ -108,8 +118,8 @@ export default function LoginPage() {
              </Button>
             </form>
             <p className="mt-4 text-center text-xs text-muted-foreground">
-                Use `admin@test.com` or `agent@test.com` for testing. <br />
-                (Ensure users exist in Firebase Auth emulator)
+                Login with any valid Firebase user. <br />
+                (DEV MODE: Will redirect to /admin)
             </p>
         </CardContent>
          <CardFooter className="text-center text-sm text-muted-foreground">
