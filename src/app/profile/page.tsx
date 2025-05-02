@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Removed AvatarImage
 import {
   Form,
   FormControl,
@@ -20,7 +20,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db, auth as firebaseAuth } from '@/lib/firebase'; // Import Firestore and Auth
 import { AppUser } from '@/services/user'; // Import AppUser type
@@ -85,7 +85,8 @@ export default function ProfilePage() {
             // Optionally create a basic document here if needed
             // For now, set form defaults from Auth user if available
             form.reset({ name: currentUser.displayName || currentUser.email || '' });
-            setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [] }); // Basic user data
+            // Ensure basic userData state even if Firestore doc missing
+            setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [] });
              toast({
                variant: "destructive",
                title: "Profile Data Missing",
@@ -101,6 +102,8 @@ export default function ProfilePage() {
            });
              // Set basic defaults even on error
              form.reset({ name: currentUser.displayName || currentUser.email || '' });
+              // Ensure basic userData state even on error
+             setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [] });
         }
       } else {
         // No user logged in, redirect or handle appropriately
@@ -219,6 +222,7 @@ export default function ProfilePage() {
                            backgroundColor={previewBgColor} // Pass custom color for preview
                         >
                            {/* Render initials */}
+                           {previewInitials} {/* Explicitly render initials here */}
                         </AvatarFallback>
                     </Avatar>
                   </div>
@@ -264,6 +268,11 @@ export default function ProfilePage() {
                                         disabled={isSubmitting}
                                         title="Select background color"
                                     />
+                                     <div
+                                        className="h-10 w-10 rounded-md border"
+                                        style={{ backgroundColor: field.value || 'transparent' }}
+                                        title="Color Preview"
+                                     />
                                 </div>
                                 <FormMessage />
                             </FormItem>
@@ -300,15 +309,13 @@ export default function ProfilePage() {
                      <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Team Information</h3>
                      <div className="flex items-center gap-2">
                          <UserCircle className="h-5 w-5 text-primary" />
-                         {/* Changed p to div */}
-                         <div className="text-sm">
+                         <div className="text-sm"> {/* Use div instead of p */}
                            <strong>Pod Manager:</strong> {podManagerName || <Skeleton className="h-4 w-32 inline-block ml-1" />}
                          </div>
                      </div>
                      <div className="flex items-center gap-2">
                         <Building2 className="h-5 w-5 text-primary" />
-                         {/* Changed p to div */}
-                         <div className="text-sm">
+                         <div className="text-sm"> {/* Use div instead of p */}
                            <strong>Team Leader:</strong> {teamLeaderName || <Skeleton className="h-4 w-32 inline-block ml-1" />}
                          </div>
                     </div>
@@ -326,4 +333,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
