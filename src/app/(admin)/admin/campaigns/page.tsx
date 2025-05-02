@@ -10,10 +10,12 @@ import {
   doc,
   query,
   orderBy,
+  onSnapshot, // Import onSnapshot for real-time updates
+  Unsubscribe, // Import Unsubscribe type
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // Import Firestore instance
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Import buttonVariants
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit, Trash2, PlusCircle, Loader2 } from 'lucide-react';
@@ -61,33 +63,37 @@ export default function AdminCampaignsPage() {
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
   const { toast } = useToast();
 
-  const fetchCampaigns = useCallback(async () => {
+  // Use useEffect for real-time updates with onSnapshot
+  useEffect(() => {
     setIsLoading(true);
     setError(null);
-    try {
-      const q = query(campaignsCollectionRef, orderBy('name')); // Order by name
-      const data = await getDocs(q);
-      const fetchedCampaigns: Campaign[] = data.docs.map((doc) => ({
+
+    const q = query(campaignsCollectionRef, orderBy('name')); // Order by name
+
+    // Subscribe to real-time updates
+    const unsubscribe: Unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedCampaigns: Campaign[] = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Omit<Campaign, 'id'>),
       }));
       setCampaigns(fetchedCampaigns);
-    } catch (err) {
-      console.error("Error fetching campaigns:", err);
-      setError("Failed to fetch campaigns. Please try again.");
+      setIsLoading(false);
+      setError(null); // Clear error on successful fetch/update
+    }, (err) => { // Error handler for onSnapshot
+      console.error("Error fetching campaigns with snapshot:", err);
+      setError("Failed to fetch campaigns. Please check your connection or permissions.");
       toast({
         variant: "destructive",
         title: "Error",
         description: "Could not load campaigns.",
       });
-    } finally {
       setIsLoading(false);
-    }
-  }, [toast]); // Add toast as dependency
+    });
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, [fetchCampaigns]); // Fetch campaigns on component mount
+    // Cleanup function to unsubscribe when component unmounts
+    return () => unsubscribe();
+
+  }, [toast]); // Only run once on mount, dependencies are stable
 
   const openAddDialog = () => {
     setSelectedCampaign(null);
@@ -107,44 +113,38 @@ export default function AdminCampaignsPage() {
   };
 
   const handleFormSubmit = async (data: CampaignFormData) => {
+     // Show loading state in button (optional, handled by form component)
     if (dialogMode === 'add') {
       try {
-        const docRef = await addDoc(campaignsCollectionRef, data);
-        // No need to manually add to state, refetch will update
-        // const newCampaign: Campaign = { id: docRef.id, ...data };
-        // setCampaigns([...campaigns, newCampaign]);
+        await addDoc(campaignsCollectionRef, data);
         toast({
           title: "Campaign Added",
           description: `"${data.name}" has been successfully added.`,
         });
-        fetchCampaigns(); // Refetch campaigns after adding
-      } catch (err) {
+        // No need to refetch, onSnapshot handles updates
+      } catch (err: any) {
         console.error("Error adding campaign: ", err);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: `Failed to add campaign "${data.name}".`,
+          title: "Error Adding Campaign",
+          description: err.message || `Failed to add campaign "${data.name}". Check console for details.`,
         });
       }
     } else if (dialogMode === 'edit' && selectedCampaign) {
       try {
         const campaignDoc = doc(db, 'campaigns', selectedCampaign.id);
         await updateDoc(campaignDoc, data);
-        // No need to manually update state, refetch will update
-        // setCampaigns(campaigns.map(c =>
-        //   c.id === selectedCampaign.id ? { ...c, ...data } : c
-        // ));
         toast({
           title: "Campaign Updated",
           description: `"${data.name}" has been successfully updated.`,
         });
-        fetchCampaigns(); // Refetch campaigns after updating
-      } catch (err) {
+         // No need to refetch, onSnapshot handles updates
+      } catch (err: any) {
         console.error("Error updating campaign: ", err);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: `Failed to update campaign "${selectedCampaign.name}".`,
+          title: "Error Updating Campaign",
+          description: err.message || `Failed to update campaign "${selectedCampaign.name}". Check console for details.`,
         });
       }
     }
@@ -157,20 +157,18 @@ export default function AdminCampaignsPage() {
       try {
         const campaignDoc = doc(db, 'campaigns', selectedCampaign.id);
         await deleteDoc(campaignDoc);
-        // No need to manually delete from state, refetch will update
-        // setCampaigns(campaigns.filter(c => c.id !== selectedCampaign.id));
         toast({
-          variant: "destructive",
+          variant: "destructive", // Use default or success variant if preferred
           title: "Campaign Deleted",
           description: `"${selectedCampaign.name}" has been deleted.`,
         });
-        fetchCampaigns(); // Refetch campaigns after deleting
-      } catch (err) {
+         // No need to refetch, onSnapshot handles updates
+      } catch (err: any) {
         console.error("Error deleting campaign: ", err);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: `Failed to delete campaign "${selectedCampaign.name}".`,
+          title: "Error Deleting Campaign",
+          description: err.message || `Failed to delete campaign "${selectedCampaign.name}". Check console for details.`,
         });
       }
       setIsAlertOpen(false); // Close the alert dialog
@@ -189,13 +187,13 @@ export default function AdminCampaignsPage() {
                 <CardDescription>View, add, edit, or delete campaigns.</CardDescription>
               </div>
               <DialogTrigger asChild>
-                <Button onClick={openAddDialog}>
+                <Button onClick={openAddDialog} disabled={isLoading}> {/* Disable button while loading */}
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Campaign
                 </Button>
               </DialogTrigger>
             </CardHeader>
             <CardContent>
-              {error && (
+              {error && !isLoading && ( // Show error only if not loading
                 <div className="mb-4 text-center text-destructive">{error}</div>
               )}
               <Table>
@@ -303,6 +301,7 @@ export default function AdminCampaignsPage() {
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the campaign
                 <span className="font-semibold"> "{selectedCampaign?.name}"</span> from the database.
+                Associated data might also be affected (implement cascade logic if needed).
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -319,10 +318,10 @@ export default function AdminCampaignsPage() {
 }
 
 // Helper function for button variants - needed if using programmatically like above
-const buttonVariants = ({ variant }: { variant: "destructive" | "default" | null | undefined }) => {
-    if (variant === "destructive") {
-        return "bg-destructive text-destructive-foreground hover:bg-destructive/90";
-    }
-    // Add other variants if needed
-    return ""; // Default or other variants
-};
+// const buttonVariants = ({ variant }: { variant: "destructive" | "default" | null | undefined }) => {
+//     if (variant === "destructive") {
+//         return "bg-destructive text-destructive-foreground hover:bg-destructive/90";
+//     }
+//     // Add other variants if needed
+//     return ""; // Default or other variants
+// };
