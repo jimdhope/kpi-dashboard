@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -15,7 +14,7 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/ui/popover"; // Ensure Popover imports are correct
 import {
     Select,
     SelectContent,
@@ -33,7 +32,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react'; // Ensure CalendarIcon is imported
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { useToast } from '@/hooks/use-toast';
@@ -312,29 +311,30 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 <FormItem className="flex flex-col">
                     <FormLabel>Start Date</FormLabel>
                     <Popover>
-                        {/* PopoverTrigger must be a direct child */}
                         <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
-                                !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
-                                {field.value ? (
-                                format(field.value, "PPP") // Format date nicely
-                                ) : (
-                                <span>Pick a date</span>
-                                )}
-                            </Button>
+                            <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
+                                    {field.value ? (
+                                    format(field.value, "PPP") // Format date nicely
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                </Button>
+                             </FormControl>
                         </PopoverTrigger>
                          <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                                 mode="single"
                                 selected={field.value}
-                                onSelect={(date) => field.onChange(date)} // Ensure onChange is called
+                                onSelect={field.onChange} // Changed to pass function directly
                                 // Optional: Disable past dates relative to today
                                 disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmitting}
                                 initialFocus
@@ -354,29 +354,30 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 <FormItem className="flex flex-col">
                     <FormLabel>End Date</FormLabel>
                     <Popover>
-                         {/* PopoverTrigger must be a direct child */}
                         <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
-                                !field.value && "text-muted-foreground"
-                                )}
-                                disabled={isSubmitting || !form.watch('startDate')} // Disable if no start date
-                            >
-                                 <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
-                                {field.value ? (
-                                format(field.value, "PPP")
-                                ) : (
-                                <span>Pick a date</span>
-                                )}
-                            </Button>
+                             <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting || !form.watch('startDate')} // Disable if no start date
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
+                                    {field.value ? (
+                                    format(field.value, "PPP")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                </Button>
+                            </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                                 mode="single"
                                 selected={field.value}
-                                onSelect={(date) => field.onChange(date)} // Ensure onChange is called
+                                onSelect={field.onChange} // Changed to pass function directly
                                 // Disable dates before start date
                                 disabled={(date) =>
                                     (form.watch('startDate') && date < form.watch('startDate')!) ||
