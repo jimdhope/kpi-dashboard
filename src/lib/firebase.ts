@@ -1,8 +1,9 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, deleteField } from "firebase/firestore"; // Added deleteField
 import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 // Your web app's Firebase configuration
@@ -55,4 +56,4 @@ if (typeof window !== 'undefined') {
 }
 
 
-export { app, auth, db, storage, analytics }; // Export storage
+export { app, auth, db, storage, analytics, deleteField }; // Export storage and deleteField
