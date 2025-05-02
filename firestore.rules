@@ -1,18 +1,17 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Allow read/write access to the 'campaigns' collection for any authenticated user.
-    // TODO: For production, restrict write access to admins only (e.g., using custom claims).
+    // Allow authenticated users to read and write to the 'campaigns' collection
     match /campaigns/{campaignId} {
       allow read, write: if request.auth != null;
     }
 
-    // Default deny all other collections/paths
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    // Add rules for other collections here as needed
+    // Example:
+    // match /users/{userId} {
+    //   allow read: if request.auth != null;
+    //   allow write: if request.auth != null && request.auth.uid == userId;
+    // }
   }
 }
