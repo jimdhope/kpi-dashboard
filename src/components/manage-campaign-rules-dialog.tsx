@@ -166,7 +166,8 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <ScrollArea className="max-h-[50vh] p-1 pr-4 mb-4">
+          {/* Wrap the rules list and Add Rule button in ScrollArea */}
+           <ScrollArea className="max-h-[50vh] p-1 pr-4 mb-4">
             {isLoading ? (
                <div className="space-y-4 p-4">
                    {Array.from({ length: 3 }).map((_, index) => (
@@ -248,13 +249,13 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                 ))}
               </div>
             )}
+             {/* Add Rule Button inside ScrollArea */}
+             <div className="flex justify-start mb-6 px-4">
+                <Button type="button" variant="outline" onClick={addRule} disabled={isSaving}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
+                </Button>
+             </div>
           </ScrollArea>
-
-          <div className="flex justify-start mb-6 px-4">
-            <Button type="button" variant="outline" onClick={addRule} disabled={isSaving}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
-            </Button>
-          </div>
 
           <DialogFooter className="mt-auto pt-4 border-t">
             <DialogClose asChild>

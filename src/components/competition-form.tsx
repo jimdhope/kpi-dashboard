@@ -215,7 +215,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
 
   return (
     <Form {...form}>
-      <ScrollArea className="h-[70vh] pr-6"> {/* Increased height */}
+       {/* Wrap main form content in ScrollArea */}
+      <ScrollArea className="h-[65vh] pr-6"> {/* Adjust height as needed */}
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4 pl-2 pr-1"> {/* Increased gap */}
 
           {/* Competition Name */}
@@ -311,33 +312,32 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 <FormItem className="flex flex-col">
                     <FormLabel>Start Date</FormLabel>
                     <Popover>
+                        {/* PopoverTrigger must be a direct child */}
                         <PopoverTrigger asChild>
-                            <FormControl>
                             <Button
                                 variant={"outline"}
                                 className={cn(
-                                "w-[240px] pl-3 text-left font-normal",
+                                "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
                                 !field.value && "text-muted-foreground"
                                 )}
                                 disabled={isSubmitting}
                             >
+                                <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
                                 {field.value ? (
                                 format(field.value, "PPP") // Format date nicely
                                 ) : (
                                 <span>Pick a date</span>
                                 )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
-                            </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                         <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                             // Optional: Disable past dates relative to today
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmitting}
-                            initialFocus
+                                mode="single"
+                                selected={field.value}
+                                onSelect={(date) => field.onChange(date)} // Ensure onChange is called
+                                // Optional: Disable past dates relative to today
+                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmitting}
+                                initialFocus
                             />
                         </PopoverContent>
                     </Popover>
@@ -354,30 +354,29 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 <FormItem className="flex flex-col">
                     <FormLabel>End Date</FormLabel>
                     <Popover>
+                         {/* PopoverTrigger must be a direct child */}
                         <PopoverTrigger asChild>
-                            <FormControl>
                             <Button
                                 variant={"outline"}
                                 className={cn(
-                                "w-[240px] pl-3 text-left font-normal",
+                                "w-[240px] pl-3 text-left font-normal justify-start", // Added justify-start
                                 !field.value && "text-muted-foreground"
                                 )}
                                 disabled={isSubmitting || !form.watch('startDate')} // Disable if no start date
                             >
+                                 <CalendarIcon className="mr-2 h-4 w-4 opacity-50" /> {/* Moved icon left */}
                                 {field.value ? (
                                 format(field.value, "PPP")
                                 ) : (
                                 <span>Pick a date</span>
                                 )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
-                            </FormControl>
                         </PopoverTrigger>
-                         <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                                 mode="single"
                                 selected={field.value}
-                                onSelect={field.onChange}
+                                onSelect={(date) => field.onChange(date)} // Ensure onChange is called
                                 // Disable dates before start date
                                 disabled={(date) =>
                                     (form.watch('startDate') && date < form.watch('startDate')!) ||
