@@ -1,5 +1,5 @@
 
-import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot, updateDoc } from 'firebase/firestore'; // Added updateDoc
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { db, app } from '@/lib/firebase'; // Import Firestore and Auth instances
 import { USER_ROLES, UserRole } from '@/components/user-form'; // Import roles definitions
@@ -17,7 +17,8 @@ export interface AppUser {
     avatarUrl?: string; // Optional field for user avatar (URL)
     avatarInitials?: string; // Optional custom initials for fallback
     avatarBgColor?: string; // Optional custom background color for fallback
-    // Add other relevant user fields as needed: podId, teamId, campaignId, etc.
+    podId?: string | null; // Add podId field (can be null if not assigned)
+    // Add other relevant user fields as needed: teamId, campaignId, etc.
 }
 
 /**
@@ -68,6 +69,7 @@ export async function createUser(name: string, email: string, password: string, 
             avatarUrl: '', // Initialize avatarUrl as empty string
             avatarInitials: '', // Initialize custom initials as empty
             avatarBgColor: '', // Initialize custom color as empty
+            podId: null, // Initialize podId as null
             // Note: A default placeholder image URL like picsum is removed.
             // The Avatar component now handles generating initials and random colors
             // if avatarUrl, avatarInitials, or avatarBgColor are not provided.
@@ -111,6 +113,7 @@ export async function getAllUsers(): Promise<AppUser[]> {
             avatarUrl: doc.data().avatarUrl || '', // Ensure defaults if missing
             avatarInitials: doc.data().avatarInitials || '',
             avatarBgColor: doc.data().avatarBgColor || '',
+            podId: doc.data().podId || null, // Ensure podId exists, default to null
         } as AppUser));
     } catch (error) {
         console.error("Error fetching users:", error);
@@ -118,9 +121,28 @@ export async function getAllUsers(): Promise<AppUser[]> {
     }
 }
 
+/**
+ * Updates the podId for a specific user.
+ * @param userId The ID of the user to update (should be the Auth UID).
+ * @param podId The ID of the pod to assign, or null to unassign.
+ */
+export async function updateUserPodAssignment(userId: string, podId: string | null): Promise<void> {
+    try {
+        const userDocRef = doc(db, 'users', userId);
+        await updateDoc(userDocRef, {
+            podId: podId // Set podId to the new value (string or null)
+        });
+        console.log(`Updated pod assignment for user ${userId} to pod ${podId}`);
+    } catch (error) {
+        console.error(`Error updating pod assignment for user ${userId}:`, error);
+        throw new Error("Failed to update user's pod assignment.");
+    }
+}
+
+
 // Potential future functions:
 // export async function getUserById(uid: string): Promise<AppUser | null> { ... }
-// export async function updateUser(uid: string, data: Partial<AppUser>): Promise<void> { ... }
+// export async function updateUser(uid: string, data: Partial<AppUser>): Promise<void> { ... } // General update function
 // export async function deleteUser(uid: string): Promise<void> {
 //   // Requires deleting from Firestore AND Firebase Auth (potentially using Admin SDK)
 // }

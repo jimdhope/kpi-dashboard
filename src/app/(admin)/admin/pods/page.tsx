@@ -46,7 +46,7 @@ import { ManagePodAgentsDialog } from '@/components/manage-pod-agents-dialog'; /
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
-import { createUser, AppUser } from '@/services/user';
+import { createUser, AppUser, updateUserPodAssignment } from '@/services/user'; // Import AppUser and updateUserPodAssignment
 import { Input } from '@/components/ui/input'; // Import Input
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
 
@@ -353,15 +353,21 @@ export default function AdminPodsPage() {
     if (selectedPod) {
        const podToDelete = selectedPod; // Store data before resetting state
       try {
-         // 1. Delete Firestore Document
+         // 1. Unassign agents from this pod
+         if (podToDelete.agentIds && podToDelete.agentIds.length > 0) {
+             await Promise.all(podToDelete.agentIds.map(agentId => updateUserPodAssignment(agentId, null)));
+             console.log(`Unassigned agents from pod ${podToDelete.id}`);
+         }
+
+         // 2. Delete Firestore Document
         const podDoc = doc(db, 'pods', podToDelete.id);
         await deleteDoc(podDoc);
 
-         // 2. No need to delete logo from Storage
+         // 3. No need to delete logo from Storage
 
         toast({
           title: "Pod Deleted",
-          description: `"${podToDelete.name}" has been deleted.`,
+          description: `"${podToDelete.name}" has been deleted and agents unassigned.`,
         });
       } catch (err: any) {
         console.error("Error deleting pod: ", err);
@@ -378,14 +384,37 @@ export default function AdminPodsPage() {
 
    // Handler for saving assigned agents
    const handleSavePodAgents = async (podId: string, selectedAgentIds: string[]) => {
+     if (!selectedPodForAgents) return;
+
+     const originalAgentIds = selectedPodForAgents.agentIds || [];
+     const agentsToAdd = selectedAgentIds.filter(id => !originalAgentIds.includes(id));
+     const agentsToRemove = originalAgentIds.filter(id => !selectedAgentIds.includes(id));
+
      try {
+       // 1. Update the pod document with the new list of agentIds
        const podDocRef = doc(db, 'pods', podId);
        await updateDoc(podDocRef, {
          agentIds: selectedAgentIds,
        });
+
+       // 2. Update the podId field on each added/removed user document
+       const updatePromises: Promise<void>[] = [];
+
+       // Assign podId to newly added agents
+       agentsToAdd.forEach(agentId => {
+         updatePromises.push(updateUserPodAssignment(agentId, podId));
+       });
+
+       // Remove podId from removed agents
+       agentsToRemove.forEach(agentId => {
+         updatePromises.push(updateUserPodAssignment(agentId, null)); // Pass null to unassign
+       });
+
+       await Promise.all(updatePromises);
+
        toast({
          title: "Agents Updated",
-         description: `Agent assignments for the pod have been saved.`,
+         description: `Agent assignments for pod "${selectedPodForAgents.name}" have been saved.`,
        });
        setIsManageAgentsOpen(false); // Close the dialog
        setSelectedPodForAgents(null);
@@ -591,14 +620,14 @@ export default function AdminPodsPage() {
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 This action cannot be undone. This will permanently delete the pod
-                                <span className="font-semibold"> "{selectedPod?.name}"</span>.
+                                <span className="font-semibold"> "{selectedPod?.name}"</span> and unassign its agents.
                                 Consider potential impact on associated teams or data.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel onClick={() => setSelectedPod(null)}>Cancel</AlertDialogCancel>
                             <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({ variant: "destructive" })}>
-                                Delete
+                                Delete Pod
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

@@ -24,6 +24,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db, auth as firebaseAuth } from '@/lib/firebase'; // Import Firestore and Auth
 import { AppUser } from '@/services/user'; // Import AppUser type
+import type { Pod } from '@/app/(admin)/admin/pods/page'; // Import Pod type
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Save, UserCircle, Building2 } from 'lucide-react'; // Icons
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
@@ -41,6 +42,7 @@ type ProfileFormData = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<AppUser | null>(null);
+  const [podData, setPodData] = useState<Pod | null>(null); // State for pod data
   const [podManagerName, setPodManagerName] = useState<string | null>(null);
   const [teamLeaderName, setTeamLeaderName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,11 +76,43 @@ export default function ProfilePage() {
               avatarInitials: fetchedUserData.avatarInitials || '',
               avatarBgColor: fetchedUserData.avatarBgColor || '',
             });
-            // TODO: Fetch Pod Manager and Team Leader names based on user's Pod/Team assignment
-            // This requires knowing how users are linked to Pods (e.g., `podId` field on user)
-            // For now, using placeholders:
-            setPodManagerName("Jane Smith (Manager)"); // Placeholder
-            setTeamLeaderName("Bob Johnson (Leader)"); // Placeholder
+
+            // --- Fetch Pod and Manager/Leader data ---
+            if (fetchedUserData.podId) {
+                const podDocRef = doc(db, 'pods', fetchedUserData.podId);
+                const podDocSnap = await getDoc(podDocRef);
+                if (podDocSnap.exists()) {
+                    const fetchedPodData = { id: podDocSnap.id, ...podDocSnap.data()} as Pod;
+                    setPodData(fetchedPodData);
+
+                    // Fetch Pod Manager Name
+                    if (fetchedPodData.podManagerId) {
+                         const managerDocRef = doc(db, 'users', fetchedPodData.podManagerId);
+                         const managerDocSnap = await getDoc(managerDocRef);
+                         setPodManagerName(managerDocSnap.exists() ? managerDocSnap.data().name : 'Unknown');
+                    } else {
+                        setPodManagerName('Not Assigned');
+                    }
+
+                     // Fetch Team Leader Name
+                    if (fetchedPodData.teamLeaderId) {
+                         const leaderDocRef = doc(db, 'users', fetchedPodData.teamLeaderId);
+                         const leaderDocSnap = await getDoc(leaderDocRef);
+                         setTeamLeaderName(leaderDocSnap.exists() ? leaderDocSnap.data().name : 'Unknown');
+                    } else {
+                        setTeamLeaderName('Not Assigned');
+                    }
+                } else {
+                    console.warn(`Pod document with ID ${fetchedUserData.podId} not found.`);
+                    setPodManagerName('Pod Not Found');
+                    setTeamLeaderName('Pod Not Found');
+                }
+            } else {
+                 setPodManagerName('Not Assigned to Pod');
+                 setTeamLeaderName('Not Assigned to Pod');
+            }
+             // --- End Fetch Pod Data ---
+
           } else {
             // Handle case where Firestore document doesn't exist yet (maybe first login)
             console.warn(`Firestore document for user ${currentUser.uid} not found.`);
@@ -90,12 +124,14 @@ export default function ProfilePage() {
                 avatarBgColor: '', // Ensure defined reset value
              });
             // Ensure basic userData state even if Firestore doc missing
-            setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [] });
+            setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [], podId: null });
              toast({
                variant: "destructive",
                title: "Profile Data Missing",
                description: "Could not load full profile details from the database.",
              });
+              setPodManagerName('N/A');
+              setTeamLeaderName('N/A');
           }
         } catch (error) {
            console.error("Error fetching user data:", error);
@@ -111,12 +147,17 @@ export default function ProfilePage() {
                  avatarBgColor: '', // Ensure defined reset value
                 });
               // Ensure basic userData state even on error
-             setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [] });
+             setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [], podId: null });
+              setPodManagerName('Error Loading');
+              setTeamLeaderName('Error Loading');
         }
       } else {
         // No user logged in, redirect or handle appropriately
         setUser(null);
         setUserData(null);
+        setPodData(null);
+        setPodManagerName(null);
+        setTeamLeaderName(null);
          // Consider redirecting to login: router.push('/login');
       }
       setIsLoading(false);
@@ -193,6 +234,7 @@ export default function ProfilePage() {
             <Skeleton className="h-10 w-full rounded" />
             <Skeleton className="h-10 w-full rounded" />
             <Skeleton className="h-10 w-full rounded" />
+            <Skeleton className="h-10 w-full rounded" /> {/* Added Skeleton for team info */}
             <Skeleton className="h-10 w-24 rounded" />
           </CardContent>
         </Card>
