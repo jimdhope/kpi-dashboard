@@ -70,9 +70,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
              {/* Achievements Log */}
              <SidebarMenuItem>
                 <Link href="/admin/achievements" passHref>
-                    <SidebarMenuButton tooltip="Achievements Log" isActive={currentPath === '/admin/achievements'}>
+                    <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/admin/achievements'}>
                       <CheckSquare />
-                      <span>Achievements Log</span>
+                      <span>Log Achievements</span>
                     </SidebarMenuButton>
                  </Link>
               </SidebarMenuItem>
@@ -186,4 +186,3 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </SidebarProvider>
   );
 }
-        
