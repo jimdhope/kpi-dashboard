@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Medal } from 'lucide-react'; // Import Medal icon
 import { generateInitials } from "@/lib/utils"; // Import generateInitials
+import { cn } from "@/lib/utils"; // Import cn for conditional classes
 
 interface LeaderboardEntry {
   rank: number;
@@ -24,12 +25,22 @@ interface LeaderboardProps {
 
 const getMedalColor = (rank: number) => {
   switch (rank) {
-    case 1: return 'text-yellow-500'; // Gold
-    case 2: return 'text-gray-400'; // Silver
-    case 3: return 'text-orange-600'; // Bronze
+    case 1: return 'text-yellow-400'; // Adjusted Gold
+    case 2: return 'text-gray-300'; // Adjusted Silver
+    case 3: return 'text-orange-400'; // Adjusted Bronze
     default: return 'text-muted-foreground';
   }
 }
+
+// Helper function to get style for top ranks
+const getRankHighlightStyle = (rank: number): React.CSSProperties => {
+  switch (rank) {
+    case 1: return { backgroundColor: '#9f8f5e', color: '#ffffff' }; // Gold-ish background, white text
+    case 2: return { backgroundColor: '#969696', color: '#ffffff' }; // Silver-ish background, white text
+    case 3: return { backgroundColor: '#996b4f', color: '#ffffff' }; // Bronze-ish background, white text
+    default: return {}; // No special style for other ranks
+  }
+};
 
 export function Leaderboard({ title, description, entries }: LeaderboardProps) {
   // Sort entries by score descending, then assign ranks
@@ -54,8 +65,17 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
           </TableHeader>
           <TableBody>
             {sortedEntries.map((entry) => (
-              <TableRow key={entry.rank} className={entry.isUser ? 'bg-accent' : ''}>
-                <TableCell className="font-medium text-center">
+              <TableRow
+                key={entry.rank}
+                // Apply highlight style for top 3, override default hover background for these rows
+                style={getRankHighlightStyle(entry.rank)}
+                // Keep user highlight, but ensure rank highlight takes precedence visually if needed
+                className={cn(
+                    entry.isUser && entry.rank > 3 ? 'bg-accent' : '', // Apply user highlight only if not top 3
+                    entry.rank <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50' // Adjust hover for highlighted rows
+                )}
+              >
+                <TableCell className="font-medium text-center align-middle"> {/* Ensure vertical alignment */}
                   {entry.rank <= 3 ? (
                     <Medal className={`inline-block h-5 w-5 ${getMedalColor(entry.rank)}`} />
                   ) : (
@@ -71,16 +91,27 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
                          <AvatarFallback
                             initials={entry.avatarInitials || generateInitials(entry.name)}
                             backgroundColor={entry.avatarBgColor}
+                             // Ensure fallback text is readable on rank background
+                            className={cn(entry.rank <= 3 ? 'text-gray-800' : '')}
                          >
                             {!entry.avatarInitials && generateInitials(entry.name)}
                          </AvatarFallback>
                       )}
                     </Avatar>
-                    <span className="font-medium truncate">{entry.name}</span>
-                     {entry.isUser && <Badge variant="outline">You</Badge>}
+                    {/* Ensure name text color contrasts with rank background */}
+                    <span className={cn("font-medium truncate", entry.rank <= 3 ? 'text-white' : '')}>{entry.name}</span>
+                     {/* Adjust badge style for contrast if needed */}
+                     {entry.isUser && <Badge variant={entry.rank <= 3 ? "secondary" : "outline"} className={entry.rank <= 3 ? "border-white/50 text-white/90" : ""}>You</Badge>}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-semibold text-primary">{entry.score.toLocaleString()}</TableCell>
+                 {/* Ensure score text color contrasts with rank background */}
+                <TableCell className={cn(
+                    "text-right font-semibold",
+                    entry.rank <= 3 ? 'text-white' : 'text-primary'
+                  )}
+                >
+                    {entry.score.toLocaleString()}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
