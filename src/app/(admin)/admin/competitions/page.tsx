@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -110,6 +111,10 @@ export default function AdminCompetitionsPage() {
                 teamLeaderId: data.teamLeaderId,
                 agentIds: data.agentIds || [],
                 campaignName: campaign?.name || 'Unknown Campaign',
+                // Include logo fields
+                logoUrl: data.logoUrl || '',
+                logoInitials: data.logoInitials || '',
+                logoBgColor: data.logoBgColor || '',
              } as Pod & { campaignName: string };
         });
         setPods(fetchedPods);
@@ -228,12 +233,15 @@ export default function AdminCompetitionsPage() {
         try {
             const competitionDoc = doc(db, 'competitions', selectedCompetition.id);
             // Only update fields editable in the form (podIds won't be editable in this iteration)
+            // Include podIds in the update data if the form allows changing it
             const updateData: Partial<Competition> = {
                 name: data.name,
                 startDate: Timestamp.fromDate(data.startDate),
                 endDate: Timestamp.fromDate(data.endDate),
                 rules: rules,
-                // podIds is not updated here
+                // If form allows editing podId, convert it to podIds array here
+                podIds: [data.podId],
+                campaignId: data.campaignId, // Update campaign if needed/allowed
             };
             await updateDoc(competitionDoc, updateData);
             toast({ title: "Competition Updated", description: `"${data.name}" has been successfully updated.` });
@@ -275,6 +283,9 @@ export default function AdminCompetitionsPage() {
            return {
                ...selectedCompetition,
                // Form expects single podId, use the first one for edit mode display
+               // Ensure startDate and endDate are Date objects
+               startDate: selectedCompetition.startDate instanceof Timestamp ? selectedCompetition.startDate.toDate() : selectedCompetition.startDate,
+               endDate: selectedCompetition.endDate instanceof Timestamp ? selectedCompetition.endDate.toDate() : selectedCompetition.endDate,
                podId: selectedCompetition.podIds?.[0] || '',
            };
        }
@@ -316,14 +327,7 @@ export default function AdminCompetitionsPage() {
               )}
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead>Pod(s)</TableHead> {/* Changed heading */}
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead className="text-right w-[150px]">Actions</TableHead>
-                  </TableRow>
+                  <TableRow><TableHead>Name</TableHead><TableHead>Campaign</TableHead><TableHead>Pod(s)</TableHead><TableHead>Start Date</TableHead><TableHead>End Date</TableHead><TableHead className="text-right w-[150px]">Actions</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
@@ -446,4 +450,5 @@ export default function AdminCompetitionsPage() {
     </div>
   );
 }
+
 
