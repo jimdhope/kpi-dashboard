@@ -182,7 +182,7 @@ export default function AdminDailyScoresPage() {
           // Assign the unsubscribe function
            unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
              const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-             setDailyLogs(fetchedLogs);
+             setDailyLogs(fetchedLogs); // This will update the logs in real-time
              setIsLoadingData(false); // Data loaded/updated
              setError(null); // Clear error on successful update
            }, (err) => {
@@ -223,34 +223,28 @@ export default function AdminDailyScoresPage() {
 
   }, [selectedPodId, selectedDate, toast]); // Re-run when podId or date changes
 
-  // 3. Process data for the table and summary
-  const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
+   // 3. Process data for the table and summary
+   const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
+    // Initialize scores map for ALL agents in the pod
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
-    const ruleTotals: Record<string, number> = {}; // ruleId -> total achieved value
-
-    // Initialize rule totals and agent scores based on the fetched agents list
     agents.forEach(agent => {
       if (agent.id) {
         scores[agent.id] = { totalPoints: 0, emojiString: '' };
       }
     });
+
+    // Initialize rule totals map
+    const ruleTotals: Record<string, number> = {}; // ruleId -> total achieved value
     rules.forEach(rule => {
         if(rule.id) ruleTotals[rule.id] = 0;
     });
 
-
-    // Aggregate points and achievements per agent and rule totals
+    // Aggregate points and achievements per agent and rule totals from current dailyLogs
     dailyLogs.forEach(log => {
-      // Find the rule corresponding to the log
-      const rule = rules.find(r => r.id === log.ruleId);
-      const rulePoints = rule?.points ?? 0; // Default to 0 points if rule not found
-
-      // Recalculate points for the current log entry based on its value and the rule's point value
-      const currentLogPoints = log.value * rulePoints;
-
       // Agent Scores Accumulation
       if (scores[log.agentId]) { // Check if agent exists in scores map
-        scores[log.agentId].totalPoints += currentLogPoints; // Add the recalculated points
+        // Use the stored points from the log directly
+        scores[log.agentId].totalPoints += log.points;
       }
 
       // Rule Totals for Pod Summary (uses log.value)
@@ -259,13 +253,13 @@ export default function AdminDailyScoresPage() {
       }
     });
 
-    // Build emoji strings for each agent (remains the same, uses log.value)
+    // Build emoji strings for each agent based on current dailyLogs
     agents.forEach(agent => {
-       if (!agent.id || !scores[agent.id]) return; // Check if agent exists in scores
+       if (!agent.id || !scores[agent.id]) return; // Check if agent exists in scores map
 
-      const agentLogs = dailyLogs.filter(log => log.agentId === agent.id);
-      let emojis = '';
-      const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
+       const agentLogs = dailyLogs.filter(log => log.agentId === agent.id);
+       let emojis = '';
+       const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
 
        sortedRules.forEach(rule => {
            if (!rule.id) return;
@@ -277,10 +271,8 @@ export default function AdminDailyScoresPage() {
                 }
             }
        });
-
        scores[agent.id].emojiString = emojis;
     });
-
 
     // Map to final AgentScore array, adding names and sorting by points
     const finalAgentScores: AgentScore[] = agents
@@ -292,7 +284,7 @@ export default function AdminDailyScoresPage() {
       }))
       .sort((a, b) => b.totalPoints - a.totalPoints); // Sort descending by points
 
-    // Build Pod Target Summary array (remains the same)
+    // Build Pod Target Summary array
     const finalPodTargetSummary: PodTargetSummary[] = rules
         .map(rule => {
             if (!rule.id) return null;
@@ -308,12 +300,12 @@ export default function AdminDailyScoresPage() {
         .filter((item): item is PodTargetSummary => item !== null)
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
-     // Generate Rule Key String (remains the same)
+     // Generate Rule Key String
      const finalRuleKeyString = rules
         .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
         .join(' ');
 
-     // Generate Pod Target Summary String (remains the same)
+     // Generate Pod Target Summary String
      const finalPodTargetSummaryString = finalPodTargetSummary
          .map(summary => `${summary.ruleEmoji} ${summary.ruleName} ${summary.achieved}${summary.target !== null ? `/${summary.target}` : ''}`)
          .join(' | ');
@@ -324,6 +316,7 @@ export default function AdminDailyScoresPage() {
         ruleKeyString: finalRuleKeyString,
         podTargetSummaryString: finalPodTargetSummaryString,
     };
+    // Dependencies ensure recalculation when logs, agents, rules, or targets change
   }, [dailyLogs, agents, rules, podTargets]);
 
 
@@ -465,7 +458,7 @@ export default function AdminDailyScoresPage() {
             {!isLoading && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
                  <p className="text-center text-muted-foreground mt-6">No active competition found for this pod and date.</p>
             )}
-             {!isLoading && canDisplay && dailyLogs.length === 0 && (
+             {!isLoading && canDisplay && agentScores.every(score => score.totalPoints === 0) && ( // Check if all scores are zero
                  <p className="text-center text-muted-foreground mt-6">No achievements logged for this pod on this date.</p>
             )}
 
@@ -475,5 +468,3 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
-
-    
