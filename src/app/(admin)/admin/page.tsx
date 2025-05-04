@@ -50,13 +50,17 @@ export default function AdminDashboardPage() {
         // In admin view, we might fetch KPIs for a specific group or aggregated data
         // For now, stick with the mock group
         const currentGroup: Group = { id: MOCK_GROUP_ID, name: 'Pod Bravo Overview' }; // Name adjusted for context
-        const fetchedKpis = await getKPIs(currentGroup);
-        setKpis(fetchedKpis);
+        // Commenting out actual fetch for now - replace with real data fetching
+        // const fetchedKpis = await getKPIs(currentGroup);
+        // setKpis(fetchedKpis);
+
+        // Simulate loading finish (remove this when real fetching is added)
+        setTimeout(() => setKpisLoading(false), 1000);
+
       } catch (error) {
         console.error("Error fetching KPIs:", error);
         // Handle error state (e.g., show a toast notification)
-      } finally {
-         setKpisLoading(false);
+        setKpisLoading(false); // Ensure loading stops on error
       }
     };
     fetchKpis();
@@ -91,13 +95,13 @@ export default function AdminDashboardPage() {
         {/* KPI Cards */}
          {kpisLoading ? (
            // Show skeleton loaders while KPIs are loading
-           Array.from({ length: 4 }).map((_, index) => ( // Show 4 skeletons to fill space
+           Array.from({ length: 2 }).map((_, index) => ( // Show 2 skeletons
              <Card key={index} className="shadow-md">
                <CardHeader className="pb-2">
                  <Skeleton className="h-4 w-1/2 rounded" />
                </CardHeader>
                <CardContent>
-                 <Skeleton className="h-8 w-1/4 rounded mb-2" />
+                 <Skeleton className="h-8 w-1/2 rounded mb-2" /> {/* Adjusted width */}
                  <Skeleton className="h-3 w-1/3 rounded mb-3" />
                  <Skeleton className="h-2 w-full rounded mb-1" />
                  <Skeleton className="h-3 w-1/4 rounded" />
@@ -109,6 +113,14 @@ export default function AdminDashboardPage() {
             <KpiCard key={kpi.name} kpi={kpi} icon={kpiIcons[kpi.name]} />
           ))
          )}
+          {/* Add placeholder message if no KPIs loaded and not loading */}
+          {!kpisLoading && kpis.length === 0 && (
+            <Card className="md:col-span-2 lg:col-span-3 xl:col-span-4">
+                <CardContent className="pt-6">
+                    <p className="text-center text-muted-foreground">No KPI data available to display.</p>
+                </CardContent>
+            </Card>
+          )}
 
          {/* Motivation Card - Commented Out */}
          {/*
@@ -123,7 +135,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
-        {/* Leaderboards */}
+        {/* Leaderboards - Using mock data */}
         <Leaderboard title="Team Leaderboard" entries={teamLeaderboardEntries} description="Overall Pod Rankings" />
         <Leaderboard title="Individual Leaderboard" entries={individualLeaderboardEntries} description="Top Agent Performance" />
       </div>
