@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Trophy, Target } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertCircle, Trophy, Target, Clipboard } from 'lucide-react'; // Added Clipboard
 import { format, startOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -310,6 +310,58 @@ export default function AdminDailyScoresPage() {
   }, [dailyLogs, agents, rules, podTargets]);
 
 
+  // New utility function to generate the plain text table for copying
+  const generatePlainTextSummary = () => {
+        // Ensure rules are sorted for consistent key order
+        const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
+        const ruleKey = sortedRules.map(rule => `${rule.emoji || '❓'} = ${rule.name} (${rule.points} pts)`).join(' | '); // Use | as separator
+
+        const agentRows = agentScores.map(score => {
+            // Aggregate counts per rule for the agent
+            const achievementCounts: { [ruleName: string]: number } = {};
+            const ruleMap = new Map(sortedRules.map(r => [r.emoji, r])); // Map emoji to rule for quick lookup
+
+            Array.from(score.emojiString).forEach(emoji => {
+                 const rule = ruleMap.get(emoji);
+                 if (rule) {
+                    achievementCounts[rule.name] = (achievementCounts[rule.name] || 0) + 1;
+                 }
+            });
+
+            // Create the achievement summary string, ordered by rule name
+             const orderedAchievements = sortedRules
+                 .map(rule => {
+                     const count = achievementCounts[rule.name];
+                     return count ? `${rule.emoji || '❓'}${rule.name}${count}` : null; // Format: EmojiRuleNameCount
+                 })
+                 .filter(item => item !== null) // Remove rules the agent didn't achieve
+                 .join(' | '); // Use | as separator
+
+            // Return the agent's row: Name (Score) | Achievements
+            return `${score.agentFirstName} (${score.totalPoints}) | ${orderedAchievements}`;
+        });
+
+        // Generate pod target summary line
+        const podSummaryLine = podTargetSummary
+            .map(summary => `${summary.ruleEmoji}${summary.ruleName}${summary.achieved}${summary.target !== null ? `/${summary.target}` : ''}`)
+            .join(' | '); // Use | as separator
+
+
+        // Combine all parts
+        return `${ruleKey}\n\n${agentRows.join('\n')}\n\nPod Summary:\n${podSummaryLine}`;
+    };
+
+    const handleCopyToClipboard = () => {
+        const plainText = generatePlainTextSummary();
+        navigator.clipboard.writeText(plainText)
+            .then(() => toast({ title: "Copied to clipboard!", description: "Paste into Teams or another application." }))
+            .catch(err => {
+                console.error("Could not copy text: ", err);
+                toast({ variant: "destructive", title: "Copy failed", description: "Could not copy data to clipboard." });
+            });
+    };
+
+
   const isLoading = isLoadingPods || isLoadingData;
   const canDisplay = !isLoading && selectedPodId && rules.length > 0 && agents.length > 0;
 
@@ -321,7 +373,7 @@ export default function AdminDailyScoresPage() {
           <CardDescription>View daily scores and pod target progress for the selected pod and date.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Selection Controls */}
+          {/* Selection Controls & Copy Button */}
           <div className="flex flex-wrap gap-4 mb-6 items-end">
             {/* Pod Select */}
             <div className="grid gap-2">
@@ -367,6 +419,22 @@ export default function AdminDailyScoresPage() {
                 </PopoverContent>
               </Popover>
             </div>
+
+             {/* Copy Button */}
+             <div className="grid gap-2">
+                 <Label className="opacity-0">.</Label> {/* Placeholder label for alignment */}
+                 <Button
+                     variant="outline"
+                     size="default" // Match height of other controls
+                     onClick={handleCopyToClipboard}
+                     disabled={isLoading || !canDisplay || agentScores.length === 0}
+                     title="Copy summary text for pasting elsewhere"
+                 >
+                     <Clipboard className="mr-2 h-4 w-4" />
+                    Copy Summary
+                 </Button>
+             </div>
+
           </div>
 
           {error && <p className="text-destructive mb-4">{error}</p>}
@@ -387,8 +455,6 @@ export default function AdminDailyScoresPage() {
           {/* Rule Key */}
           {!isLoading && rules.length > 0 && (
             <div className="mb-4 p-3 border rounded-md bg-muted/50">
-              {/* Removed Rule Key Label */}
-              {/* <h4 className="text-sm font-medium mb-2">Rule Key:</h4> */}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 {rules.map(rule => (
                   <span key={rule.id} className="whitespace-nowrap">
@@ -439,10 +505,6 @@ export default function AdminDailyScoresPage() {
                 {/* Pod Target Summary Footer */}
                  {podTargetSummary.length > 0 && (
                      <div className="mt-6 p-4 border-t">
-                        {/* Removed Pod Target Summary Label */}
-                        {/* <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
-                            <Target className="h-5 w-5 text-muted-foreground"/> Pod Target Summary
-                        </h4> */}
                          {/* Display targets in a single line, wrapping as needed */}
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                             {podTargetSummary.map(summary => (
@@ -483,4 +545,3 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
-
