@@ -1,3 +1,4 @@
+
 'use client'; // Add use client directive
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -30,6 +31,14 @@ const individualLeaderboardEntries = [
 const MOCK_GROUP_ID = 'pod-bravo-123';
 const MOCK_USER_ID = 'user-charlie-456'; // This might represent the admin or a selected user context
 
+// Mock KPI Data
+const MOCK_KPIS: KPI[] = [
+    { name: 'Sales', target: 1000000, achievement: 750000 },
+    { name: 'Customer Acquisition', target: 1000, achievement: 800 },
+    // Add more mock KPIs if needed
+];
+
+
 const kpiIcons: { [key: string]: React.ReactNode } = {
   'Sales': <DollarSign className="h-4 w-4" />,
   'Customer Acquisition': <Target className="h-4 w-4" />,
@@ -42,28 +51,34 @@ export default function AdminDashboardPage() {
   // const [isLoadingMotivation, setIsLoadingMotivation] = useState<boolean>(true); // Commented out
   const [kpisLoading, setKpisLoading] = useState<boolean>(true);
 
-  // Fetch KPIs
+  // Fetch KPIs or use mock data
   useEffect(() => {
-    const fetchKpis = async () => {
-      setKpisLoading(true); // Ensure loading state is true at start
-      try {
-        // In admin view, we might fetch KPIs for a specific group or aggregated data
-        // For now, stick with the mock group
-        const currentGroup: Group = { id: MOCK_GROUP_ID, name: 'Pod Bravo Overview' }; // Name adjusted for context
-        // Commenting out actual fetch for now - replace with real data fetching
-        // const fetchedKpis = await getKPIs(currentGroup);
-        // setKpis(fetchedKpis);
+    setKpisLoading(true); // Ensure loading state is true at start
 
-        // Simulate loading finish (remove this when real fetching is added)
-        setTimeout(() => setKpisLoading(false), 1000);
+    // Use Mock Data for now
+    setKpis(MOCK_KPIS);
 
-      } catch (error) {
-        console.error("Error fetching KPIs:", error);
-        // Handle error state (e.g., show a toast notification)
-        setKpisLoading(false); // Ensure loading stops on error
-      }
-    };
-    fetchKpis();
+    // Simulate loading finish (remove or adjust when real fetching is implemented)
+    const timer = setTimeout(() => setKpisLoading(false), 500); // Short delay for skeleton visibility
+
+    return () => clearTimeout(timer); // Cleanup timer
+
+    // --- Real Data Fetching Logic (Commented Out) ---
+    // const fetchKpis = async () => {
+    //   try {
+    //     // In admin view, we might fetch KPIs for a specific group or aggregated data
+    //     // For now, stick with the mock group
+    //     const currentGroup: Group = { id: MOCK_GROUP_ID, name: 'Pod Bravo Overview' }; // Name adjusted for context
+    //     const fetchedKpis = await getKPIs(currentGroup);
+    //     setKpis(fetchedKpis);
+    //   } catch (error) {
+    //     console.error("Error fetching KPIs:", error);
+    //     // Handle error state (e.g., show a toast notification)
+    //   } finally {
+    //       setKpisLoading(false); // Ensure loading stops
+    //   }
+    // };
+    // fetchKpis();
   }, []);
 
 
@@ -95,7 +110,7 @@ export default function AdminDashboardPage() {
         {/* KPI Cards */}
          {kpisLoading ? (
            // Show skeleton loaders while KPIs are loading
-           Array.from({ length: 2 }).map((_, index) => ( // Show 2 skeletons
+           Array.from({ length: 2 }).map((_, index) => ( // Show 2 skeletons matching mock data length
              <Card key={index} className="shadow-md">
                <CardHeader className="pb-2">
                  <Skeleton className="h-4 w-1/2 rounded" />
