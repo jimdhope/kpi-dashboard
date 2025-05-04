@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   collection,
   query,
@@ -121,13 +121,25 @@ export default function AdminLogAchievementsPage() {
       setAchievementInputs({}); // Reset inputs
 
       try {
-        // 1. Fetch Agents for the selected Pod
+        // 1. Fetch Agents for the selected Pod (only those with 'agent' role)
         const usersRef = collection(db, 'users');
-        const agentsQuery = query(usersRef, where('podId', '==', selectedPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
+        const agentsQuery = query(
+            usersRef,
+            where('podId', '==', selectedPodId),
+            where('roles', 'array-contains', 'agent'), // Ensure they have the agent role
+            orderBy('name')
+        );
         const agentsSnapshot = await getDocs(agentsQuery);
         const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
         setAgents(fetchedAgents);
         setIsLoadingAgents(false);
+
+         if (fetchedAgents.length === 0) {
+            toast({ variant: "default", title: "No Agents", description: "No users with the 'agent' role found in this pod." });
+             setIsLoadingRules(false); // Stop loading rules/achievements if no agents
+             setIsLoadingAchievements(false);
+             return;
+         }
 
         // 2. Find the active Competition for the Pod and Date
         const competitionsRef = collection(db, 'competitions');
@@ -158,7 +170,7 @@ export default function AdminLogAchievementsPage() {
         }
         setIsLoadingRules(false);
 
-        // 3. Fetch Existing Achievements for the Pod and Date
+        // 3. Fetch Existing Achievements for the Pod and Date (if agents and competition exist)
         if (activeCompetition && fetchedAgents.length > 0) {
            const achievementsRef = collection(db, 'dailyAchievements');
             const achievementsQuery = query(
@@ -247,7 +259,7 @@ export default function AdminLogAchievementsPage() {
     const agentInput = achievementInputs[agentId]?.[ruleId];
 
     if (!rule || agentInput === undefined) {
-       console.error("Rule or input data not found for auto-save.");
+       console.error("Rule or input data not found for auto-save.", rule, agentInput);
       return;
     }
 
@@ -257,6 +269,8 @@ export default function AdminLogAchievementsPage() {
      if (isNaN(value) || value < 0) {
        // Maybe a subtle visual cue instead of toast for auto-save errors
        console.warn("Invalid input value for auto-save:", valueStr);
+       // Optionally reset the input visually or show a small error indicator
+       // form.setError(...) or similar if using react-hook-form, otherwise manage state
        return;
      }
 
@@ -276,7 +290,8 @@ export default function AdminLogAchievementsPage() {
 
     if (!activeCompetitionId) {
        console.error("No active competition found for auto-save.");
-      return;
+       // Optionally inform the user non-intrusively
+       return;
     }
 
      const savingKey = `${agentId}-${ruleId}`;
@@ -295,7 +310,7 @@ export default function AdminLogAchievementsPage() {
          value: value,
          points: points,
          loggedAt: serverTimestamp(),
-         loggedBy: currentUserUid,
+         loggedBy: currentUserUid, // Logged by Admin/Manager
        };
 
        const achievementsRef = collection(db, 'dailyAchievements');
@@ -305,7 +320,7 @@ export default function AdminLogAchievementsPage() {
          docRef = doc(achievementsRef, agentInput.existingLogId);
          await setDoc(docRef, logEntry, { merge: true });
          // console.log(`Achievement updated for ${rule.name}`); // Log instead of toast
-       } else if (value > 0) {
+       } else if (value > 0) { // Only create if value > 0
          const addedDoc = await addDoc(achievementsRef, logEntry);
          // Update state with the new ID immediately
          setAchievementInputs(prev => {
@@ -324,7 +339,7 @@ export default function AdminLogAchievementsPage() {
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
       // Consider a less intrusive error indicator than toast for auto-save
-       toast({ variant: "destructive", title: "Auto-Save Failed", description: `Could not save ${rule.name}.` });
+       toast({ variant: "destructive", title: "Auto-Save Failed", description: `Could not save ${rule.name} for agent.` });
     } finally {
        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
