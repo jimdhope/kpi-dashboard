@@ -70,38 +70,52 @@ export default function AgentLogAchievementsPage() {
   // 1. Get current user and their pod ID
   useEffect(() => {
     setIsLoadingUser(true);
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+      let unsubscribeUserDoc: Unsubscribe = () => {}; // Initialize for cleanup
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
         try {
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
-            setCurrentUser(userData);
-            setAgentPodId(userData.podId || null); // Set podId from user data
-            if (!userData.podId) {
-                setError("You are not currently assigned to a pod. Cannot log achievements.");
+          unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
+              setCurrentUser(userData);
+              setAgentPodId(userData.podId || null); // Set podId from user data
+              if (!userData.podId) {
+                  setError("You are not currently assigned to a pod. Cannot log achievements.");
+              }
+               setError(null); // Clear previous errors
+            } else {
+               setError("Could not find your user profile.");
+               setCurrentUser(null);
+               setAgentPodId(null);
             }
-             setError(null); // Clear previous errors
-          } else {
-             setError("Could not find your user profile.");
+            setIsLoadingUser(false); // Mark as loaded regardless of profile existence
+          }, (err) => {
+             console.error("Error listening to user document:", err);
+             setError("Failed to load your profile information.");
              setCurrentUser(null);
              setAgentPodId(null);
-          }
+             setIsLoadingUser(false);
+          });
+           // Return the user doc listener cleanup function
+           return unsubscribeUserDoc;
         } catch (err) {
-            console.error("Error fetching user data:", err);
+            console.error("Error setting up user listener:", err);
             setError("Failed to load your profile information.");
             setCurrentUser(null);
             setAgentPodId(null);
+            setIsLoadingUser(false);
         }
       } else {
          setError("You must be logged in to log achievements.");
          setCurrentUser(null);
          setAgentPodId(null);
+         setIsLoadingUser(false);
       }
-      setIsLoadingUser(false);
+       // Ensure inner unsubscribe is returned
+       return unsubscribeUserDoc;
     });
-    return () => unsubscribe();
+    return () => unsubscribeAuth(); // Cleanup auth listener
   }, []);
 
 
@@ -379,7 +393,8 @@ export default function AgentLogAchievementsPage() {
                   rule.id ? (
                     <TableRow key={rule.id}>
                       <TableCell className="font-medium">
-                        {rule.emoji} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
+                        {/* Use emoji if it exists and is not empty, otherwise use fallback */}
+                        {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
                       </TableCell>
                       <TableCell>
                         <div className="relative">

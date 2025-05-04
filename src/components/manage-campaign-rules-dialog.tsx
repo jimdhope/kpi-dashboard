@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -202,7 +201,8 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                         <FormItem className="w-12">
                           <FormLabel className="sr-only">Emoji</FormLabel>
                           <FormControl>
-                            <Input placeholder="🏆" {...field} maxLength={4} disabled={isSaving} className="text-center" />
+                             {/* Display fallback emoji in placeholder if field is empty */}
+                            <Input placeholder={field.value ? "" : "❓"} {...field} maxLength={4} disabled={isSaving} className="text-center" />
                           </FormControl>
                           <FormMessage className="text-xs" />
                         </FormItem>

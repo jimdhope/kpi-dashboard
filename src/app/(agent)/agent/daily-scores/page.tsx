@@ -83,11 +83,12 @@ export default function AgentDailyScoresPage() {
   useEffect(() => {
     setIsLoadingUser(true);
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+      let unsubscribeUserDoc: Unsubscribe = () => {}; // Initialize for cleanup
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
         try {
           // Use onSnapshot for the user document to potentially react to podId changes
-          const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+          unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
               const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
               setCurrentUser(userData);
@@ -125,8 +126,10 @@ export default function AgentDailyScoresPage() {
          setAgentPodId(null);
          setIsLoadingUser(false);
       }
+       // Ensure inner unsubscribe is returned
+       return unsubscribeUserDoc;
     });
-    // Return the auth listener cleanup function
+     // Return the outer unsubscribe function for the auth listener
     return () => unsubscribeAuth();
   }, []);
 
@@ -264,7 +267,9 @@ export default function AgentDailyScoresPage() {
         if (logForRule) {
              currentAgentScore.totalPoints += logForRule.points;
              if (logForRule.value > 0) {
-                agentEmojis += (rule.emoji || '❓').repeat(logForRule.value);
+                 // Use emoji if it exists and is not empty, otherwise use fallback
+                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+                 agentEmojis += emojiToUse.repeat(logForRule.value);
              }
         }
     });
@@ -291,10 +296,12 @@ export default function AgentDailyScoresPage() {
     const finalPodTargetSummary: PodTargetSummary[] = rules
         .map(rule => {
             if (!rule.id) return null;
+             // Use emoji if it exists and is not empty, otherwise use fallback
+             const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
             return {
                 ruleId: rule.id,
                 ruleName: rule.name,
-                ruleEmoji: rule.emoji || '❓',
+                ruleEmoji: emojiToUse,
                 achieved: ruleTotals[rule.id] || 0,
                 target: podTargets[rule.id] ?? null,
             };
@@ -363,7 +370,8 @@ export default function AgentDailyScoresPage() {
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 {rules.map(rule => (
                   <span key={rule.id} className="whitespace-nowrap">
-                    {rule.emoji || '❓'} = {rule.name} ({rule.points} pts)
+                    {/* Use emoji if it exists and is not empty, otherwise use fallback */}
+                    {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = {rule.name} ({rule.points} pts)
                   </span>
                 ))}
               </div>

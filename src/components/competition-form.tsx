@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -86,7 +85,8 @@ export const competitionFormSchema = z.object({
 
 
 // Type for form data expects Dates after transform
-export type CompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
+// Rename to avoid conflict with existing CompetitionFormData if needed
+type CompetitionFormSchemaType = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
   startDate: Date;
   endDate: Date;
 };
@@ -95,7 +95,7 @@ export type CompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 's
 // --- Component Props ---
 
 interface CompetitionFormProps {
-  onSubmit: (data: CompetitionFormData, rules: RuleFormData[]) => Promise<void> | void; // Pass rules separately
+  onSubmit: (data: CompetitionFormSchemaType, rules: RuleFormData[]) => Promise<void> | void; // Pass rules separately
   onCancel: () => void;
   initialData?: Competition; // Optional initial data for editing
   campaigns: Campaign[];
@@ -131,7 +131,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
    const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<CompetitionFormData>({
+  const form = useForm<CompetitionFormSchemaType>({
     resolver: zodResolver(competitionFormSchema),
     defaultValues: {
       name: initialData?.name || '',
@@ -220,15 +220,10 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
      }
    };
 
-  const handleFormSubmit = async (data: CompetitionFormData) => {
+  const handleFormSubmit = async (data: CompetitionFormSchemaType) => {
     setIsSubmitting(true);
     try {
         // Data should already have valid Date objects due to Zod transform
-        // const dataToSend = {
-        //     ...data,
-        //     startDate: Timestamp.fromDate(data.startDate), // Conversion handled in parent now
-        //     endDate: Timestamp.fromDate(data.endDate), // Conversion handled in parent now
-        // };
         await onSubmit(data, data.rules); // Pass Zod-transformed data (with Dates) and rules
     } catch (error) {
         console.error("Error during competition form submission:", error);
@@ -484,7 +479,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     render={({ field: ruleField }) => (
                                         <FormItem className="w-12">
                                          <FormLabel className="sr-only">Emoji</FormLabel>
-                                        <FormControl><Input placeholder="🏆" {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
+                                          {/* Display fallback emoji in placeholder if field is empty */}
+                                        <FormControl><Input placeholder={ruleField.value ? "" : "❓"} {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
                                         <FormMessage className="text-xs" />
                                         </FormItem>
                                     )}
@@ -552,6 +548,3 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     </Form>
   );
 }
-
-
-    

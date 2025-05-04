@@ -259,7 +259,9 @@ export default function AdminDailyScoresPage() {
            if (!rule.id) return;
             const logForRule = agentLogs.find(log => log.ruleId === rule.id);
             if (logForRule && logForRule.value > 0) {
-                emojis += (rule.emoji || '❓').repeat(logForRule.value); // Use emoji or fallback
+                // Use emoji if it exists and is not empty, otherwise use fallback
+                const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+                emojis += emojiToUse.repeat(logForRule.value);
             }
        });
 
@@ -287,10 +289,12 @@ export default function AdminDailyScoresPage() {
     const finalPodTargetSummary: PodTargetSummary[] = rules
         .map(rule => {
             if (!rule.id) return null; // Skip rules without ID
+             // Use emoji if it exists and is not empty, otherwise use fallback
+             const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
             return {
                 ruleId: rule.id,
                 ruleName: rule.name,
-                ruleEmoji: rule.emoji || '❓',
+                ruleEmoji: emojiToUse,
                 achieved: ruleTotals[rule.id] || 0,
                 target: podTargets[rule.id] ?? null, // Get target from state, null if not set
             };
@@ -383,7 +387,8 @@ export default function AdminDailyScoresPage() {
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 {rules.map(rule => (
                   <span key={rule.id} className="whitespace-nowrap">
-                    {rule.emoji || '❓'} = {rule.name} ({rule.points} pts)
+                    {/* Use emoji if it exists and is not empty, otherwise use fallback */}
+                    {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = {rule.name} ({rule.points} pts)
                   </span>
                 ))}
               </div>
