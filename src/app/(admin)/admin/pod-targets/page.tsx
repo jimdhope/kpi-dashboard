@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import { format } from 'date-fns';
 
 // Define the structure for daily targets
 export interface DailyTargetData {
@@ -236,7 +237,7 @@ export default function AdminPodTargetsPage() {
                   {isLoading && <SelectItem value="-" disabled>Loading...</SelectItem>}
                   {competitions.map(comp => (
                     <SelectItem key={comp.id} value={comp.id}>
-                      {comp.name} ({format(comp.startDate.toDate(), 'PP')} - {format(comp.endDate.toDate(), 'PP')})
+                      {comp.name} ({comp.startDate ? format(comp.startDate.toDate(), 'PP') : 'N/A'})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -336,3 +337,4 @@ export default function AdminPodTargetsPage() {
     </div>
   );
 }
+
