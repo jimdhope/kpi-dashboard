@@ -207,12 +207,19 @@ export default function AdminLeaderboardPage() {
                 where('podId', '==', selectedPodId),
                 where('date', '>=', Timestamp.fromDate(startDate)),
                 where('date', '<=', Timestamp.fromDate(endDate))
-                 // Optional: Filter by competition only if timeframe is 'competition'?
-                 // ...(timeframe === 'competition' && competitionIdForLogs ? [where('competitionId', '==', competitionIdForLogs)] : [])
+                 // Optional: Filter by competition only if timeframe is 'competition' AND an ID exists
+                 // REMOVED: where('competitionId', '==', competitionIdForLogs) because it might fail if competitionIdForLogs is null
+                 // Instead, filter client-side if needed, or ensure competitionIdForLogs is always valid when timeframe is 'competition'
             );
 
              unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-                 const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+                 let fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+
+                 // Client-side filter if timeframe is 'competition' and ID is known
+                 if (timeframe === 'competition' && competitionIdForLogs) {
+                     fetchedLogs = fetchedLogs.filter(log => log.competitionId === competitionIdForLogs);
+                 }
+
                  setAllLogs(fetchedLogs);
                  setIsLoadingData(false); // Data updated
                  setError(null); // Clear error on success

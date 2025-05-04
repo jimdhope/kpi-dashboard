@@ -216,12 +216,17 @@ export default function AgentLeaderboardPage() {
                 where('podId', '==', agentPodId), // Filter by user's pod
                 where('date', '>=', Timestamp.fromDate(startDate)),
                 where('date', '<=', Timestamp.fromDate(endDate))
-                 // Optional: Filter by competition only if timeframe is 'competition'?
-                 // ...(timeframe === 'competition' && competitionIdForLogs ? [where('competitionId', '==', competitionIdForLogs)] : [])
+                 // REMOVED: where('competitionId', '==', competitionIdForLogs) - filter client-side
             );
 
              unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-                 const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+                 let fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+
+                 // Client-side filter if timeframe is 'competition' and ID is known
+                 if (timeframe === 'competition' && competitionIdForLogs) {
+                     fetchedLogs = fetchedLogs.filter(log => log.competitionId === competitionIdForLogs);
+                 }
+
                  setAllLogs(fetchedLogs);
                  setIsLoadingData(false);
                  setError(null);
@@ -250,6 +255,7 @@ export default function AgentLeaderboardPage() {
 
      // Ensure competitions are loaded before fetching other data if timeframe is 'competition'
     if (timeframe === 'competition' && competitions.length === 0 && !isLoadingData) {
+        // Only fetch if competitions are loaded OR if initial data load is not happening
         if(competitions.length > 0 || !isLoadingData){ fetchDataAndListen(); }
     } else {
        fetchDataAndListen();
