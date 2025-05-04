@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -327,7 +326,14 @@ export default function AdminCompetitionsPage() {
               )}
               <Table>
                 <TableHeader>
-                  <TableRow><TableHead>Name</TableHead><TableHead>Campaign</TableHead><TableHead>Pod(s)</TableHead><TableHead>Start Date</TableHead><TableHead>End Date</TableHead><TableHead className="text-right w-[150px]">Actions</TableHead></TableRow>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Pod(s)</TableHead> {/* Changed heading */}
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead className="text-right w-[150px]">Actions</TableHead>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
@@ -450,5 +456,3 @@ export default function AdminCompetitionsPage() {
     </div>
   );
 }
-
-
