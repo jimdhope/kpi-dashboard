@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -326,10 +327,10 @@ export default function AdminCompetitionsPage() {
               )}
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow>{/* Remove whitespace here */}
                     <TableHead>Name</TableHead>
                     <TableHead>Campaign</TableHead>
-                    <TableHead>Pod(s)</TableHead> {/* Changed heading */}
+                    <TableHead>Pod(s)</TableHead>{/* Changed heading */}
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead className="text-right w-[150px]">Actions</TableHead>
@@ -341,7 +342,7 @@ export default function AdminCompetitionsPage() {
                       <TableRow key={`loading-${index}`}>
                         <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell> {/* Pods skeleton */}
+                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>{/* Pods skeleton */}
                         <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
                         <TableCell className="text-right">
