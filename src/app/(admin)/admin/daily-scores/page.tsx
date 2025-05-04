@@ -10,6 +10,8 @@ import {
   doc,
   getDoc,
   orderBy,
+  onSnapshot, // Import onSnapshot
+  Unsubscribe, // Import Unsubscribe
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -86,21 +88,22 @@ export default function AdminDailyScoresPage() {
     setIsLoadingPods(true);
     const podsRef = collection(db, 'pods');
     const q = query(podsRef, orderBy('name'));
-    getDocs(q)
-      .then((snapshot) => {
-        const fetchedPods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod));
-        setPods(fetchedPods);
-        setError(null);
-      })
-      .catch(err => {
+    // Use onSnapshot for pods to react to changes, though less critical than logs
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedPods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod));
+      setPods(fetchedPods);
+      setError(null);
+      setIsLoadingPods(false); // Set loading false after first fetch
+    }, (err) => {
         console.error("Error fetching pods:", err);
         setError("Failed to load pods.");
         toast({ variant: "destructive", title: "Error", description: "Could not load pods." });
-      })
-      .finally(() => setIsLoadingPods(false));
+        setIsLoadingPods(false);
+    });
+     return () => unsubscribe(); // Cleanup listener
   }, [toast]);
 
-  // 2. Fetch Agents, Competition Rules, Logs, and Targets when Pod or Date changes
+  // 2. Fetch Agents, Competition Rules, Logs (Real-time), and Targets when Pod or Date changes
   useEffect(() => {
     if (!selectedPodId) {
       setAgents([]);
@@ -110,16 +113,21 @@ export default function AdminDailyScoresPage() {
       return;
     }
 
+    setIsLoadingData(true);
+    setError(null);
+    // Reset previous state for related data
+    setAgents([]);
+    setRules([]);
+    setDailyLogs([]); // Logs will be updated by listener
+    setPodTargets({});
+
+    let unsubscribeLogs: Unsubscribe = () => {}; // Initialize unsubscribe function
+
     const fetchScoreData = async () => {
-      setIsLoadingData(true);
-      setError(null);
-      setAgents([]);
-      setRules([]);
-      setDailyLogs([]);
-      setPodTargets({});
+
 
       try {
-        // Fetch Agents for the selected Pod
+        // Fetch Agents for the selected Pod (can remain getDocs as agents change less often)
         const usersRef = collection(db, 'users');
         const agentsQuery = query(
             usersRef,
@@ -133,11 +141,11 @@ export default function AdminDailyScoresPage() {
 
          if (fetchedAgents.length === 0) {
             toast({ variant: "default", title: "No Agents", description: "No agents found in this pod." });
-            setIsLoadingData(false);
+            setIsLoadingData(false); // Stop loading if no agents
              return;
          }
 
-        // Find the active Competition for the Pod and Date
+        // Find the active Competition for the Pod and Date (can remain getDocs)
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
         const competitionQuery = query(
@@ -147,7 +155,7 @@ export default function AdminDailyScoresPage() {
           orderBy('startDate', 'desc')
         );
         const competitionSnapshot = await getDocs(competitionQuery);
-        let activeCompetition: CompetitionWithTargets | null = null; // Use extended type
+        let activeCompetition: CompetitionWithTargets | null = null;
 
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithTargets & { id: string };
@@ -161,7 +169,7 @@ export default function AdminDailyScoresPage() {
           setRules(activeCompetition.rules || []);
           setPodTargets(activeCompetition.podTargets || {}); // Set pod targets from competition doc
 
-          // Fetch Daily Achievements for the Pod, Date, and Competition
+          // Setup Real-time Listener for Daily Achievements
           const achievementsRef = collection(db, 'dailyAchievements');
           const logsQuery = query(
             achievementsRef,
@@ -170,34 +178,52 @@ export default function AdminDailyScoresPage() {
             where('competitionId', '==', activeCompetition.id)
             // No ordering needed here, process later
           );
-          const logsSnapshot = await getDocs(logsQuery);
-          const fetchedLogs = logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-          setDailyLogs(fetchedLogs);
+
+          // Assign the unsubscribe function
+           unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+             const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+             setDailyLogs(fetchedLogs);
+             setIsLoadingData(false); // Data loaded/updated
+             setError(null); // Clear error on successful update
+           }, (err) => {
+               console.error("Error listening to achievements:", err);
+               setError("Failed to load real-time achievement data.");
+               setDailyLogs([]); // Clear logs on error
+               setIsLoadingData(false); // Stop loading on error
+           });
 
         } else {
           setRules([]);
-          setDailyLogs([]);
+          setDailyLogs([]); // Clear logs if no active competition
           setPodTargets({});
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date." });
+          setIsLoadingData(false); // Stop loading if no competition
         }
 
       } catch (err) {
-        console.error("Error fetching score data:", err);
+        console.error("Error fetching initial score data:", err);
         setError("Failed to load data for the selected pod/date.");
         toast({ variant: "destructive", title: "Error", description: "Could not load competition, agent, or achievement data." });
         setAgents([]);
         setRules([]);
         setDailyLogs([]);
         setPodTargets({});
-      } finally {
-        setIsLoadingData(false);
+        setIsLoadingData(false); // Stop loading on error
       }
+      // Don't set isLoadingData to false here, listener will handle it
     };
 
     fetchScoreData();
-  }, [selectedPodId, selectedDate, toast]);
 
-  // 3. Process data for the table and summary
+     // Cleanup function for the listener
+     return () => {
+         console.log("Unsubscribing from daily logs listener");
+         unsubscribeLogs();
+     };
+
+  }, [selectedPodId, selectedDate, toast]); // Re-run when podId or date changes
+
+  // 3. Process data for the table and summary (Memoization remains the same)
   const { agentScores, podTargetSummary } = useMemo(() => {
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
     const ruleTotals: Record<string, number> = {}; // ruleId -> total achieved value
@@ -317,7 +343,7 @@ export default function AdminDailyScoresPage() {
                       "w-[200px] justify-start text-left font-normal",
                       !selectedDate && "text-muted-foreground"
                     )}
-                     disabled={isLoadingData}
+                     disabled={isLoadingData} // Disable only data loading, not initial pod loading
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}

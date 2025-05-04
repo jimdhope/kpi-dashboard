@@ -10,6 +10,8 @@ import {
   doc,
   getDoc,
   orderBy,
+  onSnapshot, // Import onSnapshot
+  Unsubscribe, // Import Unsubscribe
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -80,60 +82,79 @@ export default function AgentDailyScoresPage() {
   // 1. Get current user and their pod ID
   useEffect(() => {
     setIsLoadingUser(true);
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
         try {
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
-            setCurrentUser(userData);
-            setAgentPodId(userData.podId || null);
-            if (!userData.podId) {
-              setError("You are not currently assigned to a pod.");
+          // Use onSnapshot for the user document to potentially react to podId changes
+          const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
+              setCurrentUser(userData);
+              setAgentPodId(userData.podId || null);
+              if (!userData.podId) {
+                setError("You are not currently assigned to a pod.");
+              } else {
+                setError(null);
+              }
+            } else {
+               setError("Could not find your user profile.");
+               setCurrentUser(null);
+               setAgentPodId(null);
             }
-             setError(null);
-          } else {
-             setError("Could not find your user profile.");
+             setIsLoadingUser(false); // User data loaded/updated
+          }, (err) => {
+             console.error("Error listening to user document:", err);
+             setError("Failed to load your profile information.");
              setCurrentUser(null);
              setAgentPodId(null);
-          }
+             setIsLoadingUser(false);
+          });
+           // Return the user doc listener cleanup function
+           return unsubscribeUserDoc;
         } catch (err) {
-            console.error("Error fetching user data:", err);
+            console.error("Error setting up user listener:", err);
             setError("Failed to load your profile information.");
             setCurrentUser(null);
             setAgentPodId(null);
+            setIsLoadingUser(false);
         }
       } else {
          setError("You must be logged in.");
          setCurrentUser(null);
          setAgentPodId(null);
+         setIsLoadingUser(false);
       }
-      setIsLoadingUser(false);
     });
-    return () => unsubscribe();
+    // Return the auth listener cleanup function
+    return () => unsubscribeAuth();
   }, []);
 
-  // 2. Fetch Competition Rules, Logs (User & Pod), and Targets
+  // 2. Fetch Competition Rules, Listen to Logs (User & Pod), and Targets
   useEffect(() => {
     if (!agentPodId || !currentUser?.id) {
       setRules([]);
       setDailyLogs([]);
       setPodLogs([]);
       setPodTargets({});
-      return;
+      return () => {}; // Return empty cleanup function
     }
 
-    const fetchScoreData = async () => {
-      setIsLoadingData(true);
-      setError(null);
-      setRules([]);
-      setDailyLogs([]);
-      setPodLogs([]);
-      setPodTargets({});
+    setIsLoadingData(true);
+    setError(null);
+    // Reset previous state, listeners will populate
+    setRules([]);
+    setDailyLogs([]);
+    setPodLogs([]);
+    setPodTargets({});
+
+    let unsubscribeUserLogs: Unsubscribe = () => {};
+    let unsubscribePodLogs: Unsubscribe = () => {};
+
+    const fetchAndListen = async () => {
 
       try {
-        // Find Active Competition
+        // Find Active Competition (can remain getDocs)
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
         const competitionQuery = query(
@@ -157,10 +178,8 @@ export default function AgentDailyScoresPage() {
           setRules(activeCompetition.rules || []);
           setPodTargets(activeCompetition.podTargets || {});
 
-          // Fetch Achievements for the specific agent AND the entire pod
+          // Listen to Achievements for the specific agent
           const achievementsRef = collection(db, 'dailyAchievements');
-
-          // User Logs
           const userLogsQuery = query(
             achievementsRef,
             where('agentId', '==', currentUser.id),
@@ -168,20 +187,35 @@ export default function AgentDailyScoresPage() {
             where('date', '==', dateTimestamp),
             where('competitionId', '==', activeCompetition.id)
           );
-          const userLogsSnapshot = await getDocs(userLogsQuery);
-          const fetchedUserLogs = userLogsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-          setDailyLogs(fetchedUserLogs);
+           unsubscribeUserLogs = onSnapshot(userLogsQuery, (snapshot) => {
+             const fetchedUserLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+             setDailyLogs(fetchedUserLogs);
+             // Consider setting loading false only after both listeners have fired once
+             // setIsLoadingData(false); // Moved below
+           }, (err) => {
+              console.error("Error listening to user logs:", err);
+              setError("Failed to load your achievement data.");
+              setIsLoadingData(false);
+           });
 
-           // Pod Logs (for target summary)
+
+           // Listen to Pod Logs (for target summary)
            const podLogsQuery = query(
             achievementsRef,
             where('podId', '==', agentPodId),
             where('date', '==', dateTimestamp),
             where('competitionId', '==', activeCompetition.id)
           );
-          const podLogsSnapshot = await getDocs(podLogsQuery);
-          const fetchedPodLogs = podLogsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-          setPodLogs(fetchedPodLogs);
+           unsubscribePodLogs = onSnapshot(podLogsQuery, (snapshot) => {
+             const fetchedPodLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+             setPodLogs(fetchedPodLogs);
+             setIsLoadingData(false); // Set loading false after pod logs update
+             setError(null); // Clear error on success
+           }, (err) => {
+              console.error("Error listening to pod logs:", err);
+              setError("Failed to load pod achievement data.");
+              setIsLoadingData(false);
+           });
 
 
         } else {
@@ -190,24 +224,33 @@ export default function AgentDailyScoresPage() {
           setPodLogs([]);
           setPodTargets({});
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for your pod on this date." });
+          setIsLoadingData(false); // Stop loading if no competition
         }
 
       } catch (err) {
-        console.error("Error fetching score data:", err);
+        console.error("Error fetching initial score data:", err);
         setError("Failed to load data.");
         setRules([]);
         setDailyLogs([]);
         setPodLogs([]);
         setPodTargets({});
-      } finally {
-        setIsLoadingData(false);
+        setIsLoadingData(false); // Stop loading on error
       }
+      // Don't set isLoadingData false here, listeners will do it
     };
 
-    fetchScoreData();
-  }, [agentPodId, selectedDate, currentUser?.id, toast]);
+    fetchAndListen();
 
-  // 3. Process data for the agent's view and pod summary
+     // Cleanup function for the listeners
+     return () => {
+         console.log("Unsubscribing from user and pod logs listeners");
+         unsubscribeUserLogs();
+         unsubscribePodLogs();
+     };
+
+  }, [agentPodId, selectedDate, currentUser?.id, toast]); // Re-run when these dependencies change
+
+  // 3. Process data (Memoization remains the same)
   const { agentScore, podTargetSummary } = useMemo(() => {
     // Calculate agent's score and emoji string
     let currentAgentScore: Omit<AgentScore, 'agentId' | 'agentFirstName'> = { totalPoints: 0, emojiString: '' };

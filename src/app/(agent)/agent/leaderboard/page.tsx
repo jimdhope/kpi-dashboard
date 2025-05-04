@@ -10,6 +10,8 @@ import {
   doc,
   getDoc,
   orderBy,
+  onSnapshot, // Import onSnapshot
+  Unsubscribe, // Import Unsubscribe
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -54,6 +56,7 @@ interface LeaderboardEntry {
   avatarInitials?: string;
   avatarBgColor?: string;
   isCurrentUser?: boolean; // Flag for the logged-in agent
+  isCurrentUserTeam?: boolean; // Flag for the logged-in agent's team
 }
 
 type Timeframe = 'daily' | 'weekly' | 'monthly' | 'competition';
@@ -73,91 +76,94 @@ export default function AgentLeaderboardPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // 1. Get current user and their pod ID
+  // 1. Get current user and their pod ID (use onSnapshot for potential pod changes)
   useEffect(() => {
     setIsLoadingUser(true);
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+       let unsubscribeUserDoc: Unsubscribe = () => {}; // Initialize for cleanup
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
-        try {
-          const docSnap = await getDoc(userDocRef);
+        unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
             setCurrentUser(userData);
             setAgentPodId(userData.podId || null);
-             if (!userData.podId) {
-               setError("You are not currently assigned to a pod.");
-             } else {
-                setError(null);
-             }
+            if (!userData.podId) {
+              setError("You are not currently assigned to a pod.");
+            } else {
+              setError(null);
+            }
           } else {
              setError("Could not find your user profile.");
              setCurrentUser(null);
              setAgentPodId(null);
           }
-        } catch (err) {
-            setError("Failed to load your profile information.");
-            setCurrentUser(null);
-            setAgentPodId(null);
-        }
+           setIsLoadingUser(false); // User data loaded/updated
+        }, (err) => {
+           console.error("Error listening to user document:", err);
+           setError("Failed to load your profile information.");
+           setCurrentUser(null);
+           setAgentPodId(null);
+           setIsLoadingUser(false);
+        });
       } else {
          setError("You must be logged in.");
          setCurrentUser(null);
          setAgentPodId(null);
+         setIsLoadingUser(false);
       }
-      setIsLoadingUser(false);
+        // Return the inner unsubscribe function for the doc listener
+       return unsubscribeUserDoc;
     });
-    return () => unsubscribe();
+     // Return the outer unsubscribe function for the auth listener
+    return () => unsubscribeAuth();
   }, []);
 
-  // 2. Fetch Competitions for the agent's pod
+
+  // 2. Fetch Competitions for the agent's pod (can remain getDocs)
   useEffect(() => {
       if (!agentPodId) {
           setCompetitions([]);
           setSelectedCompetitionId('');
           return;
       }
-      // Fetch competitions when podId is known
-       setIsLoadingData(true); // Start loading early if podId known
+       setIsLoadingData(true);
        const compRef = collection(db, 'competitions');
        const q = query(compRef, where('podId', '==', agentPodId), orderBy('startDate', 'desc'));
        getDocs(q)
           .then((snapshot) => {
               setCompetitions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition)));
+               setError(null);
           })
           .catch(err => {
               console.error("Error fetching competitions:", err);
               setError("Failed to load competitions for your pod.");
           })
-          .finally(() => {
-               // Loading state handled by the main data fetching effect
-          });
+           .finally(() => {
+              // Loading state handled by the main data fetching effect
+           });
   }, [agentPodId]);
 
 
-  // 3. Fetch Agents, Teams, and Logs based on Pod and Timeframe/Competition
-   useEffect(() => {
-    if (!agentPodId || isLoadingUser) { // Wait for user and podId
+  // 3. Fetch Agents, Teams, and Listen to Logs
+  useEffect(() => {
+    if (!agentPodId || isLoadingUser) {
       setPodAgents([]);
       setTeams([]);
       setAllLogs([]);
-       if(!isLoadingUser && !agentPodId) setIsLoadingData(false); // Stop loading if user loaded but no pod
-      return;
+       if(!isLoadingUser && !agentPodId) setIsLoadingData(false);
+      return () => {};
     }
 
     setIsLoadingData(true);
-    setError(null); // Clear previous errors
+    setError(null);
+    let unsubscribeLogs: Unsubscribe = () => {};
 
-    const fetchData = async () => {
+    const fetchDataAndListen = async () => {
       try {
-        // Fetch Agents in the pod
+        // Fetch Agents in the pod (can remain getDocs)
         const usersRef = collection(db, 'users');
-        const agentsQuery = query(
-            usersRef,
-            where('podId', '==', agentPodId),
-            where('roles', 'array-contains', 'agent'),
-            orderBy('name')
-        );
+        const agentsQuery = query( usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name') );
         const agentsSnapshot = await getDocs(agentsQuery);
         setPodAgents(agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
 
@@ -174,12 +180,7 @@ export default function AgentLeaderboardPage() {
                 competitionIdForLogs = competition.id;
                 const compDocRef = doc(db, 'competitions', selectedCompetitionId);
                 const compDocSnap = await getDoc(compDocRef);
-                 if (compDocSnap.exists()) {
-                     const compData = compDocSnap.data() as Competition & { teams?: any[] };
-                     setTeams(compData.teams || []);
-                 } else {
-                     setTeams([]);
-                 }
+                 setTeams(compDocSnap.exists() ? (compDocSnap.data() as Competition & { teams?: any[] }).teams || [] : []);
             } else {
                  setError("Selected competition not found.");
                  setIsLoadingData(false);
@@ -188,82 +189,81 @@ export default function AgentLeaderboardPage() {
         } else if (timeframe !== 'competition') {
             const now = selectedDate;
             switch (timeframe) {
-                case 'daily':
-                    startDate = startOfDay(now); endDate = endOfDay(now); break;
-                case 'weekly':
-                    startDate = startOfWeek(now, { weekStartsOn: 1 }); endDate = endOfWeek(now, { weekStartsOn: 1 }); break;
-                case 'monthly':
-                    startDate = startOfMonth(now); endDate = endOfMonth(now); break;
+                case 'daily': startDate = startOfDay(now); endDate = endOfDay(now); break;
+                case 'weekly': startDate = startOfWeek(now, { weekStartsOn: 1 }); endDate = endOfWeek(now, { weekStartsOn: 1 }); break;
+                case 'monthly': startDate = startOfMonth(now); endDate = endOfMonth(now); break;
             }
-             // Fetch teams from the most recent relevant competition
-              const competitionsRef = collection(db, 'competitions');
-              const relevantCompQuery = query(
-                 competitionsRef,
-                 where('podId', '==', agentPodId),
-                 where('startDate', '<=', Timestamp.fromDate(endDate!)),
-                 orderBy('startDate', 'desc')
-              );
-              const relevantCompSnapshot = await getDocs(relevantCompQuery);
-              let relevantCompetition: (Competition & { id: string, teams?: any[] }) | null = null;
-              for (const docSnap of relevantCompSnapshot.docs) {
-                 const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string, teams?: any[] };
-                  if (comp.endDate.toDate() >= startDate!) {
-                     relevantCompetition = comp;
-                     break;
-                 }
-              }
-              setTeams(relevantCompetition?.teams || []);
-              competitionIdForLogs = relevantCompetition?.id || null;
+            // Fetch teams from relevant competition
+            const competitionsRef = collection(db, 'competitions');
+            const relevantCompQuery = query( competitionsRef, where('podId', '==', agentPodId), where('startDate', '<=', Timestamp.fromDate(endDate!)), orderBy('startDate', 'desc') );
+            const relevantCompSnapshot = await getDocs(relevantCompQuery);
+            let relevantCompetition: (Competition & { id: string, teams?: any[] }) | null = null;
+            for (const docSnap of relevantCompSnapshot.docs) {
+                const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string, teams?: any[] };
+                if (comp.endDate.toDate() >= startDate!) {
+                    relevantCompetition = comp; break;
+                }
+            }
+            setTeams(relevantCompetition?.teams || []);
+            competitionIdForLogs = relevantCompetition?.id || null;
         }
 
-        // Fetch Logs
+        // Listen to Logs
         if (startDate && endDate) {
             const logsRef = collection(db, 'dailyAchievements');
-            let logsQuery = query(
+            const logsQuery = query(
                 logsRef,
                 where('podId', '==', agentPodId), // Filter by user's pod
                 where('date', '>=', Timestamp.fromDate(startDate)),
                 where('date', '<=', Timestamp.fromDate(endDate))
+                 // Optional: Filter by competition only if timeframe is 'competition'?
+                 // ...(timeframe === 'competition' && competitionIdForLogs ? [where('competitionId', '==', competitionIdForLogs)] : [])
             );
-            // // Optional: Filter by competition only if timeframe is competition
-            // if (timeframe === 'competition' && competitionIdForLogs) {
-            //     logsQuery = query(logsQuery, where('competitionId', '==', competitionIdForLogs));
-            // }
-            const logsSnapshot = await getDocs(logsQuery);
-            setAllLogs(logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog)));
-        } else if (timeframe !== 'competition') {
-             setError("Invalid date range.");
-             setAllLogs([]);
+
+             unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+                 const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+                 setAllLogs(fetchedLogs);
+                 setIsLoadingData(false);
+                 setError(null);
+             }, (err) => {
+                 console.error("Error listening to achievement logs:", err);
+                 setError("Failed to load real-time leaderboard data.");
+                 setAllLogs([]);
+                 setIsLoadingData(false);
+             });
         } else {
-            setAllLogs([]); // No competition selected
+            setAllLogs([]);
+            setIsLoadingData(false);
+             if(timeframe === 'competition' && !selectedCompetitionId) { /* Prompt handled in render */ }
+             else if (timeframe !== 'competition') { setError("Invalid date range calculated."); }
         }
 
       } catch (err) {
-        console.error("Error fetching leaderboard data:", err);
+        console.error("Error fetching initial leaderboard data:", err);
         setError("Failed to load leaderboard data.");
         setPodAgents([]);
         setTeams([]);
         setAllLogs([]);
-      } finally {
         setIsLoadingData(false);
       }
     };
 
      // Ensure competitions are loaded before fetching other data if timeframe is 'competition'
     if (timeframe === 'competition' && competitions.length === 0 && !isLoadingData) {
-       // Wait for competitions to load or handle the case where there are none
-       if(competitions.length > 0 || !isLoadingData){ // Proceed if comps loaded or loading finished
-          fetchData();
-       }
+        if(competitions.length > 0 || !isLoadingData){ fetchDataAndListen(); }
     } else {
-       fetchData(); // Fetch immediately for other timeframes or if comps already loaded
+       fetchDataAndListen();
     }
 
-   // Dependencies: Refetch when user, podId, date, timeframe, or competition selection changes
-  }, [agentPodId, selectedDate, timeframe, selectedCompetitionId, competitions, isLoadingUser]);
+     return () => {
+         console.log("Unsubscribing from agent leaderboard logs listener");
+         unsubscribeLogs();
+     };
+   // Dependencies now include currentUser?.id to refetch if user changes
+  }, [agentPodId, selectedDate, timeframe, selectedCompetitionId, competitions, isLoadingUser, currentUser?.id]);
 
 
-  // 4. Calculate Leaderboard Scores
+  // 4. Calculate Leaderboard Scores (Memoization remains the same)
   const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
     // Agent calculations
     const agentScores: Record<string, number> = {};
@@ -409,9 +409,9 @@ export default function AgentLeaderboardPage() {
             </div>
           ) : !agentPodId ? (
              <p className="text-center text-muted-foreground mt-6">You are not assigned to a pod. Leaderboards unavailable.</p>
-          ) : timeframe === 'competition' && !selectedCompetitionId ? (
+          ) : timeframe === 'competition' && !selectedCompetitionId && competitions.length > 0 ? (
              <p className="text-center text-muted-foreground mt-6">Please select a competition.</p>
-          ) : (podAgents.length === 0 && !error) ? (
+          ) : (podAgents.length === 0 && !error && agentPodId) ? (
              <p className="text-center text-muted-foreground mt-6">No agents found in your pod.</p>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
@@ -422,8 +422,10 @@ export default function AgentLeaderboardPage() {
                      <Users className="h-5 w-5 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                   {agentLeaderboard.length === 0 ? (
-                       <p className="text-muted-foreground text-center py-4">No data available for this period.</p>
+                   {agentLeaderboard.length === 0 && allLogs.length > 0 ? (
+                        <p className="text-muted-foreground text-center py-4">Processing scores...</p>
+                   ) : agentLeaderboard.length === 0 ? (
+                       <p className="text-muted-foreground text-center py-4">No agent data available for this period.</p>
                    ) : (
                     <Table>
                         <TableHeader>
@@ -475,8 +477,10 @@ export default function AgentLeaderboardPage() {
                 <CardContent>
                     {teams.length === 0 ? (
                          <p className="text-muted-foreground text-center py-4">No teams defined for this period.</p>
+                    ) : teamLeaderboard.length === 0 && allLogs.length > 0 ? (
+                         <p className="text-muted-foreground text-center py-4">Processing team scores...</p>
                     ) : teamLeaderboard.length === 0 ? (
-                         <p className="text-muted-foreground text-center py-4">No data available for this period.</p>
+                         <p className="text-muted-foreground text-center py-4">No team data available for this period.</p>
                     ) : (
                     <Table>
                         <TableHeader>
@@ -488,11 +492,11 @@ export default function AgentLeaderboardPage() {
                         </TableHeader>
                         <TableBody>
                         {teamLeaderboard.map((entry) => (
-                             <TableRow key={entry.id} className={(entry as any).isCurrentUserTeam ? 'bg-accent' : ''}> {/* Use type assertion carefully */}
+                             <TableRow key={entry.id} className={entry.isCurrentUserTeam ? 'bg-accent' : ''}>
                             <TableCell className="font-medium text-center">{entry.rank}</TableCell>
                             <TableCell className="font-medium">
                                 {entry.name}
-                                {(entry as any).isCurrentUserTeam && <Badge variant="outline" className="ml-2">Your Team</Badge>}
+                                {entry.isCurrentUserTeam && <Badge variant="outline" className="ml-2">Your Team</Badge>}
                             </TableCell>
                             <TableCell className="text-right font-semibold text-primary">
                                 {entry.totalPoints.toLocaleString()}
