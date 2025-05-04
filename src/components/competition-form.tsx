@@ -30,9 +30,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription, // Added FormDescription
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle, Target } from 'lucide-react'; // Added Target
 import { format, parse, isValid as isDateValid } from 'date-fns'; // Import date-fns functions
 import { cn } from "@/lib/utils";
 import { useToast } from '@/hooks/use-toast';
@@ -78,6 +79,8 @@ export const competitionFormSchema = z.object({
     })
      .transform(val => typeof val === 'string' ? parseDateString(val)! : val), // Transform valid string to Date
   rules: z.array(competitionRuleSchema).min(1, { message: 'At least one rule is required.' }),
+  // ADDED podTargets schema: object with ruleId keys and number values (optional)
+  podTargets: z.record(z.string(), z.coerce.number().int().min(0).optional()).optional(),
 }).refine(data => data.endDate >= data.startDate, {
     message: "End date cannot be before start date.",
     path: ["endDate"], // Attach error to endDate field
@@ -86,9 +89,10 @@ export const competitionFormSchema = z.object({
 
 // Type for form data expects Dates after transform
 // Rename to avoid conflict with existing CompetitionFormData if needed
-type CompetitionFormSchemaType = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
+type CompetitionFormSchemaType = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate' | 'podTargets'> & {
   startDate: Date;
   endDate: Date;
+  podTargets?: Record<string, number>; // Ensure podTargets is optional number record
 };
 
 
@@ -141,6 +145,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
       startDate: initialData?.startDate?.toDate(),
       endDate: initialData?.endDate?.toDate(),
       rules: initialData?.rules || [],
+      podTargets: initialData?.podTargets || {}, // Initialize podTargets
     },
     mode: 'onChange',
   });
@@ -148,7 +153,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'rules',
-    keyName: "fieldId",
+    keyName: "fieldId", // Use a unique key name other than 'id'
   });
 
    // --- Effects ---
@@ -162,7 +167,10 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
         startDate: initialData.startDate?.toDate(),
         endDate: initialData.endDate?.toDate(),
         rules: initialData.rules || [],
+        podTargets: initialData.podTargets || {}, // Reset podTargets for edit
       });
+       // Also replace the rules in the field array
+        replace(initialData.rules || []);
     } else if (mode === 'add') {
         form.reset({
             name: '',
@@ -171,20 +179,29 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
             startDate: undefined,
             endDate: undefined,
             rules: [],
+            podTargets: {}, // Reset podTargets for add
         });
+        replace([]); // Clear rules field array
     }
-  }, [initialData, mode, form]);
+  }, [initialData, mode, form, replace]); // Added replace dependency
 
   const watchedCampaignId = form.watch('campaignId');
+  const watchedRules = form.watch('rules'); // Watch rules to update targets section
 
   useEffect(() => {
+    // Load default rules only when campaign changes in 'add' mode
     if (mode === 'add' && watchedCampaignId) {
        const loadRules = async () => {
            setIsLoadingRules(true);
             try {
                 const defaultRules = await fetchCampaignRules(watchedCampaignId);
-                 replace(defaultRules.map(rule => ({ ...rule, id: rule.id || `new-${Date.now()}-${Math.random()}` })));
-                 form.trigger("rules");
+                // Assign temporary IDs or ensure they have unique IDs from source
+                 const rulesWithKeys = defaultRules.map((rule, index) => ({
+                    ...rule,
+                    id: rule.id || `new-rule-${index}-${Date.now()}` // Ensure unique key
+                 }));
+                 replace(rulesWithKeys); // Replace field array content
+                 form.trigger("rules"); // Trigger validation if needed
             } catch (e) {
                  toast({ variant: "destructive", title: "Error", description: "Could not load default campaign rules." });
                  replace([]);
@@ -194,15 +211,18 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
        };
        loadRules();
     } else if (mode === 'add' && !watchedCampaignId) {
+        // Clear rules if campaign is deselected in add mode
         replace([]);
     }
-  }, [mode, watchedCampaignId, replace, toast, form]);
+     // Don't run this effect when in 'edit' mode or if campaign ID hasn't changed
+  }, [mode, watchedCampaignId, replace, toast, form]); // Removed trigger dependency
 
 
   // --- Event Handlers ---
 
   const handleAddRule = () => {
-    append({ id: `new-${Date.now()}-${Math.random()}`, name: '', emoji: '', points: 0 });
+    // Append a new rule with a temporary unique ID
+    append({ id: `new-rule-${Date.now()}-${Math.random()}`, name: '', emoji: '', points: 0 });
   };
 
    // Handle manual date input change
@@ -223,8 +243,16 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   const handleFormSubmit = async (data: CompetitionFormSchemaType) => {
     setIsSubmitting(true);
     try {
-        // Data should already have valid Date objects due to Zod transform
-        await onSubmit(data, data.rules); // Pass Zod-transformed data (with Dates) and rules
+        // Clean podTargets: remove entries with empty strings or undefined values
+        const cleanedPodTargets = Object.entries(data.podTargets || {})
+            .filter(([_, value]) => value !== undefined && value !== null && !isNaN(value) && value >= 0)
+            .reduce((acc, [key, value]) => {
+                acc[key] = Number(value); // Ensure value is a number
+                return acc;
+            }, {} as Record<string, number>);
+
+        const submitData = { ...data, podTargets: cleanedPodTargets };
+        await onSubmit(submitData, data.rules); // Pass Zod-transformed data (with Dates) and rules
     } catch (error) {
         console.error("Error during competition form submission:", error);
     } finally {
@@ -280,7 +308,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                     ))}
                   </SelectContent>
                 </Select>
-                 {mode === 'edit' && <p className="text-xs text-muted-foreground mt-1">Campaign cannot be changed after creation.</p>}
+                 {mode === 'edit' && <FormDescription>Campaign cannot be changed after creation.</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
@@ -317,7 +345,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                     )}
                   </SelectContent>
                 </Select>
-                 {mode === 'edit' && <p className="text-xs text-muted-foreground mt-1">Pod cannot be changed after creation.</p>}
+                 {mode === 'edit' && <FormDescription>Pod cannot be changed after creation.</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
@@ -355,7 +383,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                                setIsStartDatePopoverOpen(false); // Close popover on selection
                                             }
                                         }}
-                                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || isSubmitting}
+                                        disabled={/* Removed future date restriction (date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || */ isSubmitting}
                                         initialFocus
                                     />
                                 </PopoverContent>
@@ -440,9 +468,9 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                        Add Rule
                      </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <FormDescription>
                    {mode === 'add' ? 'Default rules loaded from campaign. Modify or add rules specific to this competition.' : 'Modify the rules for this specific competition.'}
-                </p>
+                </FormDescription>
 
                  {isLoadingRules && (
                      <div className="text-center p-4">
@@ -455,9 +483,9 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                      <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md">
                          <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/>
                          <p>No rules defined.</p>
-                         {mode === 'add' && !watchedCampaignId && <p>Select a campaign to load default rules.</p>}
-                         {mode === 'add' && watchedCampaignId && <p>Add rules manually or check campaign settings.</p>}
-                         {mode === 'edit' && <p>Add rules manually.</p>}
+                         {mode === 'add' && !watchedCampaignId && <FormDescription>Select a campaign to load default rules.</FormDescription>}
+                         {mode === 'add' && watchedCampaignId && <FormDescription>Add rules manually or check campaign settings.</FormDescription>}
+                         {mode === 'edit' && <FormDescription>Add rules manually.</FormDescription>}
                      </div>
                  )}
 
@@ -524,10 +552,64 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                  )}
                   {/* Display error message for the overall rules array */}
                     {form.formState.errors.rules?.root && (
-                        <p className="text-sm font-medium text-destructive">{form.formState.errors.rules.root.message}</p>
+                        <FormMessage>{form.formState.errors.rules.root.message}</FormMessage>
                     )}
 
             </div>
+
+             {/* Pod Targets Section - Only show if rules exist */}
+             {!isLoadingRules && fields.length > 0 && (
+                 <div className="space-y-4 rounded-md border p-4 mt-4">
+                     <div className="flex justify-between items-center">
+                         <h3 className="text-lg font-semibold">Pod Daily Targets (Optional)</h3>
+                         <Target className="h-5 w-5 text-muted-foreground" />
+                     </div>
+                     <FormDescription>
+                         Set daily target values for the pod for specific rules in this competition. Leave blank if no target is needed.
+                     </FormDescription>
+                     <div className="space-y-4">
+                         {/* Header Row */}
+                         <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
+                             <Label className="flex-1 text-left">Rule Name</Label>
+                             <Label className="w-24 text-left">Target Value</Label>
+                         </div>
+                         {/* Target Input Rows */}
+                         {watchedRules.map((rule) => (
+                            rule.id && ( // Only render if rule has an ID
+                                 <div key={`target-${rule.id}`} className="flex items-start gap-2 border p-3 rounded-md bg-card">
+                                     <div className="flex-1 flex items-center pt-1.5">
+                                         <span className="text-sm font-medium">{rule.emoji || '❓'} {rule.name}</span>
+                                     </div>
+                                     <FormField
+                                         control={form.control}
+                                         // Use rule.id which should be stable
+                                         name={`podTargets.${rule.id}`}
+                                         render={({ field }) => (
+                                             <FormItem className="w-24">
+                                                 <FormLabel className="sr-only">Target for {rule.name}</FormLabel>
+                                                 <FormControl>
+                                                     <Input
+                                                         type="number"
+                                                         placeholder="Target"
+                                                         {...field}
+                                                         value={field.value ?? ''} // Handle potential undefined value
+                                                         onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} // Set undefined if empty
+                                                         min="0"
+                                                         step="1"
+                                                         disabled={isSubmitting}
+                                                         className="h-9"
+                                                     />
+                                                 </FormControl>
+                                                 <FormMessage className="text-xs" />
+                                             </FormItem>
+                                         )}
+                                     />
+                                 </div>
+                             )
+                         ))}
+                     </div>
+                 </div>
+             )}
 
 
         </form>

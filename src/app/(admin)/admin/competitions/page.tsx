@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -48,7 +47,7 @@ import type { Pod } from '@/app/(admin)/admin/pods/page'; // Import Pod type
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse rule type
 import { z } from 'zod'; // Import Zod for type inference
 
-// Competition type definition
+// Competition type definition - ADDED podTargets
 export interface Competition {
   id: string;
   name: string;
@@ -57,15 +56,17 @@ export interface Competition {
   campaignId: string;
   podId: string;
   rules: RuleFormData[]; // Store competition-specific rules
+  podTargets?: Record<string, number>; // Optional: ruleId -> targetValue
   // Derived data (optional, fetch separately or join)
   campaignName?: string;
   podName?: string;
 }
 
-// Type for the data received from the form after Zod transformation
+// Type for the data received from the form after Zod transformation - Includes podTargets
 type ReceivedCompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
     startDate: Date;
     endDate: Date;
+    podTargets?: Record<string, number>; // Include podTargets here
 };
 
 const competitionsCollectionRef = collection(db, 'competitions');
@@ -150,6 +151,7 @@ export default function AdminCompetitionsPage() {
           startDate: data.startDate, // Keep as Timestamp
           endDate: data.endDate, // Keep as Timestamp
           rules: data.rules || [], // Ensure rules is an array
+          podTargets: data.podTargets || {}, // Fetch podTargets, default to empty object
           campaignName: campaign?.name || 'Unknown Campaign',
           podName: pod?.name || 'Unknown Pod',
         };
@@ -189,7 +191,7 @@ export default function AdminCompetitionsPage() {
     setIsAlertOpen(true);
   };
 
-  // Handle form submission for adding/editing competitions
+  // Handle form submission for adding/editing competitions - INCLUDE podTargets
   const handleFormSubmit = async (data: ReceivedCompetitionFormData, rules: RuleFormData[]) => {
     setIsSubmitting(true);
 
@@ -212,6 +214,7 @@ export default function AdminCompetitionsPage() {
         startDate: Timestamp.fromDate(data.startDate), // Convert valid date to timestamp
         endDate: Timestamp.fromDate(data.endDate),     // Convert valid date to timestamp
         rules: rules, // Save the rules array directly
+        podTargets: data.podTargets || {}, // Save the podTargets object, default to empty
     };
 
     if (dialogMode === 'add') {
@@ -297,7 +300,7 @@ export default function AdminCompetitionsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Manage Competitions</CardTitle>
-                <CardDescription>Set up, view, edit, or delete weekly competitions.</CardDescription>
+                <CardDescription>Set up, view, edit, or delete weekly competitions and their targets.</CardDescription> {/* Updated description */}
               </div>
               <DialogTrigger asChild>
                 <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
@@ -391,7 +394,7 @@ export default function AdminCompetitionsPage() {
           </Card>
 
           {/* Add/Edit Competition Dialog Content */}
-          <DialogContent className="sm:max-w-2xl"> {/* Make dialog wider */}
+          <DialogContent className="sm:max-w-3xl"> {/* Made dialog wider */}
             <DialogHeader>
               <DialogTitle>{dialogMode === 'add' ? 'Add New Competition' : 'Edit Competition'}</DialogTitle>
               <DialogDescription>
@@ -439,4 +442,3 @@ export default function AdminCompetitionsPage() {
     </div>
   );
 }
-

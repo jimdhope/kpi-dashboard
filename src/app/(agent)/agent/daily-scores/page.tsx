@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -180,7 +179,7 @@ export default function AgentDailyScoresPage() {
 
         if (activeCompetition) {
           setRules(activeCompetition.rules || []);
-          setPodTargets(activeCompetition.podTargets || {});
+          setPodTargets(activeCompetition.podTargets || {}); // FETCH TARGETS
 
           // Listen to Achievements for the specific agent
           const achievementsRef = collection(db, 'dailyAchievements');
@@ -286,7 +285,7 @@ export default function AgentDailyScoresPage() {
     } : null;
 
 
-    // Calculate Pod Target Summary (using podLogs)
+    // Calculate Pod Target Summary (using podLogs) - FILTERED
     const ruleTotals: Record<string, number> = {};
     rules.forEach(rule => {
         if(rule.id) ruleTotals[rule.id] = 0;
@@ -298,6 +297,7 @@ export default function AgentDailyScoresPage() {
     });
 
     const finalPodTargetSummary: PodTargetSummary[] = rules
+        .filter(rule => rule.id && podTargets[rule.id] !== undefined && podTargets[rule.id] !== null) // Filter rules with defined targets
         .map(rule => {
             if (!rule.id) return null;
              // Use emoji if it exists and is not empty, otherwise use fallback
@@ -307,7 +307,7 @@ export default function AgentDailyScoresPage() {
                 ruleName: rule.name,
                 ruleEmoji: emojiToUse,
                 achieved: ruleTotals[rule.id] || 0,
-                target: podTargets[rule.id] ?? null,
+                target: podTargets[rule.id] ?? null, // Should not be null due to filter, but keep for safety
             };
         })
          .filter((item): item is PodTargetSummary => item !== null)
@@ -409,11 +409,10 @@ export default function AgentDailyScoresPage() {
             </Card>
           )}
 
-           {/* Pod Target Summary Footer */}
+           {/* Pod Target Summary Footer - Render only if targets exist */}
            {!isLoading && podTargetSummary.length > 0 && (
              <div className="mt-6 p-4 border rounded-md">
-                {/* Removed Pod Target Summary Label */}
-                 {/* Display targets in a single line, wrapping as needed */}
+                {/* Display targets in a single line, wrapping as needed */}
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                     {podTargetSummary.map(summary => (
                         <div key={summary.ruleId} className="flex items-center whitespace-nowrap">
@@ -430,6 +429,12 @@ export default function AgentDailyScoresPage() {
                 </div>
             </div>
             )}
+             {/* Show message if no targets are set */}
+             {!isLoading && rules.length > 0 && podTargetSummary.length === 0 && (
+                 <div className="mt-6 p-4 border-t">
+                      <p className="text-sm text-muted-foreground">No pod targets set for this competition period.</p>
+                 </div>
+             )}
 
             {/* No Data States */}
            {!isLoading && !agentPodId && !isLoadingUser && (
@@ -447,4 +452,3 @@ export default function AgentDailyScoresPage() {
     </div>
   );
 }
-

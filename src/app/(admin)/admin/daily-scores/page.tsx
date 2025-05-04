@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Trophy, Target } from 'lucide-react'; // Removed Clipboard
+import { CalendarIcon, Loader2, AlertCircle, Trophy, Target } from 'lucide-react'; // Added Target
 import { format, startOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -64,7 +64,7 @@ interface PodTargetSummary {
 }
 
 // Extend Competition interface to include podTargets (assuming structure)
-// Note: You'll need to update this in competitions/page.tsx as well if needed elsewhere
+// This interface now includes podTargets
 interface CompetitionWithTargets extends Competition {
     podTargets?: Record<string, number>; // ruleId -> targetValue
 }
@@ -175,7 +175,7 @@ export default function AdminDailyScoresPage() {
         if (activeCompetition) {
           console.log(`Active competition found: ${activeCompetition.id}`);
           setRules(activeCompetition.rules || []); // Update rules state
-          setPodTargets(activeCompetition.podTargets || {}); // Update targets state
+          setPodTargets(activeCompetition.podTargets || {}); // Update targets state - FETCH TARGETS HERE
 
           // Setup Real-time Listener for Daily Achievements
           const achievementsRef = collection(db, 'dailyAchievements');
@@ -304,8 +304,9 @@ export default function AdminDailyScoresPage() {
       })
       .sort((a, b) => b.totalPoints - a.totalPoints); // Sort descending by points
 
-    // Build Pod Target Summary array
+    // Build Pod Target Summary array - FILTERED to show only rules with targets
     const finalPodTargetSummary: PodTargetSummary[] = rules
+        .filter(rule => rule.id && podTargets[rule.id] !== undefined && podTargets[rule.id] !== null) // Filter rules with defined targets
         .map(rule => {
             if (!rule.id) return null;
              const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
@@ -314,7 +315,7 @@ export default function AdminDailyScoresPage() {
                 ruleName: rule.name,
                 ruleEmoji: emojiToUse,
                 achieved: ruleTotals[rule.id] || 0,
-                target: podTargets[rule.id] ?? null,
+                target: podTargets[rule.id] ?? null, // Should not be null due to filter, but keep for safety
             };
         })
         .filter((item): item is PodTargetSummary => item !== null)
@@ -325,16 +326,16 @@ export default function AdminDailyScoresPage() {
         .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
         .join(' ');
 
-     // Generate Pod Target Summary String
+     // Generate Pod Target Summary String - using the FILTERED summary
      const finalPodTargetSummaryString = finalPodTargetSummary
          .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? `/${summary.target}` : ''}`) // Added extra space
          .join(' | ');
 
     return {
         agentScores: finalAgentScores,
-        podTargetSummary: finalPodTargetSummary,
+        podTargetSummary: finalPodTargetSummary, // Use the filtered summary
         ruleKeyString: finalRuleKeyString,
-        podTargetSummaryString: finalPodTargetSummaryString,
+        podTargetSummaryString: finalPodTargetSummaryString, // Use the filtered summary string
     };
     // Dependencies ensure recalculation when logs, agents, rules, or targets change
   }, [dailyLogs, agents, rules, podTargets]);
@@ -459,12 +460,18 @@ export default function AdminDailyScoresPage() {
                     </TableBody>
                 </Table>
 
-                {/* Pod Target Summary Footer - Formatted as requested */}
+                {/* Pod Target Summary Footer - Render only if there are targets to show */}
                  {!isLoading && podTargetSummary.length > 0 && (
                      <div className="mt-6 p-4 border-t">
                           <p className="text-sm whitespace-pre-wrap break-words">{podTargetSummaryString}</p>
                     </div>
                 )}
+                 {/* Show message if no targets are set */}
+                  {!isLoading && rules.length > 0 && podTargetSummary.length === 0 && (
+                       <div className="mt-6 p-4 border-t">
+                            <p className="text-sm text-muted-foreground">No pod targets set for this competition period.</p>
+                      </div>
+                  )}
              </>
           )}
 
