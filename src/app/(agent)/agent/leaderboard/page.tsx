@@ -21,13 +21,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Trophy, Users } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertCircle, Trophy, Users, Medal } from 'lucide-react'; // Added Medal
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'; // Import cn
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge'; // Import Badge
@@ -60,6 +60,26 @@ interface LeaderboardEntry {
 }
 
 type Timeframe = 'daily' | 'weekly' | 'monthly' | 'competition';
+
+// Helper function to get medal color class
+const getMedalColor = (rank: number) => {
+  switch (rank) {
+    case 1: return 'text-yellow-400'; // Gold
+    case 2: return 'text-gray-300'; // Silver
+    case 3: return 'text-orange-400'; // Bronze
+    default: return 'text-muted-foreground';
+  }
+}
+
+// Helper function to get style for top ranks
+const getRankHighlightStyle = (rank: number): React.CSSProperties => {
+  switch (rank) {
+    case 1: return { backgroundColor: '#9f8f5e', color: '#ffffff' }; // Gold-ish background, white text
+    case 2: return { backgroundColor: '#969696', color: '#ffffff' }; // Silver-ish background, white text
+    case 3: return { backgroundColor: '#996b4f', color: '#ffffff' }; // Bronze-ish background, white text
+    default: return {}; // No special style for other ranks
+  }
+};
 
 export default function AgentLeaderboardPage() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -129,7 +149,7 @@ export default function AgentLeaderboardPage() {
       }
        setIsLoadingData(true);
        const compRef = collection(db, 'competitions');
-       const q = query(compRef, where('podId', '==', agentPodId), orderBy('startDate', 'desc'));
+       const q = query(compRef, where('podIds', 'array-contains', agentPodId), orderBy('startDate', 'desc')); // Updated query
        getDocs(q)
           .then((snapshot) => {
               setCompetitions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition)));
@@ -195,7 +215,7 @@ export default function AgentLeaderboardPage() {
             }
             // Fetch teams from relevant competition
             const competitionsRef = collection(db, 'competitions');
-            const relevantCompQuery = query( competitionsRef, where('podId', '==', agentPodId), where('startDate', '<=', Timestamp.fromDate(endDate!)), orderBy('startDate', 'desc') );
+            const relevantCompQuery = query( competitionsRef, where('podIds', 'array-contains', agentPodId), where('startDate', '<=', Timestamp.fromDate(endDate!)), orderBy('startDate', 'desc') ); // Use array-contains
             const relevantCompSnapshot = await getDocs(relevantCompQuery);
             let relevantCompetition: (Competition & { id: string, teams?: any[] }) | null = null;
             for (const docSnap of relevantCompSnapshot.docs) {
@@ -443,8 +463,21 @@ export default function AgentLeaderboardPage() {
                         </TableHeader>
                         <TableBody>
                         {agentLeaderboard.map((entry) => (
-                            <TableRow key={entry.id} className={entry.isCurrentUser ? 'bg-accent' : ''}>
-                            <TableCell className="font-medium text-center">{entry.rank}</TableCell>
+                            <TableRow
+                                key={entry.id}
+                                style={getRankHighlightStyle(entry.rank ?? 0)}
+                                className={cn(
+                                    entry.isCurrentUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '', // Highlight current user if not top 3
+                                    (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50' // Adjust hover for top ranks
+                                )}
+                             >
+                            <TableCell className="font-medium text-center align-middle">
+                                {(entry.rank ?? 0) <= 3 ? (
+                                    <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                                ) : (
+                                    entry.rank
+                                )}
+                            </TableCell>
                             <TableCell>
                                 <div className="flex items-center gap-2">
                                      <Avatar className="h-7 w-7">
@@ -454,16 +487,17 @@ export default function AgentLeaderboardPage() {
                                              <AvatarFallback
                                                 initials={entry.avatarInitials || generateInitials(entry.name)}
                                                 backgroundColor={entry.avatarBgColor}
+                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-800' : '')} // Contrast for rank background
                                              >
                                                  {!entry.avatarInitials && generateInitials(entry.name)}
                                              </AvatarFallback>
                                          )}
                                      </Avatar>
-                                     <span className="truncate">{entry.name}</span>
-                                     {entry.isCurrentUser && <Badge variant="outline">You</Badge>}
+                                     <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
+                                     {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={(entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : ""}>You</Badge>}
                                  </div>
                             </TableCell>
-                            <TableCell className="text-right font-semibold text-primary">
+                            <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
                                 {entry.totalPoints.toLocaleString()}
                             </TableCell>
                             </TableRow>
@@ -498,13 +532,26 @@ export default function AgentLeaderboardPage() {
                         </TableHeader>
                         <TableBody>
                         {teamLeaderboard.map((entry) => (
-                             <TableRow key={entry.id} className={entry.isCurrentUserTeam ? 'bg-accent' : ''}>
-                            <TableCell className="font-medium text-center">{entry.rank}</TableCell>
-                            <TableCell className="font-medium">
-                                {entry.name}
-                                {entry.isCurrentUserTeam && <Badge variant="outline" className="ml-2">Your Team</Badge>}
+                             <TableRow
+                                key={entry.id}
+                                style={getRankHighlightStyle(entry.rank ?? 0)}
+                                className={cn(
+                                     entry.isCurrentUserTeam && (entry.rank ?? 0) > 3 ? 'bg-accent' : '', // Highlight current user's team if not top 3
+                                     (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
+                                 )}
+                             >
+                            <TableCell className="font-medium text-center align-middle">
+                                {(entry.rank ?? 0) <= 3 ? (
+                                     <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                                 ) : (
+                                     entry.rank
+                                )}
                             </TableCell>
-                            <TableCell className="text-right font-semibold text-primary">
+                            <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
+                                {entry.name}
+                                {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
+                            </TableCell>
+                            <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
                                 {entry.totalPoints.toLocaleString()}
                             </TableCell>
                             </TableRow>
