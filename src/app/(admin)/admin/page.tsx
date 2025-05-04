@@ -1,18 +1,15 @@
 
 'use client'; // Add use client directive
 
-import React, { useState, useEffect, useCallback } from 'react';
-// No need to import DashboardLayout here, it's handled by layout.tsx
-import { KpiCard } from '@/components/kpi-card';
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Leaderboard } from '@/components/leaderboard';
-// import { MotivationCard } from '@/components/motivation-card'; // Commented out
-import { getKPIs, KPI, Group } from '@/services/kpi'; // Import getKPIs and types
-// import { generateMotivationMessage } from '@/ai/flows/generate-motivation-message'; // Commented out
-import { DollarSign, Target, Users, ShieldCheck, BarChart3 } from 'lucide-react'; // Import icons
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"; // Import Card components
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"; // Import Card components
 import { Skeleton } from '@/components/ui/skeleton'; // Import skeleton
+import { Users, ShieldCheck, Megaphone, Trophy } from 'lucide-react'; // Import relevant icons
 
-// Mock data for leaderboards - replace with actual data fetching
+// Mock data for leaderboards - replace with actual data fetching later if needed
 const teamLeaderboardEntries = [
   { rank: 1, name: 'Team Alpha', score: 1550, avatarUrl: 'https://picsum.photos/seed/alpha/40' },
   { rank: 2, name: 'Team Bravo', score: 1480, isUser: true, avatarUrl: 'https://picsum.photos/seed/bravo/40' },
@@ -27,133 +24,169 @@ const individualLeaderboardEntries = [
   { rank: 4, name: 'Diana Davis', score: 750, avatarUrl: 'https://picsum.photos/seed/diana/40' },
 ];
 
-// Mock group and user IDs - replace with actual context/auth
-const MOCK_GROUP_ID = 'pod-bravo-123';
-const MOCK_USER_ID = 'user-charlie-456'; // This might represent the admin or a selected user context
+// Interface for stats card
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  icon: React.ReactNode;
+  isLoading: boolean;
+  description?: string;
+}
 
-// Mock KPI Data
-const MOCK_KPIS: KPI[] = [
-    { name: 'Sales', target: 1000000, achievement: 750000 },
-    { name: 'Customer Acquisition', target: 1000, achievement: 800 },
-    // Add more mock KPIs if needed
-];
+function StatCard({ title, value, icon, isLoading, description }: StatCardProps) {
+  return (
+    <Card className="shadow-md hover:shadow-lg transition-shadow duration-200">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon && <div className="text-muted-foreground">{icon}</div>}
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-8 w-1/2 rounded" />
+        ) : (
+          <div className="text-2xl font-bold text-primary">{value}</div>
+        )}
+        {description && !isLoading && (
+          <p className="text-xs text-muted-foreground pt-1">{description}</p>
+        )}
+        {isLoading && <Skeleton className="h-3 w-3/4 rounded mt-1" />}
+      </CardContent>
+    </Card>
+  );
+}
 
-
-const kpiIcons: { [key: string]: React.ReactNode } = {
-  'Sales': <DollarSign className="h-4 w-4" />,
-  'Customer Acquisition': <Target className="h-4 w-4" />,
-  // Add more icons as needed
-};
 
 export default function AdminDashboardPage() {
-  const [kpis, setKpis] = useState<KPI[]>([]);
-  // const [motivationMessage, setMotivationMessage] = useState<string | null>(null); // Commented out
-  // const [isLoadingMotivation, setIsLoadingMotivation] = useState<boolean>(true); // Commented out
-  const [kpisLoading, setKpisLoading] = useState<boolean>(true);
+  const [stats, setStats] = useState({
+    campaigns: 0,
+    pods: 0,
+    users: 0,
+    activeCompetitions: 0,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch KPIs or use mock data
+  // Fetch Stats Data
   useEffect(() => {
-    setKpisLoading(true); // Ensure loading state is true at start
+    const fetchStats = async () => {
+      setIsLoadingStats(true);
+      setError(null);
+      try {
+        const campaignsQuery = query(collection(db, 'campaigns'));
+        const podsQuery = query(collection(db, 'pods'));
+        const usersQuery = query(collection(db, 'users'));
+        const now = Timestamp.now();
+        const activeCompetitionsQuery = query(
+          collection(db, 'competitions'),
+          where('startDate', '<=', now),
+          // We need to filter endDate >= now client-side or use a more complex query/data structure
+        );
 
-    // Use Mock Data for now
-    setKpis(MOCK_KPIS);
+        const [
+          campaignsSnapshot,
+          podsSnapshot,
+          usersSnapshot,
+          competitionsSnapshot,
+        ] = await Promise.all([
+          getDocs(campaignsQuery),
+          getDocs(podsQuery),
+          getDocs(usersQuery),
+          getDocs(activeCompetitionsQuery),
+        ]);
 
-    // Simulate loading finish (remove or adjust when real fetching is implemented)
-    const timer = setTimeout(() => setKpisLoading(false), 500); // Short delay for skeleton visibility
+        // Client-side filter for active competitions based on end date
+        const activeCompetitions = competitionsSnapshot.docs.filter(doc => {
+            const data = doc.data();
+            return data.endDate && data.endDate.toDate() >= now.toDate();
+        }).length;
 
-    return () => clearTimeout(timer); // Cleanup timer
 
-    // --- Real Data Fetching Logic (Commented Out) ---
-    // const fetchKpis = async () => {
-    //   try {
-    //     // In admin view, we might fetch KPIs for a specific group or aggregated data
-    //     // For now, stick with the mock group
-    //     const currentGroup: Group = { id: MOCK_GROUP_ID, name: 'Pod Bravo Overview' }; // Name adjusted for context
-    //     const fetchedKpis = await getKPIs(currentGroup);
-    //     setKpis(fetchedKpis);
-    //   } catch (error) {
-    //     console.error("Error fetching KPIs:", error);
-    //     // Handle error state (e.g., show a toast notification)
-    //   } finally {
-    //       setKpisLoading(false); // Ensure loading stops
-    //   }
-    // };
-    // fetchKpis();
+        setStats({
+          campaigns: campaignsSnapshot.size,
+          pods: podsSnapshot.size,
+          users: usersSnapshot.size,
+          activeCompetitions: activeCompetitions,
+        });
+
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+        setError("Failed to load dashboard statistics.");
+        // Optionally set stats to NaN or show error state in cards
+        setStats({ campaigns: NaN, pods: NaN, users: NaN, activeCompetitions: NaN });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStats();
   }, []);
-
-
-  // Fetch initial motivation message (maybe for the admin or a general message)
-  // const fetchMotivation = useCallback(async () => { // Commented out
-  //   setIsLoadingMotivation(true);
-  //   try {
-  //      // Admin might see a general motivation or one based on overall performance
-  //     const result = await generateMotivationMessage({ groupId: MOCK_GROUP_ID, userId: MOCK_USER_ID }); // Using mock IDs for now
-  //     setMotivationMessage(result.message);
-  //   } catch (error) {
-  //     console.error("Error generating motivation message:", error);
-  //     setMotivationMessage("Monitor team progress and keep the motivation high!"); // Admin-specific fallback
-  //     // Optionally show a toast notification for the error
-  //   } finally {
-  //     setIsLoadingMotivation(false);
-  //   }
-  // }, []);
-
-  // useEffect(() => { // Commented out
-  //   fetchMotivation();
-  // }, [fetchMotivation]);
 
 
   return (
     // DashboardLayout is applied by the layout.tsx file
     <>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {/* KPI Cards */}
-         {kpisLoading ? (
-           // Show skeleton loaders while KPIs are loading
-           Array.from({ length: 2 }).map((_, index) => ( // Show 2 skeletons matching mock data length
-             <Card key={index} className="shadow-md">
-               <CardHeader className="pb-2">
-                 <Skeleton className="h-4 w-1/2 rounded" />
-               </CardHeader>
-               <CardContent>
-                 <Skeleton className="h-8 w-1/2 rounded mb-2" /> {/* Adjusted width */}
-                 <Skeleton className="h-3 w-1/3 rounded mb-3" />
-                 <Skeleton className="h-2 w-full rounded mb-1" />
-                 <Skeleton className="h-3 w-1/4 rounded" />
-               </CardContent>
-             </Card>
-           ))
-         ) : (
-           kpis.map((kpi) => (
-            <KpiCard key={kpi.name} kpi={kpi} icon={kpiIcons[kpi.name]} />
-          ))
-         )}
-          {/* Add placeholder message if no KPIs loaded and not loading */}
-          {!kpisLoading && kpis.length === 0 && (
-            <Card className="md:col-span-2 lg:col-span-3 xl:col-span-4">
-                <CardContent className="pt-6">
-                    <p className="text-center text-muted-foreground">No KPI data available to display.</p>
-                </CardContent>
-            </Card>
-          )}
+      {error && (
+         <div className="mb-4 text-center text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>
+       )}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Quick Stats Cards */}
+        <StatCard
+            title="Total Campaigns"
+            value={isLoadingStats ? '-' : stats.campaigns}
+            icon={<Megaphone className="h-4 w-4" />}
+            isLoading={isLoadingStats}
+            description="Manage Campaigns"
+        />
+        <StatCard
+            title="Total Pods"
+            value={isLoadingStats ? '-' : stats.pods}
+            icon={<ShieldCheck className="h-4 w-4" />}
+            isLoading={isLoadingStats}
+             description="Manage Pods & Agents"
+        />
+         <StatCard
+            title="Total Users"
+            value={isLoadingStats ? '-' : stats.users}
+            icon={<Users className="h-4 w-4" />}
+            isLoading={isLoadingStats}
+             description="Manage User Accounts"
+        />
+         <StatCard
+            title="Active Competitions"
+            value={isLoadingStats ? '-' : stats.activeCompetitions}
+            icon={<Trophy className="h-4 w-4" />}
+            isLoading={isLoadingStats}
+             description="Currently running"
+        />
 
-         {/* Motivation Card - Commented Out */}
-         {/*
-         <div className="md:col-span-2 lg:col-span-1">
-          <MotivationCard
-            message={motivationMessage}
-            isLoading={isLoadingMotivation}
-            onRefresh={fetchMotivation} // Pass the refresh function
-          />
-        </div>
-         */}
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
-        {/* Leaderboards - Using mock data */}
-        <Leaderboard title="Team Leaderboard" entries={teamLeaderboardEntries} description="Overall Pod Rankings" />
-        <Leaderboard title="Individual Leaderboard" entries={individualLeaderboardEntries} description="Top Agent Performance" />
+        {/* Leaderboards - Still using mock data for now */}
+        <Leaderboard title="Team Leaderboard (Weekly Mock)" entries={teamLeaderboardEntries} description="Overall Pod Rankings" />
+        <Leaderboard title="Individual Leaderboard (Weekly Mock)" entries={individualLeaderboardEntries} description="Top Agent Performance" />
       </div>
+       {/* Add Links to key actions */}
+       {/*
+       <div className="mt-6">
+         <Card>
+            <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+             <CardContent className="flex flex-wrap gap-4">
+                <Button asChild>
+                    <Link href="/admin/competitions">Manage Competitions</Link>
+                </Button>
+                <Button asChild variant="outline">
+                    <Link href="/admin/users">Manage Users</Link>
+                </Button>
+                 <Button asChild variant="outline">
+                    <Link href="/admin/log-achievements">Log Achievements</Link>
+                 </Button>
+             </CardContent>
+         </Card>
+       </div>
+        */}
     </>
   );
 }
