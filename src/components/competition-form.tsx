@@ -33,8 +33,8 @@ import {
   FormDescription, // Added FormDescription
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle, Target } from 'lucide-react'; // Target icon removed from usage but kept import
-import { format, parse, isValid as isDateValid } from 'date-fns'; // Import date-fns functions
+import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
+import { format, parse, isValid as isDateValid, startOfDay } from 'date-fns'; // Import date-fns functions
 import { cn } from "@/lib/utils";
 import { useToast } from '@/hooks/use-toast';
 import type { Competition } from '@/app/(admin)/admin/competitions/page'; // Import Competition type
@@ -44,13 +44,17 @@ import { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reu
 
 // --- Zod Schema Definition ---
 
-const DATE_FORMAT = 'dd/MM/yyyy'; // Define the expected date format
+const DATE_FORMAT_DISPLAY = 'dd/MM/yyyy'; // Display format for input
+const DATE_FORMAT_PARSE = 'dd/MM/yyyy'; // Parsing format
 
-// Helper function to parse DD/MM/YYYY string to Date or return invalid date
+// Helper function to parse DD/MM/YYYY string to Date or return null if invalid
 const parseDateString = (dateString: string | undefined | null): Date | null => {
-  if (!dateString) return null;
-  const parsedDate = parse(dateString, DATE_FORMAT, new Date());
-  return isDateValid(parsedDate) ? parsedDate : null; // Return null if parsing fails
+  if (!dateString || dateString.length !== 10) return null; // Basic length check
+  const parsedDate = parse(dateString, DATE_FORMAT_PARSE, new Date());
+  // Check if the parsed date is valid AND if the formatted date matches the input (to catch invalid dates like 31/02/2024)
+  return isDateValid(parsedDate) && format(parsedDate, DATE_FORMAT_PARSE) === dateString
+    ? startOfDay(parsedDate) // Use startOfDay for consistency
+    : null;
 };
 
 
@@ -67,18 +71,17 @@ export const competitionFormSchema = z.object({
   name: z.string().min(3, { message: 'Competition name required (min 3 chars).' }).max(50, { message: 'Name max 50 chars.' }),
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
   podId: z.string().min(1, { message: 'Please select a pod.' }), // Keep single podId for form simplicity
-  startDate: z.union([z.date(), z.string()])
-    .refine(val => (val instanceof Date && isDateValid(val)) || (typeof val === 'string' && parseDateString(val) !== null), {
-      message: `Invalid date. Use ${DATE_FORMAT} format or the picker.`,
-    })
-    .transform(val => typeof val === 'string' ? parseDateString(val)! : val),
-  endDate: z.union([z.date(), z.string()])
-    .refine(val => (val instanceof Date && isDateValid(val)) || (typeof val === 'string' && parseDateString(val) !== null), {
-        message: `Invalid date. Use ${DATE_FORMAT} format or the picker.`,
-    })
-     .transform(val => typeof val === 'string' ? parseDateString(val)! : val),
+  startDate: z.union([z.date(), z.string()]) // Accept Date or string
+    .transform((val) => (typeof val === 'string' ? parseDateString(val) : val)) // Attempt to parse string
+    .refine((val): val is Date => val instanceof Date && isDateValid(val), { // Ensure result is a valid Date
+      message: `Invalid date. Use ${DATE_FORMAT_DISPLAY} format or picker.`,
+    }),
+  endDate: z.union([z.date(), z.string()]) // Accept Date or string
+    .transform((val) => (typeof val === 'string' ? parseDateString(val) : val)) // Attempt to parse string
+    .refine((val): val is Date => val instanceof Date && isDateValid(val), { // Ensure result is a valid Date
+        message: `Invalid date. Use ${DATE_FORMAT_DISPLAY} format or picker.`,
+    }),
   rules: z.array(competitionRuleSchema).min(1, { message: 'At least one rule is required.' }),
-  // podTargets schema removed
 }).refine(data => data.endDate >= data.startDate, {
     message: "End date cannot be before start date.",
     path: ["endDate"],
@@ -138,10 +141,10 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
       name: initialData?.name || '',
       campaignId: initialData?.campaignId || '',
       podId: initialData?.podId || '',
-      startDate: initialData?.startDate, // Already Date objects if editing
-      endDate: initialData?.endDate,   // Already Date objects if editing
+       // Store dates as Date objects internally
+       startDate: initialData?.startDate instanceof Timestamp ? initialData.startDate.toDate() : initialData?.startDate,
+       endDate: initialData?.endDate instanceof Timestamp ? initialData.endDate.toDate() : initialData?.endDate,
       rules: initialData?.rules || [],
-      // podTargets removed
     },
     mode: 'onChange',
   });
@@ -160,10 +163,10 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
         name: initialData.name,
         campaignId: initialData.campaignId,
         podId: initialData.podId, // Form expects single podId
-        startDate: initialData.startDate, // Already Date objects
-        endDate: initialData.endDate,   // Already Date objects
+        // Ensure dates are Date objects
+        startDate: initialData.startDate instanceof Timestamp ? initialData.startDate.toDate() : initialData.startDate,
+        endDate: initialData.endDate instanceof Timestamp ? initialData.endDate.toDate() : initialData.endDate,
         rules: initialData.rules || [],
-        // podTargets removed
       });
         replace(initialData.rules || []);
     } else if (mode === 'add') {
@@ -174,7 +177,6 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
             startDate: undefined,
             endDate: undefined,
             rules: [],
-            // podTargets removed
         });
         replace([]); // Clear rules field array
     }
@@ -215,24 +217,29 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     append({ id: `new-rule-${Date.now()}-${Math.random()}`, name: '', emoji: '', points: 0 });
   };
 
-   // Handle manual date input change
+   // Handle manual date input change - Update the form with the raw string
    const handleDateInputChange = (
      event: React.ChangeEvent<HTMLInputElement>,
      fieldName: 'startDate' | 'endDate'
    ) => {
-     const dateString = event.target.value;
-     const parsedDate = parseDateString(dateString);
-     if (parsedDate) {
-       form.setValue(fieldName, parsedDate, { shouldValidate: true });
-     } else {
-         form.setValue(fieldName, dateString || undefined as any, { shouldValidate: true });
+     form.setValue(fieldName, event.target.value as any, { shouldValidate: true });
+   };
+
+    // Handle date selection from the calendar - Update form with Date object
+   const handleDateSelect = (
+     date: Date | undefined,
+     fieldName: 'startDate' | 'endDate'
+   ) => {
+     if (date) {
+       form.setValue(fieldName, date, { shouldValidate: true });
+       if (fieldName === 'startDate') setIsStartDatePopoverOpen(false);
+       if (fieldName === 'endDate') setIsEndDatePopoverOpen(false);
      }
    };
 
   const handleFormSubmit = async (data: CompetitionFormSchemaType) => {
     setIsSubmitting(true);
     try {
-        // podTargets removed
         const submitData = { ...data };
         await onSubmit(submitData, data.rules); // Pass Zod-transformed data and rules
     } catch (error) {
@@ -316,9 +323,9 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                   </FormControl>
                   <SelectContent>
                     {!watchedCampaignId ? (
-                      <SelectItem value="-" disabled>No campaign selected</SelectItem>
+                      <SelectItem value="loading" disabled>No campaign selected</SelectItem>
                     ) : filteredPods.length === 0 ? (
-                      <SelectItem value="-" disabled>No pods in selected campaign</SelectItem>
+                      <SelectItem value="loading" disabled>No pods in selected campaign</SelectItem>
                     ) : (
                       filteredPods.map((pod) => (
                         <SelectItem key={pod.id} value={pod.id}>
@@ -334,8 +341,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
             )}
           />
 
-           {/* Start Date - Combined Picker and Input */}
-           <FormField
+            {/* Start Date - Combined Picker and Input */}
+            <FormField
                 control={form.control}
                 name="startDate"
                 render={({ field }) => (
@@ -345,10 +352,11 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
+                                        type="button" // Prevent form submission
                                         variant={"outline"}
                                         className={cn(
-                                            "w-[130px] justify-start text-left font-normal", // Reduced width
-                                            !field.value && "text-muted-foreground"
+                                            "w-[130px] justify-start text-left font-normal",
+                                            !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
                                         disabled={isSubmitting}
                                     >
@@ -360,26 +368,23 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
-                                        onSelect={(date) => {
-                                            if (date) {
-                                               field.onChange(date); // Update form state with Date object
-                                               setIsStartDatePopoverOpen(false); // Close popover on selection
-                                            }
-                                        }}
+                                        onSelect={(date) => handleDateSelect(date, 'startDate')}
                                         disabled={isSubmitting}
                                         initialFocus
                                     />
                                 </PopoverContent>
                             </Popover>
-                             <Input
-                                type="text"
-                                placeholder={DATE_FORMAT}
-                                value={field.value instanceof Date ? format(field.value, DATE_FORMAT) : field.value || ''}
-                                onChange={(e) => handleDateInputChange(e, 'startDate')}
-                                className="flex-1" // Input takes remaining space
-                                disabled={isSubmitting}
-                                maxLength={10}
-                             />
+                             <FormControl>
+                                <Input
+                                    type="text"
+                                    placeholder={DATE_FORMAT_DISPLAY}
+                                    value={field.value instanceof Date ? format(field.value, DATE_FORMAT_DISPLAY) : field.value || ''}
+                                    onChange={(e) => handleDateInputChange(e, 'startDate')}
+                                    className="flex-1"
+                                    disabled={isSubmitting}
+                                    maxLength={10}
+                                />
+                             </FormControl>
                         </div>
                          <FormMessage />
                     </FormItem>
@@ -397,12 +402,13 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                             <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
+                                        type="button" // Prevent form submission
                                         variant={"outline"}
                                         className={cn(
                                             "w-[130px] justify-start text-left font-normal",
-                                            !field.value && "text-muted-foreground"
+                                            !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
-                                         disabled={isSubmitting || !form.watch('startDate')}
+                                         disabled={isSubmitting || !(form.watch('startDate') instanceof Date)}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
@@ -412,12 +418,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
-                                        onSelect={(date) => {
-                                             if (date) {
-                                                 field.onChange(date); // Update form state with Date object
-                                                 setIsEndDatePopoverOpen(false); // Close popover on selection
-                                             }
-                                        }}
+                                        onSelect={(date) => handleDateSelect(date, 'endDate')}
                                          disabled={(date) =>
                                              (form.watch('startDate') instanceof Date && date < form.watch('startDate')) || isSubmitting
                                          }
@@ -425,15 +426,17 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                     />
                                 </PopoverContent>
                             </Popover>
-                              <Input
-                                 type="text"
-                                 placeholder={DATE_FORMAT}
-                                 value={field.value instanceof Date ? format(field.value, DATE_FORMAT) : field.value || ''}
-                                 onChange={(e) => handleDateInputChange(e, 'endDate')}
-                                 className="flex-1"
-                                 disabled={isSubmitting || !form.watch('startDate')}
-                                 maxLength={10}
-                              />
+                              <FormControl>
+                                 <Input
+                                     type="text"
+                                     placeholder={DATE_FORMAT_DISPLAY}
+                                     value={field.value instanceof Date ? format(field.value, DATE_FORMAT_DISPLAY) : field.value || ''}
+                                     onChange={(e) => handleDateInputChange(e, 'endDate')}
+                                     className="flex-1"
+                                     disabled={isSubmitting || !(form.watch('startDate') instanceof Date)}
+                                     maxLength={10}
+                                 />
+                              </FormControl>
                          </div>
                          <FormMessage />
                      </FormItem>
