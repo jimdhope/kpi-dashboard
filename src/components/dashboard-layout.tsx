@@ -17,7 +17,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator, // Import Separator
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList } from 'lucide-react'; // Added Star, ClipboardList
+import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target } from 'lucide-react'; // Added Target icon
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -67,33 +67,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             </SidebarMenuItem>
 
-             {/* Achievements */}
-             <SidebarMenuItem>
-                <Link href="/admin/log-achievements" passHref>
-                    <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/admin/log-achievements'}>
-                      <CheckSquare />
-                      <span>Log Achievements</span>
-                    </SidebarMenuButton>
-                 </Link>
-              </SidebarMenuItem>
-
-             {/* View Scores */}
-              <SidebarMenuItem>
-                <Link href="/admin/daily-scores" passHref>
-                  <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/admin/daily-scores'}>
-                    <ClipboardList />
-                    <span>Daily Scores</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                 <Link href="/admin/leaderboard" passHref>
-                  <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
-                    <Star />
-                    <span>Leaderboard</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
+             {/* Logging & Scores */}
+              <SidebarGroup>
+                  <SidebarGroupLabel>Daily Data</SidebarGroupLabel>
+                  <SidebarMenuItem>
+                    <Link href="/admin/log-achievements" passHref>
+                        <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/admin/log-achievements'}>
+                        <CheckSquare />
+                        <span>Log Achievements</span>
+                        </SidebarMenuButton>
+                    </Link>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <Link href="/admin/daily-scores" passHref>
+                        <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/admin/daily-scores'}>
+                            <ClipboardList />
+                            <span>Daily Scores</span>
+                        </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <Link href="/admin/leaderboard" passHref>
+                        <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
+                            <Star />
+                            <span>Leaderboard</span>
+                        </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+              </SidebarGroup>
 
 
             {/* Competitions Section */}
@@ -107,6 +108,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </SidebarMenuButton>
                    </Link>
               </SidebarMenuItem>
+              {/* New Pod Daily Targets Link */}
+                <SidebarMenuItem>
+                    <Link href="/admin/pod-targets" passHref>
+                    <SidebarMenuButton tooltip="Pod Daily Targets" isActive={currentPath === '/admin/pod-targets'}>
+                        <Target />
+                        <span>Pod Targets</span>
+                    </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
                <SidebarMenuItem>
                  <Link href="/admin/teams" passHref>
                     <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}>
@@ -147,29 +157,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </SidebarGroup>
 
             {/* Analytics Section */}
+            {/*
             <SidebarGroup>
                <SidebarGroupLabel>Analytics</SidebarGroupLabel>
                <SidebarMenuItem>
-                {/* TODO: Update href when reports page exists */}
-                  <Link href="#" passHref> {/* Update href later */}
-                     <SidebarMenuButton tooltip="KPI Reports" isActive={currentPath === '/admin/reports'}> {/* Update isActive path later */}
+                  <Link href="#" passHref>
+                     <SidebarMenuButton tooltip="KPI Reports" isActive={currentPath === '/admin/reports'}>
                       <BarChart3 />
                       <span>KPI Reports</span>
                     </SidebarMenuButton>
                  </Link>
               </SidebarMenuItem>
              </SidebarGroup>
+             */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-               {/* AvatarFallback handles initials and background color */}
               <AvatarFallback
                    initials={MOCK_ADMIN_USER.avatarInitials || generateInitials(MOCK_ADMIN_USER.name)}
                    backgroundColor={MOCK_ADMIN_USER.avatarBgColor}
                >
-                    {/* Render default initials only if no custom/generated */}
                    {!MOCK_ADMIN_USER.avatarInitials && generateInitials(MOCK_ADMIN_USER.name)}
                </AvatarFallback>
             </Avatar>
@@ -177,7 +186,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <p className="text-sm font-medium truncate">{MOCK_ADMIN_USER.name}</p>
               <p className="text-xs text-muted-foreground truncate">{MOCK_ADMIN_USER.email}</p>
             </div>
-            {/* Link to profile page */}
             <Link href="/profile" passHref>
                 <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/profile'}>
                     <Settings />
@@ -188,13 +196,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </Sidebar>
       <SidebarInset className="flex flex-col">
          <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background md:px-6">
-            <div className="flex items-center gap-2"> {/* Wrapper div */}
+            <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
               {/* TODO: Make header title dynamic */}
               <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2>
             </div>
-            <div className="flex items-center gap-4"> {/* Right side content */}
-               <ThemeToggle /> {/* Add Theme Toggle button */}
+            <div className="flex items-center gap-4">
+               <ThemeToggle />
                  <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>
           </header>

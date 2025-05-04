@@ -22,7 +22,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { CalendarIcon, Loader2, AlertCircle, Trophy, Target } from 'lucide-react'; // Added Target
-import { format, startOfDay } from 'date-fns';
+import { format, startOfDay, getDay } from 'date-fns'; // Added getDay
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -30,6 +30,7 @@ import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page'; // Import new target type
 
 // Interface for the data stored in Firestore for achievements
 interface DailyAchievementLog {
@@ -63,11 +64,13 @@ interface PodTargetSummary {
   target: number | null; // Target might not be set
 }
 
-// Extend Competition interface to include podTargets (assuming structure)
-// This interface now includes podTargets
-interface CompetitionWithTargets extends Competition {
-    podTargets?: Record<string, number>; // ruleId -> targetValue
+// Competition interface (no podTargets needed)
+interface CompetitionWithRules extends Competition {
+    // No podTargets needed here anymore
 }
+
+// Days of the week map
+const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 
 export default function AdminDailyScoresPage() {
@@ -77,62 +80,57 @@ export default function AdminDailyScoresPage() {
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [rules, setRules] = useState<RuleFormData[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
-  const [podTargets, setPodTargets] = useState<Record<string, number>>({}); // ruleId -> target
+  const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null); // State for daily targets
   const [isLoadingPods, setIsLoadingPods] = useState(true);
-  const [isLoadingData, setIsLoadingData] = useState(false); // Loading competition, agents, logs
+  const [isLoadingData, setIsLoadingData] = useState(false); // Loading competition, agents, logs, targets
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // 1. Fetch Pods
+  // 1. Fetch Pods (remains the same)
   useEffect(() => {
     setIsLoadingPods(true);
     const podsRef = collection(db, 'pods');
     const q = query(podsRef, orderBy('name'));
-    // Use onSnapshot for pods to react to changes, though less critical than logs
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedPods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod));
       setPods(fetchedPods);
       setError(null);
-      setIsLoadingPods(false); // Set loading false after first fetch
+      setIsLoadingPods(false);
     }, (err) => {
         console.error("Error fetching pods:", err);
         setError("Failed to load pods.");
         toast({ variant: "destructive", title: "Error", description: "Could not load pods." });
         setIsLoadingPods(false);
     });
-     return () => {
-         console.log("Unsubscribing from pods listener");
-         unsubscribe();
-     };
+     return () => unsubscribe();
   }, [toast]);
 
-  // 2. Fetch Agents, Competition Rules, Logs (Real-time), and Targets when Pod or Date changes
+  // 2. Fetch Agents, Competition Rules, Logs (Real-time), and Daily Targets when Pod or Date changes
   useEffect(() => {
-    // If no pod is selected, clear data and stop.
     if (!selectedPodId) {
       setAgents([]);
       setRules([]);
       setDailyLogs([]);
-      setPodTargets({});
-      setIsLoadingData(false); // Ensure loading stops
+      setDailyTargets(null); // Clear targets
+      setIsLoadingData(false);
       return;
     }
 
     setIsLoadingData(true);
     setError(null);
 
-    // Explicitly reset state for related data before starting fetch/listen
     setAgents([]);
     setRules([]);
     setDailyLogs([]);
-    setPodTargets({});
+    setDailyTargets(null); // Reset targets
 
     let unsubscribeLogs: Unsubscribe = () => {}; // Initialize unsubscribe function
+    let unsubscribeTargets: Unsubscribe = () => {}; // Initialize unsubscribe function for targets
 
     const fetchScoreDataAndListen = async () => {
       console.log(`Fetching data for Pod: ${selectedPodId}, Date: ${selectedDate.toISOString()}`);
       try {
-        // Fetch Agents for the selected Pod (can remain getDocs as agents change less often)
+        // Fetch Agents (remains the same)
         const usersRef = collection(db, 'users');
         const agentsQuery = query(
             usersRef,
@@ -142,30 +140,30 @@ export default function AdminDailyScoresPage() {
         );
         const agentsSnapshot = await getDocs(agentsQuery);
         const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-        setAgents(fetchedAgents); // Update agents state here
+        setAgents(fetchedAgents);
 
          if (fetchedAgents.length === 0) {
             toast({ variant: "default", title: "No Agents", description: "No agents found in this pod." });
-            setIsLoadingData(false); // Stop loading if no agents
-            setRules([]); // Ensure rules are cleared if no agents
-            setPodTargets({}); // Ensure targets are cleared
-            return; // Exit early
+            setIsLoadingData(false);
+            setRules([]);
+            setDailyTargets(null); // Ensure targets cleared
+            return;
          }
 
-        // Find the active Competition for the Pod and Date (can remain getDocs)
+        // Find the active Competition (use array-contains for podIds)
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
         const competitionQuery = query(
           competitionsRef,
-          where('podId', '==', selectedPodId),
+          where('podIds', 'array-contains', selectedPodId), // Check if podId is in the podIds array
           where('startDate', '<=', dateTimestamp),
           orderBy('startDate', 'desc')
         );
         const competitionSnapshot = await getDocs(competitionQuery);
-        let activeCompetition: CompetitionWithTargets | null = null;
+        let activeCompetition: CompetitionWithRules | null = null;
 
         for (const docSnap of competitionSnapshot.docs) {
-            const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithTargets & { id: string };
+            const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules & { id: string };
             if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
                 activeCompetition = comp;
                 break;
@@ -175,9 +173,8 @@ export default function AdminDailyScoresPage() {
         if (activeCompetition) {
           console.log(`Active competition found: ${activeCompetition.id}`);
           setRules(activeCompetition.rules || []); // Update rules state
-          setPodTargets(activeCompetition.podTargets || {}); // Update targets state - FETCH TARGETS HERE
 
-          // Setup Real-time Listener for Daily Achievements
+          // Listen to Daily Achievements (remains the same)
           const achievementsRef = collection(db, 'dailyAchievements');
           const logsQuery = query(
             achievementsRef,
@@ -185,62 +182,80 @@ export default function AdminDailyScoresPage() {
             where('date', '==', dateTimestamp),
             where('competitionId', '==', activeCompetition.id)
           );
-
-          // Assign the unsubscribe function
            unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
              console.log(`Received ${snapshot.docs.length} achievement logs from listener.`);
              const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-             setDailyLogs(fetchedLogs); // Update logs state directly from listener
-             // Only set loading false after the listener provides data
-             setIsLoadingData(false);
-             setError(null); // Clear error on successful update
+             setDailyLogs(fetchedLogs);
+             // Don't set loading false until targets are also fetched/updated
+             // setIsLoadingData(false);
            }, (err) => {
                console.error("Error listening to achievements:", err);
                setError("Failed to load real-time achievement data.");
-               setDailyLogs([]); // Clear logs on error
-               setIsLoadingData(false); // Stop loading on error
+               setDailyLogs([]);
+               setIsLoadingData(false);
            });
+
+           // Listen to Daily Targets document
+           const targetsDocId = `${activeCompetition.id}_${selectedPodId}`;
+           const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
+           unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    console.log("Daily targets data received:", docSnap.data());
+                    setDailyTargets(docSnap.data() as DailyTargetData);
+                } else {
+                    console.log("No daily targets document found for:", targetsDocId);
+                    setDailyTargets(null); // No targets set for this combo
+                }
+                // Set loading false after both logs and targets listeners have provided initial data
+                setIsLoadingData(false);
+                setError(null);
+           }, (err) => {
+                console.error("Error listening to daily targets:", err);
+                setError("Failed to load daily target data.");
+                setDailyTargets(null);
+                setIsLoadingData(false);
+           });
+
 
         } else {
           console.log("No active competition found.");
           setRules([]); // Ensure rules are cleared
           setDailyLogs([]); // Ensure logs are cleared
-          setPodTargets({}); // Ensure targets are cleared
+          setDailyTargets(null); // Ensure targets are cleared
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date." });
-          setIsLoadingData(false); // Stop loading if no competition
+          setIsLoadingData(false);
         }
 
       } catch (err) {
         console.error("Error fetching initial score data:", err);
         setError("Failed to load data for the selected pod/date.");
         toast({ variant: "destructive", title: "Error", description: "Could not load competition, agent, or achievement data." });
-        // Ensure state is clear on error
         setAgents([]);
         setRules([]);
         setDailyLogs([]);
-        setPodTargets({});
-        setIsLoadingData(false); // Stop loading on error
+        setDailyTargets(null);
+        setIsLoadingData(false);
       }
     };
 
     fetchScoreDataAndListen();
 
-     // Cleanup function: Unsubscribe from the logs listener when component unmounts or dependencies change
+     // Cleanup function: Unsubscribe from listeners
      return () => {
-         console.log("Unsubscribing from daily logs listener (Effect Cleanup)");
+         console.log("Unsubscribing from daily logs and targets listeners");
          unsubscribeLogs();
+         unsubscribeTargets();
      };
 
   }, [selectedPodId, selectedDate, toast]); // Re-run ONLY when podId or date changes
 
-   // 3. Process data for the table and summary (Memoization)
+   // 3. Process data for the table and summary (Memoization adjusted for new targets)
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
-     console.log(`Recalculating scores. Current dailyLogs count: ${dailyLogs.length}`);
-    // Initialize scores map for ALL agents in the pod
+     console.log(`Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}`);
+     // Calculate agent scores (remains largely the same)
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
     agents.forEach(agent => {
       if (agent.id) {
-        // Crucially, initialize score to 0 *every time* this recalculates
         scores[agent.id] = { totalPoints: 0, emojiString: '' };
       }
     });
@@ -254,12 +269,9 @@ export default function AdminDailyScoresPage() {
     // Aggregate points and achievements per agent and rule totals from *current* dailyLogs state
     dailyLogs.forEach(log => {
       // Agent Scores Accumulation
-      if (scores[log.agentId]) { // Check if agent exists in scores map
-        // Use the stored points from the log directly
-        scores[log.agentId].totalPoints += log.points; // Add points from this log
-         console.log(`Agent ${log.agentId}, Rule ${log.ruleId}: Adding ${log.points} points. New total: ${scores[log.agentId].totalPoints}`);
+      if (scores[log.agentId]) {
+        scores[log.agentId].totalPoints += log.points;
       } else {
-         // This shouldn't happen if initialization is correct, but log if it does
          console.warn(`Log found for agent ${log.agentId} who is not in the current agent list or scores map.`);
       }
 
@@ -271,7 +283,7 @@ export default function AdminDailyScoresPage() {
 
     // Build emoji strings for each agent based on current dailyLogs
     agents.forEach(agent => {
-       if (!agent.id || !scores[agent.id]) return; // Check if agent exists in scores map
+       if (!agent.id || !scores[agent.id]) return;
 
        const agentLogs = dailyLogs.filter(log => log.agentId === agent.id);
        let emojis = '';
@@ -287,14 +299,13 @@ export default function AdminDailyScoresPage() {
                 }
             }
        });
-       // Assign the calculated emoji string
        scores[agent.id].emojiString = emojis;
     });
 
     // Map to final AgentScore array, adding names and sorting by points
     const finalAgentScores: AgentScore[] = agents
       .map(agent => {
-         const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '' }; // Default if missing
+         const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '' };
           return {
             agentId: agent.id!,
             agentFirstName: agent.name.split(' ')[0] || agent.name,
@@ -302,33 +313,40 @@ export default function AdminDailyScoresPage() {
             emojiString: agentScoreData.emojiString,
           };
       })
-      .sort((a, b) => b.totalPoints - a.totalPoints); // Sort descending by points
+      .sort((a, b) => b.totalPoints - a.totalPoints);
 
-    // Build Pod Target Summary array - FILTERED to show only rules with targets
+    // Build Pod Target Summary array - FILTERED based on dailyTargets for the selected day
+    const dayOfWeek = daysOfWeek[getDay(selectedDate)]; // Get 'mon', 'tue', etc.
     const finalPodTargetSummary: PodTargetSummary[] = rules
-        .filter(rule => rule.id && podTargets[rule.id] !== undefined && podTargets[rule.id] !== null) // Filter rules with defined targets
         .map(rule => {
             if (!rule.id) return null;
-             const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+            const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
+            // Only include if a target is explicitly set (not undefined or null) for this day
+            if (targetValue === undefined || targetValue === null) {
+                 return null;
+            }
+
+            const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
             return {
                 ruleId: rule.id,
                 ruleName: rule.name,
                 ruleEmoji: emojiToUse,
                 achieved: ruleTotals[rule.id] || 0,
-                target: podTargets[rule.id] ?? null, // Should not be null due to filter, but keep for safety
+                target: targetValue, // Use the target for the specific day
             };
         })
-        .filter((item): item is PodTargetSummary => item !== null)
+        .filter((item): item is PodTargetSummary => item !== null) // Remove null entries
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
-     // Generate Rule Key String
+
+     // Generate Rule Key String (remains the same)
      const finalRuleKeyString = rules
         .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
         .join(' ');
 
-     // Generate Pod Target Summary String - using the FILTERED summary
+     // Generate Pod Target Summary String - using the FILTERED summary for the day
      const finalPodTargetSummaryString = finalPodTargetSummary
-         .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? `/${summary.target}` : ''}`) // Added extra space
+         .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? `/${summary.target}` : ''}`)
          .join(' | ');
 
     return {
@@ -338,7 +356,7 @@ export default function AdminDailyScoresPage() {
         podTargetSummaryString: finalPodTargetSummaryString, // Use the filtered summary string
     };
     // Dependencies ensure recalculation when logs, agents, rules, or targets change
-  }, [dailyLogs, agents, rules, podTargets]);
+  }, [dailyLogs, agents, rules, dailyTargets, selectedDate]);
 
 
 
@@ -383,7 +401,7 @@ export default function AdminDailyScoresPage() {
                       "w-[200px] justify-start text-left font-normal",
                       !selectedDate && "text-muted-foreground"
                     )}
-                     disabled={isLoadingData} // Disable only data loading, not initial pod loading
+                     disabled={isLoadingData}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
@@ -416,7 +434,7 @@ export default function AdminDailyScoresPage() {
            )}
 
 
-           {/* Rule Key Display - Formatted as requested */}
+           {/* Rule Key Display */}
           {!isLoading && rules.length > 0 && (
             <div className="mb-4 p-3 border rounded-md bg-muted/50">
               <p className="text-xs whitespace-pre-wrap break-words">{ruleKeyString}</p>
@@ -439,16 +457,13 @@ export default function AdminDailyScoresPage() {
                         {agentScores.map((score) => (
                         <TableRow key={score.agentId}>
                             <TableCell className="font-medium">{score.agentFirstName}</TableCell>
-                            {/* Render emojis with wrapping */}
-                             <TableCell>
-                                {/* Use Array.from for proper emoji rendering */}
+                            <TableCell>
                                 <div className="flex flex-wrap gap-1">
                                     {Array.from(score.emojiString).map((emoji, index) => (
                                         <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
                                             {emoji}
                                         </span>
                                     ))}
-                                    {/* Show '-' only if the string is genuinely empty */}
                                     {score.emojiString === '' && <span className="text-sm text-muted-foreground">-</span>}
                                 </div>
                             </TableCell>
@@ -460,16 +475,16 @@ export default function AdminDailyScoresPage() {
                     </TableBody>
                 </Table>
 
-                {/* Pod Target Summary Footer - Render only if there are targets to show */}
+                {/* Pod Target Summary Footer - Render only if there are targets for the selected day */}
                  {!isLoading && podTargetSummary.length > 0 && (
                      <div className="mt-6 p-4 border-t">
                           <p className="text-sm whitespace-pre-wrap break-words">{podTargetSummaryString}</p>
                     </div>
                 )}
-                 {/* Show message if no targets are set */}
+                 {/* Show message if no targets are set for the selected day */}
                   {!isLoading && rules.length > 0 && podTargetSummary.length === 0 && (
                        <div className="mt-6 p-4 border-t">
-                            <p className="text-sm text-muted-foreground">No pod targets set for this competition period.</p>
+                            <p className="text-sm text-muted-foreground">No pod targets set for this specific day.</p>
                       </div>
                   )}
              </>
@@ -485,7 +500,7 @@ export default function AdminDailyScoresPage() {
             {!isLoading && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
                  <p className="text-center text-muted-foreground mt-6">No active competition found for this pod and date.</p>
             )}
-             {!isLoading && canDisplay && agentScores.every(score => score.totalPoints === 0) && dailyLogs.length === 0 && ( // Check if all scores are zero AND no logs exist
+             {!isLoading && canDisplay && agentScores.every(score => score.totalPoints === 0) && dailyLogs.length === 0 && (
                  <p className="text-center text-muted-foreground mt-6">No achievements logged for this pod on this date.</p>
             )}
 
