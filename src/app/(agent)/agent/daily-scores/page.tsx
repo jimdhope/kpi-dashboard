@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -269,7 +270,10 @@ export default function AgentDailyScoresPage() {
              if (logForRule.value > 0) {
                  // Use emoji if it exists and is not empty, otherwise use fallback
                  const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-                 agentEmojis += emojiToUse.repeat(logForRule.value);
+                 // Repeat emoji based on value
+                 for (let i = 0; i < logForRule.value; i++) {
+                    agentEmojis += emojiToUse;
+                }
              }
         }
     });
@@ -366,7 +370,7 @@ export default function AgentDailyScoresPage() {
           {/* Rule Key */}
           {!isLoading && rules.length > 0 && (
              <div className="mb-4 p-3 border rounded-md bg-muted/50">
-              <h4 className="text-sm font-medium mb-2">Rule Key:</h4>
+              {/* Removed Rule Key Label */}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 {rules.map(rule => (
                   <span key={rule.id} className="whitespace-nowrap">
@@ -385,9 +389,11 @@ export default function AgentDailyScoresPage() {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                          <div>
                             <h3 className="text-xl font-semibold">{agentScore.agentFirstName}'s Score</h3>
+                            {/* Render emojis with wrapping */}
                             <div className="mt-2 flex flex-wrap gap-1">
-                                {agentScore.emojiString.split('').map((emoji, index) => (
-                                    <span key={index} className="text-2xl" title={rules.find(r => r.emoji === emoji)?.name}>
+                                {/* Use Array.from for proper emoji rendering */}
+                                {Array.from(agentScore.emojiString).map((emoji, index) => (
+                                    <span key={`${agentScore.agentId}-emoji-${index}`} className="text-2xl" title={rules.find(r => r.emoji === emoji)?.name}>
                                         {emoji}
                                     </span>
                                 ))}
@@ -406,21 +412,21 @@ export default function AgentDailyScoresPage() {
            {/* Pod Target Summary Footer */}
            {!isLoading && podTargetSummary.length > 0 && (
              <div className="mt-6 p-4 border rounded-md">
-                <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
-                    <Target className="h-5 w-5 text-muted-foreground"/> Pod Target Summary
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                {podTargetSummary.map(summary => (
-                    <div key={summary.ruleId} className="flex items-center justify-between">
-                        <span className="font-medium truncate" title={summary.ruleName}>
-                            {summary.ruleEmoji} {summary.ruleName}
-                        </span>
-                        <span className={cn("font-semibold", summary.target !== null && summary.achieved >= summary.target ? "text-green-600" : "text-muted-foreground")}>
-                            {summary.achieved}
-                            {summary.target !== null ? ` / ${summary.target}` : ''}
-                        </span>
-                    </div>
-                ))}
+                {/* Removed Pod Target Summary Label */}
+                 {/* Display targets in a single line, wrapping as needed */}
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                    {podTargetSummary.map(summary => (
+                        <div key={summary.ruleId} className="flex items-center whitespace-nowrap">
+                            <span className="font-medium truncate" title={summary.ruleName}>
+                                {summary.ruleEmoji} {summary.ruleName}
+                            </span>
+                             {/* Add margin for spacing */}
+                            <span className={cn("font-semibold ml-2", summary.target !== null && summary.achieved >= summary.target ? "text-green-600" : "text-muted-foreground")}>
+                                {summary.achieved}
+                                {summary.target !== null ? ` / ${summary.target}` : ''}
+                            </span>
+                        </div>
+                    ))}
                 </div>
             </div>
             )}
@@ -441,3 +447,4 @@ export default function AgentDailyScoresPage() {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -261,7 +262,10 @@ export default function AdminDailyScoresPage() {
             if (logForRule && logForRule.value > 0) {
                 // Use emoji if it exists and is not empty, otherwise use fallback
                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-                emojis += emojiToUse.repeat(logForRule.value);
+                // Repeat the emoji for the value count
+                for (let i = 0; i < logForRule.value; i++) {
+                    emojis += emojiToUse;
+                }
             }
        });
 
@@ -383,7 +387,8 @@ export default function AdminDailyScoresPage() {
           {/* Rule Key */}
           {!isLoading && rules.length > 0 && (
             <div className="mb-4 p-3 border rounded-md bg-muted/50">
-              <h4 className="text-sm font-medium mb-2">Rule Key:</h4>
+              {/* Removed Rule Key Label */}
+              {/* <h4 className="text-sm font-medium mb-2">Rule Key:</h4> */}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 {rules.map(rule => (
                   <span key={rule.id} className="whitespace-nowrap">
@@ -412,14 +417,15 @@ export default function AdminDailyScoresPage() {
                         <TableRow key={score.agentId}>
                             <TableCell className="font-medium">{score.agentFirstName}</TableCell>
                             {/* Render emojis with wrapping */}
-                            <TableCell>
+                             <TableCell>
+                                {/* Use Array.from for proper emoji rendering */}
                                 <div className="flex flex-wrap gap-1">
-                                    {score.emojiString.split('').map((emoji, index) => (
-                                        <span key={index} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}> {/* Basic tooltip */}
+                                    {Array.from(score.emojiString).map((emoji, index) => (
+                                        <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
                                             {emoji}
                                         </span>
                                     ))}
-                                     {score.emojiString.length === 0 && <span className="text-sm text-muted-foreground">-</span>}
+                                    {score.emojiString.length === 0 && <span className="text-sm text-muted-foreground">-</span>}
                                 </div>
                             </TableCell>
                             <TableCell className="text-right font-semibold text-primary">
@@ -433,21 +439,24 @@ export default function AdminDailyScoresPage() {
                 {/* Pod Target Summary Footer */}
                  {podTargetSummary.length > 0 && (
                      <div className="mt-6 p-4 border-t">
-                        <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
+                        {/* Removed Pod Target Summary Label */}
+                        {/* <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
                             <Target className="h-5 w-5 text-muted-foreground"/> Pod Target Summary
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
-                        {podTargetSummary.map(summary => (
-                            <div key={summary.ruleId} className="flex items-center justify-between">
-                                <span className="font-medium truncate" title={summary.ruleName}>
-                                    {summary.ruleEmoji} {summary.ruleName}
-                                </span>
-                                <span className={cn("font-semibold", summary.target !== null && summary.achieved >= summary.target ? "text-green-600" : "text-muted-foreground")}>
-                                    {summary.achieved}
-                                    {summary.target !== null ? ` / ${summary.target}` : ''}
-                                </span>
-                            </div>
-                        ))}
+                        </h4> */}
+                         {/* Display targets in a single line, wrapping as needed */}
+                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                            {podTargetSummary.map(summary => (
+                                <div key={summary.ruleId} className="flex items-center whitespace-nowrap">
+                                    <span className="font-medium truncate" title={summary.ruleName}>
+                                        {summary.ruleEmoji} {summary.ruleName}
+                                    </span>
+                                     {/* Add margin for spacing */}
+                                    <span className={cn("font-semibold ml-2", summary.target !== null && summary.achieved >= summary.target ? "text-green-600" : "text-muted-foreground")}>
+                                        {summary.achieved}
+                                        {summary.target !== null ? ` / ${summary.target}` : ''}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
@@ -474,3 +483,4 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
+
