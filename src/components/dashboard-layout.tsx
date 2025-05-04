@@ -17,7 +17,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator, // Import Separator
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare } from 'lucide-react';
+import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList } from 'lucide-react'; // Added Star, ClipboardList
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -67,15 +67,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             </SidebarMenuItem>
 
-             {/* Achievements Log */}
+             {/* Achievements */}
              <SidebarMenuItem>
-                <Link href="/admin/achievements" passHref>
-                    <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/admin/achievements'}>
+                <Link href="/admin/log-achievements" passHref>
+                    <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/admin/log-achievements'}>
                       <CheckSquare />
                       <span>Log Achievements</span>
                     </SidebarMenuButton>
                  </Link>
               </SidebarMenuItem>
+
+             {/* View Scores */}
+              <SidebarMenuItem>
+                <Link href="/admin/daily-scores" passHref>
+                  <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/admin/daily-scores'}>
+                    <ClipboardList />
+                    <span>Daily Scores</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                 <Link href="/admin/leaderboard" passHref>
+                  <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
+                    <Star />
+                    <span>Leaderboard</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+
 
             {/* Competitions Section */}
              <SidebarGroup>
