@@ -63,11 +63,16 @@ export default function ProfileLayout({
              // Check localStorage for persisted preference, otherwise use determined initial
             const persistedLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
              // Only apply persisted layout if it's valid for the user's roles
-            if (persistedLayout && fetchedRoles.includes(persistedLayout === 'admin' ? 'admin' : 'agent')) { // Adjust condition based on role logic
+             // Check if the required role for the persisted layout exists in fetchedRoles
+            const requiredRoleForPersisted = persistedLayout === 'admin' ? ['admin', 'podManager', 'teamLeader'] : ['agent'];
+            const hasRequiredRole = fetchedRoles.some(role => requiredRoleForPersisted.includes(role));
+
+            if (persistedLayout && hasRequiredRole) {
                  setLayoutType(persistedLayout);
                  console.log(`Set layout from localStorage: ${persistedLayout}`);
              } else {
                  setLayoutType(initialLayout);
+                 localStorage.setItem('preferredLayout', initialLayout); // Persist the initial layout if preference is invalid or not set
                  console.log(`Set initial layout: ${initialLayout}`);
              }
 
@@ -110,7 +115,7 @@ export default function ProfileLayout({
   // Pass roles, current layout, and handler down to the chosen layout
   // Ensure roles defaults to an empty array if null or undefined
   const layoutProps = {
-    roles: roles || [],
+    roles: roles || [], // Ensure roles is always an array
     currentLayout: layoutType,
     onLayoutChange: handleLayoutChange,
   };

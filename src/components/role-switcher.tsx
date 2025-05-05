@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { UserCog, UserRound, ChevronDown } from 'lucide-react';
 import type { UserRole } from '@/services/user';
+import { cn } from '@/lib/utils'; // Import cn
 
 interface RoleSwitcherProps {
   availableRoles: UserRole[];
@@ -19,28 +20,33 @@ interface RoleSwitcherProps {
 }
 
 export function RoleSwitcher({ availableRoles, currentLayout, onLayoutChange }: RoleSwitcherProps) {
-  const canSeeAdmin = availableRoles.includes('admin') || availableRoles.includes('podManager') || availableRoles.includes('teamLeader');
-  const canSeeAgent = availableRoles.includes('agent');
+  // Add a check to ensure availableRoles is an array before using .includes
+  const safeAvailableRoles = Array.isArray(availableRoles) ? availableRoles : [];
+
+  const canSeeAdmin = safeAvailableRoles.includes('admin') || safeAvailableRoles.includes('podManager') || safeAvailableRoles.includes('teamLeader');
+  const canSeeAgent = safeAvailableRoles.includes('agent');
   const hasMultipleViews = canSeeAdmin && canSeeAgent;
 
   if (!hasMultipleViews) {
-    return null; // Don't render if user only has one view type
+    return null; // Don't render if user only has one view type or roles are invalid
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="whitespace-nowrap"> {/* Prevent wrapping */}
           {currentLayout === 'admin' ? (
             <>
-              <UserCog className="mr-2 h-4 w-4" /> Admin View
+              <UserCog className={cn("mr-1 h-4 w-4", !hasMultipleViews && "mr-0")} /> {/* Conditional margin */}
+              {!hasMultipleViews ? '' : 'Admin View'} {/* Hide text if only one view */}
             </>
           ) : (
             <>
-              <UserRound className="mr-2 h-4 w-4" /> Agent View
+              <UserRound className={cn("mr-1 h-4 w-4", !hasMultipleViews && "mr-0")} /> {/* Conditional margin */}
+               {!hasMultipleViews ? '' : 'Agent View'} {/* Hide text if only one view */}
             </>
           )}
-          <ChevronDown className="ml-2 h-4 w-4" />
+          {hasMultipleViews && <ChevronDown className="ml-1 h-4 w-4" />} {/* Only show arrow if multiple views */}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
