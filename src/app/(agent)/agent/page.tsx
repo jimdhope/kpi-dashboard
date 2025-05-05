@@ -12,18 +12,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 // Mock data - Replace with actual data fetching specific to the logged-in agent
 // Assume the agent belongs to Team Bravo and is Charlie Brown
+// ADDED unique 'id' field to each entry
 const agentTeamLeaderboardEntries = [
-  { rank: 1, name: 'Team Alpha', score: 1550, avatarUrl: 'https://picsum.photos/seed/alpha/40' },
-  { rank: 2, name: 'Team Bravo', score: 1480, isUser: true, avatarUrl: 'https://picsum.photos/seed/bravo/40' }, // Agent's team
-  { rank: 3, name: 'Team Charlie', score: 1390, avatarUrl: 'https://picsum.photos/seed/charlie/40' },
-  { rank: 4, name: 'Team Delta', score: 1200, avatarUrl: 'https://picsum.photos/seed/delta/40' },
+  { id: 'team-alpha', rank: 1, name: 'Team Alpha', score: 1550, avatarUrl: 'https://picsum.photos/seed/alpha/40' },
+  { id: 'team-bravo', rank: 2, name: 'Team Bravo', score: 1480, isUser: true, avatarUrl: 'https://picsum.photos/seed/bravo/40' }, // Agent's team
+  { id: 'team-charlie', rank: 3, name: 'Team Charlie', score: 1390, avatarUrl: 'https://picsum.photos/seed/charlie/40' },
+  { id: 'team-delta', rank: 4, name: 'Team Delta', score: 1200, avatarUrl: 'https://picsum.photos/seed/delta/40' },
 ];
 
+// ADDED unique 'id' field to each entry
 const agentIndividualLeaderboardEntries = [
-  { rank: 1, name: 'Alice Johnson', score: 850, avatarUrl: 'https://picsum.photos/seed/alice/40' },
-  { rank: 2, name: 'Bob Williams', score: 820, avatarUrl: 'https://picsum.photos/seed/bob/40' },
-  { rank: 3, name: 'Charlie Brown', score: 790, isUser: true, avatarUrl: 'https://picsum.photos/seed/charlie_b/40' }, // Agent
-  { rank: 4, name: 'Diana Davis', score: 750, avatarUrl: 'https://picsum.photos/seed/diana/40' },
+  { id: 'agent-alice', rank: 1, name: 'Alice Johnson', score: 850, avatarUrl: 'https://picsum.photos/seed/alice/40' },
+  { id: 'agent-bob', rank: 2, name: 'Bob Williams', score: 820, avatarUrl: 'https://picsum.photos/seed/bob/40' },
+  { id: 'agent-charlie', rank: 3, name: 'Charlie Brown', score: 790, isUser: true, avatarUrl: 'https://picsum.photos/seed/charlie_b/40' }, // Agent
+  { id: 'agent-diana', rank: 4, name: 'Diana Davis', score: 750, avatarUrl: 'https://picsum.photos/seed/diana/40' },
 ];
 
 // Mock group and user IDs for the agent
@@ -97,8 +99,8 @@ export default function AgentDashboardPage() {
              </Card>
            ))
         ) : (
-          kpis.map((kpi) => (
-            <KpiCard key={kpi.name} kpi={kpi} icon={kpiIcons[kpi.name]} />
+          kpis.map((kpi, index) => ( // Add index for key fallback if KPI doesn't have a unique ID
+            <KpiCard key={kpi.name || index} kpi={kpi} icon={kpiIcons[kpi.name]} />
           ))
         )}
 
