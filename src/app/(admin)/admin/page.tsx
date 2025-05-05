@@ -84,7 +84,8 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [timeframe, setTimeframe] = useState<Timeframe>('weekly'); // Default timeframe
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date())); // Reference date for timeframe calculations
+  // Use today's date for default calculations, only use selectedDate if timeframe is custom
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   // State for fetched data
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [allPods, setAllPods] = useState<Pod[]>([]);
@@ -187,29 +188,30 @@ export default function AdminDashboardPage() {
       setError(null);
 
       let startDate: Date | null = null;
-      let endDate: Date | null = endOfDay(selectedDate); // Use selectedDate as end reference for daily/weekly/monthly
+      let endDate: Date | null = null;
+      const today = startOfDay(new Date()); // Use today's date for calculations
+
+      // Determine reference date based on timeframe, use today if selectedDate is undefined
+      const referenceDate = selectedDate || today;
 
       switch (timeframe) {
           case 'daily':
-              startDate = startOfDay(selectedDate);
+              startDate = startOfDay(referenceDate); // Use referenceDate for 'daily'
+              endDate = endOfDay(referenceDate);
               break;
           case 'weekly':
-              startDate = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Assuming week starts Monday
-              endDate = endOfWeek(selectedDate, { weekStartsOn: 1 });
+              startDate = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Use referenceDate
+              endDate = endOfWeek(referenceDate, { weekStartsOn: 1 });
               break;
           case 'monthly':
-              startDate = startOfMonth(selectedDate);
-              endDate = endOfMonth(selectedDate);
+              startDate = startOfMonth(referenceDate); // Use referenceDate
+              endDate = endOfMonth(referenceDate);
               break;
            case 'allTime':
               // No date filtering needed
               startDate = null;
               endDate = null;
               break;
-          // case 'custom': // Add later if needed
-          //     startDate = customStartDate;
-          //     endDate = customEndDate;
-          //     break;
       }
 
       const logsRef = collection(db, 'dailyAchievements');
@@ -341,6 +343,7 @@ export default function AdminDashboardPage() {
 
 
   const isLoading = isLoadingStats || isLoadingData;
+  const displayDate = selectedDate || new Date(); // Use selected date or today for display
 
   return (
     <>
@@ -371,17 +374,16 @@ export default function AdminDashboardPage() {
                   <SelectValue placeholder="Select Timeframe" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Today</SelectItem>
-                  <SelectItem value="weekly">This Week</SelectItem>
-                  <SelectItem value="monthly">This Month</SelectItem>
+                  <SelectItem value="daily">Today / Selected Day</SelectItem> {/* Clarified label */}
+                  <SelectItem value="weekly">This Week / Selected Week</SelectItem>
+                  <SelectItem value="monthly">This Month / Selected Month</SelectItem>
                   <SelectItem value="allTime">All Time</SelectItem>
                    {/* <SelectItem value="custom">Custom</SelectItem> */}
                 </SelectContent>
               </Select>
             </div>
-             {/* Date Picker (Only relevant for daily/weekly/monthly) */}
-            {(timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly') && (
-              <div className="grid gap-1.5">
+             {/* Date Picker - always available for timeframe context */}
+            <div className="grid gap-1.5">
                 <Label htmlFor="date-select">Reference Date</Label>
                  <Popover>
                     <PopoverTrigger asChild>
@@ -389,23 +391,24 @@ export default function AdminDashboardPage() {
                             id="date-select"
                             variant={"outline"}
                             className={cn("w-[240px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                            disabled={isLoading}
+                            disabled={isLoading || timeframe === 'allTime'} // Disable for 'allTime'
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                            {displayDate ? format(displayDate, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 z-50"> {/* Added z-50 */}
                         <Calendar
                             mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                            selected={selectedDate} // Bind to selectedDate state
+                            onSelect={(date) => setSelectedDate(date ? startOfDay(date) : undefined)} // Update selectedDate state
                             initialFocus
+                            disabled={timeframe === 'allTime'}
                         />
                     </PopoverContent>
                  </Popover>
+                 <FormDescription>Used to determine the week/month for filtering.</FormDescription>
               </div>
-            )}
              {/* TODO: Add Custom Date Range Pickers if 'custom' timeframe is enabled */}
         </CardContent>
       </Card>
@@ -480,5 +483,3 @@ export default function AdminDashboardPage() {
     </>
   );
 }
-
-    

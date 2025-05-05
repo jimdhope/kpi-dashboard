@@ -262,7 +262,7 @@ export default function AdminLeaderboardPage() {
               avatarBgColor: agent.avatarBgColor,
               // isCurrentUser: agent.id === currentUser?.id, // Add if needed later
           }))
-           .filter(entry => entry.totalPoints > 0)
+           // Removed filter for totalPoints > 0
           .sort((a, b) => b.totalPoints - a.totalPoints)
           .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -289,7 +289,7 @@ export default function AdminLeaderboardPage() {
               totalPoints: teamScores[team.id] || 0,
               // isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
            }))
-            .filter(entry => entry.totalPoints > 0)
+            // Removed filter for totalPoints > 0
            .sort((a, b) => b.totalPoints - a.totalPoints)
            .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -412,7 +412,7 @@ export default function AdminLeaderboardPage() {
                                 <div className="flex items-center gap-2">
                                      <Avatar className="h-7 w-7">
                                          {entry.avatarUrl ? (
-                                            <AvatarImage src={entry.avatarUrl} alt={entry.name} />
+                                            <AvatarImage src={entry.avatarUrl} alt={entry.name} data-ai-hint="avatar person" />
                                          ) : (
                                              <AvatarFallback
                                                 initials={entry.avatarInitials || generateInitials(entry.name)}
@@ -496,5 +496,3 @@ export default function AdminLeaderboardPage() {
     </div>
   );
 }
-
-    

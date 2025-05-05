@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -371,7 +372,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-50" align="start">
+                                <PopoverContent className="w-auto p-0 z-50" align="start"> {/* Ensure high z-index */}
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
@@ -422,7 +423,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-50" align="start">
+                                <PopoverContent className="w-auto p-0 z-50" align="start"> {/* Ensure high z-index */}
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
