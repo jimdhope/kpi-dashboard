@@ -20,14 +20,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Trash2, PlusCircle, Loader2, Trophy } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import Link from 'next/link'; // Import Link
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,16 +32,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { CompetitionForm, CompetitionFormData, competitionFormSchema } from '@/components/competition-form'; // Import CompetitionForm and schema
+// Removed CompetitionForm import
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns'; // For formatting dates
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
 import type { Pod } from '@/app/(admin)/admin/pods/page'; // Import Pod type
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse rule type
-import { z } from 'zod'; // Import Zod for type inference
 
-// Competition type definition - CHANGED podId to podIds array, REMOVED podTargets
+// Competition type definition - kept podIds array
 export interface Competition {
   id: string;
   name: string;
@@ -62,33 +54,26 @@ export interface Competition {
   podNames?: string[]; // Store multiple pod names
 }
 
-// Type for the data received from the form - Now expects podIds array
-type ReceivedCompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
-    startDate: Date;
-    endDate: Date;
-    // podId removed, podIds is now in the base type
-};
+// Removed ReceivedCompetitionFormData type
 
 const competitionsCollectionRef = collection(db, 'competitions');
-const campaignsCollectionRef = collection(db, 'campaigns'); // Needed for form select
-const podsCollectionRef = collection(db, 'pods'); // Needed for form select
+const campaignsCollectionRef = collection(db, 'campaigns'); // Needed for context
+const podsCollectionRef = collection(db, 'pods'); // Needed for context
 
 export default function AdminCompetitionsPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]); // For form select
-  const [pods, setPods] = useState<Pod[]>([]); // For form select
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]); // For context
+  const [pods, setPods] = useState<Pod[]>([]); // For context
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingRelated, setIsLoadingRelated] = useState(true); // Loading state for campaigns/pods
   const [error, setError] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  // Removed form state (isFormOpen, dialogMode)
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
-  const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Added state
+  const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null); // Keep for delete alert
   const [isDeleting, setIsDeleting] = useState(false); // Added state
   const { toast } = useToast();
 
-   // Fetch Campaigns and Pods for the form dropdowns
+   // Fetch Campaigns and Pods for context (to display names)
    useEffect(() => {
     const fetchRelatedData = async () => {
       setIsLoadingRelated(true);
@@ -97,12 +82,9 @@ export default function AdminCompetitionsPage() {
         const fetchedCampaigns = campaignSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign));
         setCampaigns(fetchedCampaigns);
 
-        // No need to order pods by name here, can be done in select if needed
         const podSnapshot = await getDocs(query(podsCollectionRef));
-        // Enrich pod data minimally for the select dropdown
         const fetchedPods = podSnapshot.docs.map(doc => {
             const data = doc.data();
-            const campaign = fetchedCampaigns.find(c => c.id === data.campaignId);
              return {
                 id: doc.id,
                 name: data.name,
@@ -110,22 +92,21 @@ export default function AdminCompetitionsPage() {
                 podManagerId: data.podManagerId,
                 teamLeaderId: data.teamLeaderId,
                 agentIds: data.agentIds || [],
-                campaignName: campaign?.name || 'Unknown Campaign',
                 // Include logo fields
                 logoUrl: data.logoUrl || '',
                 logoInitials: data.logoInitials || '',
                 logoBgColor: data.logoBgColor || '',
-             } as Pod & { campaignName: string };
+             } as Pod;
         });
         setPods(fetchedPods);
         setError(null);
       } catch (err) {
         console.error("Error fetching related data (campaigns/pods):", err);
-        setError("Failed to load necessary data for the form.");
+        setError("Failed to load related context data.");
         toast({
           variant: "destructive",
           title: "Data Loading Error",
-          description: "Could not load campaigns or pods for selection.",
+          description: "Could not load campaigns or pods.",
         });
       } finally {
         setIsLoadingRelated(false);
@@ -137,39 +118,37 @@ export default function AdminCompetitionsPage() {
 
   // Fetch Competitions with real-time updates and enrich data
   useEffect(() => {
-    if (isLoadingRelated) return; // Wait for campaigns/pods
+    if (isLoadingRelated) return; // Wait for campaigns/pods context
 
     setIsLoading(true);
     setError(null); // Reset error when starting to fetch competitions
 
-    // Order competitions by start date descending
     const q = query(competitionsCollectionRef, orderBy('startDate', 'desc'));
 
     const unsubscribe: Unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedCompetitions: Competition[] = querySnapshot.docs.map((doc) => {
         const data = doc.data() as Omit<Competition, 'id' | 'campaignName' | 'podNames'>;
         const campaign = campaigns.find(c => c.id === data.campaignId);
-        // Find names for all participating pods
         const participatingPods = pods.filter(p => data.podIds?.includes(p.id));
-        const podNames = participatingPods.map(p => p.name).sort(); // Sort names alphabetically
+        const podNames = participatingPods.map(p => p.name).sort();
 
         return {
           id: doc.id,
           ...data,
-          podIds: data.podIds || [], // Ensure podIds is an array
-          startDate: data.startDate, // Keep as Timestamp
-          endDate: data.endDate, // Keep as Timestamp
-          rules: data.rules || [], // Ensure rules is an array
+          podIds: data.podIds || [],
+          startDate: data.startDate,
+          endDate: data.endDate,
+          rules: data.rules || [],
           campaignName: campaign?.name || 'Unknown Campaign',
-          podNames: podNames.length > 0 ? podNames : ['Unknown Pod'], // Derived pod names
+          podNames: podNames.length > 0 ? podNames : ['Unknown Pod'],
         };
       });
       setCompetitions(fetchedCompetitions);
       setIsLoading(false);
-      setError(null); // Clear error on successful fetch/update
+      setError(null);
     }, (err) => {
       console.error("Error fetching competitions with snapshot:", err);
-      setError("Failed to fetch competitions. Please check your connection or permissions.");
+      setError("Failed to fetch competitions. Please check connection or permissions.");
       toast({
         variant: "destructive",
         title: "Error Loading Competitions",
@@ -178,122 +157,38 @@ export default function AdminCompetitionsPage() {
       setIsLoading(false);
     });
 
-    // Cleanup listener on component unmount
     return () => unsubscribe();
-  }, [toast, campaigns, pods, isLoadingRelated]); // Re-run if campaigns or pods change
+  }, [toast, campaigns, pods, isLoadingRelated]);
 
-  const openAddDialog = () => {
-    setSelectedCompetition(null);
-    setDialogMode('add');
-    setIsFormOpen(true);
-  };
-
-  const openEditDialog = (competition: Competition) => {
-    setSelectedCompetition(competition);
-    setDialogMode('edit');
-    setIsFormOpen(true);
-  };
 
   const openDeleteAlert = (competition: Competition) => {
     setSelectedCompetition(competition);
     setIsAlertOpen(true);
   };
 
-  // Handle form submission for adding/editing competitions - Accepts podIds array
-  const handleFormSubmit = async (data: ReceivedCompetitionFormData, rules: RuleFormData[]) => {
-    setIsSubmitting(true);
-
-    if (!(data.startDate instanceof Date) || !(data.endDate instanceof Date)) {
-        console.error("Invalid date data received in handleFormSubmit:", data);
-        toast({ variant: "destructive", title: "Invalid Date", description: "Start date or end date is invalid." });
-        setIsSubmitting(false);
-        return;
-    }
-
-    // Data to save - Use podIds directly from form data
-    const competitionDataToSave = {
-        name: data.name,
-        campaignId: data.campaignId,
-        podIds: data.podIds, // Use the podIds array from the form
-        startDate: Timestamp.fromDate(data.startDate),
-        endDate: Timestamp.fromDate(data.endDate),
-        rules: rules,
-        // podTargets removed
-    };
-
-    if (dialogMode === 'add') {
-        try {
-            await addDoc(competitionsCollectionRef, competitionDataToSave);
-            toast({ title: "Competition Added", description: `"${data.name}" has been successfully added.` });
-            setIsFormOpen(false);
-        } catch (err: any) {
-            console.error("Error adding competition: ", err);
-            toast({ variant: "destructive", title: "Error Adding Competition", description: err.message || "Failed to add." });
-        }
-    } else if (dialogMode === 'edit' && selectedCompetition) {
-        try {
-            const competitionDoc = doc(db, 'competitions', selectedCompetition.id);
-            // Only update fields editable in the form
-            const updateData: Partial<Competition> = {
-                name: data.name,
-                startDate: Timestamp.fromDate(data.startDate),
-                endDate: Timestamp.fromDate(data.endDate),
-                rules: rules,
-                // Allow updating pod and campaign in edit mode
-                podIds: data.podIds, // Update podIds array
-                campaignId: data.campaignId,
-            };
-            await updateDoc(competitionDoc, updateData);
-            toast({ title: "Competition Updated", description: `"${data.name}" has been successfully updated.` });
-            setIsFormOpen(false);
-            setSelectedCompetition(null);
-        } catch (err: any) {
-            console.error("Error updating competition: ", err);
-            toast({ variant: "destructive", title: "Error Updating Competition", description: err.message || "Failed to update." });
-        }
-    }
-    setIsSubmitting(false);
-  };
-
+  // Removed handleFormSubmit
 
   // Handle confirmation of deletion
   const handleConfirmDelete = async () => {
     if (selectedCompetition) {
       const competitionToDelete = selectedCompetition;
-       setIsDeleting(true); // Set deleting state
+       setIsDeleting(true);
       try {
         const competitionDoc = doc(db, 'competitions', competitionToDelete.id);
         await deleteDoc(competitionDoc);
-        // TODO: Consider deleting associated daily targets as well?
         toast({ title: "Competition Deleted", description: `Competition "${competitionToDelete.name}" has been deleted.` });
       } catch (err: any) {
         console.error("Error deleting competition: ", err);
         toast({ variant: "destructive", title: "Error Deleting Competition", description: err.message || `Failed to delete.` });
       } finally {
-         setIsDeleting(false); // Unset deleting state
+         setIsDeleting(false);
          setIsAlertOpen(false);
          setSelectedCompetition(null);
       }
     }
   };
 
-   // Prepare initial data for the form (if editing)
-   const initialFormData = useMemo(() => {
-       if (dialogMode === 'edit' && selectedCompetition) {
-           // Convert Timestamps to Dates for the form
-            const startDate = selectedCompetition.startDate instanceof Timestamp ? selectedCompetition.startDate.toDate() : selectedCompetition.startDate;
-            const endDate = selectedCompetition.endDate instanceof Timestamp ? selectedCompetition.endDate.toDate() : selectedCompetition.endDate;
-
-            return {
-               ...selectedCompetition,
-               startDate,
-               endDate,
-               // podIds is already an array in Competition type
-           };
-       }
-       return undefined;
-   }, [dialogMode, selectedCompetition]);
-
+   // Removed initialFormData calculation
 
    // Disable Add button if related data isn't loaded
    const isAddDisabled = isLoading || isLoadingRelated || (!isLoadingRelated && (campaigns.length === 0 || pods.length === 0));
@@ -306,21 +201,21 @@ export default function AdminCompetitionsPage() {
 
   return (
     <div className="space-y-6">
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        {/* Only AlertDialog remains */}
         <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Manage Competitions</CardTitle>
-                {/* Updated description - removed targets mention */}
                 <CardDescription>Set up, view, edit, or delete weekly competitions involving one or more pods.</CardDescription>
               </div>
-              <DialogTrigger asChild>
-                <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
-                   {isLoadingRelated ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                   {isLoadingRelated ? 'Loading Data...' : 'Add Competition'}
-                </Button>
-              </DialogTrigger>
+              {/* Changed Button to Link */}
+               <Link href="/admin/competitions/add" passHref>
+                 <Button disabled={isAddDisabled} title={addButtonTooltip} aria-disabled={isAddDisabled}>
+                    {isLoadingRelated ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                    {isLoadingRelated ? 'Loading Data...' : 'Add Competition'}
+                 </Button>
+               </Link>
                {isAddDisabled && !isLoading && <p className="text-xs text-muted-foreground">{addButtonTooltip}</p>}
             </CardHeader>
             <CardContent>
@@ -373,18 +268,18 @@ export default function AdminCompetitionsPage() {
                         <TableCell>{comp.endDate ? format(comp.endDate.toDate(), 'PP') : 'N/A'}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
-                            <DialogTrigger asChild>
+                            {/* Changed Edit Button to Link */}
+                            <Link href={`/admin/competitions/edit/${comp.id}`} passHref>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => openEditDialog(comp)}
                                 aria-label={`Edit ${comp.name}`}
                                 title={`Edit ${comp.name}`}
-                                disabled={isLoading || isLoadingRelated || isSubmitting}
+                                disabled={isLoading || isLoadingRelated} // Disable while loading related data
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                            </DialogTrigger>
+                            </Link>
                             <AlertDialogTrigger asChild>
                               <Button
                                 variant="ghost"
@@ -408,31 +303,7 @@ export default function AdminCompetitionsPage() {
             </CardContent>
           </Card>
 
-          {/* Add/Edit Competition Dialog Content */}
-          <DialogContent className="sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{dialogMode === 'add' ? 'Add New Competition' : 'Edit Competition'}</DialogTitle>
-              <DialogDescription>
-                {dialogMode === 'add' ? 'Configure the details for the new competition.' : `Make changes to the competition "${selectedCompetition?.name}".`}
-              </DialogDescription>
-            </DialogHeader>
-             {isLoadingRelated ? (
-                 <div className="p-6 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                    <p className="text-muted-foreground">Loading form data...</p>
-                </div>
-             ) : (
-                <CompetitionForm
-                    onSubmit={handleFormSubmit}
-                    onCancel={() => setIsFormOpen(false)}
-                    initialData={initialFormData} // Pass prepared initial data
-                    campaigns={campaigns}
-                    pods={pods}
-                    mode={dialogMode}
-                    key={initialFormData?.id ?? 'add'} // Force re-render
-                />
-             )}
-          </DialogContent>
+          {/* Removed Add/Edit Dialog Content */}
 
           {/* Delete Confirmation Alert Dialog Content */}
           <AlertDialogContent>
@@ -454,7 +325,7 @@ export default function AdminCompetitionsPage() {
           </AlertDialogContent>
 
         </AlertDialog>
-      </Dialog>
+      {/* Removed outer Dialog */}
     </div>
   );
 }

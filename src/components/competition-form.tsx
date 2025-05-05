@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -11,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox import
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Popover,
     PopoverContent,
@@ -32,11 +31,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription, // Added FormDescription
+  FormDescription,
 } from '@/components/ui/form';
-import { DialogFooter, DialogClose } from "@/components/ui/dialog";
+// Removed Dialog imports
 import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
-import { format, parse, isValid as isDateValid, startOfDay, addDays } from 'date-fns'; // Import addDays
+import { format, parse, isValid as isDateValid, startOfDay, addDays } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { useToast } from '@/hooks/use-toast';
 import type { Competition } from '@/app/(admin)/admin/competitions/page'; // Import Competition type
@@ -101,7 +100,6 @@ export const competitionFormSchema = z.object({
 type CompetitionFormSchemaType = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
   startDate: Date;
   endDate: Date;
-  // podTargets removed
 };
 
 
@@ -288,8 +286,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
 
   return (
     <Form {...form}>
-      <ScrollArea className="h-[65vh] pr-6">
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4 pl-2 pr-1">
+       {/* Removed ScrollArea wrapper */}
+       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4">
 
           {/* Competition Name */}
           <FormField
@@ -346,16 +344,15 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                <FormItem>
                  <FormLabel>Participating Pods</FormLabel>
                  <FormControl>
-                    {/* Use a multi-select component or checkboxes */}
-                    {/* Simple Checkbox Example (replace with a proper multi-select component if needed) */}
-                    <div className="space-y-2 rounded-md border p-4 max-h-40 overflow-y-auto">
+                    {/* Wrap checkboxes in ScrollArea */}
+                    <ScrollArea className="h-40 w-full rounded-md border p-4">
                          {filteredPods.length === 0 ? (
                              <p className="text-sm text-muted-foreground">
                                  {!watchedCampaignId ? "Select a campaign first" : "No pods found in this campaign."}
                              </p>
                          ) : (
                              filteredPods.map((pod) => (
-                                 <div key={pod.id} className="flex items-center gap-2">
+                                 <div key={pod.id} className="flex items-center gap-2 mb-2">
                                      <Checkbox
                                          id={`pod-${pod.id}`}
                                          checked={field.value?.includes(pod.id)}
@@ -371,7 +368,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                  </div>
                              ))
                          )}
-                    </div>
+                    </ScrollArea>
                  </FormControl>
                  <FormMessage />
                </FormItem>
@@ -435,7 +432,6 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 name="endDate"
                 render={({ field }) => (
                      <FormItem className="flex flex-col">
-                         {/* Apply error styling directly to the label if end date is invalid */}
                          <FormLabel className={cn(form.formState.errors.endDate && "text-destructive")}>End Date</FormLabel>
                          <div className="flex items-center gap-2">
                             <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
@@ -447,7 +443,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                             "w-[130px] justify-start text-left font-normal",
                                             !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
-                                         disabled={isSubmitting || !isStartDateValid} // Use recalculated validity
+                                         disabled={isSubmitting || !isStartDateValid}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
@@ -460,7 +456,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                         onSelect={(date) => handleDateSelect(date, 'endDate')}
                                         // Only disable dates *before* the start date IF start date is valid
                                          disabled={(date) =>
-                                             isSubmitting || !isStartDateValid || !date || (date < watchedStartDate!)
+                                             isSubmitting || !isStartDateValid || !date || (watchedStartDate instanceof Date && date < watchedStartDate)
                                          }
                                         initialFocus
                                     />
@@ -473,7 +469,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                      value={field.value instanceof Date ? format(field.value, DATE_FORMAT_DISPLAY) : field.value || ''}
                                      onChange={(e) => handleDateInputChange(e, 'endDate')}
                                      className="flex-1"
-                                      disabled={isSubmitting || !isStartDateValid} // Use recalculated validity
+                                      disabled={isSubmitting || !isStartDateValid}
                                      maxLength={10}
                                  />
                               </FormControl>
@@ -504,99 +500,96 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                      </div>
                  )}
 
-                {!isLoadingRules && fields.length === 0 && (
-                     <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md">
-                         <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/>
-                         <p>No rules defined.</p>
-                         {mode === 'add' && !watchedCampaignId && <FormDescription>Select a campaign to load default rules.</FormDescription>}
-                         {mode === 'add' && watchedCampaignId && <FormDescription>Add rules manually or check campaign settings.</FormDescription>}
-                         {mode === 'edit' && <FormDescription>Add rules manually.</FormDescription>}
-                     </div>
-                 )}
+                 {/* Wrap rules list in ScrollArea */}
+                 <ScrollArea className="h-60 w-full">
+                    {!isLoadingRules && fields.length === 0 ? (
+                         <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md">
+                             <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/>
+                             <p>No rules defined.</p>
+                             {mode === 'add' && !watchedCampaignId && <FormDescription>Select a campaign to load default rules.</FormDescription>}
+                             {mode === 'add' && watchedCampaignId && <FormDescription>Add rules manually or check campaign settings.</FormDescription>}
+                             {mode === 'edit' && <FormDescription>Add rules manually.</FormDescription>}
+                         </div>
+                     ) : null }
 
-                 {!isLoadingRules && fields.length > 0 && (
-                    <div className="space-y-4">
-                        {/* Header Row */}
-                        <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
-                            <Label className="w-12 text-left">Emoji</Label>
-                            <Label className="flex-1 text-left">Rule Name</Label>
-                            <Label className="w-20 text-left">Points</Label>
-                            <div className="w-8" /> {/* Spacer */}
-                        </div>
-                        {/* Rule Rows */}
-                        {fields.map((field, index) => (
-                            <div key={field.fieldId} className="flex items-start gap-2 border p-3 rounded-md bg-card">
-                                <FormField
-                                    control={form.control}
-                                    name={`rules.${index}.emoji`}
-                                    render={({ field: ruleField }) => (
-                                        <FormItem className="w-12">
-                                         <FormLabel className="sr-only">Emoji</FormLabel>
-                                        <FormControl><Input placeholder={ruleField.value ? "" : "❓"} {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
-                                        <FormMessage className="text-xs" />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`rules.${index}.name`}
-                                    render={({ field: ruleField }) => (
-                                        <FormItem className="flex-1">
-                                         <FormLabel className="sr-only">Rule Name</FormLabel>
-                                        <FormControl><Input placeholder="Rule Name" {...ruleField} disabled={isSubmitting} className="h-9" /></FormControl>
-                                        <FormMessage className="text-xs" />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`rules.${index}.points`}
-                                    render={({ field: ruleField }) => (
-                                        <FormItem className="w-20">
-                                         <FormLabel className="sr-only">Points</FormLabel>
-                                        <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting} className="h-9" /></FormControl>
-                                        <FormMessage className="text-xs" />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive hover:bg-destructive/10 mt-0.5 h-9 w-9"
-                                    onClick={() => remove(index)}
-                                    disabled={isSubmitting}
-                                    aria-label="Remove rule"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                    {!isLoadingRules && fields.length > 0 && (
+                        <div className="space-y-4 pr-4"> {/* Added padding-right */}
+                            {/* Header Row */}
+                            <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
+                                <Label className="w-12 text-left">Emoji</Label>
+                                <Label className="flex-1 text-left">Rule Name</Label>
+                                <Label className="w-20 text-left">Points</Label>
+                                <div className="w-8" /> {/* Spacer */}
                             </div>
-                        ))}
-                    </div>
-                 )}
+                            {/* Rule Rows */}
+                            {fields.map((field, index) => (
+                                <div key={field.fieldId} className="flex items-start gap-2 border p-3 rounded-md bg-card">
+                                    <FormField
+                                        control={form.control}
+                                        name={`rules.${index}.emoji`}
+                                        render={({ field: ruleField }) => (
+                                            <FormItem className="w-12">
+                                             <FormLabel className="sr-only">Emoji</FormLabel>
+                                            <FormControl><Input placeholder={ruleField.value ? "" : "❓"} {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
+                                            <FormMessage className="text-xs" />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`rules.${index}.name`}
+                                        render={({ field: ruleField }) => (
+                                            <FormItem className="flex-1">
+                                             <FormLabel className="sr-only">Rule Name</FormLabel>
+                                            <FormControl><Input placeholder="Rule Name" {...ruleField} disabled={isSubmitting} className="h-9" /></FormControl>
+                                            <FormMessage className="text-xs" />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`rules.${index}.points`}
+                                        render={({ field: ruleField }) => (
+                                            <FormItem className="w-20">
+                                             <FormLabel className="sr-only">Points</FormLabel>
+                                            <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting} className="h-9" /></FormControl>
+                                            <FormMessage className="text-xs" />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-destructive hover:bg-destructive/10 mt-0.5 h-9 w-9"
+                                        onClick={() => remove(index)}
+                                        disabled={isSubmitting}
+                                        aria-label="Remove rule"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                     )}
+                </ScrollArea>
                     {form.formState.errors.rules?.root && (
                         <FormMessage>{form.formState.errors.rules.root.message}</FormMessage>
                     )}
             </div>
 
-             {/* Pod Targets Section Removed */}
+            {/* Submit and Cancel Buttons */}
+             <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                 <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+                   Cancel
+                 </Button>
+                 <Button type="submit" disabled={isSubmitting || isLoadingRules}>
+                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                   {isSubmitting ? 'Saving...' : (mode === 'add' ? 'Add Competition' : 'Update Competition')}
+                 </Button>
+             </div>
 
         </form>
-      </ScrollArea>
-
-      {/* Footer outside the scroll area */}
-      <DialogFooter className="mt-4 pt-4 border-t">
-        <DialogClose asChild>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
-          </Button>
-        </DialogClose>
-        <Button type="button" onClick={form.handleSubmit(handleFormSubmit)} disabled={isSubmitting || isLoadingRules}>
-          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {isSubmitting ? 'Saving...' : (mode === 'add' ? 'Add Competition' : 'Update Competition')}
-        </Button>
-      </DialogFooter>
     </Form>
   );
 }
-
