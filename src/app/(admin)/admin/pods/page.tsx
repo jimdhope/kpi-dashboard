@@ -19,7 +19,7 @@ import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Remove AvatarImage import
 import { Edit, Trash2, PlusCircle, Loader2, Users, Shield, UserPlus, Search } from 'lucide-react'; // Added Search
 import {
   Dialog,
@@ -53,7 +53,7 @@ import { generateInitials } from '@/lib/utils'; // Import generateInitials
 export interface Pod {
   id: string;
   name: string;
-  logoUrl?: string; // Optional URL
+  logoUrl?: string; // Keep URL for data storage, but don't display image
   logoInitials?: string; // Optional custom initials
   logoBgColor?: string; // Optional custom background color
   campaignId: string;
@@ -227,7 +227,6 @@ export default function AdminPodsPage() {
    // Updated Pod Form Submission Handler using logoUrl, logoInitials, logoBgColor
    const handleFormSubmit = async (data: PodFormData) => {
         console.log("Pod Form Data Received:", data);
-        let finalLogoUrl = data.logoUrl || ''; // Start with provided URL
 
         // --- 1. Handle User Creation ---
         let finalPodManagerId = data.podManagerId;
@@ -267,15 +266,7 @@ export default function AdminPodsPage() {
             return; // Stop if user creation fails
         }
 
-        // --- 2. Handle Logo URL (No Upload Needed) ---
-        // Logo URL takes precedence if provided
-        if (finalLogoUrl) {
-            console.log(`Using provided logo URL: ${finalLogoUrl}`);
-        } else {
-            console.log("No logo URL provided. Using fallback avatar (initials/color).");
-        }
-
-        // --- 3. Prepare Data for Firestore ---
+        // --- 2. Prepare Data for Firestore ---
          if (!data.campaignId || !finalPodManagerId || !finalTeamLeaderId) {
              toast({
                 variant: "destructive",
@@ -288,9 +279,9 @@ export default function AdminPodsPage() {
         // Include new logo customization fields
         const podDataToSave: Omit<Pod, 'id' | 'campaignName' | 'podManagerName' | 'teamLeaderName' | 'agentNames'> = {
             name: data.name,
-            logoUrl: finalLogoUrl || '', // Save URL or empty string
-            logoInitials: data.logoInitials || '', // Save custom initials or empty string
-            logoBgColor: data.logoBgColor || '', // Save custom color or empty string
+            logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '', // Save URL or empty string
+            logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '', // Save custom initials or empty string
+            logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '', // Save custom color or empty string
             campaignId: data.campaignId,
             podManagerId: finalPodManagerId,
             teamLeaderId: finalTeamLeaderId,
@@ -298,7 +289,7 @@ export default function AdminPodsPage() {
         };
 
 
-        // --- 4. Save to Firestore ---
+        // --- 3. Save to Firestore ---
         if (dialogMode === 'add') {
             try {
                 await addDoc(podsCollectionRef, podDataToSave);
@@ -322,9 +313,9 @@ export default function AdminPodsPage() {
                 // Update only the fields that might have changed, including logo customization
                  const updates: Partial<Pod> = {
                     name: data.name,
-                    logoUrl: finalLogoUrl || '', // Update or save empty string
-                    logoInitials: data.logoInitials || '', // Update or save empty string
-                    logoBgColor: data.logoBgColor || '', // Update or save empty string
+                    logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '', // Update or save empty string
+                    logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '', // Update or save empty string
+                    logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '', // Update or save empty string
                     campaignId: data.campaignId,
                     podManagerId: finalPodManagerId,
                     teamLeaderId: finalTeamLeaderId,
@@ -503,7 +494,7 @@ export default function AdminPodsPage() {
 
                     <Table>
                         <TableHeader>
-                            <TableRow>
+                            <TableRow>{/* Remove whitespace here */}
                                 <TableHead className="w-[80px]">Logo</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Campaign</TableHead>
@@ -517,7 +508,7 @@ export default function AdminPodsPage() {
                         {isLoadingPods || isLoadingRelatedData ? (
                             // Loading Skeleton Rows
                             Array.from({ length: 3 }).map((_, index) => (
-                            <TableRow key={`loading-${index}`}>
+                            <TableRow key={`loading-${index}`}>{/* Remove whitespace here */}
                                 <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
@@ -534,28 +525,24 @@ export default function AdminPodsPage() {
                             </TableRow>
                             ))
                         ) : filteredPods.length === 0 && !error ? (
-                            <TableRow>
+                            <TableRow>{/* Remove whitespace here */}
                                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                     {searchTerm ? `No pods found matching "${searchTerm}".` : "No pods found. Create one to get started!"}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredPods.map((pod) => (
-                            <TableRow key={pod.id}>
+                            <TableRow key={pod.id}>{/* Remove whitespace here */}
                                 <TableCell>
                                 <Avatar className="h-10 w-10">
-                                    {/* Use pod.logoUrl if available, otherwise use Fallback */}
-                                     {pod.logoUrl ? (
-                                        <AvatarImage src={pod.logoUrl} alt={`${pod.name} logo`} data-ai-hint="pod logo" />
-                                     ) : (
-                                        <AvatarFallback
-                                            initials={pod.logoInitials || generateInitials(pod.name)}
-                                            backgroundColor={pod.logoBgColor} // Pass custom color
-                                        >
-                                            {/* Render default initials only if no custom/generated */}
-                                            {!pod.logoInitials && generateInitials(pod.name)}
-                                        </AvatarFallback>
-                                     )}
+                                    {/* Always use Fallback */}
+                                    <AvatarFallback
+                                        initials={pod.logoInitials || generateInitials(pod.name)}
+                                        backgroundColor={pod.logoBgColor} // Pass custom color
+                                    >
+                                        {/* Render default initials only if no custom/generated */}
+                                        {!pod.logoInitials && generateInitials(pod.name)}
+                                    </AvatarFallback>
                                 </Avatar>
                                 </TableCell>
                                 <TableCell className="font-medium">{pod.name}</TableCell>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -20,7 +19,7 @@ import { deleteUser as deleteAuthUser, updatePassword, updateEmail } from 'fireb
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Remove AvatarImage import
 import { Edit, Trash2, PlusCircle, Loader2, ShieldCheck, UserCog, UserRound, Briefcase, Search, ShieldAlert, Info } from 'lucide-react'; // Added icons
 import {
   Dialog,
@@ -352,12 +351,11 @@ export default function AdminUsersPage() {
                         <TableRow key={user.id}>
                             <TableCell>
                              <Avatar className="h-10 w-10">
-                                {/* AvatarFallback handles initials and background color */}
+                                {/* Always use Fallback */}
                                 <AvatarFallback
                                      initials={user.avatarInitials || generateInitials(user.name)}
                                      backgroundColor={user.avatarBgColor} // Pass potential custom color
                                  >
-                                     {/* Render default initials only if no custom/generated ones exist */}
                                     {!user.avatarInitials && generateInitials(user.name)}
                                 </AvatarFallback>
                             </Avatar>

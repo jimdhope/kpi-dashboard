@@ -1,7 +1,6 @@
-
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // Remove AvatarImage import
 import { Badge } from "@/components/ui/badge";
 import { Medal } from 'lucide-react'; // Import Medal icon
 import { generateInitials } from "@/lib/utils"; // Import generateInitials
@@ -12,7 +11,7 @@ interface LeaderboardEntry {
   rank?: number; // Rank might be undefined before sorting
   name: string;
   score: number; // Score should be a number
-  avatarUrl?: string;
+  avatarUrl?: string; // Keep URL for data storage, but don't display image
   avatarInitials?: string; // Optional custom initials
   avatarBgColor?: string; // Optional custom background color
   isUser?: boolean; // Flag to highlight the current user/team
@@ -58,7 +57,7 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow>{/* Remove whitespace here */}
               <TableHead className="w-[50px]">Rank</TableHead>
               <TableHead>Name</TableHead>
               <TableHead className="text-right">Score</TableHead>
@@ -86,19 +85,16 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      {entry.avatarUrl ? (
-                        <AvatarImage src={entry.avatarUrl} alt={entry.name} data-ai-hint="avatar person" />
-                      ) : (
-                         <AvatarFallback
-                            initials={entry.avatarInitials || generateInitials(entry.name)}
-                            backgroundColor={entry.avatarBgColor}
-                             // Ensure fallback text is readable on rank background
-                             // Use a very dark color for fallbacks on light rank backgrounds
-                            className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
-                         >
-                            {!entry.avatarInitials && generateInitials(entry.name)}
-                         </AvatarFallback>
-                      )}
+                       {/* Always use Fallback */}
+                       <AvatarFallback
+                          initials={entry.avatarInitials || generateInitials(entry.name)}
+                          backgroundColor={entry.avatarBgColor}
+                           // Ensure fallback text is readable on rank background
+                           // Use a very dark color for fallbacks on light rank backgrounds
+                          className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
+                       >
+                          {!entry.avatarInitials && generateInitials(entry.name)}
+                       </AvatarFallback>
                     </Avatar>
                     {/* Ensure name text color contrasts with rank background (explicitly white) */}
                     <span className={cn("font-medium truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
@@ -123,4 +119,3 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
     </Card>
   );
 }
-

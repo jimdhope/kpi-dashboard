@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +16,7 @@ import { db } from '@/lib/firebase'; // Import Firestore instance
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Remove AvatarImage import
 import { Edit, Trash2, PlusCircle, ListChecks } from 'lucide-react'; // Added ListChecks icon
 import {
   Dialog,
@@ -48,7 +47,7 @@ import { generateInitials } from '@/lib/utils'; // Import generateInitials
 export interface Campaign {
   id: string;
   name: string;
-  logoUrl?: string; // Optional URL to the logo image
+  logoUrl?: string; // Keep URL for data storage, but don't display image
   logoInitials?: string; // Optional custom initials
   logoBgColor?: string; // Optional custom background color
 }
@@ -127,14 +126,13 @@ export default function AdminCampaignsPage() {
 
   // Handle form submission including logo customization
   const handleFormSubmit = async (data: CampaignFormData) => {
-    let finalLogoUrl = data.logoUrl || ''; // Get URL from form
-
     // Prepare data for Firestore, including custom logo fields
     const campaignDataToSave: Omit<Campaign, 'id'> = {
       name: data.name,
-      logoUrl: finalLogoUrl || '', // Use URL or empty string
-      logoInitials: data.logoInitials || '', // Use custom initials or empty string
-      logoBgColor: data.logoBgColor || '', // Use custom color or empty string
+       // Always save URL/initials/color based on form, even if not displayed as image
+      logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '',
+      logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '',
+      logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '',
     };
 
     // Add or Update Firestore document
@@ -160,9 +158,9 @@ export default function AdminCampaignsPage() {
          // Update only the fields that might have changed
          const updates: Partial<Campaign> = {
              name: data.name,
-             logoUrl: finalLogoUrl || '',
-             logoInitials: data.logoInitials || '',
-             logoBgColor: data.logoBgColor || '',
+             logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '',
+             logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '',
+             logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '',
          };
         await updateDoc(campaignDoc, updates);
         toast({
@@ -279,17 +277,13 @@ export default function AdminCampaignsPage() {
                         <TableRow key={campaign.id}>
                           <TableCell>
                             <Avatar className="h-10 w-10">
-                               {campaign.logoUrl ? (
-                                  <AvatarImage src={campaign.logoUrl} alt={`${campaign.name} logo`} data-ai-hint="campaign logo"/>
-                               ) : (
-                                  <AvatarFallback
-                                      initials={campaign.logoInitials || generateInitials(campaign.name)}
-                                      backgroundColor={campaign.logoBgColor}
-                                  >
-                                      {/* Render default initials only if no custom/generated */}
-                                      {!campaign.logoInitials && generateInitials(campaign.name)}
-                                  </AvatarFallback>
-                               )}
+                               <AvatarFallback
+                                  initials={campaign.logoInitials || generateInitials(campaign.name)}
+                                  backgroundColor={campaign.logoBgColor}
+                               >
+                                  {/* Render default initials only if no custom/generated */}
+                                  {!campaign.logoInitials && generateInitials(campaign.name)}
+                               </AvatarFallback>
                             </Avatar>
                           </TableCell>
                           <TableCell className="font-medium">{campaign.name}</TableCell>

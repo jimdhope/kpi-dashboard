@@ -13,7 +13,7 @@ export interface AppUser {
     name: string;
     email: string;
     roles: UserRole[]; // Changed from role: string to roles: UserRole[]
-    avatarUrl?: string; // Optional field for user avatar (URL)
+    avatarUrl?: string; // Optional field for user avatar (URL) - kept for potential future use but not displayed
     avatarInitials?: string; // Optional custom initials for fallback
     avatarBgColor?: string; // Optional custom background color for fallback
     podId?: string | null; // Add podId field (can be null if not assigned)
@@ -65,7 +65,7 @@ export async function createUser(name: string, email: string, password: string, 
             name: name,
             email: email, // Store email for easier display/querying
             roles: roles, // Save the array of roles
-            avatarUrl: '', // Initialize avatarUrl as empty string
+            avatarUrl: '', // Initialize avatarUrl as empty string (not used for display)
             avatarInitials: '', // Initialize custom initials as empty
             avatarBgColor: '', // Initialize custom color as empty
             podId: null, // Initialize podId as null

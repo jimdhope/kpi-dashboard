@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -27,7 +26,7 @@ import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Remove AvatarImage import
 import { generateInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -59,12 +58,13 @@ interface LeaderboardEntry {
   name: string;
   totalPoints: number;
   rank?: number;
-  avatarUrl?: string;
+  avatarUrl?: string; // Keep for data storage, but don't display image
   avatarInitials?: string;
   avatarBgColor?: string;
   isCurrentUser?: boolean;
   isCurrentUserTeam?: boolean;
   agentFirstNames?: string[]; // Array of first names for team entries
+  score: number; // Added score for compatibility
 }
 
 // Team structure within Competition
@@ -265,6 +265,7 @@ export default function AdminLeaderboardPage() {
               id: agent.id!,
               name: agent.name,
               totalPoints: agentScores[agent.id!] || 0,
+              score: agentScores[agent.id!] || 0, // Add score for compatibility
               avatarUrl: agent.avatarUrl,
               avatarInitials: agent.avatarInitials,
               avatarBgColor: agent.avatarBgColor,
@@ -303,6 +304,7 @@ export default function AdminLeaderboardPage() {
                    id: team.id,
                    name: team.name,
                    totalPoints: teamScores[team.id] || 0,
+                   score: teamScores[team.id] || 0, // Add score for compatibility
                    agentFirstNames: agentFirstNames.sort(), // Sort names alphabetically
                    isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''), // Add if needed later
                };
@@ -430,18 +432,15 @@ export default function AdminLeaderboardPage() {
                               <TableCell>
                                   <div className="flex items-center gap-2">
                                        <Avatar className="h-7 w-7">
-                                           {entry.avatarUrl ? (
-                                              <AvatarImage src={entry.avatarUrl} alt={entry.name} data-ai-hint="avatar person" />
-                                           ) : (
-                                               <AvatarFallback
-                                                  initials={entry.avatarInitials || generateInitials(entry.name)}
-                                                  backgroundColor={entry.avatarBgColor}
-                                                   // Use a very dark color for fallbacks on light rank backgrounds
-                                                  className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
-                                               >
-                                                   {!entry.avatarInitials && generateInitials(entry.name)}
-                                               </AvatarFallback>
-                                           )}
+                                            {/* Always use Fallback */}
+                                            <AvatarFallback
+                                                initials={entry.avatarInitials || generateInitials(entry.name)}
+                                                backgroundColor={entry.avatarBgColor}
+                                                // Use a very dark color for fallbacks on light rank backgrounds
+                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
+                                            >
+                                                {!entry.avatarInitials && generateInitials(entry.name)}
+                                            </AvatarFallback>
                                        </Avatar>
                                         {/* Ensure name text color contrasts with rank background (explicitly white) */}
                                        <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
@@ -539,5 +538,3 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
-
-

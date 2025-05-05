@@ -1,4 +1,3 @@
-
 'use client'; // Add 'use client' directive
 import React, { useState, useEffect } from 'react'; // Import useState and useEffect
 import Link from 'next/link'; // Import Link
@@ -19,7 +18,7 @@ import {
   SidebarSeparator, // Import Separator
 } from '@/components/ui/sidebar';
 import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target } from 'lucide-react'; // Added Target icon
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Removed AvatarImage import
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth'; // Import Firebase Auth
@@ -58,6 +57,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 email: user.email || '',
                 roles: [], // Default to no roles
                 podId: null,
+                 // Ensure optional avatar fields exist or are initialized
+                 avatarUrl: '',
+                 avatarInitials: '',
+                 avatarBgColor: '',
             });
           }
           setIsLoadingUser(false);
@@ -217,6 +220,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
              ) : currentUserData ? (
                 <>
                     <Avatar className="h-9 w-9">
+                       {/* Always use Fallback */}
                        <AvatarFallback
                            initials={currentUserData.avatarInitials || getInitials(currentUserData.name)}
                            backgroundColor={currentUserData.avatarBgColor}

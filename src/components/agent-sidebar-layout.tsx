@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react'; // Import useState and useEffect
 import Link from 'next/link'; // Import Link
@@ -16,7 +15,7 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { Home, Settings, CheckSquare } from 'lucide-react'; // Removed Star, ClipboardList
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Removed AvatarImage import
 import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 import { Button } from '@/components/ui/button'; // Import Button for Logout
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth'; // Import Firebase Auth
@@ -129,6 +128,7 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
              ) : currentUserData ? (
                <>
                  <Avatar className="h-9 w-9">
+                   {/* Always use Fallback */}
                    <AvatarFallback
                       initials={currentUserData.avatarInitials || getInitials(currentUserData.name)}
                       backgroundColor={currentUserData.avatarBgColor}
@@ -172,4 +172,3 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
     </SidebarProvider>
   );
 }
-
