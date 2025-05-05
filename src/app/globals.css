@@ -8,18 +8,17 @@ body {
   overflow-x: hidden; /* Keep this if needed */
 }
 
-
 @layer base {
   body {
     @apply bg-background text-foreground; /* Keep this */
-    /* Removed bg-gradient-to-br from-background to-[hsl(var(--background-end))] */
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   :root {
-    --background: 0 0% 94%; /* Light Gray #F0F0F0 */
-    --background-end: 0 0% 90%; /* Slightly darker gray for gradient end */
-    --foreground: 0 0% 10%; /* Darker Gray for text */
+    /* Teal Theme - Light Mode */
+    --background: 0 0% 96%; /* Slightly off-white #F5F5F5 */
+    --background-end: 0 0% 92%; /* Slightly darker for gradient */
+    --foreground: 0 0% 10%; /* Dark Gray */
     --card: 0 0% 100%; /* White */
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
@@ -52,43 +51,43 @@ body {
     --sidebar-border: 0 0% 88%; /* Slightly darker border */
     --sidebar-ring: 180 100% 25%; /* Teal */
   }
+
   .dark {
-    /* Define dark mode colors */
-    --background: 240 10% 3.9%;
-    --background-end: 240 10% 7%; /* Slightly lighter dark for gradient end */
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%; /* Card background remains dark */
+    /* Teal Theme - Dark Mode */
+    --background: 210 10% 15%; /* Dark Blue-Gray */
+    --background-end: 210 10% 20%; /* Slightly lighter Dark Blue-Gray */
+    --foreground: 0 0% 98%; /* White */
+    --card: 210 10% 20%; /* Card background matches dark end */
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 210 10% 20%;
     --popover-foreground: 0 0% 98%;
     --primary: 180 80% 60%; /* Lighter Teal */
     --primary-foreground: 180 100% 10%; /* Dark Teal */
-    --secondary: 240 4% 15%;
+    --secondary: 210 10% 25%; /* Slightly lighter than dark end */
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 15%;
+    --muted: 210 10% 25%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 180 50% 20%; /* Darker Teal for hover */
+    --accent: 180 50% 30%; /* Darker Teal for hover */
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 15%;
-    --input: 240 4% 15%;
+    --border: 210 10% 30%; /* Slightly lighter border for contrast */
+    --input: 210 10% 30%;
     --ring: 180 80% 60%; /* Lighter Teal */
     --chart-1: 51 100% 60%; /* Lighter Gold */
     --chart-2: 180 70% 50%; /* Teal variant */
     --chart-3: 210 40% 60%; /* Blueish gray */
     --chart-4: 30 80% 70%; /* Orangeish */
     --chart-5: 120 40% 65%; /* Greenish */
-    --sidebar-background: hsla(240, 6%, 10%, 0.85); /* Dark with increased opacity (85%) for frosted glass */
+    --sidebar-background: hsla(210, 8%, 18%, 0.85); /* Dark blue-gray with increased opacity (85%) */
     --sidebar-foreground: 0 0% 95%; /* Light gray */
     --sidebar-primary: 180 80% 60%; /* Lighter Teal */
     --sidebar-primary-foreground: 180 100% 10%; /* Dark Teal */
-    --sidebar-accent: 180 50% 20%; /* Darker Teal */
+    --sidebar-accent: 180 50% 30%; /* Darker Teal */
     --sidebar-accent-foreground: 0 0% 98%; /* White */
-    --sidebar-border: 240 4% 15%; /* Dark border */
+    --sidebar-border: 210 10% 25%; /* Slightly lighter dark border */
     --sidebar-ring: 180 80% 60%; /* Lighter Teal */
   }
-
 }
 
 @layer base {
@@ -96,10 +95,38 @@ body {
     @apply border-border;
   }
   body {
-    /* @apply bg-background text-foreground; */ /* Handled in the body selector above */
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Styles for the animated geometric background */
+  [data-animated-background="true"] {
+    @apply relative overflow-hidden;
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-end)) 100%);
+  }
+
+  [data-animated-background="true"]::before {
+    content: "";
+    @apply absolute inset-0 z-[-1];
+    background:
+      radial-gradient(circle at 10% 10%, hsl(var(--primary)/0.1) 0%, transparent 30%),
+      radial-gradient(circle at 90% 10%, hsl(var(--primary)/0.08) 0%, transparent 25%),
+      radial-gradient(circle at 10% 90%, hsl(var(--accent)/0.1) 0%, transparent 25%),
+      radial-gradient(circle at 90% 90%, hsl(var(--secondary)/0.1) 0%, transparent 30%),
+      radial-gradient(circle at 50% 50%, hsl(var(--primary)/0.05) 0%, transparent 20%);
+    background-size: 400% 400%;
+    animation: geometric-flow 30s ease infinite alternate;
+  }
+
+  /* Keyframes for the slow animation */
+  @keyframes geometric-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 }
 
 /* Frosted Glass effect for cards (applied via Tailwind utilities in component) */
-
+.frosted-glass {
+  /* Increased opacity for better visibility */
+  @apply bg-card/85 backdrop-blur-sm border border-border/60;
+}

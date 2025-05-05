@@ -27,6 +27,7 @@ import { app, db } from '@/lib/firebase'; // Import Firebase app and db
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
 import type { AppUser } from '@/services/user'; // Import AppUser type
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { cn } from '@/lib/utils'; // Import cn
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -134,14 +135,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </SidebarMenuButton>
                         </Link>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <Link href="/admin/leaderboard" passHref>
-                        <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
-                            <Star />
-                            <span>Leaderboard</span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
               </SidebarGroup>
 
 
@@ -165,14 +158,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
-               <SidebarMenuItem>
-                 <Link href="/admin/teams" passHref>
-                    <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}>
-                      <Users />
-                      <span>Teams</span>
-                    </SidebarMenuButton>
-                 </Link>
-              </SidebarMenuItem>
+                <SidebarMenuItem>
+                     <Link href="/admin/teams" passHref>
+                        <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}>
+                          <Users />
+                          <span>Teams</span>
+                        </SidebarMenuButton>
+                     </Link>
+                 </SidebarMenuItem>
+                   <SidebarMenuItem>
+                       <Link href="/admin/leaderboard" passHref>
+                       <SidebarMenuButton tooltip="Competition Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
+                           <Star />
+                           <span>Leaderboard</span>
+                       </SidebarMenuButton>
+                       </Link>
+                   </SidebarMenuItem>
             </SidebarGroup>
 
              {/* Management Section */}
@@ -244,8 +245,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="flex flex-col">
-         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background md:px-6">
+       {/* Remove gradient background, add data attribute */}
+      <SidebarInset
+        data-animated-background="true"
+        className="flex flex-col"
+      >
+         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/80 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
               {/* TODO: Make header title dynamic */}

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -34,8 +33,8 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
   // Apply frosted glass effect: background opacity and backdrop blur
-  // Increased opacity from 80 to 85
-  "fixed z-50 gap-4 bg-background/85 backdrop-blur-sm p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  // Adjusted opacity to 90%
+  "fixed z-50 gap-4 bg-background/90 backdrop-blur-sm p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
     variants: {
       side: {

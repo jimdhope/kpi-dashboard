@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -142,7 +141,8 @@ const SidebarProvider = React.forwardRef<
               } as React.CSSProperties
             }
             className={cn(
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
+              // Remove bg-sidebar from wrapper, apply to sidebar itself
+              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-transparent",
               className
             )}
             ref={ref}
@@ -182,8 +182,9 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            // Apply frosted glass effect for non-collapsible sidebar (increased opacity)
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar/85 backdrop-blur-sm text-sidebar-foreground",
+            // Apply frosted glass effect for non-collapsible sidebar
+            // Adjusted opacity to 90%
+            "flex h-full w-[--sidebar-width] flex-col bg-sidebar/90 backdrop-blur-sm text-sidebar-foreground",
             className
           )}
           ref={ref}
@@ -200,9 +201,10 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            // Apply frosted glass effect for mobile sheet (increased opacity)
+            // Apply frosted glass effect for mobile sheet
+            // Adjusted opacity to 90%
             className={cn(
-                "w-[--sidebar-width] bg-sidebar/85 backdrop-blur-sm p-0 text-sidebar-foreground [&>button]:hidden",
+                "w-[--sidebar-width] bg-sidebar/90 backdrop-blur-sm p-0 text-sidebar-foreground [&>button]:hidden",
                 className // Allow overriding classes
             )}
             style={
@@ -254,9 +256,10 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            // Apply frosted glass effect (increased opacity)
+            // Apply frosted glass effect
+            // Adjusted opacity to 90%
             className={cn(
-                "flex h-full w-full flex-col bg-sidebar/85 backdrop-blur-sm",
+                "flex h-full w-full flex-col bg-sidebar/90 backdrop-blur-sm",
                 "group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border/60 group-data-[variant=floating]:shadow", // Adjusted border opacity
                 "group-data-[variant=inset]:rounded-none group-data-[variant=inset]:border-none group-data-[variant=inset]:shadow-none" // No styling needed for inset
             )}

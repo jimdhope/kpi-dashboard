@@ -153,11 +153,11 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-       {/* Apply gradient background to the SidebarInset (main content area) */}
-      <SidebarInset className={cn(
-          "flex flex-col",
-          "bg-gradient-to-br from-background to-[hsl(var(--background-end))]" // Apply gradient here
-      )}>
+       {/* Remove gradient background, add data attribute */}
+      <SidebarInset
+        data-animated-background="true"
+        className="flex flex-col"
+      >
          <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/80 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
@@ -171,7 +171,6 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
             </div>
           </header>
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          {/* Removed AnimatedIconsBackground */}
           {children}
         </main>
       </SidebarInset>
