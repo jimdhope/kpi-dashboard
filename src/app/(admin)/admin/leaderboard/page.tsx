@@ -33,9 +33,9 @@ import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider, // Import TooltipProvider
+  TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/ui/tooltip"; // Ensure TooltipProvider is imported
 
 
 // Interface for daily achievement logs (same as before)
@@ -268,7 +268,7 @@ export default function AdminLeaderboardPage() {
               avatarUrl: agent.avatarUrl,
               avatarInitials: agent.avatarInitials,
               avatarBgColor: agent.avatarBgColor,
-              isCurrentUser: agent.id === currentUser?.id, // Add if needed later
+              isCurrentUser: agent.id === auth.currentUser?.uid, // Add if needed later
           }))
            // Removed filter for totalPoints > 0
           .sort((a, b) => b.totalPoints - a.totalPoints)
@@ -305,7 +305,7 @@ export default function AdminLeaderboardPage() {
                    name: team.name,
                    totalPoints: teamScores[team.id] || 0,
                    agentFirstNames: agentFirstNames.sort(), // Sort names alphabetically
-                   isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
+                   isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''), // Add if needed later
                };
            })
             // Removed filter for totalPoints > 0
@@ -321,7 +321,7 @@ export default function AdminLeaderboardPage() {
   const currentUser = auth.currentUser; // Get current user for highlighting
 
   return (
-    <TooltipProvider> {/* Added TooltipProvider */}
+    <TooltipProvider> {/* Ensure TooltipProvider wraps the component */}
       <div className="space-y-6">
         <Card>
           <CardHeader>
