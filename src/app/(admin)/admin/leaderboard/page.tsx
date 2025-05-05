@@ -468,7 +468,7 @@ export default function AdminLeaderboardPage() {
                     ) : (
                     <Table>
                         <TableHeader>
-                            <TableRow>
+                            <TableRow>{/* Remove whitespace here */}
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Pod</TableHead> {/* Changed from Team */}
                                 <TableHead className="text-right">Total Points</TableHead>
