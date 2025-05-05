@@ -1,7 +1,8 @@
-'use client'; // Add 'use client' directive
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
-import Link from 'next/link'; // Import Link
-import { usePathname } from 'next/navigation'; // Keep usePathname
+
+'use client';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -17,28 +18,33 @@ import {
   SidebarGroupLabel,
   SidebarSeparator, // Import Separator
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target } from 'lucide-react'; // Added Target icon
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Removed AvatarImage import
+import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Button } from '@/components/ui/button'; // Import Button
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth'; // Import Firebase Auth
-import { doc, getDoc, onSnapshot } from "firebase/firestore"; // Import Firestore
-import { app, db } from '@/lib/firebase'; // Import Firebase app and db
-import { generateInitials } from '@/lib/utils'; // Import generateInitials
-import type { AppUser } from '@/services/user'; // Import AppUser type
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { cn } from '@/lib/utils'; // Import cn
+import { Button } from '@/components/ui/button';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { app, db } from '@/lib/firebase';
+import { generateInitials } from '@/lib/utils';
+import type { AppUser, UserRole } from '@/services/user'; // Import UserRole
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitcher
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  roles: UserRole[]; // Added roles prop
+  currentLayout: 'admin' | 'agent'; // Added currentLayout prop
+  onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const currentPath = usePathname(); // Get current route
+export function DashboardLayout({ children, roles, currentLayout, onLayoutChange }: DashboardLayoutProps) {
+  const currentPath = usePathname();
   const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
+  // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
     setIsLoadingUser(true);
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -50,15 +56,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             setCurrentUserData({ id: docSnap.id, ...docSnap.data() } as AppUser);
           } else {
             console.warn(`Firestore document for user ${user.uid} not found.`);
-            // Set minimal data from auth if Firestore doc missing
             setCurrentUserData({
                 id: user.uid,
                 uid: user.uid,
                 name: user.displayName || user.email || 'User',
                 email: user.email || '',
-                roles: ['agent'], // Default to agent if profile missing
+                roles: [],
                 podId: null,
-                 // Ensure optional avatar fields exist or are initialized
                  avatarUrl: '',
                  avatarInitials: '',
                  avatarBgColor: '',
@@ -67,29 +71,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           setIsLoadingUser(false);
         }, (error) => {
           console.error("Error fetching user document:", error);
-          setCurrentUserData(null); // Clear data on error
+          setCurrentUserData(null);
           setIsLoadingUser(false);
         });
       } else {
-        // No user logged in
         setCurrentUserData(null);
         setIsLoadingUser(false);
-        // Redirect handled by ProfileLayout
       }
-      // Return the cleanup function for the Firestore listener
-      return () => {
-        if (unsubscribeUserDoc) {
-          unsubscribeUserDoc();
-        }
-      };
+       return () => {
+         if (unsubscribeUserDoc) {
+           unsubscribeUserDoc();
+         }
+       };
     });
-
-    // Return the cleanup function for the auth listener
     return () => unsubscribeAuth();
   }, [auth]);
 
   const getInitials = (name?: string | null) => generateInitials(name || '');
-  const bgColor = currentUserData?.avatarBgColor || undefined; // Use explicit undefined for random color generation
+  const bgColor = currentUserData?.avatarBgColor || undefined;
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -105,6 +104,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </SidebarHeader>
         <SidebarContent className="flex-1 overflow-y-auto p-4">
+          {/* Sidebar Menu Items */}
           <SidebarMenu>
             {/* Dashboard */}
             <SidebarMenuItem>
@@ -143,13 +143,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <SidebarGroupLabel>Competitions</SidebarGroupLabel>
                <SidebarMenuItem>
                  <Link href="/admin/competitions" passHref>
-                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath === '/admin/competitions'}>
+                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath.startsWith('/admin/competitions')}> {/* Updated isActive check */}
                       <Trophy />
                       <span>Competitions</span>
                     </SidebarMenuButton>
                    </Link>
               </SidebarMenuItem>
-              {/* New Pod Daily Targets Link */}
                 <SidebarMenuItem>
                     <Link href="/admin/pod-targets" passHref>
                     <SidebarMenuButton tooltip="Pod Daily Targets" isActive={currentPath === '/admin/pod-targets'}>
@@ -204,10 +203,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                  </Link>
               </SidebarMenuItem>
             </SidebarGroup>
-
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
+          {/* User Info */}
           <div className="flex items-center gap-3">
              {isLoadingUser ? (
                 <>
@@ -221,7 +220,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
              ) : currentUserData ? (
                 <>
                     <Avatar className="h-9 w-9">
-                       {/* Always use Fallback */}
                        <AvatarFallback
                            initials={currentUserData.avatarInitials || getInitials(currentUserData.name)}
                            backgroundColor={currentUserData.avatarBgColor}
@@ -245,18 +243,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-       {/* Add data attribute for animated background */}
       <SidebarInset
         data-animated-background="true"
         className="flex flex-col"
       >
-         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6"> {/* Apply sticky styles */}
+         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              {/* TODO: Make header title dynamic */}
-              <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2>
+              <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2> {/* TODO: Make dynamic */}
             </div>
             <div className="flex items-center gap-4">
+               {/* Conditionally render RoleSwitcher */}
+               <RoleSwitcher
+                   availableRoles={roles}
+                   currentLayout={currentLayout}
+                   onLayoutChange={onLayoutChange}
+               />
                <ThemeToggle />
                  <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>

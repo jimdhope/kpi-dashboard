@@ -1,7 +1,8 @@
+
 'use client';
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
-import Link from 'next/link'; // Import Link
-import { usePathname } from 'next/navigation'; // Import usePathname
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -14,28 +15,33 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, Settings } from 'lucide-react'; // Removed CheckSquare
+import { Home, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
-import { Button } from '@/components/ui/button'; // Import Button for Logout
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth'; // Import Firebase Auth
-import { doc, getDoc, onSnapshot } from "firebase/firestore"; // Import Firestore
-import { app, db } from '@/lib/firebase'; // Import Firebase app and db
-import { generateInitials } from '@/lib/utils'; // Import generateInitials
-import type { AppUser } from '@/services/user'; // Import AppUser type
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { cn } from '@/lib/utils'; // Import cn
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Button } from '@/components/ui/button';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { app, db } from '@/lib/firebase';
+import { generateInitials } from '@/lib/utils';
+import type { AppUser, UserRole } from '@/services/user'; // Import UserRole
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitcher
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
+  roles: UserRole[]; // Added roles prop
+  currentLayout: 'admin' | 'agent'; // Added currentLayout prop
+  onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
 }
 
-export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
-  const currentPath = usePathname(); // Get current route
+export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutChange }: AgentSidebarLayoutProps) {
+  const currentPath = usePathname();
   const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
+  // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
     setIsLoadingUser(true);
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -47,15 +53,13 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
             setCurrentUserData({ id: docSnap.id, ...docSnap.data() } as AppUser);
           } else {
             console.warn(`Firestore document for user ${user.uid} not found.`);
-            // Set minimal data from auth if Firestore doc missing
             setCurrentUserData({
                 id: user.uid,
                 uid: user.uid,
                 name: user.displayName || user.email || 'User',
                 email: user.email || '',
-                roles: [], // Default to no roles
+                roles: [],
                 podId: null,
-                 // Ensure optional avatar fields exist or are initialized
                  avatarUrl: '',
                  avatarInitials: '',
                  avatarBgColor: '',
@@ -64,29 +68,24 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
           setIsLoadingUser(false);
         }, (error) => {
           console.error("Error fetching user document:", error);
-          setCurrentUserData(null); // Clear data on error
+          setCurrentUserData(null);
           setIsLoadingUser(false);
         });
       } else {
-        // No user logged in
         setCurrentUserData(null);
         setIsLoadingUser(false);
-        // Redirect handled by ProfileLayout
       }
-       // Return the cleanup function for the Firestore listener
        return () => {
          if (unsubscribeUserDoc) {
            unsubscribeUserDoc();
          }
        };
     });
-
-    // Return the cleanup function for the auth listener
     return () => unsubscribeAuth();
   }, [auth]);
 
    const getInitials = (name?: string | null) => generateInitials(name || '');
-   const bgColor = currentUserData?.avatarBgColor || undefined; // Use explicit undefined for random color generation
+   const bgColor = currentUserData?.avatarBgColor || undefined;
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -104,7 +103,6 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
         <SidebarContent className="flex-1 overflow-y-auto p-4">
           <SidebarMenu>
             <SidebarMenuItem>
-               {/* Use Link for navigation, pass href, set isActive */}
               <Link href="/agent" passHref>
                 <SidebarMenuButton tooltip="Dashboard" isActive={currentPath === '/agent'}>
                   <Home />
@@ -112,9 +110,11 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+            {/* Removed Log Achievements link for Agents */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
+          {/* User Info */}
           <div className="flex items-center gap-3">
               {isLoadingUser ? (
                 <>
@@ -128,7 +128,6 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
              ) : currentUserData ? (
                <>
                  <Avatar className="h-9 w-9">
-                   {/* Always use Fallback */}
                    <AvatarFallback
                       initials={currentUserData.avatarInitials || getInitials(currentUserData.name)}
                       backgroundColor={currentUserData.avatarBgColor}
@@ -152,20 +151,23 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-       {/* Add data attribute for animated background */}
       <SidebarInset
         data-animated-background="true"
         className="flex flex-col"
       >
-         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6"> {/* Apply sticky styles */}
+         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              {/* TODO: Make header title dynamic based on current page */}
-              <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2>
+              <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2> {/* Changed title */}
             </div>
             <div className="flex items-center gap-4">
+               {/* Conditionally render RoleSwitcher */}
+               <RoleSwitcher
+                   availableRoles={roles}
+                   currentLayout={currentLayout}
+                   onLayoutChange={onLayoutChange}
+               />
                <ThemeToggle />
-               {/* Logout Button for Agent */}
                <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>
           </header>

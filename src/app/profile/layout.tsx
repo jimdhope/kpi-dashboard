@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User as AuthUser } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -35,19 +35,47 @@ export default function ProfileLayout({
 }) {
   const [roles, setRoles] = useState<UserRole[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [layoutType, setLayoutType] = useState<'admin' | 'agent' | null>(null); // State for current layout
   const router = useRouter();
+
+  const determineInitialLayout = useCallback((userRoles: UserRole[]): 'admin' | 'agent' | null => {
+    // Prioritize admin/manager/leader view
+    if (userRoles.includes('admin') || userRoles.includes('podManager') || userRoles.includes('teamLeader')) {
+      return 'admin';
+    } else if (userRoles.includes('agent')) {
+      return 'agent';
+    }
+    return null; // No recognized role for layout
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
+      setIsLoading(true); // Start loading on auth change
       if (currentUser) {
         const fetchedRoles = await fetchUserRoles(currentUser.uid);
         setRoles(fetchedRoles);
-         if (fetchedRoles === null || fetchedRoles.length === 0) {
-            // Handle cases where roles couldn't be fetched or user has no roles
-            console.warn("User has no roles or roles couldn't be fetched. Redirecting...");
-             // Redirect to a default page or show an error message.
-             // For now, redirecting to login as a fallback.
-             router.push('/login');
+        if (fetchedRoles === null || fetchedRoles.length === 0) {
+          console.warn("User has no roles or roles couldn't be fetched. Redirecting to login.");
+          router.push('/login'); // Redirect if no roles found
+        } else {
+          // Determine initial layout based on fetched roles
+          const initialLayout = determineInitialLayout(fetchedRoles);
+          if (initialLayout) {
+             // Check localStorage for persisted preference, otherwise use determined initial
+            const persistedLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
+             // Only apply persisted layout if it's valid for the user's roles
+            if (persistedLayout && fetchedRoles.includes(persistedLayout === 'admin' ? 'admin' : 'agent')) { // Adjust condition based on role logic
+                 setLayoutType(persistedLayout);
+                 console.log(`Set layout from localStorage: ${persistedLayout}`);
+             } else {
+                 setLayoutType(initialLayout);
+                 console.log(`Set initial layout: ${initialLayout}`);
+             }
+
+          } else {
+            console.error("User logged in but has no recognized role for layout. Redirecting.");
+            router.push('/login'); // Redirect if no suitable role found
+          }
         }
       } else {
         // No user logged in, redirect to login
@@ -56,41 +84,47 @@ export default function ProfileLayout({
       setIsLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, [router]);
+  }, [router, determineInitialLayout]);
 
-  if (isLoading) {
+  const handleLayoutChange = useCallback((newLayout: 'admin' | 'agent') => {
+    setLayoutType(newLayout);
+    // Persist preference in localStorage
+     localStorage.setItem('preferredLayout', newLayout);
+     console.log(`Layout changed to: ${newLayout} and persisted.`);
+     // Optional: Consider reloading the page or navigating to the root of the new layout area
+     // Example: router.push(newLayout === 'admin' ? '/admin' : '/agent');
+     // Be cautious with immediate redirects, ensure necessary state is handled.
+  }, []);
+
+
+  if (isLoading || !layoutType) {
      // Show a full-page skeleton or loading indicator
      return (
         <div className="flex h-screen items-center justify-center">
+             {/* You can use a more sophisticated loader */}
              <Skeleton className="h-32 w-32 rounded-full" />
          </div>
      );
   }
 
-  if (!roles) {
-      // This case should ideally be handled by the redirect, but as a fallback:
-      return <div>Error: Could not load user profile or roles. Please try logging in again.</div>;
-   }
+  // Pass roles, current layout, and handler down to the chosen layout
+  const layoutProps = {
+    roles: roles || [], // Pass empty array if null
+    currentLayout: layoutType,
+    onLayoutChange: handleLayoutChange,
+  };
 
-
-  // Determine layout based on fetched roles
-  // Give priority to admin/manager/leader roles
-  const isAdminOrManager = roles.includes('admin') || roles.includes('podManager') || roles.includes('teamLeader');
-  const isAgent = roles.includes('agent');
-
-  if (isAdminOrManager) {
-    console.log("Rendering DashboardLayout for admin/manager/leader");
-    return <DashboardLayout>{children}</DashboardLayout>;
-  } else if (isAgent) {
-     console.log("Rendering AgentSidebarLayout for agent");
-    return <AgentSidebarLayout>{children}</AgentSidebarLayout>;
+  // Render layout based on the current state
+  if (layoutType === 'admin') {
+    console.log("Rendering DashboardLayout");
+    return <DashboardLayout {...layoutProps}>{children}</DashboardLayout>;
+  } else if (layoutType === 'agent') {
+    console.log("Rendering AgentSidebarLayout");
+    return <AgentSidebarLayout {...layoutProps}>{children}</AgentSidebarLayout>;
   } else {
-    // This case should also be handled by the initial check/redirect
-    console.error("User logged in but has no recognized role for layout.");
-    // Redirect or show error - redirecting to login as fallback
-    // router.push('/login'); // Avoid infinite loop if roles become null somehow
-     return <div>Error: User role not recognized.</div>;
+    // Fallback or error state - should ideally be handled by redirects
+    console.error("No valid layout type determined.");
+    return <div>Error: Could not determine appropriate layout.</div>;
   }
 }
