@@ -8,6 +8,7 @@ import { getKPIs, KPI, Group } from '@/services/kpi'; // Keep KPI fetching
 import { DollarSign, Target, Users, Medal, Trophy, ClipboardList, AlertCircle } from 'lucide-react'; // Add required icons
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert } from "@/components/ui/alert"; // Import Alert
 import { collection, query, where, getDocs, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
@@ -157,7 +158,8 @@ export default function AgentDashboardPage() {
          const agentGroup: Group = { id: agentPodId, name: 'Your Pod' }; // Consider fetching pod name if needed
          const fetchedKpis = await getKPIs(agentGroup);
          setKpis(fetchedKpis);
-          setError(null); // Clear KPI specific error on success
+          // Clear KPI specific error on success
+          if (error === "Failed to load your KPIs.") setError(null);
        } catch (error) {
          console.error("Error fetching agent KPIs:", error);
          setError("Failed to load your KPIs."); // Set specific KPI error
@@ -166,7 +168,7 @@ export default function AgentDashboardPage() {
        }
      };
      fetchAgentKpis();
-   }, [agentPodId, isLoadingUser]); // Rerun if podId or user loading state changes
+   }, [agentPodId, isLoadingUser, error]); // Rerun if podId or user loading state changes
 
 
    // 3. Fetch Competition Rules, Listen to Logs, Targets, Pod Agents, and Teams
@@ -185,8 +187,15 @@ export default function AgentDashboardPage() {
     }
 
     setIsLoadingData(true); // Start loading data
-    // Clear previous non-user error
-    if(error !== "You are not currently assigned to a pod." && error !== "Could not find your user profile." && error !== "You must be logged in." && error !== "Failed to load your profile information."){
+    // Clear previous non-user error only if one exists
+    const isUserError = [
+         "You are not currently assigned to a pod.",
+         "Could not find your user profile.",
+         "You must be logged in.",
+         "Failed to load your profile information."
+    ].includes(error || "");
+
+    if(!isUserError){
          setError(null);
     }
 
@@ -281,6 +290,19 @@ export default function AgentDashboardPage() {
                      setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
                  }, (err) => { console.error("Error listening to daily targets:", err); setError("Failed to load targets."); });
 
+                 // Clear non-user specific errors if data loading is successful
+                 const currentErrorIsUserError = [
+                     "You are not currently assigned to a pod.",
+                     "Could not find your user profile.",
+                     "You must be logged in.",
+                     "Failed to load your profile information.",
+                      "Failed to load your KPIs."
+                  ].includes(error || "");
+
+                  if (!currentErrorIsUserError) {
+                      setError(null);
+                  }
+
              } else {
                  // No active competition found for today
                  setRules([]);
@@ -293,9 +315,17 @@ export default function AgentDashboardPage() {
               // Consider loading complete after the initial snapshot of the competition query
               setIsLoadingData(false);
                // Clear non-user errors if data loads successfully
-              if(error !== "You are not currently assigned to a pod." && error !== "Could not find your user profile." && error !== "You must be logged in." && error !== "Failed to load your profile information."){
-                   setError(null);
-              }
+              const currentErrorIsUserErrorAfterLoad = [
+                   "You are not currently assigned to a pod.",
+                   "Could not find your user profile.",
+                   "You must be logged in.",
+                   "Failed to load your profile information.",
+                   "Failed to load your KPIs."
+                ].includes(error || "");
+
+               if(!currentErrorIsUserErrorAfterLoad){
+                    setError(null);
+               }
          }, (err) => {
              console.error("Error listening to competitions:", err);
              setError("Failed to load competition data.");
@@ -424,7 +454,7 @@ export default function AgentDashboardPage() {
           kpis.map((kpi, index) => (
             <KpiCard key={kpi.name || index} kpi={kpi} icon={kpiIcons[kpi.name]} />
           ))
-        ) : !kpisLoading && !error ? ( // Only show if not loading and no other error
+        ) : !kpisLoading && error !== "Failed to load your KPIs." ? ( // Check specific error
             <Card className="md:col-span-2 lg:col-span-3 shadow-md">
                  <CardContent className="pt-6 text-center text-muted-foreground">No KPIs found for your pod.</CardContent>
             </Card>
@@ -457,7 +487,7 @@ export default function AgentDashboardPage() {
                             {agentScore.emojiString.length === 0 && <span className="text-base text-muted-foreground">- No achievements logged today -</span>}
                         </div>
                      </>
-                 ) : !error ? ( // Only show if not loading and no other error
+                 ) : error !== "Failed to load your scores." ? ( // Check specific error
                      <p className="text-muted-foreground">Could not load your score.</p>
                  ) : null}
              </CardContent>
@@ -489,7 +519,7 @@ export default function AgentDashboardPage() {
                                </div>
                            ))}
                        </div>
-                   ) : !error ? ( // Only show if not loading and no other error
+                   ) : error !== "Failed to load targets." ? ( // Check specific error
                        <p className="text-muted-foreground">No targets set for your pod today.</p>
                    ) : null }
                </CardContent>
