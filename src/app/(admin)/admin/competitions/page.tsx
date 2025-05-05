@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -63,11 +62,11 @@ export interface Competition {
   podNames?: string[]; // Store multiple pod names
 }
 
-// Type for the data received from the form - Expects single podId from form, will convert to array on save
-type ReceivedCompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate' | 'podIds'> & {
+// Type for the data received from the form - Now expects podIds array
+type ReceivedCompetitionFormData = Omit<z.infer<typeof competitionFormSchema>, 'startDate' | 'endDate'> & {
     startDate: Date;
     endDate: Date;
-    podId: string; // Form still sends single podId for now
+    // podId removed, podIds is now in the base type
 };
 
 const competitionsCollectionRef = collection(db, 'competitions');
@@ -200,7 +199,7 @@ export default function AdminCompetitionsPage() {
     setIsAlertOpen(true);
   };
 
-  // Handle form submission for adding/editing competitions - Convert single podId to podIds array
+  // Handle form submission for adding/editing competitions - Accepts podIds array
   const handleFormSubmit = async (data: ReceivedCompetitionFormData, rules: RuleFormData[]) => {
     setIsSubmitting(true);
 
@@ -211,11 +210,11 @@ export default function AdminCompetitionsPage() {
         return;
     }
 
-    // Data to save - Convert single podId from form to an array
+    // Data to save - Use podIds directly from form data
     const competitionDataToSave = {
         name: data.name,
         campaignId: data.campaignId,
-        podIds: [data.podId], // Convert single podId to array (for future multi-pod support)
+        podIds: data.podIds, // Use the podIds array from the form
         startDate: Timestamp.fromDate(data.startDate),
         endDate: Timestamp.fromDate(data.endDate),
         rules: rules,
@@ -240,8 +239,8 @@ export default function AdminCompetitionsPage() {
                 startDate: Timestamp.fromDate(data.startDate),
                 endDate: Timestamp.fromDate(data.endDate),
                 rules: rules,
-                // Allow updating pod and campaign in edit mode for now
-                podIds: [data.podId],
+                // Allow updating pod and campaign in edit mode
+                podIds: data.podIds, // Update podIds array
                 campaignId: data.campaignId,
             };
             await updateDoc(competitionDoc, updateData);
@@ -281,13 +280,15 @@ export default function AdminCompetitionsPage() {
    // Prepare initial data for the form (if editing)
    const initialFormData = useMemo(() => {
        if (dialogMode === 'edit' && selectedCompetition) {
-           return {
+           // Convert Timestamps to Dates for the form
+            const startDate = selectedCompetition.startDate instanceof Timestamp ? selectedCompetition.startDate.toDate() : selectedCompetition.startDate;
+            const endDate = selectedCompetition.endDate instanceof Timestamp ? selectedCompetition.endDate.toDate() : selectedCompetition.endDate;
+
+            return {
                ...selectedCompetition,
-               // Form expects single podId, use the first one for edit mode display
-               // Ensure startDate and endDate are Date objects
-               startDate: selectedCompetition.startDate instanceof Timestamp ? selectedCompetition.startDate.toDate() : selectedCompetition.startDate,
-               endDate: selectedCompetition.endDate instanceof Timestamp ? selectedCompetition.endDate.toDate() : selectedCompetition.endDate,
-               podId: selectedCompetition.podIds?.[0] || '',
+               startDate,
+               endDate,
+               // podIds is already an array in Competition type
            };
        }
        return undefined;
@@ -312,7 +313,7 @@ export default function AdminCompetitionsPage() {
               <div>
                 <CardTitle>Manage Competitions</CardTitle>
                 {/* Updated description - removed targets mention */}
-                <CardDescription>Set up, view, edit, or delete weekly competitions.</CardDescription>
+                <CardDescription>Set up, view, edit, or delete weekly competitions involving one or more pods.</CardDescription>
               </div>
               <DialogTrigger asChild>
                 <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
@@ -328,10 +329,10 @@ export default function AdminCompetitionsPage() {
               )}
               <Table>
                 <TableHeader>
-                  <TableRow>{/* Remove whitespace here */}
+                  <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Campaign</TableHead>
-                    <TableHead>Pod(s)</TableHead>{/* Changed heading */}
+                    <TableHead>Pod(s)</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead className="text-right w-[150px]">Actions</TableHead>
@@ -343,7 +344,7 @@ export default function AdminCompetitionsPage() {
                       <TableRow key={`loading-${index}`}>
                         <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>{/* Pods skeleton */}
+                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
                         <TableCell className="text-right">
@@ -365,8 +366,7 @@ export default function AdminCompetitionsPage() {
                       <TableRow key={comp.id}>
                         <TableCell className="font-medium">{comp.name}</TableCell>
                         <TableCell className="text-muted-foreground">{comp.campaignName}</TableCell>
-                        {/* Display multiple pod names */}
-                        <TableCell className="text-muted-foreground truncate" title={comp.podNames?.join(', ')}>
+                        <TableCell className="text-muted-foreground truncate max-w-xs" title={comp.podNames?.join(', ')}>
                             {comp.podNames?.join(', ') || 'N/A'}
                         </TableCell>
                         <TableCell>{comp.startDate ? format(comp.startDate.toDate(), 'PP') : 'N/A'}</TableCell>
@@ -425,7 +425,7 @@ export default function AdminCompetitionsPage() {
                 <CompetitionForm
                     onSubmit={handleFormSubmit}
                     onCancel={() => setIsFormOpen(false)}
-                    initialData={initialFormData} // Use prepared initial data
+                    initialData={initialFormData} // Pass prepared initial data
                     campaigns={campaigns}
                     pods={pods}
                     mode={dialogMode}
@@ -441,7 +441,7 @@ export default function AdminCompetitionsPage() {
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the competition
                 <span className="font-semibold"> "{selectedCompetition?.name}"</span>.
-                 Associated daily targets might also be affected. {/* Updated warning */}
+                 Associated daily targets might also be affected.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

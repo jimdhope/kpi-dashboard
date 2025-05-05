@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -35,7 +34,7 @@ import {
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { CalendarIcon, Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
-import { format, parse, isValid as isDateValid, startOfDay } from 'date-fns'; // Import date-fns functions
+import { format, parse, isValid as isDateValid, startOfDay, addDays } from 'date-fns'; // Import addDays
 import { cn } from "@/lib/utils";
 import { useToast } from '@/hooks/use-toast';
 import type { Competition } from '@/app/(admin)/admin/competitions/page'; // Import Competition type
@@ -71,7 +70,8 @@ const competitionRuleSchema = z.object({
 export const competitionFormSchema = z.object({
   name: z.string().min(3, { message: 'Competition name required (min 3 chars).' }).max(50, { message: 'Name max 50 chars.' }),
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
-  podId: z.string().min(1, { message: 'Please select a pod.' }), // Keep single podId for form simplicity
+  // Changed back to podIds array for consistency with data model
+  podIds: z.array(z.string()).min(1, { message: 'Please select at least one pod.' }),
   startDate: z.union([z.date(), z.string()]) // Accept Date or string
     .transform((val) => (typeof val === 'string' ? parseDateString(val) : val)) // Attempt to parse string
     .refine((val): val is Date => val instanceof Date && isDateValid(val), { // Ensure result is a valid Date
@@ -101,8 +101,8 @@ type CompetitionFormSchemaType = Omit<z.infer<typeof competitionFormSchema>, 'st
 
 interface CompetitionFormProps {
   onSubmit: (data: CompetitionFormSchemaType, rules: RuleFormData[]) => Promise<void> | void; // Pass rules separately
-  onCancel: () => void;
-  initialData?: Omit<Competition, 'podIds'> & { podId: string }; // Adjust initial data prop if needed
+  // Update initialData to accept podIds array
+  initialData?: Omit<Competition, 'startDate' | 'endDate'> & { startDate: Date | Timestamp, endDate: Date | Timestamp };
   campaigns: Campaign[];
   pods: Pod[];
   mode: 'add' | 'edit';
@@ -141,7 +141,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     defaultValues: {
       name: initialData?.name || '',
       campaignId: initialData?.campaignId || '',
-      podId: initialData?.podId || '',
+      // Initialize podIds as an array
+      podIds: initialData?.podIds || [],
        // Store dates as Date objects internally
        startDate: initialData?.startDate instanceof Timestamp ? initialData.startDate.toDate() : initialData?.startDate,
        endDate: initialData?.endDate instanceof Timestamp ? initialData.endDate.toDate() : initialData?.endDate,
@@ -163,7 +164,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
       form.reset({
         name: initialData.name,
         campaignId: initialData.campaignId,
-        podId: initialData.podId, // Form expects single podId
+        // Use podIds array
+        podIds: initialData.podIds || [],
         // Ensure dates are Date objects
         startDate: initialData.startDate instanceof Timestamp ? initialData.startDate.toDate() : initialData.startDate,
         endDate: initialData.endDate instanceof Timestamp ? initialData.endDate.toDate() : initialData.endDate,
@@ -174,7 +176,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
         form.reset({
             name: '',
             campaignId: '',
-            podId: '',
+             // Reset podIds as empty array
+             podIds: [],
             startDate: undefined,
             endDate: undefined,
             rules: [],
@@ -186,6 +189,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   const watchedCampaignId = form.watch('campaignId');
   const watchedStartDate = form.watch('startDate'); // Watch start date
   const watchedRules = form.watch('rules'); // Watch rules
+  const watchedEndDate = form.watch('endDate'); // Watch end date
 
   useEffect(() => {
     // Load default rules only when campaign changes in 'add' mode
@@ -211,6 +215,16 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
         replace([]);
     }
   }, [mode, watchedCampaignId, replace, toast, form]);
+
+  // Effect to set default end date
+   useEffect(() => {
+       const currentEndDate = form.getValues('endDate');
+       // Only set default if start date is valid and end date is not already set
+       if (watchedStartDate instanceof Date && !currentEndDate) {
+           const defaultEndDate = addDays(watchedStartDate, 6); // Default to 6 days after start (for a 7-day competition)
+            form.setValue('endDate', defaultEndDate, { shouldValidate: true });
+       }
+   }, [watchedStartDate, form]); // Re-run when startDate changes
 
 
   // --- Event Handlers ---
@@ -287,7 +301,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 <Select
                     onValueChange={(value) => {
                         field.onChange(value);
-                        form.setValue('podId', '');
+                        form.setValue('podIds', []); // Reset pod selection on campaign change
                     }}
                     value={field.value}
                     disabled={isSubmitting || mode === 'edit'}
@@ -311,43 +325,46 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
             )}
           />
 
-          {/* Pod Selection (Filtered by Campaign) */}
+          {/* Pod Selection (Multi-Select) */}
           <FormField
-            control={form.control}
-            name="podId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pod</FormLabel>
-                <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    // Allow changing pod in edit mode for this iteration, though data model change needed later for multi-pod
-                    disabled={isSubmitting || !watchedCampaignId /*|| mode === 'edit' */}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={!watchedCampaignId ? "Select campaign first" : "Select a pod"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {!watchedCampaignId ? (
-                      <SelectItem value="loading" disabled>No campaign selected</SelectItem>
-                    ) : filteredPods.length === 0 ? (
-                      <SelectItem value="loading" disabled>No pods in selected campaign</SelectItem>
-                    ) : (
-                      filteredPods.map((pod) => (
-                        <SelectItem key={pod.id} value={pod.id}>
-                          {pod.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                 {/* {mode === 'edit' && <FormDescription>Pod cannot be changed after creation.</FormDescription>} */}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+             control={form.control}
+             name="podIds"
+             render={({ field }) => (
+               <FormItem>
+                 <FormLabel>Participating Pods</FormLabel>
+                 <FormControl>
+                    {/* Use a multi-select component or checkboxes */}
+                    {/* Simple Checkbox Example (replace with a proper multi-select component if needed) */}
+                    <div className="space-y-2 rounded-md border p-4 max-h-40 overflow-y-auto">
+                         {filteredPods.length === 0 ? (
+                             <p className="text-sm text-muted-foreground">
+                                 {!watchedCampaignId ? "Select a campaign first" : "No pods found in this campaign."}
+                             </p>
+                         ) : (
+                             filteredPods.map((pod) => (
+                                 <div key={pod.id} className="flex items-center gap-2">
+                                     <Checkbox
+                                         id={`pod-${pod.id}`}
+                                         checked={field.value?.includes(pod.id)}
+                                         onCheckedChange={(checked) => {
+                                             const currentPodIds = field.value || [];
+                                             return checked
+                                             ? field.onChange([...currentPodIds, pod.id])
+                                             : field.onChange(currentPodIds.filter((id) => id !== pod.id));
+                                         }}
+                                         disabled={isSubmitting}
+                                     />
+                                     <Label htmlFor={`pod-${pod.id}`} className="font-normal">{pod.name}</Label>
+                                 </div>
+                             ))
+                         )}
+                    </div>
+                 </FormControl>
+                 <FormMessage />
+               </FormItem>
+             )}
+           />
+
 
             {/* Start Date - Combined Picker and Input */}
             <FormField
