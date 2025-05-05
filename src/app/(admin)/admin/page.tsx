@@ -294,7 +294,7 @@ export default function AdminDashboardPage() {
 
 
   return (
-    <>
+    <Form {...form}> {/* Add Form provider */}
       {error && (
          <div className="mb-4 text-center text-destructive bg-destructive/10 p-3 rounded-md flex items-center justify-center gap-2">
            <AlertCircle className="h-4 w-4" /> {error}
@@ -305,7 +305,7 @@ export default function AdminDashboardPage() {
       <Card className="mb-6">
           <CardHeader>
              <CardTitle>Filters</CardTitle> {/* Changed Title */}
-             <CardDescription>Select the time period for the leaderboards and summary.</CardDescription>
+             {/* Removed CardDescription */}
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4 items-end">
              {/* Timeframe Select */}
@@ -348,6 +348,7 @@ export default function AdminDashboardPage() {
                          />
                      </PopoverContent>
                  </Popover>
+                 {/* Removed FormDescription */}
               </div>
           </CardContent>
       </Card>
@@ -424,6 +425,6 @@ export default function AdminDashboardPage() {
            </div>
 
        </div>
-    </>
+    </Form>
   );
 }
