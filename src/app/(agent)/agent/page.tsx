@@ -107,14 +107,15 @@ export default function AgentDashboardPage() {
         unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
-            console.log("User document found:", userData);
+            console.log("User document snapshot received:", userData);
             setCurrentUser(userData);
-            setAgentPodId(userData.podId || null);
+            setAgentPodId(userData.podId || null); // Set podId from user data
             console.log("Agent Pod ID set to:", userData.podId || null);
             if (!userData.podId) {
               console.warn("User is not assigned to a pod.");
               setError("You are not currently assigned to a pod.");
             } else {
+              // Clear specific errors if podId is now present
               if (error === "You are not currently assigned to a pod." || error === "Could not find your user profile.") {
                   setError(null);
               }
@@ -155,16 +156,15 @@ export default function AgentDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Removed error from dependencies
 
-  // 2. Fetch Agent's KPIs (Only runs once or when pod changes if dynamic)
+  // 2. Fetch Agent's KPIs (Runs when podId or user loading state changes)
    useEffect(() => {
-     console.log(`KPI Effect: isLoadingUser=${isLoadingUser}, agentPodId=${agentPodId}`);
-     // Wait for user and podId to be loaded
+     console.log(`KPI Effect triggered: isLoadingUser=${isLoadingUser}, agentPodId=${agentPodId}`);
+     // Wait for user and podId to be loaded and valid
      if (isLoadingUser || !agentPodId) {
-         console.log("KPI Effect: Skipping fetch, prerequisites not met.");
+         console.log("KPI Effect: Skipping KPI fetch, prerequisites not met (isLoadingUser or !agentPodId).");
          setKpisLoading(!isLoadingUser); // Stop KPI loading if user load is done but no pod
          if(!isLoadingUser && !agentPodId) {
              console.warn("KPI Effect: User loaded but no pod ID, cannot fetch KPIs.");
-             // Keep the "Not assigned to pod" error if it exists
          }
          return;
      };
@@ -174,19 +174,23 @@ export default function AgentDashboardPage() {
      const fetchAgentKpis = async () => {
        try {
          // Use the dynamically fetched agentPodId
-         const agentGroup: Group = { id: agentPodId, name: 'Your Pod' }; // Consider fetching pod name if needed
+         const agentGroup: Group = { id: agentPodId, name: 'Your Pod' }; // Name can be fetched if needed
+         console.log("KPI Effect: Calling getKPIs with group:", agentGroup);
          const fetchedKpis = await getKPIs(agentGroup);
-         console.log("KPI Effect: Fetched KPIs:", fetchedKpis);
+         console.log(`KPI Effect: Fetched ${fetchedKpis.length} KPIs:`, fetchedKpis);
          setKpis(fetchedKpis);
          if (fetchedKpis.length === 0) {
              console.warn("KPI Effect: No KPIs returned for pod ID:", agentPodId);
-             setError("No KPIs found for your pod."); // Set a specific message
-         } else if (error === "No KPIs found for your pod." || error === "Failed to load your KPIs.") {
-             setError(null); // Clear KPI specific error on success
+             setError("No KPIs found for your pod.");
+         } else {
+             // Clear KPI specific error on success if it exists
+             if (error === "No KPIs found for your pod." || error === "Failed to load your KPIs.") {
+                 setError(null);
+             }
          }
        } catch (kpiError) {
          console.error("Error fetching agent KPIs:", kpiError);
-         setError("Failed to load your KPIs."); // Set specific KPI error
+         setError("Failed to load your KPIs.");
        } finally {
          setKpisLoading(false);
          console.log("KPI Effect: KPI loading finished.");
@@ -194,30 +198,32 @@ export default function AgentDashboardPage() {
      };
      fetchAgentKpis();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-   }, [agentPodId, isLoadingUser]); // Rerun if podId or user loading state changes, ignore 'error' dependency
+   }, [agentPodId, isLoadingUser]); // Rerun if podId or user loading state changes
 
 
    // 3. Fetch Competition Rules, Listen to Logs, Targets, Pod Agents, and Teams
   useEffect(() => {
-    console.log(`Data Effect: isLoadingUser=${isLoadingUser}, agentPodId=${agentPodId}, currentUser=${!!currentUser}`);
+    console.log(`Data Effect triggered: isLoadingUser=${isLoadingUser}, agentPodId=${agentPodId}, currentUser=${!!currentUser}`);
     // Ensure user, podId are available and user loading is complete
     if (!agentPodId || !currentUser?.id || isLoadingUser) {
-      console.log("Data Effect: Skipping fetch, prerequisites not met.");
+      console.log("Data Effect: Skipping data fetch, prerequisites not met.");
       setIsLoadingData(false); // Stop loading if prerequisites aren't met
-      // Clear dependent state
-      setRules([]);
-      setDailyLogs([]);
-      setPodLogs([]);
-      setDailyTargets(null);
-      setPodAgents([]);
-      setTeams([]);
+      // Clear dependent state if prerequisites are missing after initial load
+      if(!isLoadingUser) {
+          setRules([]);
+          setDailyLogs([]);
+          setPodLogs([]);
+          setDailyTargets(null);
+          setPodAgents([]);
+          setTeams([]);
+      }
       return () => {}; // Return empty cleanup
     }
 
     console.log("Data Effect: Starting data fetch and listeners for pod:", agentPodId);
     setIsLoadingData(true); // Start loading data
 
-    // Clear previous non-user specific errors if one exists
+    // Clear previous non-user/KPI specific errors if one exists
     const isUserOrKpiError = [
          "You are not currently assigned to a pod.",
          "Could not find your user profile.",
@@ -228,9 +234,9 @@ export default function AgentDashboardPage() {
     ].includes(error || "");
 
     if(!isUserOrKpiError){
+         console.log("Data Effect: Clearing previous error:", error)
          setError(null);
     }
-
 
     let unsubscribeUserLogs: Unsubscribe = () => {};
     let unsubscribePodLogs: Unsubscribe = () => {};
@@ -241,163 +247,170 @@ export default function AgentDashboardPage() {
     let currentActiveCompetition: CompetitionWithRules | null = null; // Track competition for filtering
 
     const fetchAndListen = async () => {
-      // No try/catch here, errors handled in listeners
-
-          // Fetch Agents in the pod (listen for changes)
-         console.log("Data Effect: Setting up agents listener for pod:", agentPodId);
-         const usersRef = collection(db, 'users');
-         const agentsQuery = query(usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
-         unsubscribeAgents = onSnapshot(agentsQuery, (agentsSnapshot) => {
-              const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-              console.log("Data Effect: Pod agents listener updated, found:", fetchedAgents.length);
-              setPodAgents(fetchedAgents);
-          }, (err) => {
-               console.error("Error listening to pod agents:", err);
-               setError("Failed to load pod member data.");
-               setIsLoadingData(false); // Stop loading on agent fetch error
-          });
+        // Fetch Agents in the pod (listen for changes)
+       console.log("Data Effect: Setting up agents listener for pod:", agentPodId);
+       const usersRef = collection(db, 'users');
+       const agentsQuery = query(usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
+       unsubscribeAgents = onSnapshot(agentsQuery, (agentsSnapshot) => {
+            const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+            console.log("Data Effect: Pod agents listener updated, found:", fetchedAgents.length);
+            setPodAgents(fetchedAgents);
+        }, (err) => {
+             console.error("Error listening to pod agents:", err);
+             setError("Failed to load pod member data.");
+             setIsLoadingData(false); // Stop loading on agent fetch error
+        });
 
 
-        // Find Active Competition based on *today's date* and listen for changes
-        console.log("Data Effect: Setting up competition listener for pod:", agentPodId);
-        const competitionsRef = collection(db, 'competitions');
-        const todayTimestamp = Timestamp.fromDate(startOfDay(new Date()));
+      // Find Active Competition based on *today's date* and listen for changes
+      console.log("Data Effect: Setting up competition listener for pod:", agentPodId);
+      const competitionsRef = collection(db, 'competitions');
+      const todayTimestamp = Timestamp.fromDate(startOfDay(new Date()));
 
-        const competitionQuery = query(
-          competitionsRef,
-          where('podIds', 'array-contains', agentPodId),
-          where('startDate', '<=', todayTimestamp),
-          orderBy('startDate', 'desc')
-          // We'll filter endDate client-side as Firestore can't range filter on two fields
-        );
+      const competitionQuery = query(
+        competitionsRef,
+        where('podIds', 'array-contains', agentPodId),
+        where('startDate', '<=', todayTimestamp),
+        orderBy('startDate', 'desc')
+        // We'll filter endDate client-side as Firestore can't range filter on two fields
+      );
 
-         // Listen to the competition query
-         unsubscribeCompetition = onSnapshot(competitionQuery, (competitionSnapshot) => {
-             console.log("Data Effect: Competition listener triggered.");
-             let activeCompetition: CompetitionWithRules | null = null;
-             for (const docSnap of competitionSnapshot.docs) {
-                 const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules & { id: string };
-                 if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= todayTimestamp) {
-                     activeCompetition = comp;
-                     break;
-                 }
-             }
+       // Listen to the competition query
+       unsubscribeCompetition = onSnapshot(competitionQuery, (competitionSnapshot) => {
+           console.log(`Data Effect: Competition listener triggered. Found ${competitionSnapshot.docs.length} potential competitions.`);
+           let activeCompetition: CompetitionWithRules | null = null;
+           for (const docSnap of competitionSnapshot.docs) {
+               const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules & { id: string };
+               if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= todayTimestamp) {
+                   activeCompetition = comp;
+                   console.log("Data Effect: Found active competition:", activeCompetition.id);
+                   break;
+               }
+           }
 
-             currentActiveCompetition = activeCompetition; // Update tracked competition
+           currentActiveCompetition = activeCompetition; // Update tracked competition
 
-             if (activeCompetition) {
-                 console.log("Data Effect: Active competition found:", activeCompetition.id);
-                 setRules(activeCompetition.rules || []);
-                 setTeams(activeCompetition.teams || []); // Update teams from competition data
-
-                 // --- Set up listeners for logs and targets based on this active competition ---
-                 const achievementsRef = collection(db, 'dailyAchievements');
-
-                 // --- User Logs Listener ---
-                 console.log("Data Effect: Setting up user logs listener for competition:", activeCompetition.id);
-                 const userLogsQuery = query(
-                     achievementsRef,
-                     where('agentId', '==', currentUser.id),
-                     where('podId', '==', agentPodId),
-                     where('competitionId', '==', activeCompetition.id)
-                 );
-                 // Ensure previous listener is cleaned up before creating a new one
-                 if (unsubscribeUserLogs) unsubscribeUserLogs();
-                 unsubscribeUserLogs = onSnapshot(userLogsQuery, (snapshot) => {
-                     // Filter dates client-side for the competition duration
-                     const filteredLogs = snapshot.docs
-                         .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
-                         .filter(log => {
-                              if (!activeCompetition?.startDate || !activeCompetition?.endDate) return false; // Add null check
-                             const logDate = log.date.toDate();
-                             const compStart = activeCompetition.startDate.toDate();
-                             const compEnd = activeCompetition.endDate.toDate();
-                             return logDate >= compStart && logDate <= compEnd;
-                         });
-                     setDailyLogs(filteredLogs);
-                     console.log("Data Effect: User logs listener updated, found:", filteredLogs.length);
-                 }, (err) => { console.error("Error listening to user logs:", err); setError("Failed to load your scores."); });
+           // --- Clean up previous listeners before setting new ones ---
+           if (unsubscribeUserLogs) { console.log("Data Effect: Cleaning up old user logs listener"); unsubscribeUserLogs(); }
+           if (unsubscribePodLogs) { console.log("Data Effect: Cleaning up old pod logs listener"); unsubscribePodLogs(); }
+           if (unsubscribeTargets) { console.log("Data Effect: Cleaning up old targets listener"); unsubscribeTargets(); }
 
 
-                 // --- Pod Logs Listener ---
-                  console.log("Data Effect: Setting up pod logs listener for competition:", activeCompetition.id);
-                  const podLogsQuery = query(
-                     achievementsRef,
-                     where('podId', '==', agentPodId),
-                     where('competitionId', '==', activeCompetition.id)
-                     // Remove the date constraint for pod logs to simplify the query and avoid needing the index
-                 );
-                  // Ensure previous listener is cleaned up
-                 if (unsubscribePodLogs) unsubscribePodLogs();
-                 unsubscribePodLogs = onSnapshot(podLogsQuery, (snapshot) => {
-                      // Filter dates client-side for the competition duration
-                     const filteredLogs = snapshot.docs
-                         .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
-                         .filter(log => {
-                             if (!activeCompetition?.startDate || !activeCompetition?.endDate) return false; // Add null check
-                             const logDate = log.date.toDate();
-                             const compStart = activeCompetition.startDate.toDate();
-                             const compEnd = activeCompetition.endDate.toDate();
-                             return logDate >= compStart && logDate <= compEnd;
-                         });
-                     setPodLogs(filteredLogs);
-                     console.log("Data Effect: Pod logs listener updated, found:", filteredLogs.length);
-                 }, (err) => { console.error("Error listening to pod logs:", err); setError("Failed to load pod scores."); });
+           if (activeCompetition) {
+               console.log("Data Effect: Active competition confirmed:", activeCompetition.id);
+               setRules(activeCompetition.rules || []);
+               setTeams(activeCompetition.teams || []); // Update teams from competition data
+
+               // --- Set up listeners for logs and targets based on this active competition ---
+               const achievementsRef = collection(db, 'dailyAchievements');
+
+               // --- User Logs Listener ---
+               console.log("Data Effect: Setting up new user logs listener for competition:", activeCompetition.id);
+               const userLogsQuery = query(
+                   achievementsRef,
+                   where('agentId', '==', currentUser.id),
+                   where('podId', '==', agentPodId),
+                   where('competitionId', '==', activeCompetition.id)
+               );
+               unsubscribeUserLogs = onSnapshot(userLogsQuery, (snapshot) => {
+                   // Filter dates client-side for the competition duration
+                   const filteredLogs = snapshot.docs
+                       .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
+                       .filter(log => {
+                            if (!activeCompetition?.startDate || !activeCompetition?.endDate) return false; // Add null check
+                           const logDate = log.date.toDate();
+                           const compStart = activeCompetition.startDate.toDate();
+                           const compEnd = activeCompetition.endDate.toDate();
+                           return logDate >= compStart && logDate <= compEnd;
+                       });
+                   setDailyLogs(filteredLogs);
+                   console.log(`Data Effect: User logs listener updated, found ${filteredLogs.length} logs for competition.`);
+               }, (err) => { console.error("Error listening to user logs:", err); setError("Failed to load your scores."); });
 
 
-                 // --- Targets Listener ---
-                 const targetsDocId = `${activeCompetition.id}_${agentPodId}`;
-                 console.log("Data Effect: Setting up targets listener for doc:", targetsDocId);
-                 const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
-                  // Ensure previous listener is cleaned up
-                 if (unsubscribeTargets) unsubscribeTargets();
-                 unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
-                     setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
-                      console.log("Data Effect: Targets listener updated, found:", docSnap.exists());
-                 }, (err) => { console.error("Error listening to daily targets:", err); setError("Failed to load targets."); });
-
-                 // Clear non-user/KPI specific errors if data loading is successful
-                  const currentErrorIsUserOrKpiError = [
-                     "You are not currently assigned to a pod.",
-                     "Could not find your user profile.",
-                     "You must be logged in.",
-                     "Failed to load your profile information.",
-                     "Failed to load your KPIs.",
-                      "No KPIs found for your pod."
-                  ].includes(error || "");
-
-                  if (!currentErrorIsUserOrKpiError) {
-                      setError(null);
-                  }
-
-             } else {
-                 // No active competition found for today
-                  console.log("Data Effect: No active competition found.");
-                 setRules([]);
-                 setTeams([]);
-                 setDailyLogs([]);
-                 setPodLogs([]);
-                 setDailyTargets(null);
-                  toast({ variant: "default", title: "No Active Competition", description: "No competition running for your pod today." });
-             }
-              // Consider loading complete after the initial snapshot of the competition query
-              setIsLoadingData(false);
-              console.log("Data Effect: Data loading finished.");
-
-         }, (err) => {
-             console.error("Error listening to competitions:", err);
-             setError("Failed to load competition data.");
-             setIsLoadingData(false);
-         });
+               // --- Pod Logs Listener ---
+                console.log("Data Effect: Setting up new pod logs listener for competition:", activeCompetition.id);
+                const podLogsQuery = query(
+                   achievementsRef,
+                   where('podId', '==', agentPodId),
+                   where('competitionId', '==', activeCompetition.id)
+               );
+               unsubscribePodLogs = onSnapshot(podLogsQuery, (snapshot) => {
+                    // Filter dates client-side for the competition duration
+                   const filteredLogs = snapshot.docs
+                       .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
+                       .filter(log => {
+                           if (!activeCompetition?.startDate || !activeCompetition?.endDate) return false; // Add null check
+                           const logDate = log.date.toDate();
+                           const compStart = activeCompetition.startDate.toDate();
+                           const compEnd = activeCompetition.endDate.toDate();
+                           return logDate >= compStart && logDate <= compEnd;
+                       });
+                   setPodLogs(filteredLogs);
+                   console.log(`Data Effect: Pod logs listener updated, found ${filteredLogs.length} logs for competition.`);
+               }, (err) => { console.error("Error listening to pod logs:", err); setError("Failed to load pod scores."); });
 
 
+               // --- Targets Listener ---
+               const targetsDocId = `${activeCompetition.id}_${agentPodId}`;
+               console.log("Data Effect: Setting up new targets listener for doc:", targetsDocId);
+               const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
+               unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
+                   setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
+                    console.log("Data Effect: Targets listener updated, target doc exists:", docSnap.exists());
+               }, (err) => { console.error("Error listening to daily targets:", err); setError("Failed to load targets."); });
+
+               // Clear non-user/KPI specific errors if data loading is successful
+                const currentErrorIsUserOrKpiError = [
+                   "You are not currently assigned to a pod.",
+                   "Could not find your user profile.",
+                   "You must be logged in.",
+                   "Failed to load your profile information.",
+                   "Failed to load your KPIs.",
+                    "No KPIs found for your pod."
+                ].includes(error || "");
+
+                if (!currentErrorIsUserOrKpiError && error) {
+                     console.log("Data Effect: Clearing non-user/KPI error:", error);
+                     setError(null);
+                }
+
+           } else {
+               // No active competition found for today
+                console.log("Data Effect: No active competition found.");
+               setRules([]);
+               setTeams([]);
+               setDailyLogs([]);
+               setPodLogs([]);
+               setDailyTargets(null);
+                // Clear previous listeners if no competition active
+                if (unsubscribeUserLogs) { console.log("Data Effect: Cleaning up user logs listener (no active comp)"); unsubscribeUserLogs(); }
+                if (unsubscribePodLogs) { console.log("Data Effect: Cleaning up pod logs listener (no active comp)"); unsubscribePodLogs(); }
+                if (unsubscribeTargets) { console.log("Data Effect: Cleaning up targets listener (no active comp)"); unsubscribeTargets(); }
+
+                toast({ variant: "default", title: "No Active Competition", description: "No competition running for your pod today." });
+           }
+            // Consider loading complete after the initial snapshot of the competition query
+            setIsLoadingData(false);
+            console.log("Data Effect: Data loading state set to false.");
+
+       }, (err) => {
+           console.error("Error listening to competitions:", err);
+           setError("Failed to load competition data.");
+           setIsLoadingData(false);
+           // Clean up other listeners on competition error
+           if (unsubscribeUserLogs) unsubscribeUserLogs();
+           if (unsubscribePodLogs) unsubscribePodLogs();
+           if (unsubscribeTargets) unsubscribeTargets();
+           if (unsubscribeAgents) unsubscribeAgents();
+       });
     };
 
     fetchAndListen();
 
     // Cleanup function for ALL listeners
     return () => {
-      console.log("Data Effect: Cleaning up listeners.");
+      console.log("Data Effect: Cleaning up ALL listeners.");
       unsubscribeUserLogs();
       unsubscribePodLogs();
       unsubscribeTargets();
@@ -410,10 +423,10 @@ export default function AgentDashboardPage() {
 
   // 4. Process data (Scores, Leaderboards) - useMemo
   const { agentScore, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
-     console.log(`Memo: Calculating scores. Logs: ${dailyLogs.length}, Pod Logs: ${podLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}`);
+     console.log(`Memo triggered: Calculating scores/leaderboards. Daily Logs: ${dailyLogs.length}, Pod Logs: ${podLogs.length}, Agents: ${podAgents.length}, Teams: ${teams.length}`);
     // --- Calculate Agent's Score for Today ---
     let currentAgentScore: Omit<AgentScore, 'agentId' | 'agentFirstName'> = { totalPoints: 0, emojiString: '' };
-    if (currentUser) {
+    if (currentUser && rules.length > 0) {
         const todayTimestamp = startOfDay(new Date());
         // Filter logs based on today's date *client-side*
         const todayLogs = dailyLogs.filter(log => log.date.toDate() >= todayTimestamp); // Filter for today only
@@ -441,6 +454,7 @@ export default function AgentDashboardPage() {
          agentFirstName: currentUser.name.split(' ')[0] || currentUser.name,
          ...currentAgentScore
     } : null;
+     console.log("Memo: Calculated agent score for today:", finalAgentScore);
 
     // --- Calculate Pod Target Summary for Today ---
     const dayOfWeek = daysOfWeek[getDay(new Date())];
@@ -460,6 +474,8 @@ export default function AgentDashboardPage() {
         })
         .filter((item): item is PodTargetSummary => item !== null)
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
+     console.log("Memo: Calculated pod target summary for today:", finalPodTargetSummary);
+
 
      // --- Calculate Leaderboards (using all fetched podLogs for the competition duration) ---
      // Agent Leaderboard
@@ -470,6 +486,8 @@ export default function AgentDashboardPage() {
        .map(agent => ({ id: agent.id!, name: agent.name, totalPoints: agentScoresMap[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isCurrentUser: agent.id === currentUser?.id }))
        .sort((a, b) => b.totalPoints - a.totalPoints)
        .map((entry, index) => ({ ...entry, rank: index + 1 }));
+     console.log(`Memo: Calculated agent leaderboard (${finalAgentLeaderboard.length} entries):`, finalAgentLeaderboard);
+
 
      // Team Leaderboard
      const teamScoresMap: Record<string, number> = {};
@@ -479,12 +497,13 @@ export default function AgentDashboardPage() {
        .map(team => ({ id: team.id, name: team.name, totalPoints: teamScoresMap[team.id] || 0, isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || '') }))
        .sort((a, b) => b.totalPoints - a.totalPoints)
        .map((entry, index) => ({ ...entry, rank: index + 1 }));
+     console.log(`Memo: Calculated team leaderboard (${finalTeamLeaderboard.length} entries):`, finalTeamLeaderboard);
 
 
     return { agentScore: finalAgentScore, podTargetSummary: finalPodTargetSummary, agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
   }, [dailyLogs, podLogs, rules, dailyTargets, currentUser, podAgents, teams]); // Dependencies updated
 
-  const isLoading = isLoadingUser || isLoadingData; // Combined loading state
+  const isLoading = isLoadingUser || isLoadingData || kpisLoading; // Combined loading state
 
   return (
     <>
@@ -513,7 +532,7 @@ export default function AgentDashboardPage() {
           kpis.map((kpi, index) => (
             <KpiCard key={kpi.name || index} kpi={kpi} icon={kpiIcons[kpi.name]} />
           ))
-        ) : !kpisLoading && !error ? ( // Show only if not loading and no other error
+        ) : !kpisLoading && !error ? ( // Show only if not loading and no KPI-specific error
             <Card className="md:col-span-2 lg:col-span-3 shadow-md">
                  <CardContent className="pt-6 text-center text-muted-foreground">No KPIs found for your pod.</CardContent>
             </Card>
@@ -595,8 +614,17 @@ export default function AgentDashboardPage() {
                </>
            ) : (
                <>
-                  <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} description="Current Competition Ranking" />
-                  <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} description="Current Competition Ranking" />
+                  {/* Conditionally render Leaderboards only if data is available */}
+                  {teamLeaderboard.length > 0 ? (
+                      <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} description="Current Competition Ranking" />
+                  ) : !error ? (
+                     <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No team data available for the current competition.</CardContent></Card>
+                  ) : null}
+                   {agentLeaderboard.length > 0 ? (
+                       <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} description="Current Competition Ranking" />
+                   ) : !error ? (
+                     <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No agent data available for the current competition.</CardContent></Card>
+                   ) : null}
                </>
            )}
       </div>
