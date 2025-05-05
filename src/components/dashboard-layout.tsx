@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation'; // Keep usePathname
 import {
   SidebarProvider,
   Sidebar,
@@ -17,7 +17,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator, // Import Separator
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target } from 'lucide-react';
+import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare } from 'lucide-react'; // Added UserSquare for Agent View
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Corrected import
@@ -25,30 +25,21 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { app, db } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
-import type { AppUser, UserRole } from '@/services/user'; // Import UserRole
+import type { AppUser } from '@/services/user'; // Import UserRole
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitcher
+// Removed RoleSwitcher import
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  roles: UserRole[]; // Added roles prop
-  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop
-  onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
+  // Removed roles, currentLayout, onLayoutChange props
 }
 
-export function DashboardLayout({ children, roles, currentLayout, onLayoutChange }: DashboardLayoutProps) {
+export function DashboardLayout({ children }: DashboardLayoutProps) {
   const currentPath = usePathname();
   const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
-
-  // Log received props for debugging
-  useEffect(() => {
-    // Use console.log for client-side components
-    console.log("[DashboardLayout] Received props:", { roles, currentLayout });
-  }, [roles, currentLayout]);
-
 
   // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
@@ -209,6 +200,18 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
                  </Link>
               </SidebarMenuItem>
             </SidebarGroup>
+
+             {/* Agent View Link */}
+            <SidebarSeparator />
+            <SidebarMenuItem>
+                <Link href="/agent" passHref>
+                    <SidebarMenuButton tooltip="View Agent Dashboard" isActive={currentPath.startsWith('/agent')}>
+                        <UserSquare />
+                        <span>View Agent Dashboard</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
+
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
@@ -259,12 +262,7 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
               <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2> {/* TODO: Make dynamic */}
             </div>
             <div className="flex items-center gap-4">
-               {/* Pass props to RoleSwitcher - ensure roles are passed as an array */}
-               <RoleSwitcher
-                   availableRoles={roles || []} // Pass empty array if roles is undefined
-                   currentLayout={currentLayout ?? 'admin'} // Provide default if null
-                   onLayoutChange={onLayoutChange}
-               />
+               {/* Removed RoleSwitcher */}
                <ThemeToggle />
                  <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>

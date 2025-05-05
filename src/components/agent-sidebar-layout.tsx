@@ -22,29 +22,21 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { app, db } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
-import type { AppUser, UserRole } from '@/services/user'; // Import UserRole
+import type { AppUser } from '@/services/user'; // Import UserRole
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitcher
+// Removed RoleSwitcher import
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
-  roles: UserRole[]; // Added roles prop
-  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop
-  onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
+  // Removed roles, currentLayout, onLayoutChange props
 }
 
-export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutChange }: AgentSidebarLayoutProps) {
+export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
   const currentPath = usePathname();
-  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+    const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
-
-  // Log received props for debugging
-  useEffect(() => {
-    // Use console.log for client-side components
-    console.log("[AgentSidebarLayout] Received props:", { roles, currentLayout });
-  }, [roles, currentLayout]);
 
   // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
@@ -115,17 +107,6 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-             {/* Log Achievements Link - Removed */}
-             {/*
-             <SidebarMenuItem>
-              <Link href="/agent/log-achievements" passHref>
-                <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/agent/log-achievements'}>
-                  <CheckSquare />
-                  <span>Log Achievements</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-             */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
@@ -176,12 +157,7 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
               <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2> {/* Changed title */}
             </div>
             <div className="flex items-center gap-4">
-               {/* Pass props to RoleSwitcher - ensure roles are passed as an array */}
-               <RoleSwitcher
-                   availableRoles={roles || []} // Pass empty array if roles is undefined
-                   currentLayout={currentLayout ?? 'agent'} // Provide default if null
-                   onLayoutChange={onLayoutChange}
-               />
+               {/* Removed RoleSwitcher */}
                <ThemeToggle />
                <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>

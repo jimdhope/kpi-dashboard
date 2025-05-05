@@ -98,37 +98,7 @@ export default function ProfileLayout({
           router.push('/login'); // Redirect if no suitable role found
           return; // Stop further processing
         }
-
-        // Read preferred layout from localStorage
-        let preferredLayout: 'admin' | 'agent' | null = null;
-        try {
-           preferredLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
-        } catch (e) {
-           console.warn("[ProfileLayout] Could not access localStorage.");
-        }
-
-        // Check if preferred layout is valid for the user's roles
-        const canSeeAdmin = rolesToSet.includes('admin') || rolesToSet.includes('podManager') || rolesToSet.includes('teamLeader');
-        const canSeeAgent = rolesToSet.includes('agent');
-        let finalLayout = defaultLayout; // Start with role-based default
-
-        if (preferredLayout === 'admin' && canSeeAdmin) {
-           finalLayout = 'admin';
-        } else if (preferredLayout === 'agent' && canSeeAgent) {
-            finalLayout = 'agent';
-        }
-
-        console.log(`[ProfileLayout] Setting final layout type to: ${finalLayout}`);
-        setLayoutType(finalLayout);
-
-         // Persist the *final* layout choice back to localStorage
-         try {
-             if (finalLayout) { // Only save if a layout was determined
-               localStorage.setItem('preferredLayout', finalLayout);
-             }
-         } catch (e) {
-             console.warn("[ProfileLayout] Could not save preferredLayout to localStorage");
-         }
+        setLayoutType(defaultLayout); // Set the layout based solely on roles
 
       } else {
         // No user logged in
@@ -151,36 +121,10 @@ export default function ProfileLayout({
     }
   }, [router, determineInitialLayout]); // Dependencies
 
-  // Handler for layout change triggered by RoleSwitcher
-  const handleLayoutChange = useCallback((newLayout: 'admin' | 'agent') => {
-     // Ensure user has the role for the requested layout change
-     const currentRoles = roles || []; // Use empty array if roles is null
-     const canChangeToAdmin = currentRoles.some(r => ['admin', 'podManager', 'teamLeader'].includes(r));
-     const canChangeToAgent = currentRoles.includes('agent');
-
-     if ((newLayout === 'admin' && !canChangeToAdmin) || (newLayout === 'agent' && !canChangeToAgent)) {
-        console.warn(`[ProfileLayout] Attempted to switch to invalid layout '${newLayout}' for roles: ${currentRoles.join(', ')}`);
-        return; // Do nothing if the change is invalid
-     }
-
-    setLayoutType(newLayout);
-     try {
-       localStorage.setItem('preferredLayout', newLayout);
-       console.log(`[ProfileLayout] Layout changed to: ${newLayout} and persisted.`);
-     } catch (e) {
-       console.warn("[ProfileLayout] Could not save preferredLayout to localStorage");
-     }
-  }, [roles]); // Depend on roles to ensure validity check is current
-
 
   // Combine roles and layoutType into props object *after* state updates
-  const layoutProps = {
-    roles: roles || [], // Pass empty array if roles is null/undefined
-    currentLayout: layoutType,
-    onLayoutChange: handleLayoutChange,
-  };
-  console.log("[ProfileLayout] Preparing to render layout with props:", layoutProps);
-
+  // Removed props for role switcher
+  console.log("[ProfileLayout] Preparing to render layout...");
 
   // Render loading state until auth is checked and layout determined
    if (isLoading || !authChecked) {
@@ -212,10 +156,10 @@ export default function ProfileLayout({
   // Render based on layoutType
   if (layoutType === 'admin') {
     console.log("[ProfileLayout] Rendering DashboardLayout...");
-    return <DashboardLayout {...layoutProps}>{children}</DashboardLayout>;
+    return <DashboardLayout>{children}</DashboardLayout>;
   } else if (layoutType === 'agent') {
     console.log("[ProfileLayout] Rendering AgentSidebarLayout...");
-    return <AgentSidebarLayout {...layoutProps}>{children}</AgentSidebarLayout>;
+    return <AgentSidebarLayout>{children}</AgentSidebarLayout>;
   } else {
     // Fallback if layoutType is null (e.g., during redirect or if no suitable layout found)
     console.log("[ProfileLayout] Rendering null because layoutType is null (likely redirecting or no suitable role).");
