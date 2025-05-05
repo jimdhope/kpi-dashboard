@@ -35,7 +35,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // Ensure TooltipProvider is imported
+} from "@/components/ui/tooltip"; // Correct import path
 
 
 // Interface for daily achievement logs (same as before)
@@ -55,7 +55,7 @@ interface DailyAchievementLog {
 
 // Interface for leaderboard entries - Added agentFirstNames
 interface LeaderboardEntry {
-  id: string; // Can be agentId or teamId
+  id: string; // Can be agentId or teamId or podId
   name: string;
   totalPoints: number;
   rank?: number;
@@ -270,7 +270,6 @@ export default function AdminLeaderboardPage() {
               avatarBgColor: agent.avatarBgColor,
               isCurrentUser: agent.id === auth.currentUser?.uid, // Add if needed later
           }))
-           // Removed filter for totalPoints > 0
           .sort((a, b) => b.totalPoints - a.totalPoints)
           .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -308,7 +307,6 @@ export default function AdminLeaderboardPage() {
                    isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''), // Add if needed later
                };
            })
-            // Removed filter for totalPoints > 0
            .sort((a, b) => b.totalPoints - a.totalPoints)
            .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -508,10 +506,17 @@ export default function AdminLeaderboardPage() {
                                           </div>
                                            {/* Display agent first names */}
                                            {entry.agentFirstNames && entry.agentFirstNames.length > 0 && (
-                                               {/* Ensure list text color contrasts with rank background (adjust opacity) */}
-                                              <span className={cn("text-xs", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
-                                                  {entry.agentFirstNames.join(', ')}
-                                              </span>
+                                               <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        {/* Ensure list text color contrasts with rank background (adjust opacity) */}
+                                                        <span className={cn("text-xs cursor-help", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
+                                                            {entry.agentFirstNames.join(', ')}
+                                                        </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Team Members: {entry.agentFirstNames.join(', ')}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                            )}
                                       </div>
                                   </TableCell>
@@ -534,3 +539,4 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
+
