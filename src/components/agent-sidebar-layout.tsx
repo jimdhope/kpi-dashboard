@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -112,15 +111,6 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
                 <SidebarMenuButton tooltip="Dashboard" isActive={currentPath === '/agent'}>
                   <Home />
                   <span>My Dashboard</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-             {/* Re-added Log Achievements link for Agents, pointing to the correct page */}
-             <SidebarMenuItem>
-              <Link href="/agent/achievements" passHref>
-                <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/agent/achievements'}>
-                  <CheckSquare />
-                  <span>Log Achievements</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>

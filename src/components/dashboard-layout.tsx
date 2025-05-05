@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -46,8 +45,10 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
 
   // Log received props for debugging
   useEffect(() => {
+    // Use console.log for client-side components
     console.log("[DashboardLayout] Received props:", { roles, currentLayout });
   }, [roles, currentLayout]);
+
 
   // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {

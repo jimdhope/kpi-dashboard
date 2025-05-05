@@ -52,57 +52,66 @@ export default function ProfileLayout({
       setIsLoading(true); // Start loading on auth change
       if (currentUser) {
         const fetchedRoles = await fetchUserRoles(currentUser.uid);
-        setRoles(fetchedRoles);
-        console.log("[ProfileLayout] Fetched roles:", fetchedRoles); // Log fetched roles
+        console.log("[ProfileLayout] Fetched roles inside useEffect:", fetchedRoles); // Log fetched roles
+        setRoles(fetchedRoles); // Set roles state
+
         if (fetchedRoles === null || fetchedRoles.length === 0) {
           console.warn("User has no roles or roles couldn't be fetched. Redirecting to login.");
+          setLayoutType(null); // Ensure layoutType is null if no roles
           router.push('/login'); // Redirect if no roles found
-        } else {
-          // Determine initial layout based on fetched roles
-          const initialLayout = determineInitialLayout(fetchedRoles);
-          console.log("[ProfileLayout] Initial layout determined:", initialLayout); // Log initial layout
-          if (initialLayout) {
-             // Check localStorage for persisted preference, otherwise use determined initial
-            let preferredLayout: 'admin' | 'agent' | null = null;
-            try {
-              preferredLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
-            } catch (e) {
-              console.warn("Could not access localStorage for preferredLayout");
-            }
-
-             // Only apply persisted layout if it's valid for the user's roles
-             // Check if the required role for the persisted layout exists in fetchedRoles
-            const requiredRoleForPersisted = preferredLayout === 'admin' ? ['admin', 'podManager', 'teamLeader'] : ['agent'];
-            const hasRequiredRole = fetchedRoles.some(role => requiredRoleForPersisted.includes(role));
-
-            if (preferredLayout && hasRequiredRole) {
-                 setLayoutType(preferredLayout);
-                 console.log(`[ProfileLayout] Set layout from localStorage: ${preferredLayout}`);
-             } else {
-                 setLayoutType(initialLayout);
-                 try {
-                   localStorage.setItem('preferredLayout', initialLayout); // Persist the initial layout if preference is invalid or not set
-                 } catch (e) {
-                   console.warn("Could not save preferredLayout to localStorage");
-                 }
-                 console.log(`[ProfileLayout] Set initial layout: ${initialLayout}`);
-             }
-
-          } else {
-            console.error("User logged in but has no recognized role for layout. Redirecting.");
-            router.push('/login'); // Redirect if no suitable role found
-          }
+          setIsLoading(false); // Stop loading after potential redirect
+          return; // Exit early
         }
+
+        // Determine initial layout based on fetched roles
+        const initialLayout = determineInitialLayout(fetchedRoles);
+        console.log("[ProfileLayout] Initial layout determined inside useEffect:", initialLayout); // Log initial layout
+
+        if (initialLayout) {
+          // Check localStorage for persisted preference, otherwise use determined initial
+          let preferredLayout: 'admin' | 'agent' | null = null;
+          try {
+            preferredLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
+          } catch (e) {
+            console.warn("Could not access localStorage for preferredLayout");
+          }
+
+          // Only apply persisted layout if it's valid for the user's roles
+          const requiredRoleForPersisted = preferredLayout === 'admin' ? ['admin', 'podManager', 'teamLeader'] : ['agent'];
+          const hasRequiredRole = fetchedRoles.some(role => requiredRoleForPersisted.includes(role));
+
+          let finalLayout: 'admin' | 'agent';
+          if (preferredLayout && hasRequiredRole) {
+            finalLayout = preferredLayout;
+            console.log(`[ProfileLayout] Setting layout from localStorage: ${finalLayout}`);
+          } else {
+            finalLayout = initialLayout;
+            try {
+              localStorage.setItem('preferredLayout', finalLayout); // Persist the initial layout if preference is invalid or not set
+            } catch (e) {
+              console.warn("Could not save preferredLayout to localStorage");
+            }
+            console.log(`[ProfileLayout] Setting initial layout: ${finalLayout}`);
+          }
+          setLayoutType(finalLayout); // Set layoutType state
+        } else {
+          console.error("User logged in but has no recognized role for layout. Redirecting.");
+          setLayoutType(null); // Ensure layoutType is null
+          router.push('/login'); // Redirect if no suitable role found
+        }
+
       } else {
         // No user logged in, redirect to login
         console.log("[ProfileLayout] No user logged in, redirecting.");
+        setRoles(null); // Clear roles
+        setLayoutType(null); // Clear layoutType
         router.push('/login');
       }
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading after processing
     });
 
     return () => unsubscribe();
-  }, [router, determineInitialLayout]);
+  }, [router, determineInitialLayout]); // Add determineInitialLayout to dependencies
 
   const handleLayoutChange = useCallback((newLayout: 'admin' | 'agent') => {
     setLayoutType(newLayout);
@@ -133,7 +142,7 @@ export default function ProfileLayout({
   // Ensure roles defaults to an empty array if null or undefined
   const layoutProps = {
     roles: roles || [], // Ensure roles is always an array
-    currentLayout: layoutType,
+    currentLayout: layoutType, // Pass the state variable
     onLayoutChange: handleLayoutChange,
   };
 
@@ -147,7 +156,7 @@ export default function ProfileLayout({
     return <AgentSidebarLayout {...layoutProps}>{children}</AgentSidebarLayout>;
   } else {
     // Fallback or error state - should ideally be handled by redirects
-    console.error("[ProfileLayout] No valid layout type determined.");
-    return <div>Error: Could not determine appropriate layout.</div>;
+    console.error("[ProfileLayout] No valid layout type determined. This should not happen.");
+    return <div>Error: Could not determine appropriate layout. Check console logs.</div>;
   }
 }
