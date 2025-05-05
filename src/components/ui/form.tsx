@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -44,13 +45,19 @@ const FormField = <
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
-  const { getFieldState, formState } = useFormContext()
+  const form = useFormContext() // Get the whole context first
+
+  // Check if form context exists before destructuring
+  if (!form || !fieldContext) {
+      if (!fieldContext) {
+           throw new Error("useFormField should be used within <FormField>")
+       }
+       // If FormProvider is missing, useFormContext returns null/undefined
+        throw new Error("useFormField should be used within a FormProvider component")
+   }
+  const { getFieldState, formState } = form; // Destructure after check
 
   const fieldState = getFieldState(fieldContext.name, formState)
-
-  if (!fieldContext) {
-    throw new Error("useFormField should be used within <FormField>")
-  }
 
   const { id } = itemContext
 

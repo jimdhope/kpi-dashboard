@@ -13,7 +13,8 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'; // Added Calendar
 import { Button } from '@/components/ui/button'; // Added Button
 import { Label } from '@/components/ui/label'; // Added Label
-import { FormDescription } from '@/components/ui/form'; // Added FormDescription import
+import { FormDescription, Form } from '@/components/ui/form'; // Added Form import
+import { useForm } from 'react-hook-form'; // Import useForm
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'; // Date functions
 import { cn } from '@/lib/utils'; // For conditional classes
 import type { AppUser } from '@/services/user';
@@ -96,6 +97,9 @@ export default function AdminDashboardPage() {
 
   const [isLoadingData, setIsLoadingData] = useState(true); // Loading state for leaderboards/summary
 
+  // Initialize react-hook-form - needed for FormDescription context
+   const form = useForm(); // Minimal form setup
+
   // --- Data Fetching ---
 
   // Fetch Stats Data (remains largely the same, uses onSnapshot now)
@@ -137,8 +141,10 @@ export default function AdminDashboardPage() {
              setAllCompetitions(fetchedCompetitions); // Store all competitions
 
              const activeCompetitions = fetchedCompetitions.filter(comp =>
-                comp.startDate.toDate() <= now.toDate() && comp.endDate.toDate() >= now.toDate()
-            ).length;
+                 // Ensure start and end dates exist before comparing
+                 comp.startDate && comp.endDate &&
+                 comp.startDate.toDate() <= now.toDate() && comp.endDate.toDate() >= now.toDate()
+             ).length;
             setStats(prev => ({ ...prev, activeCompetitions }));
              setIsLoadingStats(false); // Mark stats as loaded after competitions
              setError(null);
@@ -279,7 +285,6 @@ export default function AdminDashboardPage() {
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
             }))
-             // Show all agents regardless of score
             .sort((a, b) => b.score - a.score) // Sort by score
             .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -298,7 +303,6 @@ export default function AdminDashboardPage() {
         });
 
         const finalPodLeaderboard: LeaderboardEntry[] = Object.values(podScores)
-             // Show all pods regardless of score
             .sort((a, b) => b.score - a.score) // Sort by score
              .map((entry, index) => {
                 const podData = allPods.find(p => p.id === entry.id); // Get full pod data for avatar
@@ -347,7 +351,8 @@ export default function AdminDashboardPage() {
 
 
   const isLoading = isLoadingStats || isLoadingData;
-  const displayDate = selectedDate || new Date(); // Use selected date or today for display
+  const displayDate = selectedDate || startOfDay(new Date()); // Use selected date or today for display
+
 
   return (
     <>
@@ -366,56 +371,57 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Timeframe Selection */}
-       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Leaderboard & Summary Timeframe</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4 items-end">
-             <div className="grid gap-1.5">
-              <Label htmlFor="timeframe-select">Select Period</Label>
-              <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
-                <SelectTrigger id="timeframe-select" className="w-[180px]">
-                  <SelectValue placeholder="Select Timeframe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Today / Selected Day</SelectItem> {/* Clarified label */}
-                  <SelectItem value="weekly">This Week / Selected Week</SelectItem>
-                  <SelectItem value="monthly">This Month / Selected Month</SelectItem>
-                  <SelectItem value="allTime">All Time</SelectItem>
-                   {/* <SelectItem value="custom">Custom</SelectItem> */}
-                </SelectContent>
-              </Select>
-            </div>
-             {/* Date Picker - always available for timeframe context */}
-            <div className="grid gap-1.5">
-                <Label htmlFor="date-select">Reference Date</Label>
-                 <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            id="date-select"
-                            variant={"outline"}
-                            className={cn("w-[240px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                            disabled={isLoading || timeframe === 'allTime'} // Disable for 'allTime'
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {displayDate ? format(displayDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-50"> {/* Added z-50 */}
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate} // Bind to selectedDate state
-                            onSelect={(date) => setSelectedDate(date ? startOfDay(date) : undefined)} // Update selectedDate state
-                            initialFocus
-                            disabled={timeframe === 'allTime'}
-                        />
-                    </PopoverContent>
-                 </Popover>
-                 <FormDescription>Used to determine the week/month for filtering.</FormDescription>
-              </div>
-             {/* TODO: Add Custom Date Range Pickers if 'custom' timeframe is enabled */}
-        </CardContent>
-      </Card>
+      {/* Wrap controls in Form Provider */}
+      <Form {...form}>
+        <Card className="mb-6">
+            <CardHeader>
+            <CardTitle>Leaderboard & Summary Timeframe</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-4 items-end">
+                <div className="grid gap-1.5">
+                <Label htmlFor="timeframe-select">Select Period</Label>
+                <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
+                    <SelectTrigger id="timeframe-select" className="w-[180px]">
+                    <SelectValue placeholder="Select Timeframe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="daily">Today / Selected Day</SelectItem>
+                    <SelectItem value="weekly">This Week / Selected Week</SelectItem>
+                    <SelectItem value="monthly">This Month / Selected Month</SelectItem>
+                    <SelectItem value="allTime">All Time</SelectItem>
+                    </SelectContent>
+                </Select>
+                </div>
+                {/* Date Picker - always available for timeframe context */}
+                <div className="grid gap-1.5">
+                    <Label htmlFor="date-select">Reference Date</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                id="date-select"
+                                variant={"outline"}
+                                className={cn("w-[240px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                                disabled={isLoading || timeframe === 'allTime'} // Disable for 'allTime'
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {displayDate ? format(displayDate, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-50">
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate} // Bind to selectedDate state
+                                onSelect={(date) => setSelectedDate(date ? startOfDay(date) : undefined)} // Update selectedDate state
+                                initialFocus
+                                disabled={timeframe === 'allTime'}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <FormDescription>Used to determine the week/month for filtering.</FormDescription>
+                </div>
+            </CardContent>
+        </Card>
+      </Form>
 
 
        {/* Leaderboards and Achievement Summary */}
@@ -487,3 +493,4 @@ export default function AdminDashboardPage() {
     </>
   );
 }
+
