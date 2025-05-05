@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -260,18 +259,17 @@ export default function AgentDashboardPage() {
         listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => {
             if (!isMounted) return;
             const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-             // Functional update to compare agent lists properly
+
+             // Compare IDs before setting state to prevent unnecessary re-renders
              setPodAgents(currentAgents => {
-                // Convert agent arrays to sorted ID strings for comparison
-                const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
-                const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
-                // Only update state if the list of agents has actually changed
-                if (currentAgentIds !== fetchedAgentIds) {
-                    console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
-                    return fetchedAgents;
-                }
-                return currentAgents; // Return the existing state if no change
-            });
+                 const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
+                 const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
+                 if (currentAgentIds !== fetchedAgentIds) {
+                      console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
+                      return fetchedAgents;
+                 }
+                 return currentAgents; // Return the existing state if no change
+             });
         }, (err) => {
             if (isMounted) {
                 console.error("[AgentDashboard] Error listening to pod agents:", err);
@@ -738,9 +736,9 @@ export default function AgentDashboardPage() {
 
 
       {/* Scores and Targets Section */}
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-          {/* Your Scores Card */}
-           <Card className="shadow-md lg:col-span-2">
+      <div className="grid gap-6 md:grid-cols-2"> {/* Adjusted grid layout */}
+           {/* Your Scores Card */}
+           <Card className="shadow-md"> {/* Removed explicit col span */}
              <CardHeader>
                <CardTitle className="flex items-center gap-2"> <ListChecks className="h-5 w-5"/> Your Scores</CardTitle>
                 <CardDescription>Achievements logged for the entire competition period.</CardDescription>
@@ -783,7 +781,7 @@ export default function AgentDashboardPage() {
            </Card>
 
            {/* Pod Target Summary Card */}
-           <Card className="shadow-md">
+           <Card className="shadow-md"> {/* Removed explicit col span */}
               <CardHeader>
                    <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle>
                    <CardDescription>Your pod's progress towards today's targets.</CardDescription>
