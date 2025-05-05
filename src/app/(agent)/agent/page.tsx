@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -95,30 +94,30 @@ export default function AgentDashboardPage() {
   const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null); // Store active competition
 
   // New State for Achievement Logging (moved from achievements page)
-  // REMOVED: const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [achievementInputs, setAchievementInputs] = useState<AgentAchievementInputState>({});
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
 
   // Listeners declared outside useEffect to be accessible in cleanup
-  let unsubscribeAgents: Unsubscribe = () => {};
+  let unsubscribeAgents: Unsubscribe | null = null;
   let unsubscribeCompetition: Unsubscribe | null = null;
-  let unsubscribeUserLogs: Unsubscribe = () => {};
-  let unsubscribePodLogs: Unsubscribe = () => {};
-  let unsubscribeTargets: Unsubscribe = () => {};
-  let unsubscribeDailyAchievements: Unsubscribe = () => {};
+  let unsubscribeUserLogs: Unsubscribe | null = null;
+  let unsubscribePodLogs: Unsubscribe | null = null;
+  let unsubscribeTargets: Unsubscribe | null = null;
+  let unsubscribeDailyAchievements: Unsubscribe | null = null;
 
 
   // 1. Get current user and their pod ID (using onSnapshot for real-time updates)
   useEffect(() => {
     setIsLoadingUser(true);
     console.log("[AgentDashboard] Setting up auth listener...");
-    let unsubscribeUserDoc: Unsubscribe = () => {}; // Declare outside the callback
+    let unsubscribeUserDoc: Unsubscribe | null = null; // Declare outside the callback
 
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       // Cleanup previous user doc listener if exists
-      if (typeof unsubscribeUserDoc === 'function') {
+      if (unsubscribeUserDoc) {
         console.log("[AgentDashboard] Cleaning up previous user doc listener.");
         unsubscribeUserDoc();
+        unsubscribeUserDoc = null; // Reset it
       }
 
       if (user) {
@@ -167,13 +166,14 @@ export default function AgentDashboardPage() {
     });
     return () => {
          console.log("[AgentDashboard] Cleaning up auth listener.");
-         if (typeof unsubscribeUserDoc === 'function') {
+         if (unsubscribeUserDoc) {
             console.log("[AgentDashboard] Cleaning up final user doc listener.");
             unsubscribeUserDoc();
         }
         unsubscribeAuth();
     }
-  }, [agentPodId, isLoadingUser]); // Adjusted dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on initial mount
 
 
   // Function to fetch and listen to daily achievements for the CURRENT date
@@ -231,10 +231,17 @@ export default function AgentDashboardPage() {
     if (!agentPodId || !currentUser?.id || isLoadingUser) {
         console.log("[AgentDashboard] Data Effect: Skipping/Cleaning up, prerequisites not met.");
         // Clean up listeners if context is lost mid-run
+        if (unsubscribeAgents) unsubscribeAgents();
         if (unsubscribeUserLogs) unsubscribeUserLogs();
         if (unsubscribePodLogs) unsubscribePodLogs();
         if (unsubscribeTargets) unsubscribeTargets();
         if (unsubscribeDailyAchievements) unsubscribeDailyAchievements();
+        unsubscribeAgents = null;
+        unsubscribeCompetition = null;
+        unsubscribeUserLogs = null;
+        unsubscribePodLogs = null;
+        unsubscribeTargets = null;
+        unsubscribeDailyAchievements = null;
         // Reset states if prerequisites are not met after initial load
         if (!isLoadingUser) {
             setIsLoadingData(false);
@@ -264,9 +271,10 @@ export default function AgentDashboardPage() {
 
     unsubscribeAgents = onSnapshot(agentsQuery, (agentsSnapshot) => {
          if (!isMounted) return; // Check if component is still mounted
+
          const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
 
-         // Compare IDs before setting state to prevent unnecessary re-renders
+          // Compare IDs before setting state to prevent unnecessary re-renders
          setPodAgents(currentAgents => {
              const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
              const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
@@ -318,10 +326,10 @@ export default function AgentDashboardPage() {
          if (foundActiveCompetition?.id !== currentActiveComp?.id) {
              console.log(`[AgentDashboard] Active competition changed from ${currentActiveComp?.id ?? 'None'} to: ${foundActiveCompetition?.id ?? 'None'}`);
              // Cleanup old listeners before setting up new ones
-             if (unsubscribeUserLogs) { console.log("[AgentDashboard] Data Effect: Cleaning up old user logs listener"); unsubscribeUserLogs(); }
-             if (unsubscribePodLogs) { console.log("[AgentDashboard] Data Effect: Cleaning up old pod logs listener"); unsubscribePodLogs(); }
-             if (unsubscribeTargets) { console.log("[AgentDashboard] Data Effect: Cleaning up old targets listener"); unsubscribeTargets(); }
-             if (unsubscribeDailyAchievements) { console.log("[AgentDashboard] Data Effect: Cleaning up old daily achievements listener"); unsubscribeDailyAchievements(); }
+             if (unsubscribeUserLogs) { console.log("[AgentDashboard] Data Effect: Cleaning up old user logs listener"); unsubscribeUserLogs(); unsubscribeUserLogs = null; }
+             if (unsubscribePodLogs) { console.log("[AgentDashboard] Data Effect: Cleaning up old pod logs listener"); unsubscribePodLogs(); unsubscribePodLogs = null; }
+             if (unsubscribeTargets) { console.log("[AgentDashboard] Data Effect: Cleaning up old targets listener"); unsubscribeTargets(); unsubscribeTargets = null; }
+             if (unsubscribeDailyAchievements) { console.log("[AgentDashboard] Data Effect: Cleaning up old daily achievements listener"); unsubscribeDailyAchievements(); unsubscribeDailyAchievements = null;}
 
               if (foundActiveCompetition) {
                  const activeCompId = foundActiveCompetition.id;
@@ -339,7 +347,7 @@ export default function AgentDashboardPage() {
                   const userLogsQuery = query(
                     achievementsRef,
                     where('agentId', '==', currentUser.id),
-                    where('podId', '==', agentPodId),
+                    where('podId', '==', agentPodId!), // Add non-null assertion as it's checked above
                     where('competitionId', '==', activeCompId),
                      where('date', '>=', compStartDate) // Filter from competition start
                      // No end date filter needed here if we only care about active comp
@@ -356,7 +364,7 @@ export default function AgentDashboardPage() {
                  console.log("[AgentDashboard] Data Effect: Setting up pod logs listener for competition:", activeCompId);
                  const podLogsQuery = query(
                     achievementsRef,
-                    where('podId', '==', agentPodId),
+                    where('podId', '==', agentPodId!), // Add non-null assertion
                     where('competitionId', '==', activeCompId),
                      where('date', '>=', compStartDate) // Filter from competition start
                      // No end date filter needed
@@ -416,24 +424,36 @@ export default function AgentDashboardPage() {
       setError("Failed to load competition data.");
       setIsLoadingData(false);
       // Ensure all listeners are cleaned up on error
-      unsubscribeAgents();
+      if (unsubscribeAgents) unsubscribeAgents();
       if (unsubscribeCompetition) unsubscribeCompetition();
       if (unsubscribeUserLogs) unsubscribeUserLogs();
       if (unsubscribePodLogs) unsubscribePodLogs();
       if (unsubscribeTargets) unsubscribeTargets();
       if (unsubscribeDailyAchievements) unsubscribeDailyAchievements();
+        unsubscribeAgents = null;
+        unsubscribeCompetition = null;
+        unsubscribeUserLogs = null;
+        unsubscribePodLogs = null;
+        unsubscribeTargets = null;
+        unsubscribeDailyAchievements = null;
     });
 
     // Cleanup function
     return () => {
       isMounted = false; // Mark as unmounted
       console.log("[AgentDashboard] Data Effect: Cleaning up ALL listeners.");
-      unsubscribeAgents();
+      if (unsubscribeAgents) unsubscribeAgents();
       if (unsubscribeCompetition) unsubscribeCompetition();
       if (unsubscribeUserLogs) unsubscribeUserLogs();
       if (unsubscribePodLogs) unsubscribePodLogs();
       if (unsubscribeTargets) unsubscribeTargets();
       if (unsubscribeDailyAchievements) unsubscribeDailyAchievements();
+       unsubscribeAgents = null;
+        unsubscribeCompetition = null;
+        unsubscribeUserLogs = null;
+        unsubscribePodLogs = null;
+        unsubscribeTargets = null;
+        unsubscribeDailyAchievements = null;
     };
      // Dependencies: Re-run when user/pod context changes
   }, [agentPodId, currentUser?.id, isLoadingUser, fetchAndListenDailyAchievements]); // Pass fetchAndListen as dependency
@@ -492,7 +512,8 @@ export default function AgentDashboardPage() {
           });
       }
        const finalAgentTodayAchievements = Array.from(todayAchievementsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-      console.log("[AgentDashboard] Memo: Calculated agent score for today:", { totalPoints: todayTotalPoints, achievements: finalAgentTodayAchievements });
+       const finalAgentAchievementsToday : AgentScore = { totalPoints: todayTotalPoints, achievements: finalAgentTodayAchievements };
+      console.log("[AgentDashboard] Memo: Calculated agent score for today:", finalAgentAchievementsToday);
 
 
     // --- Calculate Pod Target Summary for Today ---
@@ -575,11 +596,12 @@ export default function AgentDashboardPage() {
 
     return {
         agentAchievements: { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievements },
-        agentAchievementsToday: { totalPoints: todayTotalPoints, achievements: finalAgentTodayAchievements }, // Use calculated today's achievements
+        agentAchievementsToday: finalAgentAchievementsToday, // Use calculated today's achievements
         podTargetSummary: finalPodTargetSummary,
         agentLeaderboard: finalAgentLeaderboard,
         teamLeaderboard: finalTeamLeaderboard
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dailyLogs, podLogs, rules, dailyTargets, currentUser, podAgents, teams]); // Use current date directly, no selectedDate
 
 
@@ -592,6 +614,7 @@ export default function AgentDashboardPage() {
       [ruleId]: { ...prev[ruleId], value: newValue },
     }));
     debouncedSave(ruleId, newValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [achievementInputs]); // Depend on achievementInputs to get the latest existingLogId
 
   const debounce = (func: Function, delay: number) => {
@@ -677,7 +700,7 @@ export default function AgentDashboardPage() {
 
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
      // eslint-disable-next-line react-hooks/exhaustive-deps
-     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs] // Dependencies updated, removed selectedDate
+     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs] // Dependencies updated
    );
 
 
@@ -696,9 +719,8 @@ export default function AgentDashboardPage() {
         {/* Log Achievements Section */}
         <Card>
             <CardHeader>
-                <CardTitle>Today's Achievements</CardTitle> {/* Updated Title */}
+                <CardTitle>Today's Achievements</CardTitle>
                 <CardDescription>Use the buttons to log your achievements for today.</CardDescription>
-                 {/* Date Picker Removed */}
             </CardHeader>
             <CardContent>
                 {isLoading ? (
@@ -834,8 +856,8 @@ export default function AgentDashboardPage() {
                                </div>
                            ))}
                        </div>
-                   ) : !error && !isLoading ? (
-                       <p className="text-muted-foreground">No targets set for your pod today.</p>
+                   ) : !error && !isLoading && activeCompetition ? ( // Show only if there's an active competition but no targets
+                       <p className="text-muted-foreground text-sm">No targets set for your pod today.</p>
                    ) : null }
                </CardContent>
             </Card>
@@ -853,14 +875,20 @@ export default function AgentDashboardPage() {
                <>
                   {teamLeaderboard.length > 0 ? (
                       <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} description="Current Competition Ranking" />
-                  ) : !error && !isLoading && rules.length > 0 ? (
-                     <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No team data available for the current competition.</CardContent></Card>
+                  ) : !error && !isLoading && activeCompetition && teams.length > 0 ? ( // Show only if teams exist but no scores yet
+                     <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No team data available yet for the current competition.</CardContent></Card>
+                  ) : !error && !isLoading && activeCompetition && teams.length === 0 ? ( // Show if no teams defined
+                      <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No teams defined for the current competition.</CardContent></Card>
                   ) : null}
+
                    {agentLeaderboard.length > 0 ? (
                        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} description="Current Competition Ranking" />
-                   ) : !error && !isLoading && rules.length > 0 ? (
-                     <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No agent data available for the current competition.</CardContent></Card>
-                   ) : null}
+                   ) : !error && !isLoading && activeCompetition && podAgents.length > 0 ? ( // Show only if agents exist but no scores yet
+                     <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No agent data available yet for the current competition.</CardContent></Card>
+                   ) : !error && !isLoading && activeCompetition && podAgents.length === 0 ? ( // Show if no agents in pod
+                       <Card className="h-[400px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No agents found in your pod for this competition.</CardContent></Card>
+                  ) : null}
+
                     {error === "No active competition found for your pod today." && (
                          <Card className="md:col-span-2 h-[100px] flex items-center justify-center shadow-md"><CardContent className="text-muted-foreground text-center">No competition is currently active for your pod.</CardContent></Card>
                     )}
