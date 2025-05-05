@@ -56,7 +56,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 uid: user.uid,
                 name: user.displayName || user.email || 'User',
                 email: user.email || '',
-                roles: [], // Default to no roles
+                roles: ['agent'], // Default to agent if profile missing
                 podId: null,
                  // Ensure optional avatar fields exist or are initialized
                  avatarUrl: '',
@@ -250,7 +250,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         data-animated-background="true"
         className="flex flex-col"
       >
-         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/80 backdrop-blur-sm md:px-6">
+         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6"> {/* Apply sticky styles */}
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
               {/* TODO: Make header title dynamic */}

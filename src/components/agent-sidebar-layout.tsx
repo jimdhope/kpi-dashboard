@@ -112,7 +112,6 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-            {/* Removed Log Achievements Link */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
@@ -153,12 +152,12 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-       {/* Remove gradient background, add data attribute */}
+       {/* Add data attribute for animated background */}
       <SidebarInset
         data-animated-background="true"
         className="flex flex-col"
       >
-         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/80 backdrop-blur-sm md:px-6">
+         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6"> {/* Apply sticky styles */}
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
               {/* TODO: Make header title dynamic based on current page */}
