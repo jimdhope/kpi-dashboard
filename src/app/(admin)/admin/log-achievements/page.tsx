@@ -17,6 +17,7 @@ import {
   limit, // Import limit
   Unsubscribe, // Import Unsubscribe
   onSnapshot, // Import onSnapshot
+  deleteDoc, // Import deleteDoc
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase'; // Import auth as well
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -162,42 +163,46 @@ export default function AdminLogAchievementsPage() {
         const competitionQuery = query(
           competitionsRef,
           where('podIds', 'array-contains', selectedPodId), // Check if pod is in the array
-          where('startDate', '<=', dateTimestamp),
+          // Remove date constraints to allow backdating
+          // where('startDate', '<=', dateTimestamp),
           orderBy('startDate', 'desc') // Get the most recent starting first
-          // We will filter by end date client-side
+          // Filter by end date client-side is no longer needed here, but might be useful elsewhere
         );
         const competitionSnapshot = await getDocs(competitionQuery);
-        let activeCompetition: (Competition & { id: string }) | null = null;
+        let competitionForDate: (Competition & { id: string }) | null = null;
 
-        // Iterate through potential matches and find the one where the end date is also valid
+        // Find the competition that BRACKETS the selected date (most recent one if multiple overlap)
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-            // Ensure endDate exists and is a Timestamp before calling toDate()
-             if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
-                activeCompetition = comp;
-                console.log(`Found competition "${activeCompetition.name}" active on ${selectedDate.toLocaleDateString()}`);
-                break; // Found the most relevant active competition
+            const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
+            const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
+
+            if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
+                 competitionForDate = comp;
+                 console.log(`Found competition "${competitionForDate.name}" that includes ${selectedDate.toLocaleDateString()}`);
+                break; // Found the most relevant competition for the selected date
             }
         }
 
-        if (activeCompetition) {
-            setActiveCompetitionId(activeCompetition.id); // Store the active ID
-            setCompetitionRules(activeCompetition.rules || []);
+
+        if (competitionForDate) {
+            setActiveCompetitionId(competitionForDate.id); // Store the active ID
+            setCompetitionRules(competitionForDate.rules || []);
         } else {
-          setActiveCompetitionId(null); // No active competition for this date
-          setCompetitionRules([]); // No active competition, no rules
-           toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod active on ${selectedDate.toLocaleDateString()}.` });
+          setActiveCompetitionId(null); // No competition found for this date
+          setCompetitionRules([]); // No competition, no rules
+           toast({ variant: "default", title: "No Competition Found", description: `No competition includes the selected date: ${selectedDate.toLocaleDateString()}.` });
         }
         setIsLoadingRules(false);
 
         // 3. Fetch Existing Achievements for the Pod and Date (if agents and competition exist)
-        if (activeCompetition && fetchedAgents.length > 0) {
+        if (competitionForDate && fetchedAgents.length > 0) {
            const achievementsRef = collection(db, 'dailyAchievements');
             const achievementsQuery = query(
                 achievementsRef,
                 where('podId', '==', selectedPodId),
                 where('date', '==', dateTimestamp),
-                where('competitionId', '==', activeCompetition.id) // Ensure it's for the correct competition
+                where('competitionId', '==', competitionForDate.id) // Ensure it's for the correct competition
              );
              const achievementsSnapshot = await getDocs(achievementsQuery);
              const existingAchievements = achievementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
@@ -208,7 +213,7 @@ export default function AdminLogAchievementsPage() {
                  // Ensure agent.id is not undefined before using it as a key
                  if (!agent.id) return;
                 initialInputs[agent.id] = {};
-                (activeCompetition?.rules || []).forEach(rule => {
+                (competitionForDate?.rules || []).forEach(rule => {
                      // Ensure rule.id is not undefined
                      if (!rule.id) return;
                    const existingLog = existingAchievements.find(log => log.agentId === agent.id && log.ruleId === rule.id);
