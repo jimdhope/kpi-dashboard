@@ -307,8 +307,8 @@ export default function AdminLeaderboardPage() {
                    isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''), // Add if needed later
                };
            })
-           .sort((a, b) => b.totalPoints - a.totalPoints)
-           .map((entry, index) => ({ ...entry, rank: index + 1 }));
+          .sort((a, b) => b.totalPoints - a.totalPoints)
+          .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
       return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
    // Dependencies: logs, filtered agents, competition teams, all agents (for name lookup)
@@ -539,4 +539,5 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
+
 

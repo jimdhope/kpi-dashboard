@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,6 +14,8 @@ import {
   addDoc,
   orderBy,
   serverTimestamp,
+  onSnapshot, // Added onSnapshot import
+  Unsubscribe, // Keep Unsubscribe
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -98,7 +101,7 @@ export default function AgentLogAchievementsPage() {
              setIsLoadingUser(false);
           });
            // Return the user doc listener cleanup function
-           return unsubscribeUserDoc;
+           // return unsubscribeUserDoc; // This line was causing the outer function to return undefined
         } catch (err) {
             console.error("Error setting up user listener:", err);
             setError("Failed to load your profile information.");
@@ -112,10 +115,15 @@ export default function AgentLogAchievementsPage() {
          setAgentPodId(null);
          setIsLoadingUser(false);
       }
-       // Ensure inner unsubscribe is returned
-       return unsubscribeUserDoc;
+       // Ensure inner unsubscribe is returned for cleanup
+       return () => {
+         if (unsubscribeUserDoc) {
+             unsubscribeUserDoc();
+         }
+       };
     });
-    return () => unsubscribeAuth(); // Cleanup auth listener
+    // Return the auth listener cleanup function
+    return () => unsubscribeAuth();
   }, []);
 
 
@@ -142,9 +150,10 @@ export default function AgentLogAchievementsPage() {
         // Find the active Competition for the Pod and Date
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+         // Updated query to use array-contains for podIds
         const competitionQuery = query(
           competitionsRef,
-          where('podId', '==', agentPodId),
+          where('podIds', 'array-contains', agentPodId), // Check if agent's podId is in the podIds array
           where('startDate', '<=', dateTimestamp),
           orderBy('startDate', 'desc')
         );
@@ -152,7 +161,8 @@ export default function AgentLogAchievementsPage() {
         let activeCompetition: (Competition & { id: string }) | null = null;
         for (const docSnap of competitionSnapshot.docs) {
           const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-          if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
+           // Ensure endDate exists and is a Timestamp before calling toDate()
+          if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
             activeCompetition = comp;
             break;
           }
@@ -252,12 +262,14 @@ export default function AgentLogAchievementsPage() {
      // Find active competition ID again (consider storing activeCompetitionId in state)
      const competitionsRef = collection(db, 'competitions');
      const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-     const competitionQuery = query(competitionsRef, where('podId', '==', agentPodId), where('startDate', '<=', dateTimestamp), orderBy('startDate', 'desc'));
+      // Updated query to use array-contains
+     const competitionQuery = query(competitionsRef, where('podIds', 'array-contains', agentPodId), where('startDate', '<=', dateTimestamp), orderBy('startDate', 'desc'));
      const competitionSnapshot = await getDocs(competitionQuery);
      let activeCompetitionId: string | null = null;
      for (const docSnap of competitionSnapshot.docs) {
          const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-         if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
+         // Ensure endDate exists and is a Timestamp before calling toDate()
+          if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
              activeCompetitionId = comp.id;
              break;
          }
@@ -350,7 +362,7 @@ export default function AgentLogAchievementsPage() {
                   {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
+              <PopoverContent className="w-auto p-0 z-50">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -428,3 +440,4 @@ export default function AgentLogAchievementsPage() {
     </div>
   );
 }
+

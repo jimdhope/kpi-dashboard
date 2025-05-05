@@ -134,7 +134,11 @@ export default function AgentLeaderboardPage() {
          setIsLoadingUser(false);
       }
         // Return the inner unsubscribe function for the doc listener
-       return unsubscribeUserDoc;
+        return () => {
+            if(unsubscribeUserDoc){
+                unsubscribeUserDoc();
+            }
+        };
     });
      // Return the outer unsubscribe function for the auth listener
     return () => unsubscribeAuth();
@@ -221,7 +225,7 @@ export default function AgentLeaderboardPage() {
             let relevantCompetition: (Competition & { id: string, teams?: any[] }) | null = null;
             for (const docSnap of relevantCompSnapshot.docs) {
                 const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string, teams?: any[] };
-                if (comp.endDate.toDate() >= startDate!) {
+                if (comp.endDate instanceof Timestamp && comp.endDate.toDate() >= startDate!) {
                     relevantCompetition = comp; break;
                 }
             }
@@ -458,7 +462,7 @@ export default function AgentLeaderboardPage() {
                    ) : (
                     <Table>
                         <TableHeader>
-                        <TableRow>
+                        <TableRow>{/* Remove whitespace here */}
                             <TableHead className="w-[50px]">Rank</TableHead>
                             <TableHead>Agent</TableHead>
                             <TableHead className="text-right">Total Points</TableHead>
@@ -530,7 +534,7 @@ export default function AgentLeaderboardPage() {
                     ) : (
                     <Table>
                         <TableHeader>
-                            <TableRow>
+                            <TableRow>{/* Remove whitespace here */}
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Team</TableHead>
                                 <TableHead className="text-right">Total Points</TableHead>
@@ -578,5 +582,6 @@ export default function AgentLeaderboardPage() {
     </div>
   );
 }
+
 
 

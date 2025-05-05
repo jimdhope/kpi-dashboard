@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -120,10 +121,16 @@ export default function AgentDailyScoresPage() {
          setAgentPodId(null);
          setIsLoadingUser(false);
       }
-       return unsubscribeUserDoc;
+       // Return the inner unsubscribe function for the doc listener
+        return () => {
+            if(unsubscribeUserDoc){
+                unsubscribeUserDoc();
+            }
+        };
     });
     return () => unsubscribeAuth();
   }, []);
+
 
   // 2. Fetch Competition Rules, Listen to Logs (User & Pod), and Daily Targets
   useEffect(() => {
@@ -469,4 +476,5 @@ export default function AgentDailyScoresPage() {
     </div>
   );
 }
+
 
