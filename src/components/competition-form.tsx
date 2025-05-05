@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox import
 import {
     Popover,
     PopoverContent,
@@ -101,6 +103,7 @@ type CompetitionFormSchemaType = Omit<z.infer<typeof competitionFormSchema>, 'st
 
 interface CompetitionFormProps {
   onSubmit: (data: CompetitionFormSchemaType, rules: RuleFormData[]) => Promise<void> | void; // Pass rules separately
+  onCancel: () => void; // Added onCancel prop
   // Update initialData to accept podIds array
   initialData?: Omit<Competition, 'startDate' | 'endDate'> & { startDate: Date | Timestamp, endDate: Date | Timestamp };
   campaigns: Campaign[];
@@ -446,7 +449,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                         onSelect={(date) => handleDateSelect(date, 'endDate')}
                                         // Allow selecting past dates in edit mode, but ensure end >= start
                                          disabled={(date) =>
-                                             isSubmitting || !(watchedStartDate instanceof Date) || (date < watchedStartDate)
+                                             isSubmitting || !(watchedStartDate instanceof Date) || !date || (date < watchedStartDate)
                                          }
                                         initialFocus
                                     />
@@ -585,3 +588,4 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
     </Form>
   );
 }
+
