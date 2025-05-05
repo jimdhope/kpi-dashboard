@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,6 +14,9 @@ import {
   addDoc,
   orderBy,
   serverTimestamp,
+  limit, // Import limit
+  Unsubscribe, // Import Unsubscribe
+  onSnapshot, // Import onSnapshot
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase'; // Import auth as well
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -34,7 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 // Interface for the data stored in Firestore
-interface DailyAchievementLog {
+export interface DailyAchievementLog {
   id?: string; // Firestore ID
   agentId: string;
   podId: string;
@@ -73,6 +77,7 @@ export default function AdminLogAchievementsPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
+  const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null); // Store competition ID
 
   // Get current user
   useEffect(() => {
@@ -88,18 +93,20 @@ export default function AdminLogAchievementsPage() {
     setIsLoadingPods(true);
     const podsRef = collection(db, 'pods');
     const q = query(podsRef, orderBy('name'));
-    getDocs(q)
-      .then((snapshot) => {
+    // Use onSnapshot for real-time updates if needed, otherwise getDocs is fine
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         const fetchedPods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod));
         setPods(fetchedPods);
         setError(null);
-      })
-      .catch(err => {
+        setIsLoadingPods(false);
+    }, (err) => {
         console.error("Error fetching pods:", err);
         setError("Failed to load pods.");
         toast({ variant: "destructive", title: "Error", description: "Could not load pods." });
-      })
-      .finally(() => setIsLoadingPods(false));
+        setIsLoadingPods(false);
+    });
+
+    return () => unsubscribe(); // Cleanup listener
   }, [toast]);
 
   // Fetch Agents, Competition Rules, and Existing Achievements when Pod or Date changes
@@ -108,6 +115,11 @@ export default function AdminLogAchievementsPage() {
       setAgents([]);
       setCompetitionRules([]);
       setAchievementInputs({});
+      setActiveCompetitionId(null); // Reset active competition
+      // Set loading states to false if no pod is selected
+      setIsLoadingAgents(false);
+      setIsLoadingRules(false);
+      setIsLoadingAchievements(false);
       return;
     }
 
@@ -119,6 +131,7 @@ export default function AdminLogAchievementsPage() {
       setAgents([]);
       setCompetitionRules([]);
       setAchievementInputs({}); // Reset inputs
+      setActiveCompetitionId(null); // Reset active competition
 
       try {
         // 1. Fetch Agents for the selected Pod (only those with 'agent' role)
@@ -138,35 +151,42 @@ export default function AdminLogAchievementsPage() {
             toast({ variant: "default", title: "No Agents", description: "No users with the 'agent' role found in this pod." });
              setIsLoadingRules(false); // Stop loading rules/achievements if no agents
              setIsLoadingAchievements(false);
+             setActiveCompetitionId(null); // Ensure competition is cleared
              return;
          }
 
-        // 2. Find the active Competition for the Pod and Date
+        // 2. Find a Competition active on the *selected date* involving this pod
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+        // Query to find ANY competition involving the pod, active on the date.
         const competitionQuery = query(
           competitionsRef,
-          where('podId', '==', selectedPodId),
-          where('startDate', '<=', dateTimestamp), // Start date is on or before selected date
-          orderBy('startDate', 'desc') // Get the latest starting one first
+          where('podIds', 'array-contains', selectedPodId), // Check if pod is in the array
+          where('startDate', '<=', dateTimestamp),
+          orderBy('startDate', 'desc') // Get the most recent starting first
+          // We will filter by end date client-side
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let activeCompetition: (Competition & { id: string }) | null = null;
+
+        // Iterate through potential matches and find the one where the end date is also valid
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-             // Firestore Timestamps must be compared using their methods
-            if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
+            // Ensure endDate exists and is a Timestamp before calling toDate()
+             if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
                 activeCompetition = comp;
+                console.log(`Found competition "${activeCompetition.name}" active on ${selectedDate.toLocaleDateString()}`);
                 break; // Found the most relevant active competition
             }
         }
 
-
         if (activeCompetition) {
-          setCompetitionRules(activeCompetition.rules || []);
+            setActiveCompetitionId(activeCompetition.id); // Store the active ID
+            setCompetitionRules(activeCompetition.rules || []);
         } else {
+          setActiveCompetitionId(null); // No active competition for this date
           setCompetitionRules([]); // No active competition, no rules
-           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date. Cannot log achievements." });
+           toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod active on ${selectedDate.toLocaleDateString()}.` });
         }
         setIsLoadingRules(false);
 
@@ -212,6 +232,7 @@ export default function AdminLogAchievementsPage() {
         setAgents([]);
         setCompetitionRules([]);
         setAchievementInputs({});
+        setActiveCompetitionId(null);
       } finally {
         setIsLoadingAgents(false); // Ensure all loading states are false
         setIsLoadingRules(false);
@@ -249,9 +270,8 @@ export default function AdminLogAchievementsPage() {
    };
 
     const handleSaveAchievement = async (agentId: string, ruleId: string, valueStr: string | undefined) => {
-    if (!selectedPodId || !currentUserUid) {
-      // No toast here, fail silently or log internally for auto-save
-      console.error("Pod or user information missing for auto-save.");
+    if (!selectedPodId || !currentUserUid || !activeCompetitionId) { // Check activeCompetitionId state
+      console.error("Pod, user, or active competition information missing for auto-save.");
       return;
     }
 
@@ -274,36 +294,17 @@ export default function AdminLogAchievementsPage() {
        return;
      }
 
-    // Find active competition again (consider storing in state)
-     const competitionsRef = collection(db, 'competitions');
-     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-     const competitionQuery = query(competitionsRef, where('podId', '==', selectedPodId), where('startDate', '<=', dateTimestamp), orderBy('startDate', 'desc'));
-     const competitionSnapshot = await getDocs(competitionQuery);
-     let activeCompetitionId: string | null = null;
-     for (const docSnap of competitionSnapshot.docs) {
-         const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-          if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
-             activeCompetitionId = comp.id;
-             break;
-         }
-     }
-
-    if (!activeCompetitionId) {
-       console.error("No active competition found for auto-save.");
-       // Optionally inform the user non-intrusively
-       return;
-    }
-
      const savingKey = `${agentId}-${ruleId}`;
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
 
     try {
        const points = rule.points * value;
+       const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate)); // Use the selected date
 
        const logEntry: Omit<DailyAchievementLog, 'id'> = {
          agentId: agentId,
          podId: selectedPodId,
-         competitionId: activeCompetitionId,
+         competitionId: activeCompetitionId, // Use the stored active competition ID
          ruleId: rule.id!,
          ruleName: rule.name,
          date: dateTimestamp,
@@ -318,8 +319,22 @@ export default function AdminLogAchievementsPage() {
 
        if (agentInput.existingLogId) {
          docRef = doc(achievementsRef, agentInput.existingLogId);
-         await setDoc(docRef, logEntry, { merge: true });
-         // console.log(`Achievement updated for ${rule.name}`); // Log instead of toast
+         // If value is 0, delete the log instead of updating
+         if (value === 0) {
+             await deleteDoc(docRef);
+             console.log(`Achievement deleted for ${rule.name} (value set to 0)`);
+             // Update state to remove existingLogId immediately
+             setAchievementInputs(prev => {
+                 const newState = { ...prev };
+                  if (newState[agentId]?.[ruleId]) {
+                     newState[agentId][ruleId].existingLogId = undefined;
+                 }
+                 return newState;
+             });
+         } else {
+             await setDoc(docRef, logEntry, { merge: true });
+             console.log(`Achievement updated for ${rule.name} to ${value}`);
+         }
        } else if (value > 0) { // Only create if value > 0
          const addedDoc = await addDoc(achievementsRef, logEntry);
          // Update state with the new ID immediately
@@ -327,10 +342,14 @@ export default function AdminLogAchievementsPage() {
              const newState = { ...prev };
               if (newState[agentId] && newState[agentId][ruleId]) {
                  newState[agentId][ruleId].existingLogId = addedDoc.id;
+             } else if (newState[agentId]) {
+                 newState[agentId][ruleId] = { value: String(value), existingLogId: addedDoc.id };
+             } else {
+                  newState[agentId] = { [ruleId]: { value: String(value), existingLogId: addedDoc.id } };
              }
              return newState;
          });
-          // console.log(`Achievement logged for ${rule.name}`); // Log instead of toast
+          console.log(`Achievement logged for ${rule.name} with value ${value}`); // Log instead of toast
        } else {
           // Value is 0, no existing log, do nothing silently
            // console.log(`Log skipped for ${rule.name} (value 0)`);
@@ -348,7 +367,7 @@ export default function AdminLogAchievementsPage() {
    // Create the debounced save function
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), // Debounce for 1 second
      // Dependencies: recreate debounce function if these change
-      [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast]
+      [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId] // Added activeCompetitionId
   );
 
 
@@ -357,7 +376,7 @@ export default function AdminLogAchievementsPage() {
   const isAnyCellSaving = (agentId: string): boolean => {
       return competitionRules.some(rule => rule.id && isSaving[`${agentId}-${rule.id}`]);
   }
-  const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0;
+  const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0 && activeCompetitionId; // Check if a competition was found
 
   return (
     <div className="space-y-6">
@@ -437,15 +456,18 @@ export default function AdminLogAchievementsPage() {
               </div>
            ) : !canLog && !error ? (
                <p className="text-muted-foreground text-center py-6">
-                  {agents.length === 0 ? "No agents found in this pod." : "No active competition or rules found for this pod and date."}
+                  {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition found for this pod active on ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
                </p>
             ) : (
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow>{/* Remove whitespace here */}
                   <TableHead className="w-[200px]">Agent</TableHead>
                   {competitionRules.map(rule => (
-                    <TableHead key={rule.id}>{rule.emoji} {rule.name} ({rule.points} pts)</TableHead>
+                    <TableHead key={rule.id}>
+                       {/* Use emoji if it exists and is not empty, otherwise use fallback */}
+                       {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
+                    </TableHead>
                   ))}
                   {/* Optional: Add a status column if needed */}
                    {/* <TableHead className="w-[100px] text-right">Status</TableHead> */}
@@ -455,7 +477,7 @@ export default function AdminLogAchievementsPage() {
                 {agents.map((agent) => (
                    // Ensure agent.id is valid before rendering row
                    agent.id ? (
-                    <TableRow key={agent.id}>
+                    <TableRow key={agent.id}>{/* Remove whitespace here */}
                         <TableCell className="font-medium">{agent.name}</TableCell>
                         {competitionRules.map(rule => (
                            // Ensure rule.id is valid before rendering cell
@@ -500,3 +522,4 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
+
