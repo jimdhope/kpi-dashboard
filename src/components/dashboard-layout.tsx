@@ -44,6 +44,11 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
+  // Log received props for debugging
+  useEffect(() => {
+    console.log("[DashboardLayout] Received props:", { roles, currentLayout });
+  }, [roles, currentLayout]);
+
   // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
     setIsLoadingUser(true);

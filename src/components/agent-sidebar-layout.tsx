@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, Settings } from 'lucide-react';
+import { Home, Settings, CheckSquare } from 'lucide-react'; // Added CheckSquare
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,11 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
   const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
+
+  // Log received props for debugging
+  useEffect(() => {
+    console.log("[AgentSidebarLayout] Received props:", { roles, currentLayout });
+  }, [roles, currentLayout]);
 
   // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
@@ -110,7 +115,15 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-            {/* Removed Log Achievements link for Agents */}
+             {/* Re-added Log Achievements link for Agents, pointing to the correct page */}
+             <SidebarMenuItem>
+              <Link href="/agent/achievements" passHref>
+                <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/agent/achievements'}>
+                  <CheckSquare />
+                  <span>Log Achievements</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
