@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -46,11 +47,9 @@ interface AchievementSummaryEntry {
 // Timeframe options
 type Timeframe = 'daily' | 'weekly' | 'monthly' | 'allTime';
 
-// --- Removed StatCard component definition ---
 
 export default function AdminDashboardPage() {
   // --- State Variables ---
-  // Removed stats and isLoadingStats state
   const [error, setError] = useState<string | null>(null);
 
   const [timeframe, setTimeframe] = useState<Timeframe>('weekly'); // Default timeframe
@@ -68,8 +67,6 @@ export default function AdminDashboardPage() {
    const form = useForm(); // Minimal form setup
 
   // --- Data Fetching ---
-
-  // Removed useEffect hook for fetching Stats Data
 
   // Fetch base data (Users, Pods, Rules, Competitions - needed for rules/context)
   useEffect(() => {
@@ -132,7 +129,7 @@ export default function AdminDashboardPage() {
   }, []);
 
 
-  // Fetch Achievement Logs based on Timeframe (remains the same)
+  // Fetch Achievement Logs based on Timeframe
   useEffect(() => {
       setIsLoadingData(true); // Start loading when timeframe or date changes
       setError(null);
@@ -202,7 +199,7 @@ export default function AdminDashboardPage() {
   }, [timeframe, selectedDate]); // Dependencies: re-run when timeframe or selectedDate changes
 
 
-  // --- Data Calculation (useMemo) - remains the same ---
+  // --- Data Calculation (useMemo) ---
    const { podLeaderboard, individualLeaderboard, achievementSummary } = useMemo(() => {
        // Return empty arrays if still loading base data (users, pods, rules)
        if (isLoadingData || allUsers.length === 0 || allPods.length === 0 || allRules.length === 0) {
@@ -293,7 +290,7 @@ export default function AdminDashboardPage() {
 
 
    const isLoading = isLoadingData; // Use isLoadingData which covers logs and base data dependencies
-  const displayDate = selectedDate || startOfDay(new Date()); // Use selected date or today for display
+   const displayDate = selectedDate || startOfDay(new Date()); // Use selected date or today for display
 
 
   return (
@@ -303,8 +300,6 @@ export default function AdminDashboardPage() {
            <AlertCircle className="h-4 w-4" /> {error}
           </div>
        )}
-
-      {/* --- Removed Stats Cards --- */}
 
       {/* Filters Section */}
       <Card className="mb-6">
@@ -353,17 +348,53 @@ export default function AdminDashboardPage() {
                          />
                      </PopoverContent>
                  </Popover>
-                 {/* Removed FormDescription */}
               </div>
-              {/* Removed Custom Date Range Pickers */}
           </CardContent>
       </Card>
 
-      {/* Leaderboards and Achievement Summary */}
-       <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3"> {/* Adjust grid for new layout */}
+      {/* Achievement Summary Cards */}
+        <div className="mb-6">
+            <h2 className="text-2xl font-semibold tracking-tight mb-4">Achievement Summary</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {isLoading ? (
+                    <>
+                        <Skeleton className="h-[120px] w-full" />
+                        <Skeleton className="h-[120px] w-full" />
+                        <Skeleton className="h-[120px] w-full" />
+                        <Skeleton className="h-[120px] w-full" />
+                    </>
+                ) : achievementSummary.length === 0 ? (
+                <Card className="sm:col-span-full h-[120px] flex items-center justify-center">
+                    <CardContent className="text-center text-muted-foreground">
+                        <p>No achievements logged in this period.</p>
+                    </CardContent>
+                </Card>
+                ) : (
+                    achievementSummary.map((summary, index) => (
+                        <Card key={index} className="shadow-sm">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium truncate" title={summary.ruleName}>
+                                    {summary.ruleName}
+                                </CardTitle>
+                                <span className="text-lg">{summary.emoji}</span>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-primary">
+                                    {summary.totalValue.toLocaleString()}
+                                </div>
+                                <CardDescription>Total Count</CardDescription>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
+        </div>
+
+       {/* Leaderboards Section */}
+       <div className="grid gap-6 md:grid-cols-2">
 
            {/* Pod Leaderboard */}
-           <div className="lg:col-span-1">
+           <div >
               {isLoading ? (
                   <Skeleton className="h-[400px] w-full" />
               ) : podLeaderboard.length === 0 ? (
@@ -377,44 +408,8 @@ export default function AdminDashboardPage() {
               )}
            </div>
 
-           {/* Achievement Summary Cards */}
-           <div className="lg:col-span-1 grid grid-cols-1 sm:grid-cols-2 gap-6 self-start"> {/* New summary section */}
-               {isLoading ? (
-                   <>
-                       <Skeleton className="h-[120px] w-full" />
-                       <Skeleton className="h-[120px] w-full" />
-                       <Skeleton className="h-[120px] w-full" />
-                       <Skeleton className="h-[120px] w-full" />
-                   </>
-               ) : achievementSummary.length === 0 ? (
-                  <Card className="sm:col-span-2 h-[400px] flex items-center justify-center">
-                      <CardContent className="text-center text-muted-foreground">
-                           <p>No achievements logged in this period.</p>
-                       </CardContent>
-                  </Card>
-               ) : (
-                   achievementSummary.map((summary, index) => (
-                       <Card key={index} className="shadow-sm">
-                           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                               <CardTitle className="text-sm font-medium truncate" title={summary.ruleName}>
-                                   {summary.ruleName}
-                               </CardTitle>
-                               <span className="text-lg">{summary.emoji}</span>
-                           </CardHeader>
-                           <CardContent>
-                               <div className="text-2xl font-bold text-primary">
-                                   {summary.totalValue.toLocaleString()}
-                               </div>
-                               <CardDescription>Total Count</CardDescription>
-                           </CardContent>
-                       </Card>
-                   ))
-               )}
-           </div>
-
-
            {/* Individual Leaderboard */}
-           <div className="lg:col-span-1">
+           <div >
               {isLoading ? (
                   <Skeleton className="h-[400px] w-full" />
               ) : individualLeaderboard.length === 0 ? (
