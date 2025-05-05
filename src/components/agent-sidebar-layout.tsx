@@ -14,8 +14,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, Settings, CheckSquare } from 'lucide-react'; // Removed Star, ClipboardList
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Removed AvatarImage import
+import { Home, Settings } from 'lucide-react'; // Removed CheckSquare
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 import { Button } from '@/components/ui/button'; // Import Button for Logout
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth'; // Import Firebase Auth
@@ -24,6 +24,7 @@ import { app, db } from '@/lib/firebase'; // Import Firebase app and db
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
 import type { AppUser } from '@/services/user'; // Import AppUser type
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { cn } from '@/lib/utils'; // Import cn
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
@@ -111,7 +112,7 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-             {/* Removed Daily Scores and Leaderboard Links */}
+            {/* Removed Log Achievements Link */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
@@ -152,8 +153,12 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="flex flex-col">
-         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background md:px-6">
+       {/* Apply gradient background to the SidebarInset (main content area) */}
+      <SidebarInset className={cn(
+          "flex flex-col",
+          "bg-gradient-to-br from-background to-[hsl(var(--background-end))]" // Apply gradient here
+      )}>
+         <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/80 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
               {/* TODO: Make header title dynamic based on current page */}
@@ -166,6 +171,7 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
             </div>
           </header>
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+          {/* Removed AnimatedIconsBackground */}
           {children}
         </main>
       </SidebarInset>

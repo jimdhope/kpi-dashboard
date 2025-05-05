@@ -4,11 +4,21 @@
 
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  /* Removed direct background properties from body */
+  overflow-x: hidden; /* Keep this if needed */
 }
 
+
 @layer base {
+  body {
+    @apply bg-background text-foreground; /* Keep this */
+    /* Removed bg-gradient-to-br from-background to-[hsl(var(--background-end))] */
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
   :root {
     --background: 0 0% 94%; /* Light Gray #F0F0F0 */
+    --background-end: 0 0% 90%; /* Slightly darker gray for gradient end */
     --foreground: 0 0% 10%; /* Darker Gray for text */
     --card: 0 0% 100%; /* White */
     --card-foreground: 0 0% 10%;
@@ -33,7 +43,7 @@ body {
     --chart-4: 30 80% 60%; /* Orangeish */
     --chart-5: 120 40% 55%; /* Greenish */
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%; /* Off-white */
+    --sidebar-background: hsla(0, 0%, 98%, 0.85); /* Off-white with increased opacity (85%) for frosted glass */
     --sidebar-foreground: 0 0% 20%; /* Dark gray */
     --sidebar-primary: 180 100% 25%; /* Teal */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
@@ -45,8 +55,9 @@ body {
   .dark {
     /* Define dark mode colors */
     --background: 240 10% 3.9%;
+    --background-end: 240 10% 7%; /* Slightly lighter dark for gradient end */
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 240 10% 3.9%; /* Card background remains dark */
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
@@ -68,7 +79,7 @@ body {
     --chart-3: 210 40% 60%; /* Blueish gray */
     --chart-4: 30 80% 70%; /* Orangeish */
     --chart-5: 120 40% 65%; /* Greenish */
-    --sidebar-background: 240 6% 10%; /* Dark */
+    --sidebar-background: hsla(240, 6%, 10%, 0.85); /* Dark with increased opacity (85%) for frosted glass */
     --sidebar-foreground: 0 0% 95%; /* Light gray */
     --sidebar-primary: 180 80% 60%; /* Lighter Teal */
     --sidebar-primary-foreground: 180 100% 10%; /* Dark Teal */
@@ -77,6 +88,7 @@ body {
     --sidebar-border: 240 4% 15%; /* Dark border */
     --sidebar-ring: 180 80% 60%; /* Lighter Teal */
   }
+
 }
 
 @layer base {
@@ -84,7 +96,10 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    /* @apply bg-background text-foreground; */ /* Handled in the body selector above */
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Frosted Glass effect for cards (applied via Tailwind utilities in component) */
+
