@@ -351,6 +351,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                         <div className="flex items-center gap-2">
                              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
                                 <PopoverTrigger asChild>
+                                    {/* Ensure the Button is not disabled when the popover should be open */}
                                     <Button
                                         type="button" // Prevent form submission
                                         variant={"outline"}
@@ -358,7 +359,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                             "w-[130px] justify-start text-left font-normal",
                                             !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
-                                        disabled={isSubmitting}
+                                        disabled={isSubmitting} // Only disable if submitting
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
@@ -401,6 +402,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                          <div className="flex items-center gap-2">
                             <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
                                 <PopoverTrigger asChild>
+                                    {/* Ensure the Button is not disabled when the popover should be open */}
                                     <Button
                                         type="button" // Prevent form submission
                                         variant={"outline"}
