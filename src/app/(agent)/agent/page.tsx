@@ -7,7 +7,7 @@ import { getKPIs, KPI, Group } from '@/services/kpi';
 import { DollarSign, Target, Users, Medal, Trophy, ClipboardList, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert } from "@/components/ui/alert";
+import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert"; // Renamed import
 import { collection, query, where, getDocs, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
@@ -98,29 +98,35 @@ export default function AgentDashboardPage() {
   // 1. Get current user and their pod ID (using onSnapshot for real-time updates)
   useEffect(() => {
     setIsLoadingUser(true);
+    console.log("Setting up auth listener...");
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       let unsubscribeUserDoc: Unsubscribe = () => {};
       if (user) {
+        console.log(`Auth state changed: User found (UID: ${user.uid})`);
         const userDocRef = doc(db, 'users', user.uid);
         unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
+            console.log("User document found:", userData);
             setCurrentUser(userData);
             setAgentPodId(userData.podId || null);
+            console.log("Agent Pod ID set to:", userData.podId || null);
             if (!userData.podId) {
+              console.warn("User is not assigned to a pod.");
               setError("You are not currently assigned to a pod.");
             } else {
-              // Clear specific errors if pod is assigned
               if (error === "You are not currently assigned to a pod." || error === "Could not find your user profile.") {
                   setError(null);
               }
             }
           } else {
+             console.error(`User document not found in Firestore for UID: ${user.uid}`);
              setError("Could not find your user profile.");
              setCurrentUser(null);
              setAgentPodId(null);
           }
           setIsLoadingUser(false);
+          console.log("User loading finished.");
         }, (err) => {
            console.error("Error listening to user document:", err);
            setError("Failed to load your profile information.");
@@ -129,43 +135,61 @@ export default function AgentDashboardPage() {
            setIsLoadingUser(false);
         });
       } else {
+         console.log("Auth state changed: No user logged in.");
          setError("You must be logged in.");
          setCurrentUser(null);
          setAgentPodId(null);
          setIsLoadingUser(false);
       }
       return () => {
+        console.log("Cleaning up user doc listener.");
         if (unsubscribeUserDoc) {
           unsubscribeUserDoc();
         }
       };
     });
-    return () => unsubscribeAuth();
+    return () => {
+         console.log("Cleaning up auth listener.");
+        unsubscribeAuth();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Removed error from dependencies
 
   // 2. Fetch Agent's KPIs (Only runs once or when pod changes if dynamic)
    useEffect(() => {
+     console.log(`KPI Effect: isLoadingUser=${isLoadingUser}, agentPodId=${agentPodId}`);
      // Wait for user and podId to be loaded
      if (isLoadingUser || !agentPodId) {
+         console.log("KPI Effect: Skipping fetch, prerequisites not met.");
          setKpisLoading(!isLoadingUser); // Stop KPI loading if user load is done but no pod
+         if(!isLoadingUser && !agentPodId) {
+             console.warn("KPI Effect: User loaded but no pod ID, cannot fetch KPIs.");
+             // Keep the "Not assigned to pod" error if it exists
+         }
          return;
      };
 
      setKpisLoading(true);
+     console.log("KPI Effect: Fetching KPIs for pod:", agentPodId);
      const fetchAgentKpis = async () => {
        try {
          // Use the dynamically fetched agentPodId
          const agentGroup: Group = { id: agentPodId, name: 'Your Pod' }; // Consider fetching pod name if needed
          const fetchedKpis = await getKPIs(agentGroup);
+         console.log("KPI Effect: Fetched KPIs:", fetchedKpis);
          setKpis(fetchedKpis);
-          // Clear KPI specific error on success
-          if (error === "Failed to load your KPIs.") setError(null);
+         if (fetchedKpis.length === 0) {
+             console.warn("KPI Effect: No KPIs returned for pod ID:", agentPodId);
+             setError("No KPIs found for your pod."); // Set a specific message
+         } else if (error === "No KPIs found for your pod." || error === "Failed to load your KPIs.") {
+             setError(null); // Clear KPI specific error on success
+         }
        } catch (kpiError) {
          console.error("Error fetching agent KPIs:", kpiError);
          setError("Failed to load your KPIs."); // Set specific KPI error
        } finally {
          setKpisLoading(false);
+         console.log("KPI Effect: KPI loading finished.");
        }
      };
      fetchAgentKpis();
@@ -175,8 +199,10 @@ export default function AgentDashboardPage() {
 
    // 3. Fetch Competition Rules, Listen to Logs, Targets, Pod Agents, and Teams
   useEffect(() => {
+    console.log(`Data Effect: isLoadingUser=${isLoadingUser}, agentPodId=${agentPodId}, currentUser=${!!currentUser}`);
     // Ensure user, podId are available and user loading is complete
     if (!agentPodId || !currentUser?.id || isLoadingUser) {
+      console.log("Data Effect: Skipping fetch, prerequisites not met.");
       setIsLoadingData(false); // Stop loading if prerequisites aren't met
       // Clear dependent state
       setRules([]);
@@ -188,18 +214,20 @@ export default function AgentDashboardPage() {
       return () => {}; // Return empty cleanup
     }
 
+    console.log("Data Effect: Starting data fetch and listeners for pod:", agentPodId);
     setIsLoadingData(true); // Start loading data
 
-    // Clear previous non-user error only if one exists
-    const isUserError = [
+    // Clear previous non-user specific errors if one exists
+    const isUserOrKpiError = [
          "You are not currently assigned to a pod.",
          "Could not find your user profile.",
          "You must be logged in.",
          "Failed to load your profile information.",
-         "Failed to load your KPIs." // Keep KPI error as potentially relevant
+         "Failed to load your KPIs.",
+         "No KPIs found for your pod."
     ].includes(error || "");
 
-    if(!isUserError){
+    if(!isUserOrKpiError){
          setError(null);
     }
 
@@ -216,10 +244,13 @@ export default function AgentDashboardPage() {
       // No try/catch here, errors handled in listeners
 
           // Fetch Agents in the pod (listen for changes)
+         console.log("Data Effect: Setting up agents listener for pod:", agentPodId);
          const usersRef = collection(db, 'users');
          const agentsQuery = query(usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
          unsubscribeAgents = onSnapshot(agentsQuery, (agentsSnapshot) => {
-              setPodAgents(agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
+              const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+              console.log("Data Effect: Pod agents listener updated, found:", fetchedAgents.length);
+              setPodAgents(fetchedAgents);
           }, (err) => {
                console.error("Error listening to pod agents:", err);
                setError("Failed to load pod member data.");
@@ -228,6 +259,7 @@ export default function AgentDashboardPage() {
 
 
         // Find Active Competition based on *today's date* and listen for changes
+        console.log("Data Effect: Setting up competition listener for pod:", agentPodId);
         const competitionsRef = collection(db, 'competitions');
         const todayTimestamp = Timestamp.fromDate(startOfDay(new Date()));
 
@@ -241,6 +273,7 @@ export default function AgentDashboardPage() {
 
          // Listen to the competition query
          unsubscribeCompetition = onSnapshot(competitionQuery, (competitionSnapshot) => {
+             console.log("Data Effect: Competition listener triggered.");
              let activeCompetition: CompetitionWithRules | null = null;
              for (const docSnap of competitionSnapshot.docs) {
                  const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules & { id: string };
@@ -253,7 +286,7 @@ export default function AgentDashboardPage() {
              currentActiveCompetition = activeCompetition; // Update tracked competition
 
              if (activeCompetition) {
-                 console.log("Active competition found:", activeCompetition.id);
+                 console.log("Data Effect: Active competition found:", activeCompetition.id);
                  setRules(activeCompetition.rules || []);
                  setTeams(activeCompetition.teams || []); // Update teams from competition data
 
@@ -261,7 +294,7 @@ export default function AgentDashboardPage() {
                  const achievementsRef = collection(db, 'dailyAchievements');
 
                  // --- User Logs Listener ---
-                  // Query only by agentId, podId, competitionId
+                 console.log("Data Effect: Setting up user logs listener for competition:", activeCompetition.id);
                  const userLogsQuery = query(
                      achievementsRef,
                      where('agentId', '==', currentUser.id),
@@ -271,7 +304,7 @@ export default function AgentDashboardPage() {
                  // Ensure previous listener is cleaned up before creating a new one
                  if (unsubscribeUserLogs) unsubscribeUserLogs();
                  unsubscribeUserLogs = onSnapshot(userLogsQuery, (snapshot) => {
-                     // Filter dates client-side
+                     // Filter dates client-side for the competition duration
                      const filteredLogs = snapshot.docs
                          .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
                          .filter(log => {
@@ -282,23 +315,22 @@ export default function AgentDashboardPage() {
                              return logDate >= compStart && logDate <= compEnd;
                          });
                      setDailyLogs(filteredLogs);
-                     console.log("User logs listener updated, found:", filteredLogs.length);
+                     console.log("Data Effect: User logs listener updated, found:", filteredLogs.length);
                  }, (err) => { console.error("Error listening to user logs:", err); setError("Failed to load your scores."); });
 
 
                  // --- Pod Logs Listener ---
-                  // Query only by podId and competitionId
+                  console.log("Data Effect: Setting up pod logs listener for competition:", activeCompetition.id);
                   const podLogsQuery = query(
                      achievementsRef,
                      where('podId', '==', agentPodId),
                      where('competitionId', '==', activeCompetition.id)
                      // Remove the date constraint for pod logs to simplify the query and avoid needing the index
-                     // where('date', '==', todayTimestamp)
                  );
                   // Ensure previous listener is cleaned up
                  if (unsubscribePodLogs) unsubscribePodLogs();
                  unsubscribePodLogs = onSnapshot(podLogsQuery, (snapshot) => {
-                      // Filter dates client-side
+                      // Filter dates client-side for the competition duration
                      const filteredLogs = snapshot.docs
                          .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
                          .filter(log => {
@@ -309,36 +341,38 @@ export default function AgentDashboardPage() {
                              return logDate >= compStart && logDate <= compEnd;
                          });
                      setPodLogs(filteredLogs);
-                     console.log("Pod logs listener updated, found:", filteredLogs.length);
+                     console.log("Data Effect: Pod logs listener updated, found:", filteredLogs.length);
                  }, (err) => { console.error("Error listening to pod logs:", err); setError("Failed to load pod scores."); });
 
 
                  // --- Targets Listener ---
                  const targetsDocId = `${activeCompetition.id}_${agentPodId}`;
+                 console.log("Data Effect: Setting up targets listener for doc:", targetsDocId);
                  const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
                   // Ensure previous listener is cleaned up
                  if (unsubscribeTargets) unsubscribeTargets();
                  unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
                      setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
-                      console.log("Targets listener updated, found:", docSnap.exists());
+                      console.log("Data Effect: Targets listener updated, found:", docSnap.exists());
                  }, (err) => { console.error("Error listening to daily targets:", err); setError("Failed to load targets."); });
 
-                 // Clear non-user specific errors if data loading is successful
-                 const currentErrorIsUserError = [
+                 // Clear non-user/KPI specific errors if data loading is successful
+                  const currentErrorIsUserOrKpiError = [
                      "You are not currently assigned to a pod.",
                      "Could not find your user profile.",
                      "You must be logged in.",
                      "Failed to load your profile information.",
-                      "Failed to load your KPIs."
+                     "Failed to load your KPIs.",
+                      "No KPIs found for your pod."
                   ].includes(error || "");
 
-                  if (!currentErrorIsUserError) {
+                  if (!currentErrorIsUserOrKpiError) {
                       setError(null);
                   }
 
              } else {
                  // No active competition found for today
-                  console.log("No active competition found.");
+                  console.log("Data Effect: No active competition found.");
                  setRules([]);
                  setTeams([]);
                  setDailyLogs([]);
@@ -348,18 +382,8 @@ export default function AgentDashboardPage() {
              }
               // Consider loading complete after the initial snapshot of the competition query
               setIsLoadingData(false);
-               // Clear non-user errors if data loads successfully
-              const currentErrorIsUserErrorAfterLoad = [
-                   "You are not currently assigned to a pod.",
-                   "Could not find your user profile.",
-                   "You must be logged in.",
-                   "Failed to load your profile information.",
-                   "Failed to load your KPIs."
-                ].includes(error || "");
+              console.log("Data Effect: Data loading finished.");
 
-               if(!currentErrorIsUserErrorAfterLoad){
-                    setError(null);
-               }
          }, (err) => {
              console.error("Error listening to competitions:", err);
              setError("Failed to load competition data.");
@@ -373,6 +397,7 @@ export default function AgentDashboardPage() {
 
     // Cleanup function for ALL listeners
     return () => {
+      console.log("Data Effect: Cleaning up listeners.");
       unsubscribeUserLogs();
       unsubscribePodLogs();
       unsubscribeTargets();
@@ -385,6 +410,7 @@ export default function AgentDashboardPage() {
 
   // 4. Process data (Scores, Leaderboards) - useMemo
   const { agentScore, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
+     console.log(`Memo: Calculating scores. Logs: ${dailyLogs.length}, Pod Logs: ${podLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}`);
     // --- Calculate Agent's Score for Today ---
     let currentAgentScore: Omit<AgentScore, 'agentId' | 'agentFirstName'> = { totalPoints: 0, emojiString: '' };
     if (currentUser) {
@@ -438,18 +464,18 @@ export default function AgentDashboardPage() {
      // --- Calculate Leaderboards (using all fetched podLogs for the competition duration) ---
      // Agent Leaderboard
      const agentScoresMap: Record<string, number> = {};
-     podAgents.forEach(agent => { agentScoresMap[agent.id!] = 0; });
+     podAgents.forEach(agent => { if(agent.id) agentScoresMap[agent.id] = 0; }); // Initialize scores for all pod agents
      podLogs.forEach(log => { if (agentScoresMap.hasOwnProperty(log.agentId)) agentScoresMap[log.agentId] += log.points; });
-     const finalAgentLeaderboard: LeaderboardEntry[] = podAgents
+     const finalAgentLeaderboard: LeaderboardEntry[] = podAgents // Use podAgents state here
        .map(agent => ({ id: agent.id!, name: agent.name, totalPoints: agentScoresMap[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isCurrentUser: agent.id === currentUser?.id }))
        .sort((a, b) => b.totalPoints - a.totalPoints)
        .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
      // Team Leaderboard
      const teamScoresMap: Record<string, number> = {};
-     teams.forEach(team => { teamScoresMap[team.id] = 0; });
+     teams.forEach(team => { teamScoresMap[team.id] = 0; }); // Initialize scores for all teams
      podLogs.forEach(log => { const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId)); if (agentTeam && teamScoresMap.hasOwnProperty(agentTeam.id)) teamScoresMap[agentTeam.id] += log.points; });
-     const finalTeamLeaderboard: LeaderboardEntry[] = teams
+     const finalTeamLeaderboard: LeaderboardEntry[] = teams // Use teams state here
        .map(team => ({ id: team.id, name: team.name, totalPoints: teamScoresMap[team.id] || 0, isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || '') }))
        .sort((a, b) => b.totalPoints - a.totalPoints)
        .map((entry, index) => ({ ...entry, rank: index + 1 }));
@@ -465,7 +491,7 @@ export default function AgentDashboardPage() {
       {error && (
          <Alert variant="destructive" className="mb-6">
            <AlertCircle className="h-4 w-4" />
-           <CardDescription>{error}</CardDescription> {/* Using CardDescription for consistency */}
+           <UIDescription>{error}</UIDescription> {/* Using renamed import */}
          </Alert>
       )}
 
@@ -487,7 +513,7 @@ export default function AgentDashboardPage() {
           kpis.map((kpi, index) => (
             <KpiCard key={kpi.name || index} kpi={kpi} icon={kpiIcons[kpi.name]} />
           ))
-        ) : !kpisLoading && error !== "Failed to load your KPIs." ? ( // Check specific error
+        ) : !kpisLoading && !error ? ( // Show only if not loading and no other error
             <Card className="md:col-span-2 lg:col-span-3 shadow-md">
                  <CardContent className="pt-6 text-center text-muted-foreground">No KPIs found for your pod.</CardContent>
             </Card>
@@ -520,7 +546,7 @@ export default function AgentDashboardPage() {
                             {agentScore.emojiString.length === 0 && <span className="text-base text-muted-foreground">- No achievements logged today -</span>}
                         </div>
                      </>
-                 ) : error !== "Failed to load your scores." ? ( // Check specific error
+                 ) : !error ? ( // Show only if no error
                      <p className="text-muted-foreground">Could not load your score.</p>
                  ) : null}
              </CardContent>
@@ -552,7 +578,7 @@ export default function AgentDashboardPage() {
                                </div>
                            ))}
                        </div>
-                   ) : error !== "Failed to load targets." ? ( // Check specific error
+                   ) : !error ? ( // Show only if no error
                        <p className="text-muted-foreground">No targets set for your pod today.</p>
                    ) : null }
                </CardContent>
