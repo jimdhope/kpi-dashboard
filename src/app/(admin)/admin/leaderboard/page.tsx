@@ -46,7 +46,7 @@ interface DailyAchievementLog {
   loggedBy?: string | null;
 }
 
-// Interface for leaderboard entries (same as before)
+// Interface for leaderboard entries - Added agentFirstNames
 interface LeaderboardEntry {
   id: string; // Can be agentId or teamId
   name: string;
@@ -57,6 +57,7 @@ interface LeaderboardEntry {
   avatarBgColor?: string;
   isCurrentUser?: boolean;
   isCurrentUserTeam?: boolean;
+  agentFirstNames?: string[]; // Array of first names for team entries
 }
 
 // Team structure within Competition
@@ -283,18 +284,29 @@ export default function AdminLeaderboardPage() {
 
 
        const finalTeamLeaderboard: LeaderboardEntry[] = teams
-           .map(team => ({
-              id: team.id,
-              name: team.name,
-              totalPoints: teamScores[team.id] || 0,
-              // isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
-           }))
+           .map(team => {
+               // Get agent first names for this team
+               const agentFirstNames = (team.agentIds || [])
+                   .map(agentId => {
+                       const agent = agents.find(a => a.id === agentId);
+                       return agent ? agent.name.split(' ')[0] : null; // Get first name
+                   })
+                   .filter((name): name is string => !!name); // Remove nulls
+
+               return {
+                   id: team.id,
+                   name: team.name,
+                   totalPoints: teamScores[team.id] || 0,
+                   agentFirstNames: agentFirstNames.sort(), // Sort names alphabetically
+                   // isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
+               };
+           })
             // Removed filter for totalPoints > 0
            .sort((a, b) => b.totalPoints - a.totalPoints)
            .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
       return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-   // Dependencies: logs, filtered agents, competition teams
+   // Dependencies: logs, filtered agents, competition teams, all agents (for name lookup)
   }, [allLogs, agents, participatingPods, teams, selectedPodId]);
 
   const isLoading = isLoadingBase || isLoadingData;
@@ -476,8 +488,18 @@ export default function AdminLeaderboardPage() {
                                     )}
                                 </TableCell>
                                 <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
-                                    {entry.name}
-                                    {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold">{entry.name}</span>
+                                            {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
+                                        </div>
+                                         {/* Display agent first names */}
+                                         {entry.agentFirstNames && entry.agentFirstNames.length > 0 && (
+                                            <span className={cn("text-xs", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
+                                                {entry.agentFirstNames.join(', ')}
+                                            </span>
+                                         )}
+                                    </div>
                                 </TableCell>
                                 <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
                                     {entry.totalPoints.toLocaleString()}
