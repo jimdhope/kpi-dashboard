@@ -115,6 +115,15 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+             {/* Log Achievements Link */}
+             <SidebarMenuItem>
+              <Link href="/agent/log-achievements" passHref>
+                <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/agent/log-achievements'}>
+                  <CheckSquare />
+                  <span>Log Achievements</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
@@ -165,11 +174,10 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
               <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2> {/* Changed title */}
             </div>
             <div className="flex items-center gap-4">
-               {/* Conditionally render RoleSwitcher */}
-               {/* Passing props received from ProfileLayout */}
+               {/* Pass props to RoleSwitcher */}
                <RoleSwitcher
                    availableRoles={roles}
-                   currentLayout={currentLayout}
+                   currentLayout={currentLayout ?? 'agent'} // Provide default if null
                    onLayoutChange={onLayoutChange}
                />
                <ThemeToggle />

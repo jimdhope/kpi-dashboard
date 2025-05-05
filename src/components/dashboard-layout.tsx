@@ -259,11 +259,10 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
               <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2> {/* TODO: Make dynamic */}
             </div>
             <div className="flex items-center gap-4">
-               {/* Conditionally render RoleSwitcher */}
-               {/* Passing props received from ProfileLayout */}
+               {/* Pass props to RoleSwitcher */}
                <RoleSwitcher
                    availableRoles={roles}
-                   currentLayout={currentLayout}
+                   currentLayout={currentLayout ?? 'admin'} // Provide default if null
                    onLayoutChange={onLayoutChange}
                />
                <ThemeToggle />
