@@ -101,7 +101,7 @@ export default function AgentLogAchievementsPage() {
              setIsLoadingUser(false);
           });
            // Return the user doc listener cleanup function
-           // return unsubscribeUserDoc; // This line was causing the outer function to return undefined
+           return unsubscribeUserDoc;
         } catch (err) {
             console.error("Error setting up user listener:", err);
             setError("Failed to load your profile information.");
@@ -115,15 +115,10 @@ export default function AgentLogAchievementsPage() {
          setAgentPodId(null);
          setIsLoadingUser(false);
       }
-       // Ensure inner unsubscribe is returned for cleanup
-       return () => {
-         if (unsubscribeUserDoc) {
-             unsubscribeUserDoc();
-         }
-       };
+       // Ensure inner unsubscribe is returned
+       return unsubscribeUserDoc;
     });
-    // Return the auth listener cleanup function
-    return () => unsubscribeAuth();
+    return () => unsubscribeAuth(); // Cleanup auth listener
   }, []);
 
 
@@ -393,7 +388,7 @@ export default function AgentLogAchievementsPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>{/* Remove whitespace here */}
+                <TableRow>
                   <TableHead>Rule</TableHead>
                   <TableHead className="w-[120px]">Value</TableHead> {/* Set fixed width for value input */}
                   <TableHead className="w-[100px] text-right">Status</TableHead>
