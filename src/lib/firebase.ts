@@ -46,25 +46,33 @@ const db = getFirestore(app);
 const storage = getStorage(app); // Initialize Storage
 let analytics: any = null; // Initialize analytics as null
 
-// Use a flag to check if we already tried connecting emulators
+// Flag to ensure emulators are connected only once if needed
 let emulatorsConnected = false;
 
-if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && !emulatorsConnected) {
-  console.log("Connecting to Firebase Emulators...");
-  try {
-    connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
-    connectFirestoreEmulator(db, 'localhost', 8080);
-    connectStorageEmulator(storage, 'localhost', 9199);
-    console.log("Successfully connected to Firebase Emulators.");
-    emulatorsConnected = true; // Set flag to prevent reconnecting
-  } catch (error) {
-     console.error("Error connecting to Firebase Emulators:", error);
-     // Optionally, notify the user or fallback to production services
-     // For now, we'll just log the error and continue using production services if emulators fail
+// Connect to emulators only in development environment (client-side check)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && !emulatorsConnected) {
+  // Check if running on localhost or a typical dev domain
+  if (window.location.hostname === 'localhost' || window.location.hostname.includes('local')) {
+      console.log("Connecting to Firebase Emulators (Detected Dev Environment)...");
+      try {
+        // Make sure ports match your emulator setup
+        connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+        connectFirestoreEmulator(db, 'localhost', 8080);
+        connectStorageEmulator(storage, 'localhost', 9199);
+        console.log("Successfully connected to Firebase Emulators.");
+        emulatorsConnected = true; // Set flag
+      } catch (error) {
+         console.error("Error connecting to Firebase Emulators:", error);
+         // Fallback to production services might happen automatically if emulators aren't reachable
+      }
+  } else {
+       console.log("Development environment detected, but not localhost. Using Production Firebase Services.");
   }
-} else {
+
+} else if (typeof window !== 'undefined') {
    console.log("Using Production Firebase Services.");
 }
+
 
 // Initialize Analytics (conditionally, only in browser and if supported/configured)
 if (typeof window !== 'undefined') {
