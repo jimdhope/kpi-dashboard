@@ -1,5 +1,6 @@
+
 'use client'; // Add 'use client' directive
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // Import useState and useEffect
 import Link from 'next/link'; // Import Link
 import { usePathname } from 'next/navigation'; // Keep usePathname
 import {
@@ -21,26 +22,70 @@ import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, Users
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
-import { getAuth } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth'; // Import Firebase Auth
+import { doc, getDoc, onSnapshot } from "firebase/firestore"; // Import Firestore
+import { app, db } from '@/lib/firebase'; // Import Firebase app and db
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
+import type { AppUser } from '@/services/user'; // Import AppUser type
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-// TODO: Replace with actual admin user data from auth context
-const MOCK_ADMIN_USER = {
-    name: "Admin User",
-    email: "admin@kpiquest.com",
-    avatarUrl: "", // Keep empty if no URL
-    avatarInitials: '', // Example: Add if needed
-    avatarBgColor: '', // Example: Add if needed
-};
-
-
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const currentPath = usePathname(); // Get current route
+  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const auth = getAuth(app);
+
+  useEffect(() => {
+    setIsLoadingUser(true);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      let unsubscribeUserDoc: (() => void) | undefined = undefined;
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setCurrentUserData({ id: docSnap.id, ...docSnap.data() } as AppUser);
+          } else {
+            console.warn(`Firestore document for user ${user.uid} not found.`);
+            // Set minimal data from auth if Firestore doc missing
+            setCurrentUserData({
+                id: user.uid,
+                uid: user.uid,
+                name: user.displayName || user.email || 'User',
+                email: user.email || '',
+                roles: [], // Default to no roles
+                podId: null,
+            });
+          }
+          setIsLoadingUser(false);
+        }, (error) => {
+          console.error("Error fetching user document:", error);
+          setCurrentUserData(null); // Clear data on error
+          setIsLoadingUser(false);
+        });
+      } else {
+        // No user logged in
+        setCurrentUserData(null);
+        setIsLoadingUser(false);
+        // Redirect handled by ProfileLayout
+      }
+      // Return the cleanup function for the Firestore listener
+      return () => {
+        if (unsubscribeUserDoc) {
+          unsubscribeUserDoc();
+        }
+      };
+    });
+
+    // Return the cleanup function for the auth listener
+    return () => unsubscribeAuth();
+  }, [auth]);
+
+  const getInitials = (name?: string | null) => generateInitials(name || '');
+  const bgColor = currentUserData?.avatarBgColor || undefined; // Use explicit undefined for random color generation
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -156,41 +201,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </SidebarMenuItem>
             </SidebarGroup>
 
-            {/* Analytics Section */}
-            {/*
-            <SidebarGroup>
-               <SidebarGroupLabel>Analytics</SidebarGroupLabel>
-               <SidebarMenuItem>
-                  <Link href="#" passHref>
-                     <SidebarMenuButton tooltip="KPI Reports" isActive={currentPath === '/admin/reports'}>
-                      <BarChart3 />
-                      <span>KPI Reports</span>
-                    </SidebarMenuButton>
-                 </Link>
-              </SidebarMenuItem>
-             </SidebarGroup>
-             */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback
-                   initials={MOCK_ADMIN_USER.avatarInitials || generateInitials(MOCK_ADMIN_USER.name)}
-                   backgroundColor={MOCK_ADMIN_USER.avatarBgColor}
-               >
-                   {!MOCK_ADMIN_USER.avatarInitials && generateInitials(MOCK_ADMIN_USER.name)}
-               </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium truncate">{MOCK_ADMIN_USER.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{MOCK_ADMIN_USER.email}</p>
-            </div>
-            <Link href="/profile" passHref>
-                <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/profile'}>
-                    <Settings />
-                </SidebarMenuButton>
-            </Link>
+             {isLoadingUser ? (
+                <>
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div className="flex-1 space-y-1">
+                        <Skeleton className="h-4 w-20 rounded" />
+                        <Skeleton className="h-3 w-32 rounded" />
+                    </div>
+                    <Skeleton className="h-7 w-7 rounded" />
+                </>
+             ) : currentUserData ? (
+                <>
+                    <Avatar className="h-9 w-9">
+                       <AvatarFallback
+                           initials={currentUserData.avatarInitials || getInitials(currentUserData.name)}
+                           backgroundColor={currentUserData.avatarBgColor}
+                        >
+                           {!currentUserData.avatarInitials && getInitials(currentUserData.name)}
+                       </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 overflow-hidden">
+                        <p className="text-sm font-medium truncate">{currentUserData.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{currentUserData.email}</p>
+                    </div>
+                    <Link href="/profile" passHref>
+                        <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/profile'}>
+                            <Settings />
+                        </SidebarMenuButton>
+                    </Link>
+                </>
+             ) : (
+                 <div className="text-xs text-muted-foreground">Not logged in</div>
+             )}
           </div>
         </SidebarFooter>
       </Sidebar>
