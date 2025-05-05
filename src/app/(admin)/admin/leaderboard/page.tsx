@@ -268,7 +268,7 @@ export default function AdminLeaderboardPage() {
               avatarUrl: agent.avatarUrl,
               avatarInitials: agent.avatarInitials,
               avatarBgColor: agent.avatarBgColor,
-              // isCurrentUser: agent.id === currentUser?.id, // Add if needed later
+              isCurrentUser: agent.id === currentUser?.id, // Add if needed later
           }))
            // Removed filter for totalPoints > 0
           .sort((a, b) => b.totalPoints - a.totalPoints)
@@ -305,7 +305,7 @@ export default function AdminLeaderboardPage() {
                    name: team.name,
                    totalPoints: teamScores[team.id] || 0,
                    agentFirstNames: agentFirstNames.sort(), // Sort names alphabetically
-                   // isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
+                   isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
                };
            })
             // Removed filter for totalPoints > 0
@@ -318,6 +318,7 @@ export default function AdminLeaderboardPage() {
 
   const isLoading = isLoadingBase || isLoadingData;
   const competition = competitions.find(c => c.id === selectedCompetitionId);
+  const currentUser = auth.currentUser; // Get current user for highlighting
 
   return (
     <TooltipProvider> {/* Added TooltipProvider */}
@@ -533,6 +534,3 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
-
-
-    
