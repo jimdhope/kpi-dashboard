@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -6,10 +7,6 @@ import { Target, Medal, Trophy, ClipboardList, AlertCircle, CalendarIcon, Loader
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert"; // Ensure AlertDescription is aliased or imported uniquely
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'; // Added Popover imports
-import { Calendar } from '@/components/ui/calendar'; // Added Calendar import
-import { Button } from '@/components/ui/button'; // Added Button import
-import { Label } from '@/components/ui/label'; // Added Label import
 import { collection, query, where, getDocs, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, setDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'; // Added Firestore save/delete functions
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
@@ -76,7 +73,7 @@ const getRankHighlightStyle = (rank: number): React.CSSProperties => {
         case 1: return { backgroundColor: '#9f8f5e', color: '#ffffff' };
         case 2: return { backgroundColor: '#969696', color: '#ffffff' };
         case 3: return { backgroundColor: '#996b4f', color: '#ffffff' };
-        default: return {};
+        default: return {}; // No special style for other ranks
     }
 };
 
@@ -98,7 +95,7 @@ export default function AgentDashboardPage() {
   const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null); // Store active competition
 
   // New State for Achievement Logging (moved from achievements page)
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
+  // REMOVED: const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [achievementInputs, setAchievementInputs] = useState<AgentAchievementInputState>({});
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
 
@@ -176,22 +173,23 @@ export default function AgentDashboardPage() {
         }
         unsubscribeAuth();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Removed agentPodId, isLoadingUser dependencies
+  }, [agentPodId, isLoadingUser]); // Adjusted dependencies
 
 
-  // Function to fetch and listen to daily achievements for the selected date
-    const fetchAndListenDailyAchievements = useCallback((competitionId: string | null, currentRules: RuleFormData[], date: Date) => {
+  // Function to fetch and listen to daily achievements for the CURRENT date
+    const fetchAndListenDailyAchievements = useCallback((competitionId: string | null, currentRules: RuleFormData[]) => {
+        const currentDate = startOfDay(new Date()); // Always use the current date
+
         if (!competitionId || !currentUser?.id || !agentPodId) {
              console.log("[fetchAndListenDailyAchievements] Skipping: Missing required IDs or competition.");
              setAchievementInputs({}); // Clear inputs if no competition
              return;
          };
 
-        console.log(`[fetchAndListenDailyAchievements] Setting up listener for competition ${competitionId}, date ${date.toISOString().split('T')[0]}`);
+        console.log(`[fetchAndListenDailyAchievements] Setting up listener for competition ${competitionId}, date ${currentDate.toISOString().split('T')[0]}`);
 
         const dailyAchievementsRef = collection(db, 'dailyAchievements');
-        const dateTimestamp = Timestamp.fromDate(startOfDay(date));
+        const dateTimestamp = Timestamp.fromDate(currentDate);
         const dailyQuery = query(
             dailyAchievementsRef,
             where('agentId', '==', currentUser.id),
@@ -204,7 +202,7 @@ export default function AgentDashboardPage() {
         if (unsubscribeDailyAchievements) unsubscribeDailyAchievements();
 
         unsubscribeDailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
-            console.log(`[fetchAndListenDailyAchievements] Listener updated, found ${snapshot.docs.length} logs for ${date.toISOString().split('T')[0]}`);
+            console.log(`[fetchAndListenDailyAchievements] Listener updated, found ${snapshot.docs.length} logs for ${currentDate.toISOString().split('T')[0]}`);
             const existingAchievements = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
             const initialInputs: AgentAchievementInputState = {};
             currentRules.forEach(rule => { // Use currentRules passed to function
@@ -222,7 +220,6 @@ export default function AgentDashboardPage() {
             setAchievementInputs({});
         });
         // No cleanup return here, managed by the main effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser?.id, agentPodId]); // Dependencies for useCallback
 
 
@@ -267,7 +264,7 @@ export default function AgentDashboardPage() {
 
     unsubscribeAgents = onSnapshot(agentsQuery, (agentsSnapshot) => {
          if (!isMounted) return; // Check if component is still mounted
-        const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+         const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
 
          // Compare IDs before setting state to prevent unnecessary re-renders
          setPodAgents(currentAgents => {
@@ -280,7 +277,6 @@ export default function AgentDashboardPage() {
              console.log("[AgentDashboard] Pod agents listener updated, no change in agents.");
              return currentAgents; // No change
          });
-
     }, (err) => {
         if (!isMounted) return;
         console.error("[AgentDashboard] Error listening to pod agents:", err);
@@ -292,7 +288,7 @@ export default function AgentDashboardPage() {
     // --- Setup Competition Listener ---
     console.log("[AgentDashboard] Data Effect: Setting up competition listener for pod:", agentPodId);
     const competitionsRef = collection(db, 'competitions');
-    const todayTimestamp = Timestamp.fromDate(startOfDay(new Date()));
+    const todayTimestamp = Timestamp.fromDate(startOfDay(new Date())); // Use current date for competition check
     const competitionQuery = query(
       competitionsRef,
       where('podIds', 'array-contains', agentPodId),
@@ -387,8 +383,8 @@ export default function AgentDashboardPage() {
                   }, (err) => { if (isMounted) { console.error("[AgentDashboard] Error listening to daily targets:", err); setError("Failed to load targets."); } });
 
 
-                 // --- Initial Fetch and Listener Setup for Daily Achievements (for selectedDate) ---
-                 fetchAndListenDailyAchievements(activeCompId, activeCompRules, selectedDate);
+                 // --- Initial Fetch and Listener Setup for Daily Achievements (for CURRENT date) ---
+                 fetchAndListenDailyAchievements(activeCompId, activeCompRules);
 
              } else {
                  console.log("[AgentDashboard] Data Effect: No active competition found.");
@@ -440,22 +436,7 @@ export default function AgentDashboardPage() {
       if (unsubscribeDailyAchievements) unsubscribeDailyAchievements();
     };
      // Dependencies: Re-run when user/pod context changes
-  }, [agentPodId, currentUser?.id, isLoadingUser, selectedDate, fetchAndListenDailyAchievements]); // Added fetchAndListenDailyAchievements
-
-
-
-    // Effect to refetch daily achievements when selectedDate changes *and* competition is active
-    useEffect(() => {
-         console.log(`[AgentDashboard] Selected Date Effect triggered: Date=${selectedDate.toISOString().split('T')[0]}, ActiveComp=${activeCompetition?.id ?? 'None'}, Rules=${rules.length}`);
-        if (activeCompetition?.id && rules.length > 0) {
-             fetchAndListenDailyAchievements(activeCompetition.id, rules, selectedDate);
-        } else {
-             // Clear inputs if no active competition or rules for the selected date
-             setAchievementInputs({});
-        }
-         // Cleanup is handled by the main data effect that sets up this listener
-         // The fetchAndListenDailyAchievements function handles its own cleanup internally
-    }, [selectedDate, activeCompetition?.id, rules, fetchAndListenDailyAchievements]);
+  }, [agentPodId, currentUser?.id, isLoadingUser, fetchAndListenDailyAchievements]); // Pass fetchAndListen as dependency
 
 
   // 4. Process data (Scores, Leaderboards) - useMemo
@@ -487,7 +468,7 @@ export default function AgentDashboardPage() {
     // --- Calculate Agent's Score for Today ---
      let todayTotalPoints = 0;
      const todayAchievementsMap = new Map<string, { name: string; emoji: string; value: number }>();
-     const todayTimestampStart = startOfDay(selectedDate); // Use selectedDate here
+     const todayTimestampStart = startOfDay(new Date()); // Always use current date
 
       if (currentUser && rules.length > 0) {
          // Filter the COMPETITION logs for today's date
@@ -515,7 +496,7 @@ export default function AgentDashboardPage() {
 
 
     // --- Calculate Pod Target Summary for Today ---
-    const dayOfWeek = daysOfWeek[getDay(selectedDate)]; // Use selectedDate here
+    const dayOfWeek = daysOfWeek[getDay(new Date())]; // Always use current day
     const podRuleTotalsToday: Record<string, number> = {};
     rules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
 
@@ -599,8 +580,7 @@ export default function AgentDashboardPage() {
         agentLeaderboard: finalAgentLeaderboard,
         teamLeaderboard: finalTeamLeaderboard
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dailyLogs, podLogs, rules, dailyTargets, currentUser, podAgents, teams, selectedDate]); // Added selectedDate
+  }, [dailyLogs, podLogs, rules, dailyTargets, currentUser, podAgents, teams]); // Use current date directly, no selectedDate
 
 
   // --- Achievement Card Logic (Moved from achievements page) ---
@@ -612,7 +592,6 @@ export default function AgentDashboardPage() {
       [ruleId]: { ...prev[ruleId], value: newValue },
     }));
     debouncedSave(ruleId, newValue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [achievementInputs]); // Depend on achievementInputs to get the latest existingLogId
 
   const debounce = (func: Function, delay: number) => {
@@ -639,7 +618,7 @@ export default function AgentDashboardPage() {
     setIsSaving(prev => ({ ...prev, [ruleId]: true }));
     try {
       const points = rule.points * value;
-      const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate)); // Use selectedDate for logging
+      const dateTimestamp = Timestamp.fromDate(startOfDay(new Date())); // Log for current day
       const logEntry: Omit<DailyAchievementLog, 'id'> = {
         agentId: currentUser.id,
         podId: agentPodId,
@@ -698,7 +677,7 @@ export default function AgentDashboardPage() {
 
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
      // eslint-disable-next-line react-hooks/exhaustive-deps
-     [agentPodId, currentUser?.id, activeCompetition?.id, rules, selectedDate, toast, achievementInputs] // Added achievementInputs
+     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs] // Dependencies updated, removed selectedDate
    );
 
 
@@ -717,36 +696,9 @@ export default function AgentDashboardPage() {
         {/* Log Achievements Section */}
         <Card>
             <CardHeader>
-                <CardTitle>Log Achievements ({format(selectedDate, 'PPP')})</CardTitle>
-                <CardDescription>Use the buttons to log your achievements for the selected date.</CardDescription>
-                 {/* Date Picker for Logging */}
-                 <div className="pt-4">
-                    <Label htmlFor="log-date-select">Select Date to Log For</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          id="log-date-select"
-                          variant={"outline"}
-                          className={cn(
-                            "w-full sm:w-[240px] justify-start text-left font-normal mt-2",
-                            !selectedDate && "text-muted-foreground"
-                          )}
-                          disabled={isLoading}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-50">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                </div>
+                <CardTitle>Today's Achievements</CardTitle> {/* Updated Title */}
+                <CardDescription>Use the buttons to log your achievements for today.</CardDescription>
+                 {/* Date Picker Removed */}
             </CardHeader>
             <CardContent>
                 {isLoading ? (
@@ -759,7 +711,7 @@ export default function AgentDashboardPage() {
                      <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
                  ) : !canLog && !error && rules.length === 0 ? ( // Check rules length specifically
                     <p className="text-muted-foreground text-center py-6">
-                        No competition rules found for your pod on this date.
+                        No competition rules found for your pod today.
                     </p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -787,12 +739,12 @@ export default function AgentDashboardPage() {
            <Card className="shadow-md lg:col-span-2"> {/* Span 2 columns on larger screens */}
              <CardHeader>
                <CardTitle className="flex items-center gap-2"> <Activity className="h-5 w-5"/> Your Scores</CardTitle>
-               <CardDescription>Achievements logged for the selected day and the entire competition.</CardDescription>
+               <CardDescription>Achievements logged for today and the entire competition.</CardDescription>
              </CardHeader>
              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {/* Daily Scores */}
                   <div>
-                       <h3 className="text-lg font-semibold mb-2">Today ({format(selectedDate, 'PPP')})</h3>
+                       <h3 className="text-lg font-semibold mb-2">Today</h3>
                        {isLoading ? (
                            <div className="space-y-2">
                                 <Skeleton className="h-6 w-1/4 rounded mb-1" />
@@ -814,7 +766,7 @@ export default function AgentDashboardPage() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground">No achievements logged for {format(selectedDate, 'PPP')}.</p>
+                                    <p className="text-sm text-muted-foreground">No achievements logged today.</p>
                                 )}
                             </>
                         ) : !error ? (
@@ -859,7 +811,7 @@ export default function AgentDashboardPage() {
            <Card className="shadow-md">
               <CardHeader>
                    <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle>
-                   <CardDescription>Your pod's progress towards today's targets ({format(selectedDate, 'PPP')}).</CardDescription>
+                   <CardDescription>Your pod's progress towards today's targets.</CardDescription>
               </CardHeader>
               <CardContent>
                    {isLoading ? (
