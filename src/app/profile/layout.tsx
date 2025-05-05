@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -109,8 +108,9 @@ export default function ProfileLayout({
   }
 
   // Pass roles, current layout, and handler down to the chosen layout
+  // Ensure roles defaults to an empty array if null or undefined
   const layoutProps = {
-    roles: roles || [], // Pass empty array if null
+    roles: roles || [],
     currentLayout: layoutType,
     onLayoutChange: handleLayoutChange,
   };
