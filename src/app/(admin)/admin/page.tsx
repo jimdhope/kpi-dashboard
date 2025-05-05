@@ -86,7 +86,6 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [timeframe, setTimeframe] = useState<Timeframe>('weekly'); // Default timeframe
-  // Use today's date for default calculations, only use selectedDate if timeframe is custom
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   // State for fetched data
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
@@ -377,25 +376,24 @@ export default function AdminDashboardPage() {
             <CardHeader>
             <CardTitle>Leaderboard & Summary Timeframe</CardTitle>
             </CardHeader>
-            {/* Removed wrapping grid, using flex for direct control */}
             <CardContent className="flex flex-wrap gap-4 items-end">
                 <div className="grid gap-1.5"> {/* Keep grid for label + select */}
-                <Label htmlFor="timeframe-select">Select Period</Label>
-                <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
-                    <SelectTrigger id="timeframe-select" className="w-[180px]">
-                    <SelectValue placeholder="Select Timeframe" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="daily">Today / Selected Day</SelectItem>
-                    <SelectItem value="weekly">This Week / Selected Week</SelectItem>
-                    <SelectItem value="monthly">This Month / Selected Month</SelectItem>
-                    <SelectItem value="allTime">All Time</SelectItem>
-                    </SelectContent>
-                </Select>
+                    <Label htmlFor="timeframe-select">Select Period</Label>
+                    <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
+                        <SelectTrigger id="timeframe-select" className="w-[180px]">
+                            <SelectValue placeholder="Select Timeframe" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="allTime">All Time</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
                 {/* Date Picker - always available for timeframe context */}
                 <div className="grid gap-1.5"> {/* Keep grid for label + popover */}
-                    <Label htmlFor="date-select">Start Date</Label> {/* Changed Label */}
+                    <Label htmlFor="date-select">Start Date</Label>
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -496,3 +494,4 @@ export default function AdminDashboardPage() {
   );
 }
 
+    
