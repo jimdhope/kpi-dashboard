@@ -80,7 +80,7 @@ export default function AgentDailyScoresPage() {
   const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]); // Logs for the entire pod (for target summary)
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null); // State for daily targets
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = false;
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -354,7 +354,7 @@ export default function AgentDailyScoresPage() {
                   {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
+              <PopoverContent className="w-auto p-0 z-50"> {/* Added z-50 */}
                 <Calendar
                   mode="single"
                   selected={selectedDate}

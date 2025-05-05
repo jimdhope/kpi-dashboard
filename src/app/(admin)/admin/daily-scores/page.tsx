@@ -346,7 +346,7 @@ export default function AdminDailyScoresPage() {
 
      // Generate Pod Target Summary String - using the FILTERED summary for the day
      const finalPodTargetSummaryString = finalPodTargetSummary
-         .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? `/${summary.target}` : ''}`)
+         .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
          .join(' | ');
 
     return {
@@ -407,7 +407,7 @@ export default function AdminDailyScoresPage() {
                     {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0 z-50"> {/* Added z-50 */}
                   <Calendar
                     mode="single"
                     selected={selectedDate}

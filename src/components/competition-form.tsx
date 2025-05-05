@@ -240,6 +240,12 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   const handleFormSubmit = async (data: CompetitionFormSchemaType) => {
     setIsSubmitting(true);
     try {
+        // Ensure startDate and endDate are Date objects before submitting
+        if (!(data.startDate instanceof Date) || !(data.endDate instanceof Date)) {
+          toast({ variant: "destructive", title: "Invalid Date", description: "Please select valid start and end dates." });
+          setIsSubmitting(false);
+          return;
+        }
         const submitData = { ...data };
         await onSubmit(submitData, data.rules); // Pass Zod-transformed data and rules
     } catch (error) {
@@ -365,7 +371,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0 z-50" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
@@ -416,7 +422,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0 z-50" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}

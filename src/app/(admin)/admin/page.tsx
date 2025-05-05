@@ -395,7 +395,7 @@ export default function AdminDashboardPage() {
                             {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent className="w-auto p-0 z-50"> {/* Added z-50 */}
                         <Calendar
                             mode="single"
                             selected={selectedDate}
