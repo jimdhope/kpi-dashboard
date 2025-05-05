@@ -36,7 +36,7 @@ interface AgentSidebarLayoutProps {
 
 export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutChange }: AgentSidebarLayoutProps) {
   const currentPath = usePathname();
-    const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
@@ -115,7 +115,8 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-             {/* Log Achievements Link */}
+             {/* Log Achievements Link - Removed */}
+             {/*
              <SidebarMenuItem>
               <Link href="/agent/log-achievements" passHref>
                 <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/agent/log-achievements'}>
@@ -124,6 +125,7 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+             */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
@@ -174,9 +176,9 @@ export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutCha
               <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2> {/* Changed title */}
             </div>
             <div className="flex items-center gap-4">
-               {/* Pass props to RoleSwitcher */}
+               {/* Pass props to RoleSwitcher - ensure roles are passed as an array */}
                <RoleSwitcher
-                   availableRoles={roles}
+                   availableRoles={roles || []} // Pass empty array if roles is undefined
                    currentLayout={currentLayout ?? 'agent'} // Provide default if null
                    onLayoutChange={onLayoutChange}
                />

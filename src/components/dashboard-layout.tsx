@@ -20,7 +20,7 @@ import {
 import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; // Corrected import
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { app, db } from '@/lib/firebase';
@@ -39,7 +39,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, roles, currentLayout, onLayoutChange }: DashboardLayoutProps) {
   const currentPath = usePathname();
-    const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
@@ -259,9 +259,9 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
               <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2> {/* TODO: Make dynamic */}
             </div>
             <div className="flex items-center gap-4">
-               {/* Pass props to RoleSwitcher */}
+               {/* Pass props to RoleSwitcher - ensure roles are passed as an array */}
                <RoleSwitcher
-                   availableRoles={roles}
+                   availableRoles={roles || []} // Pass empty array if roles is undefined
                    currentLayout={currentLayout ?? 'admin'} // Provide default if null
                    onLayoutChange={onLayoutChange}
                />
