@@ -13,7 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'; // Added Calendar
 import { Button } from '@/components/ui/button'; // Added Button
 import { Label } from '@/components/ui/label'; // Added Label
-import { FormDescription, Form } from '@/components/ui/form'; // Added Form import
+import { Form, FormDescription } from '@/components/ui/form'; // Added Form import
 import { useForm } from 'react-hook-form'; // Import useForm
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'; // Date functions
 import { cn } from '@/lib/utils'; // For conditional classes
@@ -377,8 +377,9 @@ export default function AdminDashboardPage() {
             <CardHeader>
             <CardTitle>Leaderboard & Summary Timeframe</CardTitle>
             </CardHeader>
+            {/* Removed wrapping grid, using flex for direct control */}
             <CardContent className="flex flex-wrap gap-4 items-end">
-                <div className="grid gap-1.5">
+                <div className="grid gap-1.5"> {/* Keep grid for label + select */}
                 <Label htmlFor="timeframe-select">Select Period</Label>
                 <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
                     <SelectTrigger id="timeframe-select" className="w-[180px]">
@@ -393,8 +394,8 @@ export default function AdminDashboardPage() {
                 </Select>
                 </div>
                 {/* Date Picker - always available for timeframe context */}
-                <div className="grid gap-1.5">
-                    <Label htmlFor="date-select">Reference Date</Label>
+                <div className="grid gap-1.5"> {/* Keep grid for label + popover */}
+                    <Label htmlFor="date-select">Start Date</Label> {/* Changed Label */}
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -417,8 +418,9 @@ export default function AdminDashboardPage() {
                             />
                         </PopoverContent>
                     </Popover>
-                    <FormDescription>Used to determine the week/month for filtering.</FormDescription>
+                    {/* Removed FormDescription */}
                 </div>
+                {/* TODO: Add Custom Date Range Pickers if 'custom' timeframe is enabled */}
             </CardContent>
         </Card>
       </Form>
