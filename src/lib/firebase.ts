@@ -16,7 +16,8 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional
+  // Ensure NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID is set, or handle its absence
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || undefined
 };
 
 // Validate that essential config values are present
@@ -48,11 +49,12 @@ let analytics: any = null; // Initialize analytics as null
 // Initialize Analytics (conditionally, only in browser and if supported/configured)
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
-    if (supported && firebaseConfig.measurementId) { // Also check if measurementId exists
+    // Check if measurementId is defined and not an empty string before initializing
+    if (supported && firebaseConfig.measurementId && firebaseConfig.measurementId.trim() !== '') {
       analytics = getAnalytics(app);
       console.log("Firebase Analytics initialized");
     } else {
-       console.log("Firebase Analytics not supported or measurementId missing.");
+       console.log("Firebase Analytics not supported or measurementId missing/invalid.");
     }
   }).catch(error => {
     console.error("Error checking Firebase Analytics support:", error);
