@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -30,6 +29,13 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider, // Import TooltipProvider
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 // Interface for daily achievement logs (same as before)
 interface DailyAchievementLog {
@@ -313,215 +319,216 @@ export default function AdminLeaderboardPage() {
   const competition = competitions.find(c => c.id === selectedCompetitionId);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Competition Leaderboards</CardTitle>
-          <CardDescription>View agent and team rankings for a specific competition.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Selection Controls */}
-          <div className="flex flex-wrap gap-4 mb-6 items-end">
-            {/* Competition Select */}
-            <div className="grid gap-2">
-              <Label htmlFor="competition-select">Competition</Label>
-              <Select
-                onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); /* Reset pod filter */ }}
-                value={selectedCompetitionId}
-                disabled={isLoadingBase}
-              >
-                <SelectTrigger id="competition-select" className="w-[250px]">
-                  <SelectValue placeholder={isLoadingBase ? "Loading..." : "Select Competition"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {competitions.length === 0 && !isLoadingBase && <SelectItem value="-" disabled>No competitions found</SelectItem>}
-                  {competitions.map(comp => (
-                    <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <TooltipProvider> {/* Added TooltipProvider */}
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Competition Leaderboards</CardTitle>
+            <CardDescription>View agent and team rankings for a specific competition.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Selection Controls */}
+            <div className="flex flex-wrap gap-4 mb-6 items-end">
+              {/* Competition Select */}
+              <div className="grid gap-2">
+                <Label htmlFor="competition-select">Competition</Label>
+                <Select
+                  onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); /* Reset pod filter */ }}
+                  value={selectedCompetitionId}
+                  disabled={isLoadingBase}
+                >
+                  <SelectTrigger id="competition-select" className="w-[250px]">
+                    <SelectValue placeholder={isLoadingBase ? "Loading..." : "Select Competition"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {competitions.length === 0 && !isLoadingBase && <SelectItem value="-" disabled>No competitions found</SelectItem>}
+                    {competitions.map(comp => (
+                      <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Pod Filter Select (Optional) */}
-            <div className="grid gap-2">
-              <Label htmlFor="pod-filter-select">Filter by Pod (Optional)</Label>
-              <Select
-                onValueChange={(value) => setSelectedPodId(value === 'all' ? '' : value)}
-                value={selectedPodId || 'all'}
-                disabled={isLoading || !selectedCompetitionId || participatingPods.length === 0}
-              >
-                <SelectTrigger id="pod-filter-select" className="w-[200px]">
-                  <SelectValue placeholder={!selectedCompetitionId ? "Select competition first" : (participatingPods.length === 0 ? "No pods" : "All Pods")} />
-                </SelectTrigger>
-                <SelectContent>
-                   {!selectedCompetitionId ? (
-                       <SelectItem value="-" disabled>Select competition first</SelectItem>
-                   ) : participatingPods.length === 0 ? (
-                       <SelectItem value="-" disabled>No pods in competition</SelectItem>
-                   ) : (
-                     <>
-                       <SelectItem value="all">All Pods</SelectItem>
-                       {participatingPods.map(pod => (
-                         <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                       ))}
-                     </>
-                   )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {error && <p className="text-destructive mb-4">{error}</p>}
-
-          {/* Leaderboard Display */}
-          {!selectedCompetitionId && !isLoadingBase && (
-            <p className="text-muted-foreground text-center py-4">Please select a competition to view leaderboards.</p>
-          )}
-
-          {selectedCompetitionId && isLoading ? (
-            <div className="grid md:grid-cols-2 gap-6">
-                <Skeleton className="h-[400px] w-full" />
-                <Skeleton className="h-[400px] w-full" />
-            </div>
-          ) : selectedCompetitionId && !isLoading && (
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Agent Leaderboard */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg font-semibold">Agent Leaderboard</CardTitle>
-                     <Users className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                   {agentLeaderboard.length === 0 ? (
-                       <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
-                   ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>{/* Remove whitespace here */}
-                                <TableHead className="w-[50px]">Rank</TableHead>
-                                <TableHead>Agent</TableHead>
-                                <TableHead className="text-right">Total Points</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {agentLeaderboard.map((entry) => (
-                             <TableRow
-                                key={entry.id}
-                                style={getRankHighlightStyle(entry.rank ?? 0)}
-                                className={cn(
-                                    entry.isCurrentUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
-                                    (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
-                                )}
-                             >
-                            <TableCell className="font-medium text-center align-middle">
-                                {(entry.rank ?? 0) <= 3 ? (
-                                    <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
-                                ) : (
-                                    entry.rank
-                                )}
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex items-center gap-2">
-                                     <Avatar className="h-7 w-7">
-                                         {entry.avatarUrl ? (
-                                            <AvatarImage src={entry.avatarUrl} alt={entry.name} data-ai-hint="avatar person" />
-                                         ) : (
-                                             <AvatarFallback
-                                                initials={entry.avatarInitials || generateInitials(entry.name)}
-                                                backgroundColor={entry.avatarBgColor}
-                                                 // Use a very dark color for fallbacks on light rank backgrounds
-                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
-                                             >
-                                                 {!entry.avatarInitials && generateInitials(entry.name)}
-                                             </AvatarFallback>
-                                         )}
-                                     </Avatar>
-                                      {/* Ensure name text color contrasts with rank background (explicitly white) */}
-                                     <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
-                                     {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
-                                 </div>
-                            </TableCell>
-                             {/* Ensure score text color contrasts with rank background (explicitly white) */}
-                            <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
-                                {entry.totalPoints.toLocaleString()}
-                            </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                    )}
-                </CardContent>
-              </Card>
-
-              {/* Team Leaderboard */}
-              <Card>
-                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg font-semibold">Team Leaderboard</CardTitle>
-                     <Trophy className="h-5 w-5 text-muted-foreground" />
-                 </CardHeader>
-                <CardContent>
-                     {teams.length === 0 ? (
-                         <p className="text-muted-foreground text-center py-4">No teams defined for this competition.</p>
-                     ) : teamLeaderboard.length === 0 ? (
-                         <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
+              {/* Pod Filter Select (Optional) */}
+              <div className="grid gap-2">
+                <Label htmlFor="pod-filter-select">Filter by Pod (Optional)</Label>
+                <Select
+                  onValueChange={(value) => setSelectedPodId(value === 'all' ? '' : value)}
+                  value={selectedPodId || 'all'}
+                  disabled={isLoading || !selectedCompetitionId || participatingPods.length === 0}
+                >
+                  <SelectTrigger id="pod-filter-select" className="w-[200px]">
+                    <SelectValue placeholder={!selectedCompetitionId ? "Select competition first" : (participatingPods.length === 0 ? "No pods" : "All Pods")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                     {!selectedCompetitionId ? (
+                         <SelectItem value="-" disabled>Select competition first</SelectItem>
+                     ) : participatingPods.length === 0 ? (
+                         <SelectItem value="-" disabled>No pods in competition</SelectItem>
                      ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>{/* Remove whitespace here */}
-                                    <TableHead className="w-[50px]">Rank</TableHead>
-                                    <TableHead>Team</TableHead>
-                                    <TableHead className="text-right">Total Points</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {teamLeaderboard.map((entry) => (
-                                <TableRow
-                                    key={entry.id}
-                                    style={getRankHighlightStyle(entry.rank ?? 0)}
-                                    className={cn(
-                                        entry.isCurrentUserTeam && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
-                                        (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
-                                    )}
-                                >
-                                <TableCell className="font-medium text-center align-middle">
-                                    {(entry.rank ?? 0) <= 3 ? (
-                                        <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
-                                    ) : (
-                                        entry.rank
-                                    )}
-                                </TableCell>
-                                {/* Ensure name text color contrasts with rank background (explicitly white) */}
-                                <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-1">
-                                            <span className="font-semibold">{entry.name}</span>
-                                            {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
-                                        </div>
-                                         {/* Display agent first names */}
-                                         {entry.agentFirstNames && entry.agentFirstNames.length > 0 && (
-                                             {/* Ensure list text color contrasts with rank background (adjust opacity) */}
-                                            <span className={cn("text-xs", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
-                                                {entry.agentFirstNames.join(', ')}
-                                            </span>
-                                         )}
-                                    </div>
-                                </TableCell>
-                                {/* Ensure score text color contrasts with rank background (explicitly white) */}
-                                <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
-                                    {entry.totalPoints.toLocaleString()}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                    )}
-                </CardContent>
-              </Card>
+                       <>
+                         <SelectItem value="all">All Pods</SelectItem>
+                         {participatingPods.map(pod => (
+                           <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                         ))}
+                       </>
+                     )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+
+            {error && <p className="text-destructive mb-4">{error}</p>}
+
+            {/* Leaderboard Display */}
+            {!selectedCompetitionId && !isLoadingBase && (
+              <p className="text-muted-foreground text-center py-4">Please select a competition to view leaderboards.</p>
+            )}
+
+            {selectedCompetitionId && isLoading ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                  <Skeleton className="h-[400px] w-full" />
+                  <Skeleton className="h-[400px] w-full" />
+              </div>
+            ) : selectedCompetitionId && !isLoading && (
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Agent Leaderboard */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-lg font-semibold">Agent Leaderboard</CardTitle>
+                       <Users className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                     {agentLeaderboard.length === 0 ? (
+                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
+                     ) : (
+                      <Table>
+                          <TableHeader>
+                              <TableRow>{/* Remove whitespace here */}
+                                  <TableHead className="w-[50px]">Rank</TableHead>
+                                  <TableHead>Agent</TableHead>
+                                  <TableHead className="text-right">Total Points</TableHead>
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                          {agentLeaderboard.map((entry) => (
+                               <TableRow
+                                  key={entry.id}
+                                  style={getRankHighlightStyle(entry.rank ?? 0)}
+                                  className={cn(
+                                      entry.isCurrentUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
+                                      (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
+                                  )}
+                               >
+                              <TableCell className="font-medium text-center align-middle">
+                                  {(entry.rank ?? 0) <= 3 ? (
+                                      <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                                  ) : (
+                                      entry.rank
+                                  )}
+                              </TableCell>
+                              <TableCell>
+                                  <div className="flex items-center gap-2">
+                                       <Avatar className="h-7 w-7">
+                                           {entry.avatarUrl ? (
+                                              <AvatarImage src={entry.avatarUrl} alt={entry.name} data-ai-hint="avatar person" />
+                                           ) : (
+                                               <AvatarFallback
+                                                  initials={entry.avatarInitials || generateInitials(entry.name)}
+                                                  backgroundColor={entry.avatarBgColor}
+                                                   // Use a very dark color for fallbacks on light rank backgrounds
+                                                  className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
+                                               >
+                                                   {!entry.avatarInitials && generateInitials(entry.name)}
+                                               </AvatarFallback>
+                                           )}
+                                       </Avatar>
+                                        {/* Ensure name text color contrasts with rank background (explicitly white) */}
+                                       <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
+                                       {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
+                                   </div>
+                              </TableCell>
+                               {/* Ensure score text color contrasts with rank background (explicitly white) */}
+                              <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
+                                  {entry.totalPoints.toLocaleString()}
+                              </TableCell>
+                              </TableRow>
+                          ))}
+                          </TableBody>
+                      </Table>
+                      )}
+                  </CardContent>
+                </Card>
+
+                {/* Team Leaderboard */}
+                <Card>
+                   <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-lg font-semibold">Team Leaderboard</CardTitle>
+                       <Trophy className="h-5 w-5 text-muted-foreground" />
+                   </CardHeader>
+                  <CardContent>
+                       {teams.length === 0 ? (
+                           <p className="text-muted-foreground text-center py-4">No teams defined for this competition.</p>
+                       ) : teamLeaderboard.length === 0 ? (
+                           <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
+                       ) : (
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>{/* Remove whitespace here */}
+                                      <TableHead className="w-[50px]">Rank</TableHead>
+                                      <TableHead>Team</TableHead>
+                                      <TableHead className="text-right">Total Points</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                              {teamLeaderboard.map((entry) => (
+                                  <TableRow
+                                      key={entry.id}
+                                      style={getRankHighlightStyle(entry.rank ?? 0)}
+                                      className={cn(
+                                          entry.isCurrentUserTeam && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
+                                          (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
+                                      )}
+                                  >
+                                  <TableCell className="font-medium text-center align-middle">
+                                      {(entry.rank ?? 0) <= 3 ? (
+                                          <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                                      ) : (
+                                          entry.rank
+                                      )}
+                                  </TableCell>
+                                  {/* Ensure name text color contrasts with rank background (explicitly white) */}
+                                  <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
+                                      <div className="flex flex-col">
+                                          <div className="flex items-center gap-1">
+                                              <span className="font-semibold">{entry.name}</span>
+                                              {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
+                                          </div>
+                                           {/* Display agent first names */}
+                                           {entry.agentFirstNames && entry.agentFirstNames.length > 0 && (
+                                               {/* Ensure list text color contrasts with rank background (adjust opacity) */}
+                                              <span className={cn("text-xs", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
+                                                  {entry.agentFirstNames.join(', ')}
+                                              </span>
+                                           )}
+                                      </div>
+                                  </TableCell>
+                                  {/* Ensure score text color contrasts with rank background (explicitly white) */}
+                                  <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
+                                      {entry.totalPoints.toLocaleString()}
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                          </TableBody>
+                      </Table>
+                      )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </TooltipProvider>
   );
 }
-
