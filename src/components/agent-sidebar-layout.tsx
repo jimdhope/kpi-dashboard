@@ -30,18 +30,19 @@ import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitche
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
   roles: UserRole[]; // Added roles prop
-  currentLayout: 'admin' | 'agent'; // Added currentLayout prop
+  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop, allow null initially
   onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
 }
 
 export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutChange }: AgentSidebarLayoutProps) {
   const currentPath = usePathname();
-  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+    const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
   // Log received props for debugging
   useEffect(() => {
+    // Use console.log for client-side components
     console.log("[AgentSidebarLayout] Received props:", { roles, currentLayout });
   }, [roles, currentLayout]);
 

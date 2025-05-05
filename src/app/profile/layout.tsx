@@ -140,9 +140,10 @@ export default function ProfileLayout({
 
   // Pass roles, current layout, and handler down to the chosen layout
   // Ensure roles defaults to an empty array if null or undefined
+  // Correctly pass both roles and layoutType (as currentLayout)
   const layoutProps = {
-    roles: roles || [], // Ensure roles is always an array
-    currentLayout: layoutType, // Pass the state variable
+    roles: roles || [],
+    currentLayout: layoutType, // Use the state variable `layoutType`
     onLayoutChange: handleLayoutChange,
   };
 

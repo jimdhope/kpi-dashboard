@@ -33,13 +33,13 @@ import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitche
 interface DashboardLayoutProps {
   children: React.ReactNode;
   roles: UserRole[]; // Added roles prop
-  currentLayout: 'admin' | 'agent'; // Added currentLayout prop
+  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop, allow null initially
   onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
 }
 
 export function DashboardLayout({ children, roles, currentLayout, onLayoutChange }: DashboardLayoutProps) {
   const currentPath = usePathname();
-  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+    const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
