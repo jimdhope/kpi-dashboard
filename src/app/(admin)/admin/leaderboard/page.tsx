@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -14,20 +13,16 @@ import {
   onSnapshot, // Use onSnapshot
   Unsubscribe, // Use Unsubscribe
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Trophy, Users, Medal } from 'lucide-react';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { Loader2, AlertCircle, Trophy, Users, Medal } from 'lucide-react';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
-// Removed RuleFormData import as it's not directly used for calculation here
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -52,7 +47,7 @@ interface DailyAchievementLog {
 
 // Interface for leaderboard entries (same as before)
 interface LeaderboardEntry {
-  id: string; // Can be agentId or podId/teamId
+  id: string; // Can be agentId or teamId
   name: string;
   totalPoints: number;
   rank?: number;
@@ -60,11 +55,15 @@ interface LeaderboardEntry {
   avatarInitials?: string;
   avatarBgColor?: string;
   isCurrentUser?: boolean;
-  isCurrentUserTeam?: boolean; // Renaming to isCurrentUserPod for clarity might be better
+  isCurrentUserTeam?: boolean;
 }
 
-// Timeframe options (same as admin dashboard)
-type Timeframe = 'daily' | 'weekly' | 'monthly' | 'allTime'; // Removed 'competition' for consistency with dashboard
+// Team structure within Competition
+interface Team {
+  id: string;
+  name: string;
+  agentIds: string[];
+}
 
 // Helper functions for medals and rank styles (same as before)
 const getMedalColor = (rank: number) => {
@@ -87,171 +86,155 @@ const getRankHighlightStyle = (rank: number): React.CSSProperties => {
 
 
 export default function AdminLeaderboardPage() {
-  // State remains similar, removed selectedCompetitionId
+  // State changes: removed timeframe/date, added selectedCompetitionId
   const [pods, setPods] = useState<Pod[]>([]);
-  const [selectedPodId, setSelectedPodId] = useState<string>(''); // Can filter by pod if desired
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
-  const [timeframe, setTimeframe] = useState<Timeframe>('weekly'); // Default to weekly
-  const [competitions, setCompetitions] = useState<Competition[]>([]); // Still needed for team context potentially
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>(''); // New state for competition selection
+  const [selectedPodId, setSelectedPodId] = useState<string>(''); // Filter by pod within the competition
+  const [competitions, setCompetitions] = useState<Competition[]>([]); // Store all competitions
   const [agents, setAgents] = useState<AppUser[]>([]); // All users, will filter by pod if needed
-  const [teams, setTeams] = useState<any[]>([]); // Teams context might still be useful
+  const [teams, setTeams] = useState<Team[]>([]); // Teams for the selected competition
   const [allLogs, setAllLogs] = useState<DailyAchievementLog[]>([]);
-  const [isLoadingPods, setIsLoadingPods] = useState(true);
-  const [isLoadingData, setIsLoadingData] = useState(true); // Combined loading
+  const [isLoadingBase, setIsLoadingBase] = useState(true); // Loading pods, users, competitions
+  const [isLoadingData, setIsLoadingData] = useState(false); // Loading logs, teams
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // 1. Fetch Pods (use onSnapshot for real-time updates)
+  // 1. Fetch Base Data (Pods, Users, Competitions) - Use onSnapshot for potential updates
   useEffect(() => {
-    setIsLoadingPods(true);
-    const podsRef = collection(db, 'pods');
-    const q = query(podsRef, orderBy('name'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const fetchedPods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod));
-        setPods(fetchedPods);
-        setError(null);
-        setIsLoadingPods(false);
-    }, (err) => {
-        console.error("Error fetching pods:", err);
-        setError("Failed to load pods.");
-        setIsLoadingPods(false);
-    });
-     return () => unsubscribe();
-  }, []);
+    setIsLoadingBase(true);
+    setError(null);
+    const unsubscribes: Unsubscribe[] = [];
+    let isMounted = true;
 
-   // 2. Fetch All Users (use onSnapshot for real-time updates)
-  useEffect(() => {
-     setIsLoadingData(true); // Start loading data
-     const usersRef = collection(db, 'users');
-     const q = query(usersRef, orderBy('name'));
-     const unsubscribe = onSnapshot(q, (snapshot) => {
-         const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-         setAgents(fetchedUsers); // Store all users
-         setError(null);
-         // Don't set isLoadingData false yet, logs need to load
-     }, (err) => {
-         console.error("Error fetching users:", err);
-         setError("Failed to load users data.");
-         setIsLoadingData(false);
-     });
-     return () => unsubscribe();
-  }, []);
+    const fetchBaseData = async () => {
+      try {
+        // Fetch Pods
+        const podsQuery = query(podsCollectionRef, orderBy('name'));
+        unsubscribes.push(onSnapshot(podsQuery, (snapshot) => {
+          if (!isMounted) return;
+          setPods(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod)));
+        }, err => { if (isMounted) { console.error("Error fetching pods:", err); setError(prev => prev ?? "Failed to load pods."); } }));
 
-   // 3. Fetch Competitions (still useful for team context, onSnapshot optional)
-  useEffect(() => {
-      // Fetch competitions once or use snapshot if needed
-       const compRef = collection(db, 'competitions');
-       const q = query(compRef, orderBy('startDate', 'desc'));
-       const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
-            setCompetitions(fetchedComps);
-            setError(null);
-       }, (err) => {
-            console.error("Error fetching competitions:", err);
-            setError("Failed to load competitions data.");
-       });
-        return () => unsubscribe;
+        // Fetch Users
+        const usersQuery = query(usersCollectionRef, orderBy('name'));
+        unsubscribes.push(onSnapshot(usersQuery, (snapshot) => {
+          if (!isMounted) return;
+          setAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
+        }, err => { if (isMounted) { console.error("Error fetching users:", err); setError(prev => prev ?? "Failed to load users."); } }));
+
+        // Fetch Competitions
+        const compQuery = query(collection(db, 'competitions'), orderBy('startDate', 'desc'));
+        unsubscribes.push(onSnapshot(compQuery, (snapshot) => {
+           if (!isMounted) return;
+          setCompetitions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition)));
+          setIsLoadingBase(false); // Mark base loading complete after competitions
+        }, err => { if (isMounted) { console.error("Error fetching competitions:", err); setError(prev => prev ?? "Failed to load competitions."); setIsLoadingBase(false); } }));
+
+      } catch (err) {
+        if (isMounted) {
+          console.error("Error fetching base data:", err);
+          setError("Failed to load necessary data.");
+          setIsLoadingBase(false);
+        }
+      }
+    };
+
+    fetchBaseData();
+
+    return () => {
+      isMounted = false;
+      unsubscribes.forEach(unsub => unsub());
+    };
   }, []);
 
 
-  // 4. Fetch Achievement Logs based on Timeframe (Main Data Listener)
+   // 4. Fetch Competition-Specific Data (Logs, Teams) and Listen to Logs
   useEffect(() => {
-    setIsLoadingData(true); // Ensure loading state is true when timeframe changes
+    if (!selectedCompetitionId) {
+        setTeams([]);
+        setAllLogs([]);
+        setIsLoadingData(false); // Not loading if no competition selected
+        return () => {}; // Return empty cleanup
+    }
+
+    setIsLoadingData(true);
     setError(null);
     let unsubscribeLogs: Unsubscribe = () => {};
 
-    const fetchDataAndListen = async () => {
-        let startDate: Date | null = null;
-        let endDate: Date | null = endOfDay(selectedDate); // Use selectedDate as end reference
+    const fetchCompetitionDataAndListen = async () => {
+        try {
+            // Fetch Teams for the selected competition
+            const compDocRef = doc(db, 'competitions', selectedCompetitionId);
+            const compDocSnap = await getDoc(compDocRef);
+            if (compDocSnap.exists()) {
+                 const compData = compDocSnap.data() as Competition & { teams?: Team[] };
+                 setTeams(compData.teams || []);
+            } else {
+                setError("Selected competition data not found.");
+                 setTeams([]);
+                 setAllLogs([]);
+                 setIsLoadingData(false);
+                 return;
+            }
 
-        switch (timeframe) {
-            case 'daily': startDate = startOfDay(selectedDate); break;
-            case 'weekly': startDate = startOfWeek(selectedDate, { weekStartsOn: 1 }); endDate = endOfWeek(selectedDate, { weekStartsOn: 1 }); break;
-            case 'monthly': startDate = startOfMonth(selectedDate); endDate = endOfMonth(selectedDate); break;
-             case 'allTime': startDate = null; endDate = null; break;
-        }
+            // Listen to Logs for the specific competition
+            const logsRef = collection(db, 'dailyAchievements');
+            let logsQuery = query(logsRef, where('competitionId', '==', selectedCompetitionId));
 
-        const logsRef = collection(db, 'dailyAchievements');
-        let logsQuery = query(logsRef); // Base query
+            // Apply pod filter if selected
+            if (selectedPodId) {
+                logsQuery = query(logsQuery, where('podId', '==', selectedPodId));
+            }
 
-        // Apply date filters if applicable
-        if (startDate && endDate) {
-             logsQuery = query(logsQuery,
-                 where('date', '>=', Timestamp.fromDate(startDate)),
-                 where('date', '<=', Timestamp.fromDate(endDate))
-             );
-        }
+            unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+                const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+                setAllLogs(fetchedLogs);
+                setIsLoadingData(false); // Data loaded
+                setError(null);
+            }, (err) => {
+                console.error("Error listening to achievement logs for competition:", err);
+                setError("Failed to load real-time leaderboard data.");
+                setAllLogs([]);
+                setIsLoadingData(false);
+            });
 
-         // Apply pod filter if a pod is selected
-         if (selectedPodId) {
-             logsQuery = query(logsQuery, where('podId', '==', selectedPodId));
-         }
-
-        unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-            const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-            setAllLogs(fetchedLogs);
-            setIsLoadingData(false); // Data loaded
-            setError(null);
-        }, (err) => {
-            console.error("Error listening to achievement logs:", err);
-            setError("Failed to load real-time leaderboard data.");
+        } catch (err) {
+            console.error("Error fetching competition data:", err);
+            setError("Failed to load competition-specific data.");
+            setTeams([]);
             setAllLogs([]);
             setIsLoadingData(false);
-        });
-
-        // Fetch relevant teams based on the timeframe (needed for Pod Leaderboard context)
-         // This logic might need refinement depending on how teams are structured and linked
-         try {
-             if (startDate && endDate) {
-                 const relevantCompQuery = query(
-                     collection(db, 'competitions'),
-                     where('startDate', '<=', Timestamp.fromDate(endDate)),
-                     // Can't reliably query endDate >= startDate with Firestore limitations
-                     orderBy('startDate', 'desc')
-                 );
-                 const relevantCompSnapshot = await getDocs(relevantCompQuery);
-                 const relevantTeams: any[] = [];
-                 relevantCompSnapshot.docs.forEach(docSnap => {
-                     const comp = docSnap.data() as Competition & { teams?: any[] };
-                     if (comp.endDate.toDate() >= startDate!) {
-                         // Filter teams by selectedPodId if applicable
-                         if (selectedPodId && comp.podIds?.includes(selectedPodId)) {
-                             relevantTeams.push(...(comp.teams || []));
-                         } else if (!selectedPodId) { // Include all teams if no pod is selected
-                             relevantTeams.push(...(comp.teams || []));
-                         }
-                     }
-                 });
-                 // TODO: Deduplicate teams if necessary based on team ID
-                 setTeams(relevantTeams);
-             } else { // All time - potentially fetch all teams? Might be too much data.
-                  setTeams([]); // Or fetch all teams if feasible
-             }
-         } catch (teamError) {
-              console.error("Error fetching teams for context:", teamError);
-             // Handle team fetching error if needed
-         }
+        }
     };
 
-    // Fetch only when necessary dependencies are ready
-    if (!isLoadingPods) {
-        fetchDataAndListen();
-    }
+    fetchCompetitionDataAndListen();
 
-
+    // Cleanup function for the logs listener
     return () => {
-        console.log("Unsubscribing from leaderboard logs listener");
+        console.log("Unsubscribing from competition leaderboard logs listener");
         unsubscribeLogs();
     };
-  }, [selectedPodId, selectedDate, timeframe, isLoadingPods]); // Re-run when these change
+  }, [selectedCompetitionId, selectedPodId]);
+
+   // --- Memoized Derived Data ---
+
+    // Pods participating in the selected competition
+    const participatingPods = useMemo(() => {
+        if (!selectedCompetitionId) return [];
+        const competition = competitions.find(c => c.id === selectedCompetitionId);
+        if (!competition || !competition.podIds) return [];
+        return pods.filter(pod => competition.podIds.includes(pod.id));
+    }, [competitions, pods, selectedCompetitionId]);
 
 
   // 5. Calculate Leaderboard Scores (useMemo)
-  const { agentLeaderboard, podLeaderboard } = useMemo(() => {
+  const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
       // Filter agents based on selectedPodId if necessary
       const relevantAgents = selectedPodId
           ? agents.filter(agent => agent.podId === selectedPodId && agent.roles?.includes('agent'))
-          : agents.filter(agent => agent.roles?.includes('agent')); // All agents if no pod selected
+          : // If no pod filter, include agents from *all* pods participating in the competition
+            agents.filter(agent => agent.roles?.includes('agent') && participatingPods.some(p => p.id === agent.podId));
+
 
         // Agent calculations
       const agentScores: Record<string, number> = {};
@@ -272,125 +255,118 @@ export default function AdminLeaderboardPage() {
               avatarUrl: agent.avatarUrl,
               avatarInitials: agent.avatarInitials,
               avatarBgColor: agent.avatarBgColor,
+              // isCurrentUser: agent.id === currentUser?.id, // Add if needed later
           }))
            .filter(entry => entry.totalPoints > 0) // Optional: Hide agents with 0 points
           .sort((a, b) => b.totalPoints - a.totalPoints)
           .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
-      // Pod calculations
-      const podScores: Record<string, number> = {};
-       // Initialize scores for all pods, or only selected pod if filtered
-       const relevantPods = selectedPodId ? pods.filter(p => p.id === selectedPodId) : pods;
-       relevantPods.forEach(pod => { podScores[pod.id] = 0; });
+      // Team calculations - uses the `teams` state fetched for the competition
+      const teamScores: Record<string, number> = {};
+       teams.forEach(team => { teamScores[team.id] = 0; });
 
        allLogs.forEach(log => {
-           // Only count logs for pods currently in the relevantPods list
-           if (log.podId && podScores.hasOwnProperty(log.podId)) {
-               podScores[log.podId] += log.points;
-           }
+            // Ensure log points are valid
+            const points = typeof log.points === 'number' ? log.points : 0;
+
+           // Find the team the agent belongs to *within the competition's teams*
+            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+             if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
+                 teamScores[agentTeam.id] += points;
+             }
        });
 
 
-       const finalPodLeaderboard: LeaderboardEntry[] = relevantPods
-           .map(pod => ({
-              id: pod.id,
-              name: pod.name,
-              totalPoints: podScores[pod.id] || 0,
-              avatarUrl: pod.logoUrl,
-              avatarInitials: pod.logoInitials,
-              avatarBgColor: pod.logoBgColor,
+       const finalTeamLeaderboard: LeaderboardEntry[] = teams
+           .map(team => ({
+              id: team.id,
+              name: team.name,
+              totalPoints: teamScores[team.id] || 0,
+              // isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
            }))
-           .filter(entry => entry.totalPoints > 0) // Optional: Hide pods with 0 points
+           .filter(entry => entry.totalPoints > 0) // Optional: Hide teams with 0 points
            .sort((a, b) => b.totalPoints - a.totalPoints)
            .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
-      return { agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard };
-  }, [allLogs, agents, pods, selectedPodId]); // Updated dependencies
+      return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
+   // Dependencies: logs, filtered agents, competition teams
+  }, [allLogs, agents, participatingPods, teams, selectedPodId]);
 
-  const isLoading = isLoadingPods || isLoadingData;
+  const isLoading = isLoadingBase || isLoadingData;
+  const competition = competitions.find(c => c.id === selectedCompetitionId);
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Leaderboards</CardTitle>
-          <CardDescription>View agent and pod rankings based on accumulated points.</CardDescription>
+          <CardTitle>Competition Leaderboards</CardTitle>
+          <CardDescription>View agent and team rankings for a specific competition.</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Selection Controls */}
           <div className="flex flex-wrap gap-4 mb-6 items-end">
-            {/* Pod Select (Optional Filter) */}
+            {/* Competition Select */}
             <div className="grid gap-2">
-              <Label htmlFor="pod-select">Filter by Pod (Optional)</Label>
-              <Select onValueChange={(value) => setSelectedPodId(value === 'all' ? '' : value)} value={selectedPodId || 'all'} disabled={isLoadingPods || isLoadingData}>
-                <SelectTrigger id="pod-select" className="w-[200px]">
-                  <SelectValue placeholder={isLoadingPods ? "Loading..." : "All Pods"} />
+              <Label htmlFor="competition-select">Competition</Label>
+              <Select
+                onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); /* Reset pod filter */ }}
+                value={selectedCompetitionId}
+                disabled={isLoadingBase}
+              >
+                <SelectTrigger id="competition-select" className="w-[250px]">
+                  <SelectValue placeholder={isLoadingBase ? "Loading..." : "Select Competition"} />
                 </SelectTrigger>
                 <SelectContent>
-                   <SelectItem value="all">All Pods</SelectItem>
-                  {pods.map(pod => (
-                    <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                  {competitions.length === 0 && !isLoadingBase && <SelectItem value="-" disabled>No competitions found</SelectItem>}
+                  {competitions.map(comp => (
+                    <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
                   ))}
-                  {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Timeframe Select */}
+            {/* Pod Filter Select (Optional) */}
             <div className="grid gap-2">
-              <Label htmlFor="timeframe-select">Timeframe</Label>
-              <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoadingData}>
-                <SelectTrigger id="timeframe-select" className="w-[180px]">
-                  <SelectValue placeholder="Select Timeframe" />
+              <Label htmlFor="pod-filter-select">Filter by Pod (Optional)</Label>
+              <Select
+                onValueChange={(value) => setSelectedPodId(value === 'all' ? '' : value)}
+                value={selectedPodId || 'all'}
+                disabled={isLoading || !selectedCompetitionId || participatingPods.length === 0}
+              >
+                <SelectTrigger id="pod-filter-select" className="w-[200px]">
+                  <SelectValue placeholder={!selectedCompetitionId ? "Select competition first" : (participatingPods.length === 0 ? "No pods" : "All Pods")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Today</SelectItem>
-                  <SelectItem value="weekly">This Week</SelectItem>
-                  <SelectItem value="monthly">This Month</SelectItem>
-                  <SelectItem value="allTime">All Time</SelectItem>
+                   {!selectedCompetitionId ? (
+                       <SelectItem value="-" disabled>Select competition first</SelectItem>
+                   ) : participatingPods.length === 0 ? (
+                       <SelectItem value="-" disabled>No pods in competition</SelectItem>
+                   ) : (
+                     <>
+                       <SelectItem value="all">All Pods</SelectItem>
+                       {participatingPods.map(pod => (
+                         <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                       ))}
+                     </>
+                   )}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Date Select (for Daily/Weekly/Monthly) */}
-            {(timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly') && (
-                <div className="grid gap-2">
-                <Label htmlFor="date-select">Reference Date</Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                    <Button
-                        id="date-select"
-                        variant={"outline"}
-                        className={cn("w-[200px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                        disabled={isLoadingData}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                    <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                        initialFocus
-                    />
-                    </PopoverContent>
-                </Popover>
-                </div>
-            )}
-
           </div>
 
           {error && <p className="text-destructive mb-4">{error}</p>}
 
-          {/* Leaderboard Tables */}
-          {isLoading ? (
+          {/* Leaderboard Display */}
+          {!selectedCompetitionId && !isLoadingBase && (
+            <p className="text-muted-foreground text-center py-4">Please select a competition to view leaderboards.</p>
+          )}
+
+          {selectedCompetitionId && isLoading ? (
             <div className="grid md:grid-cols-2 gap-6">
                 <Skeleton className="h-[400px] w-full" />
                 <Skeleton className="h-[400px] w-full" />
             </div>
-          ) : (
+          ) : selectedCompetitionId && !isLoading && (
             <div className="grid md:grid-cols-2 gap-6">
               {/* Agent Leaderboard */}
               <Card>
@@ -400,15 +376,15 @@ export default function AdminLeaderboardPage() {
                 </CardHeader>
                 <CardContent>
                    {agentLeaderboard.length === 0 ? (
-                       <p className="text-muted-foreground text-center py-4">No agent data available for this period{selectedPodId ? ` in ${pods.find(p=>p.id===selectedPodId)?.name}` : ''}.</p>
+                       <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                    ) : (
                     <Table>
                         <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px]">Rank</TableHead>
-                            <TableHead>Agent</TableHead>
-                            <TableHead className="text-right">Total Points</TableHead>
-                        </TableRow>
+                            <TableRow>
+                                <TableHead className="w-[50px]">Rank</TableHead>
+                                <TableHead>Agent</TableHead>
+                                <TableHead className="text-right">Total Points</TableHead>
+                            </TableRow>
                         </TableHeader>
                         <TableBody>
                         {agentLeaderboard.map((entry) => (
@@ -416,7 +392,7 @@ export default function AdminLeaderboardPage() {
                                 key={entry.id}
                                 style={getRankHighlightStyle(entry.rank ?? 0)}
                                 className={cn(
-                                    // entry.isCurrentUser handled in admin dashboard if needed, removed here
+                                    entry.isCurrentUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
                                     (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
                                 )}
                              >
@@ -443,7 +419,7 @@ export default function AdminLeaderboardPage() {
                                          )}
                                      </Avatar>
                                      <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
-                                     {/* Removed isCurrentUser badge */}
+                                     {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={(entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : ""}>You</Badge>}
                                  </div>
                             </TableCell>
                             <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
@@ -457,65 +433,54 @@ export default function AdminLeaderboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Pod Leaderboard */}
+              {/* Team Leaderboard */}
               <Card>
                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg font-semibold">Pod Leaderboard</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Team Leaderboard</CardTitle>
                      <Trophy className="h-5 w-5 text-muted-foreground" />
                  </CardHeader>
                 <CardContent>
-                    {podLeaderboard.length === 0 ? (
-                         <p className="text-muted-foreground text-center py-4">No pod data available for this period{selectedPodId ? ` for ${pods.find(p=>p.id===selectedPodId)?.name}` : ''}.</p>
-                    ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>{/* Remove whitespace here */}<TableHead className="w-[50px]">Rank</TableHead><TableHead>Pod</TableHead><TableHead className="text-right">Total Points</TableHead></TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {podLeaderboard.map((entry) => (
-                             <TableRow
-                                key={entry.id}
-                                style={getRankHighlightStyle(entry.rank ?? 0)}
-                                className={cn(
-                                     // isCurrentUserTeam relevance depends on context, removed for admin view
-                                     (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
-                                 )}
-                             >
-                            <TableCell className="font-medium text-center align-middle">
-                                {(entry.rank ?? 0) <= 3 ? (
-                                     <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
-                                 ) : (
-                                     entry.rank
-                                )}
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex items-center gap-2">
-                                    <Avatar className="h-7 w-7">
-                                         {entry.avatarUrl ? (
-                                            <AvatarImage src={entry.avatarUrl} alt={entry.name} />
-                                         ) : (
-                                             <AvatarFallback
-                                                initials={entry.avatarInitials || generateInitials(entry.name)}
-                                                backgroundColor={entry.avatarBgColor}
-                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-800' : '')}
-                                             >
-                                                 {!entry.avatarInitials && generateInitials(entry.name)}
-                                             </AvatarFallback>
-                                         )}
-                                     </Avatar>
-                                    <span className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
-                                        {entry.name}
-                                        {/* Removed isCurrentUserTeam badge */}
-                                    </span>
-                                </div>
-                            </TableCell>
-                            <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
-                                {entry.totalPoints.toLocaleString()}
-                            </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
+                     {teams.length === 0 ? (
+                         <p className="text-muted-foreground text-center py-4">No teams defined for this competition.</p>
+                     ) : teamLeaderboard.length === 0 ? (
+                         <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
+                     ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>{/* Remove whitespace here */}
+                                    <TableHead className="w-[50px]">Rank</TableHead>
+                                    <TableHead>Team</TableHead>
+                                    <TableHead className="text-right">Total Points</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {teamLeaderboard.map((entry) => (
+                                <TableRow
+                                    key={entry.id}
+                                    style={getRankHighlightStyle(entry.rank ?? 0)}
+                                    className={cn(
+                                        entry.isCurrentUserTeam && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
+                                        (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
+                                    )}
+                                >
+                                <TableCell className="font-medium text-center align-middle">
+                                    {(entry.rank ?? 0) <= 3 ? (
+                                        <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                                    ) : (
+                                        entry.rank
+                                    )}
+                                </TableCell>
+                                <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
+                                    {entry.name}
+                                    {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
+                                </TableCell>
+                                <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
+                                    {entry.totalPoints.toLocaleString()}
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
                     )}
                 </CardContent>
               </Card>
