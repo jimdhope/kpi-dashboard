@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, Medal, Trophy, ClipboardList, AlertCircle, CalendarIcon, Loader2, Activity, ListChecks } from 'lucide-react'; // Added ListChecks
+import { Target, Medal, Trophy, ClipboardList, AlertCircle, CalendarIcon, Loader2, Activity, ListChecks } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
@@ -96,7 +96,6 @@ export default function AgentDashboardPage() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
   const [rules, setRules] = useState<RuleFormData[]>([]);
-  // Rename competitionLogs to dailyLogs as it holds ALL logs for the user/pod during competition
   const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]); // Logs for the current user for the competition period
   const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]); // Logs for the pod (for target summary & leaderboards) for competition period
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
@@ -115,7 +114,6 @@ export default function AgentDashboardPage() {
   let unsubscribeUserDoc: Unsubscribe | null = null;
   let unsubscribeAgents: Unsubscribe | null = null;
   let unsubscribeCompetition: Unsubscribe | null = null;
-  // Renamed listener for clarity
   let unsubscribeUserLogs: Unsubscribe | null = null;
   let unsubscribePodLogs: Unsubscribe | null = null;
   let unsubscribeTargets: Unsubscribe | null = null;
@@ -187,7 +185,7 @@ export default function AgentDashboardPage() {
             unsubscribeAuth();
          }
     }
-  }, []); // Removed dependencies agentPodId, isLoadingUser as they should not trigger re-auth
+  }, [agentPodId]); // Added agentPodId as dependency
 
 
   // Function to fetch and listen to daily achievements for the CURRENT date
@@ -246,7 +244,6 @@ export default function AgentDashboardPage() {
        console.log("[AgentDashboard] Data Effect: Skipping/Cleaning up, prerequisites not met.");
         if (unsubscribeAgents) unsubscribeAgents();
         if (unsubscribeCompetition) unsubscribeCompetition();
-        // Renamed listener cleanup
         if (unsubscribeUserLogs) unsubscribeUserLogs();
         if (unsubscribePodLogs) unsubscribePodLogs();
         if (unsubscribeTargets) unsubscribeTargets();
@@ -263,7 +260,7 @@ export default function AgentDashboardPage() {
              setRules([]);
              setTeams([]);
              setPodAgents([]);
-             setDailyLogs([]); // Use correct state setter
+             setDailyLogs([]);
              setPodLogs([]);
              setDailyTargets(null);
              setAchievementInputs({});
@@ -282,17 +279,16 @@ export default function AgentDashboardPage() {
       unsubscribeAgents = onSnapshot(agentsQuery, (agentsSnapshot) => {
           if (!isMounted) return;
           const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-
-          // Compare IDs before setting state to prevent unnecessary re-renders
-          setPodAgents(currentAgents => {
-              const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
-              const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
-              if (currentAgentIds !== fetchedAgentIds) {
-                  console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
-                  return fetchedAgents;
-              }
-              return currentAgents;
-          });
+           // Use functional update to compare previous state and avoid infinite loops
+           setPodAgents(currentAgents => {
+               const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
+               const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
+               if (currentAgentIds !== fetchedAgentIds) {
+                   console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
+                   return fetchedAgents;
+               }
+               return currentAgents; // No change, return current state
+           });
       }, (err) => {
           if (isMounted) {
               console.error("[AgentDashboard] Error listening to pod agents:", err);
@@ -331,7 +327,6 @@ export default function AgentDashboardPage() {
          if (foundActiveCompetition?.id !== currentActiveComp?.id) {
              console.log(`[AgentDashboard] Active competition changed from ${currentActiveComp?.id ?? 'None'} to: ${foundActiveCompetition?.id ?? 'None'}`);
              // Cleanup old listeners before setting up new ones
-             // Renamed listener cleanup
              if (unsubscribeUserLogs) { console.log("[AgentDashboard] Data Effect: Cleaning up old user logs listener"); unsubscribeUserLogs(); unsubscribeUserLogs = null; }
              if (unsubscribePodLogs) { console.log("[AgentDashboard] Data Effect: Cleaning up old pod logs listener"); unsubscribePodLogs(); unsubscribePodLogs = null; }
              if (unsubscribeTargets) { console.log("[AgentDashboard] Data Effect: Cleaning up old targets listener"); unsubscribeTargets(); unsubscribeTargets = null; }
@@ -341,7 +336,7 @@ export default function AgentDashboardPage() {
                  const activeCompId = foundActiveCompetition.id;
                  // Filter out bonus rule for all dashboard components
                  const activeCompRules = (foundActiveCompetition.rules || []).filter(rule => rule.name.toLowerCase() !== 'bonus');
-                 setRules(activeCompRules); // Set the filtered rules
+                 setRules(activeCompRules);
                  setTeams(foundActiveCompetition.teams || []);
                  console.log(`[AgentDashboard] Data Effect: Set ${activeCompRules.length} rules and ${foundActiveCompetition.teams?.length ?? 0} teams for competition ${activeCompId}`);
 
@@ -361,7 +356,7 @@ export default function AgentDashboardPage() {
                     if (!isMounted) return;
                     const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
                     console.log(`[AgentDashboard] User logs listener updated, found ${logs.length} logs for user in competition ${activeCompId}.`);
-                    setDailyLogs(logs); // Use correct state setter
+                    setDailyLogs(logs);
                   }, (err) => { if (isMounted) { console.error("[AgentDashboard] Error listening to user logs:", err); setError("Failed to load your competition scores."); } });
 
 
@@ -394,14 +389,13 @@ export default function AgentDashboardPage() {
                  }, (err) => { if (isMounted) { console.error("[AgentDashboard] Error listening to daily targets:", err); setError("Failed to load targets."); } });
 
                  // --- Initial Fetch and Listener Setup for Daily Achievements (for CURRENT date) ---
-                  // Pass the filtered rules to this function
                  fetchAndListenDailyAchievements(activeCompId, activeCompRules);
 
              } else {
                  console.log("[AgentDashboard] Data Effect: No active competition found.");
                  setRules([]);
                  setTeams([]);
-                 setDailyLogs([]); // Use correct state setter
+                 setDailyLogs([]);
                  setPodLogs([]);
                  setDailyTargets(null);
                  setAchievementInputs({});
@@ -422,7 +416,6 @@ export default function AgentDashboardPage() {
        console.log("[AgentDashboard] Data Effect: Cleaning up ALL listeners.");
         if (unsubscribeAgents) unsubscribeAgents();
         if (unsubscribeCompetition) unsubscribeCompetition();
-        // Renamed listener cleanup
         if (unsubscribeUserLogs) unsubscribeUserLogs();
         if (unsubscribePodLogs) unsubscribePodLogs();
         if (unsubscribeTargets) unsubscribeTargets();
@@ -468,14 +461,14 @@ export default function AgentDashboardPage() {
                  dailyTotalPoints += pointsToAdd;
 
                  const ruleKey = rule.id!;
-                 const currentRuleTotal = dailyAchievementsMap.get(ruleKey) || { ruleId: ruleKey, name: rule.name, emoji: rule.emoji || '❓', value: 0 };
+                 const currentRuleTotal = dailyAchievementsMap.get(ruleKey) || { ruleId: ruleKey, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0 }; // Use ruleName here
                  const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
                  currentRuleTotal.value += valueToAdd;
                  dailyAchievementsMap.set(ruleKey, currentRuleTotal);
              }
          });
      }
-      const finalAgentDailyAchievementsList = Array.from(dailyAchievementsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+      const finalAgentDailyAchievementsList = Array.from(dailyAchievementsMap.values()).sort((a, b) => a.ruleName.localeCompare(b.ruleName)); // Use ruleName
      const finalAgentDailyAchievements: AgentDailyAchievements = { totalPoints: dailyTotalPoints, achievements: finalAgentDailyAchievementsList };
       console.log("[AgentDashboard] Memo: Calculated final agent daily achievements:", finalAgentDailyAchievements);
 
@@ -492,14 +485,14 @@ export default function AgentDashboardPage() {
                 competitionTotalPoints += pointsToAdd;
 
                 const ruleKey = rule.id!;
-                const currentRuleTotal = competitionAchievementsMap.get(ruleKey) || { ruleId: ruleKey, name: rule.name, emoji: rule.emoji || '❓', value: 0 };
+                const currentRuleTotal = competitionAchievementsMap.get(ruleKey) || { ruleId: ruleKey, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0 }; // Use ruleName here
                 const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
                 currentRuleTotal.value += valueToAdd;
                 competitionAchievementsMap.set(ruleKey, currentRuleTotal);
             }
         });
     }
-    const finalAgentCompetitionAchievementsList = Array.from(competitionAchievementsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const finalAgentCompetitionAchievementsList = Array.from(competitionAchievementsMap.values()).sort((a, b) => a.ruleName.localeCompare(b.ruleName)); // Use ruleName
     const finalAgentCompetitionAchievements: AgentCompetitionAchievements = { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievementsList };
     console.log("[AgentDashboard] Memo: Calculated final agent competition achievements:", finalAgentCompetitionAchievements);
 
@@ -527,7 +520,7 @@ export default function AgentDashboardPage() {
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: emojiToUse, achieved: podRuleTotalsToday[rule.id] || 0, target: targetValue };
         })
         .filter((item): item is PodTargetSummary => item !== null)
-        .sort((a, b) => a.ruleName.localeCompare(b.name));
+        .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
      console.log("[AgentDashboard] Memo: Calculated pod target summary for today:", finalPodTargetSummary);
 
      // --- Calculate Leaderboards (using all fetched podLogs for the competition duration) ---
@@ -673,7 +666,7 @@ export default function AgentDashboardPage() {
   };
 
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs, handleSaveAchievement] // Added handleSaveAchievement
+     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs, handleSaveAchievement]
    );
 
 
@@ -721,8 +714,7 @@ export default function AgentDashboardPage() {
                     </p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                         {/* Filter out bonus rules from rendering AchievementCard */}
-                        {rules.filter(rule => rule.name.toLowerCase() !== 'bonus').map((rule) => (
+                        {rules.map((rule) => (
                             rule.id ? (
                                 <AchievementCard
                                     key={rule.id}
@@ -764,8 +756,9 @@ export default function AgentDashboardPage() {
                                 {/* Competition Achievements Breakdown */}
                                 {agentCompetitionAchievements.achievements.length > 0 ? (
                                     <div className="space-y-1 text-sm">
+                                        {/* Display achievements in a list */}
                                         {agentCompetitionAchievements.achievements.map(ach => (
-                                            <div key={ach.ruleId} className="flex items-center justify-between">
+                                            <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap">
                                                 <span className="font-medium truncate" title={ach.ruleName}>
                                                     {ach.ruleEmoji} {ach.ruleName}
                                                 </span>
@@ -853,4 +846,3 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
-
