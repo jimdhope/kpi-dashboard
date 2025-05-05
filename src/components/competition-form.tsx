@@ -282,7 +282,9 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
 
   const filteredPods = pods.filter(pod => pod.campaignId === watchedCampaignId);
 
+  // Re-evaluate isStartDateValid inside the render scope
   const isStartDateValid = watchedStartDate instanceof Date && isDateValid(watchedStartDate);
+
 
   return (
     <Form {...form}>
@@ -445,7 +447,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                             "w-[130px] justify-start text-left font-normal",
                                             !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
-                                         disabled={isSubmitting || !isStartDateValid} // Disable if submitting or start date is invalid
+                                         disabled={isSubmitting || !isStartDateValid} // Use recalculated validity
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
@@ -471,7 +473,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                      value={field.value instanceof Date ? format(field.value, DATE_FORMAT_DISPLAY) : field.value || ''}
                                      onChange={(e) => handleDateInputChange(e, 'endDate')}
                                      className="flex-1"
-                                      disabled={isSubmitting || !isStartDateValid} // Disable if submitting or start date is invalid
+                                      disabled={isSubmitting || !isStartDateValid} // Use recalculated validity
                                      maxLength={10}
                                  />
                               </FormControl>
