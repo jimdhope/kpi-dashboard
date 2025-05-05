@@ -85,7 +85,13 @@ export const competitionFormSchema = z.object({
         message: `Invalid date. Use ${DATE_FORMAT_DISPLAY} format or picker.`,
     }),
   rules: z.array(competitionRuleSchema).min(1, { message: 'At least one rule is required.' }),
-}).refine(data => data.endDate >= data.startDate, {
+}).refine(data => {
+    // Only validate end date if start date is valid
+    if (data.startDate instanceof Date && isDateValid(data.startDate)) {
+        return data.endDate instanceof Date && isDateValid(data.endDate) && data.endDate >= data.startDate;
+    }
+    return true; // Skip validation if start date is invalid
+  }, {
     message: "End date cannot be before start date.",
     path: ["endDate"],
 });
@@ -147,11 +153,11 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
       // Initialize podIds as an array
       podIds: initialData?.podIds || [],
        // Store dates as Date objects internally
-       startDate: initialData?.startDate instanceof Timestamp ? initialData.startDate.toDate() : initialData?.startDate,
-       endDate: initialData?.endDate instanceof Timestamp ? initialData.endDate.toDate() : initialData?.endDate,
+       startDate: initialData?.startDate instanceof Timestamp ? startOfDay(initialData.startDate.toDate()) : initialData?.startDate instanceof Date ? startOfDay(initialData.startDate) : undefined,
+       endDate: initialData?.endDate instanceof Timestamp ? startOfDay(initialData.endDate.toDate()) : initialData?.endDate instanceof Date ? startOfDay(initialData.endDate) : undefined,
       rules: initialData?.rules || [],
     },
-    mode: 'onChange',
+    mode: 'onBlur', // Change validation mode to onBlur
   });
 
   const { fields, append, remove, replace } = useFieldArray({
@@ -169,9 +175,9 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
         campaignId: initialData.campaignId,
         // Use podIds array
         podIds: initialData.podIds || [],
-        // Ensure dates are Date objects
-        startDate: initialData.startDate instanceof Timestamp ? initialData.startDate.toDate() : initialData.startDate,
-        endDate: initialData.endDate instanceof Timestamp ? initialData.endDate.toDate() : initialData.endDate,
+        // Ensure dates are Date objects and start of day
+        startDate: initialData.startDate instanceof Timestamp ? startOfDay(initialData.startDate.toDate()) : initialData.startDate instanceof Date ? startOfDay(initialData.startDate) : undefined,
+        endDate: initialData.endDate instanceof Timestamp ? startOfDay(initialData.endDate.toDate()) : initialData.endDate instanceof Date ? startOfDay(initialData.endDate) : undefined,
         rules: initialData.rules || [],
       });
         replace(initialData.rules || []);
@@ -223,7 +229,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
    useEffect(() => {
        const currentEndDate = form.getValues('endDate');
        // Only set default if start date is valid and end date is not already set
-       if (watchedStartDate instanceof Date && !currentEndDate) {
+       if (watchedStartDate instanceof Date && isDateValid(watchedStartDate) && !currentEndDate) {
            const defaultEndDate = addDays(watchedStartDate, 6); // Default to 6 days after start (for a 7-day competition)
             form.setValue('endDate', defaultEndDate, { shouldValidate: true });
        }
@@ -250,7 +256,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
      fieldName: 'startDate' | 'endDate'
    ) => {
      if (date) {
-       form.setValue(fieldName, date, { shouldValidate: true });
+       form.setValue(fieldName, startOfDay(date), { shouldValidate: true }); // Ensure it's start of day
        if (fieldName === 'startDate') setIsStartDatePopoverOpen(false);
        if (fieldName === 'endDate') setIsEndDatePopoverOpen(false);
      }
@@ -275,6 +281,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   };
 
   const filteredPods = pods.filter(pod => pod.campaignId === watchedCampaignId);
+
+  const isStartDateValid = watchedStartDate instanceof Date && isDateValid(watchedStartDate);
 
   return (
     <Form {...form}>
@@ -425,7 +433,8 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                 name="endDate"
                 render={({ field }) => (
                      <FormItem className="flex flex-col">
-                         <FormLabel>End Date</FormLabel>
+                         {/* Apply error styling directly to the label if end date is invalid */}
+                         <FormLabel className={cn(form.formState.errors.endDate && "text-destructive")}>End Date</FormLabel>
                          <div className="flex items-center gap-2">
                             <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
                                 <PopoverTrigger asChild>
@@ -436,7 +445,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                             "w-[130px] justify-start text-left font-normal",
                                             !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
-                                         disabled={isSubmitting || !(watchedStartDate instanceof Date)} // Disable if start date not set
+                                         disabled={isSubmitting || !isStartDateValid} // Disable if submitting or start date is invalid
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
@@ -447,9 +456,9 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
                                         onSelect={(date) => handleDateSelect(date, 'endDate')}
-                                        // Allow selecting past dates in edit mode, but ensure end >= start
+                                        // Only disable dates *before* the start date IF start date is valid
                                          disabled={(date) =>
-                                             isSubmitting || !(watchedStartDate instanceof Date) || !date || (date < watchedStartDate)
+                                             isSubmitting || !isStartDateValid || !date || (date < watchedStartDate!)
                                          }
                                         initialFocus
                                     />
@@ -462,7 +471,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                      value={field.value instanceof Date ? format(field.value, DATE_FORMAT_DISPLAY) : field.value || ''}
                                      onChange={(e) => handleDateInputChange(e, 'endDate')}
                                      className="flex-1"
-                                     disabled={isSubmitting || !(watchedStartDate instanceof Date)} // Disable if start date not set
+                                      disabled={isSubmitting || !isStartDateValid} // Disable if submitting or start date is invalid
                                      maxLength={10}
                                  />
                               </FormControl>
