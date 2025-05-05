@@ -387,7 +387,7 @@ export default function AgentLogAchievementsPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>{/* Remove whitespace here */}
+                <TableRow>
                   <TableHead>Rule</TableHead>
                   <TableHead className="w-[120px]">Value</TableHead> {/* Set fixed width for value input */}
                   <TableHead className="w-[100px] text-right">Status</TableHead>
