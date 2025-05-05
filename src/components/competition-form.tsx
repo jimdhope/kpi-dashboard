@@ -184,6 +184,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   }, [initialData, mode, form, replace]);
 
   const watchedCampaignId = form.watch('campaignId');
+  const watchedStartDate = form.watch('startDate'); // Watch start date
   const watchedRules = form.watch('rules'); // Watch rules
 
   useEffect(() => {
@@ -358,7 +359,6 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                         <div className="flex items-center gap-2">
                              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
                                 <PopoverTrigger asChild>
-                                    {/* Ensure the Button is not disabled when the popover should be open */}
                                     <Button
                                         type="button" // Prevent form submission
                                         variant={"outline"}
@@ -366,13 +366,13 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                             "w-[130px] justify-start text-left font-normal",
                                             !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
-                                        disabled={isSubmitting} // Only disable if submitting
+                                        disabled={isSubmitting}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-50" align="start"> {/* Ensure high z-index */}
+                                <PopoverContent className="w-auto p-0 z-50" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
@@ -409,7 +409,6 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                          <div className="flex items-center gap-2">
                             <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
                                 <PopoverTrigger asChild>
-                                    {/* Ensure the Button is not disabled when the popover should be open */}
                                     <Button
                                         type="button" // Prevent form submission
                                         variant={"outline"}
@@ -417,19 +416,20 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                             "w-[130px] justify-start text-left font-normal",
                                             !(field.value instanceof Date) && "text-muted-foreground"
                                         )}
-                                         disabled={isSubmitting || !(form.watch('startDate') instanceof Date)}
+                                         disabled={isSubmitting || !(watchedStartDate instanceof Date)} // Disable if start date not set
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                          {field.value instanceof Date ? format(field.value, 'PP') : <span>Pick date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-50" align="start"> {/* Ensure high z-index */}
+                                <PopoverContent className="w-auto p-0 z-50" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={field.value instanceof Date ? field.value : undefined}
                                         onSelect={(date) => handleDateSelect(date, 'endDate')}
+                                        // Allow selecting past dates in edit mode, but ensure end >= start
                                          disabled={(date) =>
-                                             (form.watch('startDate') instanceof Date && date < form.watch('startDate')) || isSubmitting
+                                             isSubmitting || !(watchedStartDate instanceof Date) || (date < watchedStartDate)
                                          }
                                         initialFocus
                                     />
@@ -442,7 +442,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                      value={field.value instanceof Date ? format(field.value, DATE_FORMAT_DISPLAY) : field.value || ''}
                                      onChange={(e) => handleDateInputChange(e, 'endDate')}
                                      className="flex-1"
-                                     disabled={isSubmitting || !(form.watch('startDate') instanceof Date)}
+                                     disabled={isSubmitting || !(watchedStartDate instanceof Date)} // Disable if start date not set
                                      maxLength={10}
                                  />
                               </FormControl>

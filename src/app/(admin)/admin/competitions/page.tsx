@@ -98,7 +98,8 @@ export default function AdminCompetitionsPage() {
         const fetchedCampaigns = campaignSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign));
         setCampaigns(fetchedCampaigns);
 
-        const podSnapshot = await getDocs(query(podsCollectionRef, orderBy('name')));
+        // No need to order pods by name here, can be done in select if needed
+        const podSnapshot = await getDocs(query(podsCollectionRef));
         // Enrich pod data minimally for the select dropdown
         const fetchedPods = podSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -142,7 +143,8 @@ export default function AdminCompetitionsPage() {
     setIsLoading(true);
     setError(null); // Reset error when starting to fetch competitions
 
-    const q = query(competitionsCollectionRef, orderBy('startDate', 'desc')); // Order by start date descending
+    // Order competitions by start date descending
+    const q = query(competitionsCollectionRef, orderBy('startDate', 'desc'));
 
     const unsubscribe: Unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedCompetitions: Competition[] = querySnapshot.docs.map((doc) => {
@@ -232,16 +234,15 @@ export default function AdminCompetitionsPage() {
     } else if (dialogMode === 'edit' && selectedCompetition) {
         try {
             const competitionDoc = doc(db, 'competitions', selectedCompetition.id);
-            // Only update fields editable in the form (podIds won't be editable in this iteration)
-            // Include podIds in the update data if the form allows changing it
+            // Only update fields editable in the form
             const updateData: Partial<Competition> = {
                 name: data.name,
                 startDate: Timestamp.fromDate(data.startDate),
                 endDate: Timestamp.fromDate(data.endDate),
                 rules: rules,
-                // If form allows editing podId, convert it to podIds array here
+                // Allow updating pod and campaign in edit mode for now
                 podIds: [data.podId],
-                campaignId: data.campaignId, // Update campaign if needed/allowed
+                campaignId: data.campaignId,
             };
             await updateDoc(competitionDoc, updateData);
             toast({ title: "Competition Updated", description: `"${data.name}" has been successfully updated.` });
