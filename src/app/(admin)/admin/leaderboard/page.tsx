@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  collection,
+  collection, // Import collection
   query,
   where,
   getDocs,
@@ -13,7 +14,7 @@ import {
   onSnapshot, // Use onSnapshot
   Unsubscribe, // Use Unsubscribe
 } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase'; // Import db
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -84,6 +85,11 @@ const getRankHighlightStyle = (rank: number): React.CSSProperties => {
   }
 };
 
+// Define collection references
+const podsCollectionRef = collection(db, 'pods');
+const usersCollectionRef = collection(db, 'users');
+const competitionsCollectionRef = collection(db, 'competitions');
+const dailyAchievementsCollectionRef = collection(db, 'dailyAchievements');
 
 export default function AdminLeaderboardPage() {
   // State changes: removed timeframe/date, added selectedCompetitionId
@@ -123,7 +129,7 @@ export default function AdminLeaderboardPage() {
         }, err => { if (isMounted) { console.error("Error fetching users:", err); setError(prev => prev ?? "Failed to load users."); } }));
 
         // Fetch Competitions
-        const compQuery = query(collection(db, 'competitions'), orderBy('startDate', 'desc'));
+        const compQuery = query(competitionsCollectionRef, orderBy('startDate', 'desc'));
         unsubscribes.push(onSnapshot(compQuery, (snapshot) => {
            if (!isMounted) return;
           setCompetitions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition)));
@@ -164,7 +170,7 @@ export default function AdminLeaderboardPage() {
     const fetchCompetitionDataAndListen = async () => {
         try {
             // Fetch Teams for the selected competition
-            const compDocRef = doc(db, 'competitions', selectedCompetitionId);
+            const compDocRef = doc(competitionsCollectionRef, selectedCompetitionId);
             const compDocSnap = await getDoc(compDocRef);
             if (compDocSnap.exists()) {
                  const compData = compDocSnap.data() as Competition & { teams?: Team[] };
@@ -178,8 +184,7 @@ export default function AdminLeaderboardPage() {
             }
 
             // Listen to Logs for the specific competition
-            const logsRef = collection(db, 'dailyAchievements');
-            let logsQuery = query(logsRef, where('competitionId', '==', selectedCompetitionId));
+            let logsQuery = query(dailyAchievementsCollectionRef, where('competitionId', '==', selectedCompetitionId));
 
             // Apply pod filter if selected
             if (selectedPodId) {
@@ -380,7 +385,7 @@ export default function AdminLeaderboardPage() {
                    ) : (
                     <Table>
                         <TableHeader>
-                            <TableRow>
+                            <TableRow>{/* Remove whitespace here */}
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Agent</TableHead>
                                 <TableHead className="text-right">Total Points</TableHead>
