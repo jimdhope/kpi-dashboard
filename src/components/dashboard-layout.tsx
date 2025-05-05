@@ -33,7 +33,7 @@ import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitche
 interface DashboardLayoutProps {
   children: React.ReactNode;
   roles: UserRole[]; // Added roles prop
-  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop, allow null initially
+  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop
   onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
 }
 
@@ -260,6 +260,7 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
             </div>
             <div className="flex items-center gap-4">
                {/* Conditionally render RoleSwitcher */}
+               {/* Passing props received from ProfileLayout */}
                <RoleSwitcher
                    availableRoles={roles}
                    currentLayout={currentLayout}

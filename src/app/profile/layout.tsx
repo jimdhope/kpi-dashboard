@@ -9,7 +9,7 @@ import { AgentSidebarLayout } from '@/components/agent-sidebar-layout'; // For A
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 import type { AppUser, UserRole } from '@/services/user'; // Import types
 
-// Helper function to fetch user roles from Firestore
+// Helper function to fetch user roles from Firestore (remains the same)
 async function fetchUserRoles(uid: string): Promise<UserRole[] | null> {
   try {
     const userDocRef = doc(db, 'users', uid);
@@ -33,11 +33,16 @@ export default function ProfileLayout({
   children: React.ReactNode;
 }) {
   const [roles, setRoles] = useState<UserRole[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [layoutType, setLayoutType] = useState<'admin' | 'agent' | null>(null); // State for current layout
+  const [isLoading, setIsLoading] = useState(true); // Combined loading state
+  const [authChecked, setAuthChecked] = useState(false); // Track initial auth check
   const router = useRouter();
 
-  const determineInitialLayout = useCallback((userRoles: UserRole[]): 'admin' | 'agent' | null => {
+  // Function to determine layout based on roles
+  const determineLayout = useCallback((userRoles: UserRole[] | null): 'admin' | 'agent' | null => {
+    if (!userRoles || userRoles.length === 0) {
+      return null; // No roles, no specific layout
+    }
     // Prioritize admin/manager/leader view
     if (userRoles.includes('admin') || userRoles.includes('podManager') || userRoles.includes('teamLeader')) {
       return 'admin';
@@ -47,117 +52,117 @@ export default function ProfileLayout({
     return null; // No recognized role for layout
   }, []);
 
+  // Effect to handle authentication and role fetching
   useEffect(() => {
+    console.log("[ProfileLayout] Auth Effect Running");
+    setIsLoading(true); // Start loading when checking auth
+    setAuthChecked(false); // Reset auth check status
+
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
-      setIsLoading(true); // Start loading on auth change
+      console.log("[ProfileLayout] Auth State Changed. Current User:", currentUser?.uid || 'None');
       if (currentUser) {
         const fetchedRoles = await fetchUserRoles(currentUser.uid);
-        console.log("[ProfileLayout] Fetched roles inside useEffect:", fetchedRoles); // Log fetched roles
+        console.log("[ProfileLayout] Fetched roles:", fetchedRoles);
         setRoles(fetchedRoles); // Set roles state
 
         if (fetchedRoles === null || fetchedRoles.length === 0) {
-          console.warn("User has no roles or roles couldn't be fetched. Redirecting to login.");
-          setLayoutType(null); // Ensure layoutType is null if no roles
-          router.push('/login'); // Redirect if no roles found
-          setIsLoading(false); // Stop loading after potential redirect
-          return; // Exit early
-        }
-
-        // Determine initial layout based on fetched roles
-        const initialLayout = determineInitialLayout(fetchedRoles);
-        console.log("[ProfileLayout] Initial layout determined inside useEffect:", initialLayout); // Log initial layout
-
-        if (initialLayout) {
-          // Check localStorage for persisted preference, otherwise use determined initial
-          let preferredLayout: 'admin' | 'agent' | null = null;
-          try {
-            preferredLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
-          } catch (e) {
-            console.warn("Could not access localStorage for preferredLayout");
-          }
-
-          // Only apply persisted layout if it's valid for the user's roles
-          const requiredRoleForPersisted = preferredLayout === 'admin' ? ['admin', 'podManager', 'teamLeader'] : ['agent'];
-          const hasRequiredRole = fetchedRoles.some(role => requiredRoleForPersisted.includes(role));
-
-          let finalLayout: 'admin' | 'agent';
-          if (preferredLayout && hasRequiredRole) {
-            finalLayout = preferredLayout;
-            console.log(`[ProfileLayout] Setting layout from localStorage: ${finalLayout}`);
-          } else {
-            finalLayout = initialLayout;
-            try {
-              localStorage.setItem('preferredLayout', finalLayout); // Persist the initial layout if preference is invalid or not set
-            } catch (e) {
-              console.warn("Could not save preferredLayout to localStorage");
-            }
-            console.log(`[ProfileLayout] Setting initial layout: ${finalLayout}`);
-          }
-          setLayoutType(finalLayout); // Set layoutType state
+          console.warn("[ProfileLayout] User has no roles or roles couldn't be fetched. Redirecting to login.");
+          setRoles([]); // Set to empty array if null
+          setLayoutType(null);
+          router.push('/login');
         } else {
-          console.error("User logged in but has no recognized role for layout. Redirecting.");
-          setLayoutType(null); // Ensure layoutType is null
-          router.push('/login'); // Redirect if no suitable role found
-        }
+          const determinedLayout = determineLayout(fetchedRoles);
+          console.log("[ProfileLayout] Determined layout:", determinedLayout);
+          if (determinedLayout) {
+             // Logic to check/set preferred layout from localStorage remains, but simplified setting
+             let finalLayout = determinedLayout; // Default to determined layout
+             try {
+                const preferredLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
+                const requiredRoleForPersisted = preferredLayout === 'admin' ? ['admin', 'podManager', 'teamLeader'] : ['agent'];
+                const hasRequiredRole = fetchedRoles.some(role => requiredRoleForPersisted.includes(role));
 
+                if (preferredLayout && hasRequiredRole) {
+                    finalLayout = preferredLayout;
+                    console.log(`[ProfileLayout] Setting layout from localStorage: ${finalLayout}`);
+                } else {
+                    localStorage.setItem('preferredLayout', finalLayout); // Persist the determined layout
+                    console.log(`[ProfileLayout] Setting determined layout: ${finalLayout}`);
+                }
+             } catch (e) {
+                 console.warn("[ProfileLayout] Could not access/save preferredLayout in localStorage");
+                 // Use determinedLayout if localStorage fails
+             }
+             setLayoutType(finalLayout);
+          } else {
+            console.error("[ProfileLayout] User has roles but no suitable layout found. Redirecting.");
+            setLayoutType(null);
+            router.push('/login'); // Redirect if no suitable role found
+          }
+        }
       } else {
-        // No user logged in, redirect to login
-        console.log("[ProfileLayout] No user logged in, redirecting.");
+        // No user logged in
+        console.log("[ProfileLayout] No user logged in, redirecting to login.");
         setRoles(null); // Clear roles
         setLayoutType(null); // Clear layoutType
         router.push('/login');
       }
-      setIsLoading(false); // Stop loading after processing
+      setIsLoading(false); // Stop loading after processing auth state
+      setAuthChecked(true); // Mark auth as checked
     });
 
-    return () => unsubscribe();
-  }, [router, determineInitialLayout]); // Add determineInitialLayout to dependencies
+    return () => {
+        console.log("[ProfileLayout] Cleaning up Auth Effect");
+        unsubscribe();
+    }
+  }, [router, determineLayout]); // Dependencies
 
+  // Handler for layout change (remains the same)
   const handleLayoutChange = useCallback((newLayout: 'admin' | 'agent') => {
     setLayoutType(newLayout);
-    // Persist preference in localStorage
      try {
        localStorage.setItem('preferredLayout', newLayout);
+       console.log(`[ProfileLayout] Layout changed to: ${newLayout} and persisted.`);
      } catch (e) {
-       console.warn("Could not save preferredLayout to localStorage");
+       console.warn("[ProfileLayout] Could not save preferredLayout to localStorage");
      }
-     console.log(`[ProfileLayout] Layout changed to: ${newLayout} and persisted.`);
-     // Optional: Consider reloading the page or navigating to the root of the new layout area
-     // Example: router.push(newLayout === 'admin' ? '/admin' : '/agent');
-     // Be cautious with immediate redirects, ensure necessary state is handled.
   }, []);
 
-
-  if (isLoading || !layoutType) {
-     // Show a full-page skeleton or loading indicator
-     return (
-        <div className="flex h-screen items-center justify-center">
-             {/* You can use a more sophisticated loader */}
-             <Skeleton className="h-32 w-32 rounded-full" />
-         </div>
-     );
+  // Render loading state until auth is checked and layout determined
+  if (isLoading || !authChecked || (authChecked && !layoutType && firebaseAuth.currentUser)) { // Show loading if logged in but layout not yet set
+    console.log(`[ProfileLayout] Rendering Loading State: isLoading=${isLoading}, authChecked=${authChecked}, layoutType=${layoutType}, currentUser=${!!firebaseAuth.currentUser}`);
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  // Pass roles, current layout, and handler down to the chosen layout
-  // Ensure roles defaults to an empty array if null or undefined
-  // Correctly pass both roles and layoutType (as currentLayout)
+  // Ensure we have a valid layout before rendering
+  if (!layoutType) {
+     console.log("[ProfileLayout] Rendering null because no valid layoutType determined (likely redirecting).");
+     // This should ideally not be reached if redirects work correctly, but acts as a fallback.
+     // A redirect is likely happening, so rendering nothing prevents errors.
+     return null;
+  }
+
+
+  // Prepare props only when layout is determined
   const layoutProps = {
-    roles: roles || [],
-    currentLayout: layoutType, // Use the state variable `layoutType`
+    roles: roles || [], // Pass roles (guaranteed to be an array or empty)
+    currentLayout: layoutType, // Pass the determined layout type
     onLayoutChange: handleLayoutChange,
   };
 
-  console.log("[ProfileLayout] Rendering with layout type:", layoutType, "and props:", layoutProps); // Log before rendering
+  console.log("[ProfileLayout] Rendering Layout:", layoutType, "with props:", layoutProps);
 
-  // Render layout based on the current state
-  // Spread the props correctly onto the child layout components
+  // Render the appropriate layout based on the state
   if (layoutType === 'admin') {
     return <DashboardLayout {...layoutProps}>{children}</DashboardLayout>;
   } else if (layoutType === 'agent') {
     return <AgentSidebarLayout {...layoutProps}>{children}</AgentSidebarLayout>;
   } else {
-    // Fallback or error state - should ideally be handled by redirects
-    console.error("[ProfileLayout] No valid layout type determined. This should not happen.");
-    return <div>Error: Could not determine appropriate layout. Check console logs.</div>;
+    // Should not happen if logic above is correct
+    console.error("[ProfileLayout] Fallback: No valid layout type. This indicates an issue.");
+    return <div>Error: Invalid layout state.</div>;
   }
 }
