@@ -207,7 +207,7 @@ export default function AgentDashboardPage() {
            listenerRefs.current.userDoc = undefined;
        };
        // No dependencies needed for the auth listener setup itself
-   }, []); // Run only once on mount
+   }, [cleanupListeners]); // Added cleanupListeners
 
 
     // 2. Fetch Competition Data, Pod Agents, and setup Log/Target Listeners
@@ -259,17 +259,18 @@ export default function AgentDashboardPage() {
         const agentsQuery = query(usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
         listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => {
             if (!isMounted) return;
-            const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+             const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
 
-             // Compare IDs before setting state to prevent unnecessary re-renders
+             // Use functional update with comparison to prevent infinite loops
              setPodAgents(currentAgents => {
                  const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
                  const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
                  if (currentAgentIds !== fetchedAgentIds) {
-                      console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
-                      return fetchedAgents;
+                     console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
+                     return fetchedAgents;
                  }
-                 return currentAgents; // Return the existing state if no change
+                 console.log("[AgentDashboard] Pod agents listener: No change in agent IDs.");
+                 return currentAgents; // No change, return current state
              });
         }, (err) => {
             if (isMounted) {
@@ -417,6 +418,7 @@ export default function AgentDashboardPage() {
                     return foundActiveCompetition;
                 }
                  // If competition didn't change, no need to update listeners
+                 console.log("[AgentDashboard] Data Effect: Active competition unchanged.");
                  return currentActiveComp;
             });
         }, (err) => {
@@ -535,9 +537,9 @@ export default function AgentDashboardPage() {
              name: agent.name,
              totalPoints: agentScoresMap[agent.id!] || 0,
              score: agentScoresMap[agent.id!] || 0,
-             avatarUrl: agent.avatarUrl,
-             avatarInitials: agent.avatarInitials,
-             avatarBgColor: agent.avatarBgColor,
+             avatarUrl: agent.avatarUrl, // Include avatarUrl
+             avatarInitials: agent.avatarInitials, // Include avatarInitials
+             avatarBgColor: agent.avatarBgColor, // Include avatarBgColor
              isCurrentUser: agent.id === currentUser?.id
            }))
            .sort((a, b) => b.totalPoints - a.totalPoints)
@@ -667,7 +669,7 @@ export default function AgentDashboardPage() {
   };
 
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs] // Dependencies
+     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs, handleValueChange] // Dependencies
    );
 
 
@@ -736,20 +738,20 @@ export default function AgentDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2"> {/* Adjusted grid layout */}
            {/* Your Scores Card */}
             <Card className="shadow-md flex flex-col h-full">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="flex items-center gap-2">
-                  <ListChecks className="h-5 w-5"/>
-                  <CardTitle>Your Scores</CardTitle>
-                </div>
-                {/* Competition Total Score */}
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Competition Total</p>
-                  {isLoading ? (
-                      <Skeleton className="h-6 w-16 rounded mt-1"/>
-                  ) : (
-                      <p className="text-2xl font-bold text-primary">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>
-                  )}
-                </div>
+               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="flex items-center gap-2">
+                      <ListChecks className="h-5 w-5"/>
+                      <CardTitle>Your Scores</CardTitle>
+                  </div>
+                  {/* Competition Total Score */}
+                  <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Competition Total</p>
+                      {isLoading ? (
+                          <Skeleton className="h-6 w-16 rounded mt-1"/>
+                      ) : (
+                          <p className="text-2xl font-bold text-primary">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>
+                      )}
+                  </div>
               </CardHeader>
               <CardContent className="flex-grow">
                   {isLoading ? (
@@ -846,4 +848,3 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
-
