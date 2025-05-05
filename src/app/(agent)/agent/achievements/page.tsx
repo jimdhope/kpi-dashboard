@@ -170,7 +170,12 @@ export default function AgentLogAchievementsPage() {
         }
 
         if (activeCompetition) {
-          setCompetitionRules(activeCompetition.rules || []);
+          // Filter out the 'Bonus' rule specifically for agents
+          const filteredRules = (activeCompetition.rules || []).filter(
+            rule => rule.name.toLowerCase() !== 'bonus'
+          );
+          setCompetitionRules(filteredRules);
+
 
           // Fetch Existing Achievements for this agent, pod, and date
           const achievementsRef = collection(db, 'dailyAchievements');
@@ -186,7 +191,7 @@ export default function AgentLogAchievementsPage() {
 
           // Initialize Input State based on fetched rules and existing logs
           const initialInputs: AgentAchievementInputState = {};
-          (activeCompetition.rules || []).forEach(rule => {
+          filteredRules.forEach(rule => { // Use filteredRules here
             if (!rule.id) return; // Skip rule if ID is missing
             const existingLog = existingAchievements.find(log => log.ruleId === rule.id);
             initialInputs[rule.id] = {
