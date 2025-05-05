@@ -460,12 +460,12 @@ export default function AgentDashboardPage() {
 
 
   // 4. Process data (Scores, Leaderboards) - useMemo
-  const { agentAchievements, agentAchievementsToday, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
+  const { agentAchievements, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
     console.log(`[AgentDashboard] Memo triggered: Calculating data. Daily Logs: ${dailyLogs.length}, Pod Logs: ${podLogs.length}, Agents: ${podAgents.length}, Teams: ${teams.length}, Rules: ${rules.length}`);
 
     // --- Calculate Agent's *Competition* Score and Achievements ---
     let competitionTotalPoints = 0;
-    const competitionAchievementsMap = new Map<string, { name: string; emoji: string; value: number }>();
+    const competitionAchievementsMap = new Map<string, { ruleId: string; name: string; emoji: string; value: number }>(); // Include ruleId
 
     if (currentUser && rules.length > 0) {
         dailyLogs.forEach(log => {
@@ -475,7 +475,7 @@ export default function AgentDashboardPage() {
                 competitionTotalPoints += pointsToAdd;
 
                 const ruleKey = rule.id!;
-                const currentRuleTotal = competitionAchievementsMap.get(ruleKey) || { name: rule.name, emoji: rule.emoji || '❓', value: 0 };
+                const currentRuleTotal = competitionAchievementsMap.get(ruleKey) || { ruleId: ruleKey, name: rule.name, emoji: rule.emoji || '❓', value: 0 };
                 currentRuleTotal.value += log.value || 0;
                 competitionAchievementsMap.set(ruleKey, currentRuleTotal);
             }
@@ -484,36 +484,7 @@ export default function AgentDashboardPage() {
     const finalAgentCompetitionAchievements = Array.from(competitionAchievementsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
      console.log("[AgentDashboard] Memo: Calculated final agent competition achievements:", finalAgentCompetitionAchievements);
 
-
-    // --- Calculate Agent's Score for Today ---
-     let todayTotalPoints = 0;
-     const todayAchievementsMap = new Map<string, { name: string; emoji: string; value: number }>();
-     const todayTimestampStart = startOfDay(new Date()); // Always use current date
-
-      if (currentUser && rules.length > 0) {
-         // Filter the COMPETITION logs for today's date
-         const todayLogs = dailyLogs.filter(log => {
-             if (!log.date || !(log.date instanceof Timestamp)) return false;
-             return startOfDay(log.date.toDate()).getTime() === todayTimestampStart.getTime();
-         });
-          console.log(`[AgentDashboard] Memo: Found ${todayLogs.length} logs for current agent today.`);
-
-          todayLogs.forEach(log => {
-              const rule = rules.find(r => r.id === log.ruleId);
-               if (rule) {
-                  const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
-                  todayTotalPoints += pointsToAdd;
-
-                  const ruleKey = rule.id!;
-                  const currentRuleTotal = todayAchievementsMap.get(ruleKey) || { name: rule.name, emoji: rule.emoji || '❓', value: 0 };
-                  currentRuleTotal.value += log.value || 0;
-                  todayAchievementsMap.set(ruleKey, currentRuleTotal);
-              }
-          });
-      }
-       const finalAgentTodayAchievements = Array.from(todayAchievementsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-       const finalAgentAchievementsToday : AgentScore = { totalPoints: todayTotalPoints, achievements: finalAgentTodayAchievements };
-      console.log("[AgentDashboard] Memo: Calculated agent score for today:", finalAgentAchievementsToday);
+    const finalAgentAchievements : AgentScore = { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievements };
 
 
     // --- Calculate Pod Target Summary for Today ---
@@ -522,6 +493,7 @@ export default function AgentDashboardPage() {
     rules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
 
      // Filter the POD logs for today's date
+     const todayTimestampStart = startOfDay(new Date()); // Always use current date
      const todayPodLogs = podLogs.filter(log => {
          if (!log.date || !(log.date instanceof Timestamp)) return false;
          return startOfDay(log.date.toDate()).getTime() === todayTimestampStart.getTime();
@@ -595,8 +567,7 @@ export default function AgentDashboardPage() {
      console.log(`[AgentDashboard] Memo: Calculated team leaderboard (${finalTeamLeaderboard.length} entries)`);
 
     return {
-        agentAchievements: { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievements },
-        agentAchievementsToday: finalAgentAchievementsToday, // Use calculated today's achievements
+        agentAchievements: finalAgentAchievements, // Renamed for clarity
         podTargetSummary: finalPodTargetSummary,
         agentLeaderboard: finalAgentLeaderboard,
         teamLeaderboard: finalTeamLeaderboard
@@ -764,38 +735,8 @@ export default function AgentDashboardPage() {
                <CardDescription>Achievements logged for today and the entire competition.</CardDescription>
              </CardHeader>
              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {/* Daily Scores */}
-                  <div>
-                       <h3 className="text-lg font-semibold mb-2">Today</h3>
-                       {isLoading ? (
-                           <div className="space-y-2">
-                                <Skeleton className="h-6 w-1/4 rounded mb-1" />
-                                <Skeleton className="h-4 w-full rounded" />
-                                <Skeleton className="h-4 w-5/6 rounded" />
-                           </div>
-                       ) : agentAchievementsToday ? (
-                           <>
-                                <div className="text-2xl font-bold text-primary mb-2">{agentAchievementsToday.totalPoints.toLocaleString()} pts</div>
-                                {agentAchievementsToday.achievements.length > 0 ? (
-                                    <div className="space-y-1 text-sm">
-                                        {agentAchievementsToday.achievements.map(ach => (
-                                            <div key={ach.ruleId} className="flex items-center justify-between">
-                                                <span className="font-medium truncate" title={ach.ruleName}>
-                                                    {ach.ruleEmoji} {ach.ruleName}
-                                                </span>
-                                                <span className="text-muted-foreground">{ach.value.toLocaleString()}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No achievements logged today.</p>
-                                )}
-                            </>
-                        ) : !error ? (
-                            <p className="text-muted-foreground">Could not load today's scores.</p>
-                        ) : null}
-                   </div>
-                    {/* Competition Scores */}
+                 {/* Daily Scores (Removed) */}
+                  {/* Competition Scores */}
                    <div>
                       <h3 className="text-lg font-semibold mb-2">Competition Total</h3>
                        {isLoading ? (
@@ -810,6 +751,7 @@ export default function AgentDashboardPage() {
                                 {agentAchievements.achievements.length > 0 ? (
                                     <div className="space-y-1 text-sm">
                                         {agentAchievements.achievements.map(ach => (
+                                            // Added key prop here
                                             <div key={ach.ruleId} className="flex items-center justify-between">
                                                 <span className="font-medium truncate" title={ach.ruleName}>
                                                     {ach.ruleEmoji} {ach.ruleName}
