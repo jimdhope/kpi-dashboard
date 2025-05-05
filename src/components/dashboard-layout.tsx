@@ -245,7 +245,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-       {/* Remove gradient background, add data attribute */}
+       {/* Add data attribute for animated background */}
       <SidebarInset
         data-animated-background="true"
         className="flex flex-col"
