@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -37,7 +36,7 @@ import { ManageTeamAgentsDialog } from '@/components/manage-team-agents-dialog';
 import { cn } from '@/lib/utils';
 
 // Team interface remains the same
-interface Team {
+export interface Team {
   id: string;
   name: string;
   agentIds: string[];
@@ -294,10 +293,11 @@ const agentNameMap = useMemo(() => {
           toast({ variant: "destructive", title: "Error", description: "No competition selected." });
           return;
       }
-      if (unassignedAgents.length > 0) {
-         toast({ variant: "destructive", title: "Unassigned Agents", description: "Please assign all agents to a team before saving." });
-         return;
-      }
+      // Removed check for unassigned agents
+      // if (unassignedAgents.length > 0) {
+      //    toast({ variant: "destructive", title: "Unassigned Agents", description: "Please assign all agents to a team before saving." });
+      //    return;
+      // }
        if (teams.some(team => !team.name.trim())) {
           toast({ variant: "destructive", title: "Missing Team Name", description: "Please ensure all teams have a name." });
           return;
@@ -428,10 +428,12 @@ const agentNameMap = useMemo(() => {
                             >
                                 <Shuffle className="mr-2 h-4 w-4" /> Random Assign
                             </Button>
-                            <Button onClick={handleSaveTeams} disabled={isSubmitting || unassignedAgents.length > 0}>
+                            {/* Remove disabled check for unassignedAgents */}
+                            <Button onClick={handleSaveTeams} disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Save Teams
                             </Button>
+                            {/* Keep the unassigned agents indicator */}
                             {unassignedAgents.length > 0 && (
                                 <p className="text-xs text-destructive flex items-center gap-1 w-full justify-end">
                                     <AlertCircle className="h-3 w-3"/> {unassignedAgents.length} agent(s) unassigned.
