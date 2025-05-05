@@ -93,19 +93,20 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
                             initials={entry.avatarInitials || generateInitials(entry.name)}
                             backgroundColor={entry.avatarBgColor}
                              // Ensure fallback text is readable on rank background
-                            className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-800' : '')}
+                             // Use a very dark color for fallbacks on light rank backgrounds
+                            className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
                          >
                             {!entry.avatarInitials && generateInitials(entry.name)}
                          </AvatarFallback>
                       )}
                     </Avatar>
-                    {/* Ensure name text color contrasts with rank background */}
+                    {/* Ensure name text color contrasts with rank background (explicitly white) */}
                     <span className={cn("font-medium truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
                      {/* Adjust badge style for contrast if needed */}
                      {entry.isUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
                   </div>
                 </TableCell>
-                 {/* Ensure score text color contrasts with rank background */}
+                 {/* Ensure score text color contrasts with rank background (explicitly white) */}
                 <TableCell className={cn(
                     "text-right font-semibold",
                     (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary'
@@ -122,3 +123,4 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
     </Card>
   );
 }
+

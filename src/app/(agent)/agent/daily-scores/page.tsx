@@ -80,7 +80,7 @@ export default function AgentDailyScoresPage() {
   const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]); // Logs for the entire pod (for target summary)
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null); // State for daily targets
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingData, setIsLoadingData] = false;
+  const [isLoadingData, setIsLoadingData] = useState(false); // Combined loading state
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -127,15 +127,20 @@ export default function AgentDailyScoresPage() {
 
   // 2. Fetch Competition Rules, Listen to Logs (User & Pod), and Daily Targets
   useEffect(() => {
+    // Initial check: Don't proceed if pod ID or user ID is missing
     if (!agentPodId || !currentUser?.id) {
       setRules([]);
       setDailyLogs([]);
       setPodLogs([]);
       setDailyTargets(null); // Clear targets
-      return () => {};
+       // If user loading is done and there's no pod ID, error is likely set already
+       if (!isLoadingUser && !agentPodId) {
+         setIsLoadingData(false); // Ensure loading is false if we bail early
+       }
+      return () => {}; // Return empty cleanup function
     }
 
-    setIsLoadingData(true);
+    setIsLoadingData(true); // Set loading true only when we intend to fetch
     setError(null);
     setRules([]);
     setDailyLogs([]);
@@ -147,6 +152,12 @@ export default function AgentDailyScoresPage() {
     let unsubscribeTargets: Unsubscribe = () => {}; // Initialize unsubscribe function for targets
 
     const fetchAndListen = async () => {
+      // *** Add extra check here within the async function ***
+       if (!agentPodId) {
+          console.warn("fetchAndListen called but agentPodId is null/undefined.");
+          setIsLoadingData(false);
+          return; // Prevent Firestore queries with invalid podId
+       }
 
       try {
         // Find Active Competition (use array-contains for podIds)
@@ -163,16 +174,18 @@ export default function AgentDailyScoresPage() {
 
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules & { id: string };
-            if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
+             // Ensure comp.endDate exists and is a Timestamp before calling .toDate()
+            if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
                 activeCompetition = comp;
                 break;
             }
         }
 
+
         if (activeCompetition) {
           setRules(activeCompetition.rules || []);
 
-          // Listen to Achievements for the specific agent (remains the same)
+          // Listen to Achievements for the specific agent
           const achievementsRef = collection(db, 'dailyAchievements');
           const userLogsQuery = query(
             achievementsRef,
@@ -191,7 +204,7 @@ export default function AgentDailyScoresPage() {
            });
 
 
-           // Listen to Pod Logs (for target summary) (remains the same)
+           // Listen to Pod Logs (for target summary)
            const podLogsQuery = query(
             achievementsRef,
             where('podId', '==', agentPodId),
@@ -259,11 +272,12 @@ export default function AgentDailyScoresPage() {
          unsubscribeTargets();
      };
 
-  }, [agentPodId, selectedDate, currentUser?.id, toast]); // Re-run when these dependencies change
+  }, [agentPodId, selectedDate, currentUser?.id, toast, isLoadingUser]); // Add isLoadingUser dependency
+
 
   // 3. Process data (Memoization adjusted for new targets)
   const { agentScore, podTargetSummary } = useMemo(() => {
-    // Calculate agent's score and emoji string (remains the same)
+    // Calculate agent's score and emoji string
     let currentAgentScore: Omit<AgentScore, 'agentId' | 'agentFirstName'> = { totalPoints: 0, emojiString: '' };
     let agentEmojis = '';
     const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
@@ -455,3 +469,4 @@ export default function AgentDailyScoresPage() {
     </div>
   );
 }
+

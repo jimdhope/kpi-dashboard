@@ -490,16 +490,19 @@ export default function AgentLeaderboardPage() {
                                              <AvatarFallback
                                                 initials={entry.avatarInitials || generateInitials(entry.name)}
                                                 backgroundColor={entry.avatarBgColor}
-                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-800' : '')} // Contrast for rank background
+                                                // Use a very dark color for fallbacks on light rank backgrounds
+                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
                                              >
                                                  {!entry.avatarInitials && generateInitials(entry.name)}
                                              </AvatarFallback>
                                          )}
                                      </Avatar>
+                                      {/* Ensure name text color contrasts with rank background (explicitly white) */}
                                      <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
-                                     {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={(entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : ""}>You</Badge>}
+                                     {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
                                  </div>
                             </TableCell>
+                            {/* Ensure score text color contrasts with rank background (explicitly white) */}
                             <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
                                 {entry.totalPoints.toLocaleString()}
                             </TableCell>
@@ -550,10 +553,12 @@ export default function AgentLeaderboardPage() {
                                      entry.rank
                                 )}
                             </TableCell>
+                            {/* Ensure name text color contrasts with rank background (explicitly white) */}
                             <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
                                 {entry.name}
                                 {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
                             </TableCell>
+                            {/* Ensure score text color contrasts with rank background (explicitly white) */}
                             <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
                                 {entry.totalPoints.toLocaleString()}
                             </TableCell>
@@ -574,4 +579,4 @@ export default function AgentLeaderboardPage() {
   );
 }
 
-    
+

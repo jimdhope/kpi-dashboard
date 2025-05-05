@@ -429,16 +429,19 @@ export default function AdminLeaderboardPage() {
                                              <AvatarFallback
                                                 initials={entry.avatarInitials || generateInitials(entry.name)}
                                                 backgroundColor={entry.avatarBgColor}
-                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-800' : '')}
+                                                 // Use a very dark color for fallbacks on light rank backgrounds
+                                                className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
                                              >
                                                  {!entry.avatarInitials && generateInitials(entry.name)}
                                              </AvatarFallback>
                                          )}
                                      </Avatar>
+                                      {/* Ensure name text color contrasts with rank background (explicitly white) */}
                                      <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
-                                     {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={(entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : ""}>You</Badge>}
+                                     {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
                                  </div>
                             </TableCell>
+                             {/* Ensure score text color contrasts with rank background (explicitly white) */}
                             <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
                                 {entry.totalPoints.toLocaleString()}
                             </TableCell>
@@ -487,6 +490,7 @@ export default function AdminLeaderboardPage() {
                                         entry.rank
                                     )}
                                 </TableCell>
+                                {/* Ensure name text color contrasts with rank background (explicitly white) */}
                                 <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1">
@@ -495,12 +499,14 @@ export default function AdminLeaderboardPage() {
                                         </div>
                                          {/* Display agent first names */}
                                          {entry.agentFirstNames && entry.agentFirstNames.length > 0 && (
+                                             {/* Ensure list text color contrasts with rank background (adjust opacity) */}
                                             <span className={cn("text-xs", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
                                                 {entry.agentFirstNames.join(', ')}
                                             </span>
                                          )}
                                     </div>
                                 </TableCell>
+                                {/* Ensure score text color contrasts with rank background (explicitly white) */}
                                 <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
                                     {entry.totalPoints.toLocaleString()}
                                 </TableCell>
@@ -518,3 +524,4 @@ export default function AdminLeaderboardPage() {
     </div>
   );
 }
+
