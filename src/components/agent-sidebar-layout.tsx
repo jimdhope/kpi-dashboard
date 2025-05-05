@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, Award, Settings, Star, ClipboardList, CheckSquare } from 'lucide-react'; // Icons for agent view - Added Star, ClipboardList, CheckSquare
+import { Home, Settings, CheckSquare } from 'lucide-react'; // Removed Star, ClipboardList
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 import { Button } from '@/components/ui/button'; // Import Button for Logout
@@ -117,24 +117,7 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
                   </SidebarMenuButton>
                </Link>
             </SidebarMenuItem>
-             {/* View Scores */}
-              <SidebarMenuItem>
-                <Link href="/agent/daily-scores" passHref>
-                  <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/agent/daily-scores'}>
-                    <ClipboardList />
-                    <span>Daily Scores</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                 <Link href="/agent/leaderboard" passHref>
-                  <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/agent/leaderboard'}>
-                    <Star />
-                    <span>Leaderboard</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-             {/* Add other agent-specific links here if needed */}
+             {/* Removed Daily Scores and Leaderboard Links */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
