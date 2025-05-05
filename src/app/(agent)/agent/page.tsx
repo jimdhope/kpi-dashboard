@@ -21,6 +21,7 @@ import { generateInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { AchievementCard } from '@/components/achievement-card';
+import { Progress } from '@/components/ui/progress'; // Import Progress component
 
 // Interfaces (LeaderboardEntry, DailyAchievementLog, etc.)
 interface LeaderboardEntry {
@@ -59,6 +60,7 @@ interface PodTargetSummary {
   ruleEmoji: string;
   achieved: number;
   target: number | null;
+  progress?: number; // Optional progress percentage
 }
 
 // State Interface for Achievement Inputs (for today)
@@ -111,7 +113,6 @@ export default function AgentDashboardPage() {
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
 
    // --- Listener Management Ref ---
-   // Use refs to keep track of unsubscribe functions to avoid stale closures
    const listenerRefs = React.useRef<{
        auth?: Unsubscribe;
        userDoc?: Unsubscribe;
@@ -259,21 +260,22 @@ export default function AgentDashboardPage() {
         listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => {
             if (!isMounted) return;
             const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-            // Functional update to avoid infinite loop
-            setPodAgents(currentAgents => {
+             // Functional update to compare agent lists properly
+             setPodAgents(currentAgents => {
+                // Convert agent arrays to sorted ID strings for comparison
                 const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
                 const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
+                // Only update state if the list of agents has actually changed
                 if (currentAgentIds !== fetchedAgentIds) {
                     console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
                     return fetchedAgents;
                 }
-                return currentAgents;
+                return currentAgents; // Return the existing state if no change
             });
         }, (err) => {
             if (isMounted) {
                 console.error("[AgentDashboard] Error listening to pod agents:", err);
                 setError("Failed to load pod member data.");
-                // Optionally set loading false here if this is critical path
             }
         });
 
@@ -413,7 +415,13 @@ export default function AgentDashboardPage() {
                     setIsLoadingData(false); // Set loading false *after* setting up listeners or clearing state
                     return foundActiveCompetition;
                 }
-                // If competition didn't change, no need to update listeners or loading state
+                 // If competition didn't change, no need to update listeners or loading state
+                 // Also don't set loading state again if it didn't change
+                 // If it was already false, keep it false.
+                 if (!isLoadingData) {
+                     console.log("[AgentDashboard] Data Effect: Competition unchanged, keeping loading state false.");
+                     // setIsLoadingData(false); // This line caused the infinite loop
+                 }
                  return currentActiveComp;
             });
         }, (err) => {
@@ -429,150 +437,150 @@ export default function AgentDashboardPage() {
              isMounted = false;
              cleanupDataListeners();
         };
-        // Dependencies: Rerun when user or pod changes
-    }, [agentPodId, currentUser?.id, isLoadingUser]); // Added isLoadingUser
+    }, [agentPodId, currentUser?.id, isLoadingUser, cleanupListeners]); // Re-add cleanupListeners
 
 
-  // 4. Process data (Scores, Leaderboards) - useMemo
-  const { agentDailyAchievements, agentCompetitionAchievements, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
-    console.log(`[AgentDashboard] Memo triggered: Calculating data. Daily Logs: ${dailyLogs.length}, Pod Logs: ${podLogs.length}, Agents: ${podAgents.length}, Teams: ${teams.length}, Rules: ${rules.length}`);
+    // 4. Process data (Scores, Leaderboards) - useMemo
+    const { agentDailyAchievements, agentCompetitionAchievements, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
+        console.log(`[AgentDashboard] Memo triggered: Calculating data. Daily Logs: ${dailyLogs.length}, Pod Logs: ${podLogs.length}, Agents: ${podAgents.length}, Teams: ${teams.length}, Rules: ${rules.length}`);
 
-     // Filter logs for Today (used for Daily Score and Pod Target Summary)
-     const todayStart = startOfDay(new Date());
-     const todayUserLogs = dailyLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
-     const todayPodLogs = podLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
-     console.log(`[AgentDashboard] Memo: Found ${todayUserLogs.length} logs for current agent today.`);
+        const todayStart = startOfDay(new Date());
+        const todayUserLogs = dailyLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
+        const todayPodLogs = podLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
+        console.log(`[AgentDashboard] Memo: Found ${todayUserLogs.length} logs for current agent today.`);
 
-    // --- Calculate Agent's *Daily* Achievements ---
-     let dailyTotalPoints = 0;
-     const dailyAchievementsMap = new Map<string, { ruleId: string; ruleName: string; ruleEmoji: string; value: number }>();
-     const displayRules = rules.filter(rule => rule.name.toLowerCase() !== 'bonus');
+        const displayRules = rules.filter(rule => rule.name.toLowerCase() !== 'bonus');
 
-     if (currentUser && displayRules.length > 0) {
-         todayUserLogs.forEach(log => {
-             const rule = displayRules.find(r => r.id === log.ruleId);
-             if (rule) {
-                 const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
-                 dailyTotalPoints += pointsToAdd;
-                 const ruleKey = rule.id!;
-                 const currentRuleTotal = dailyAchievementsMap.get(ruleKey) || { ruleId: ruleKey, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0 };
+        // --- Calculate Agent's *Daily* Achievements ---
+        let dailyTotalPoints = 0;
+        const dailyAchievementsMap = new Map<string, { ruleId: string; ruleName: string; ruleEmoji: string; value: number }>();
+        if (currentUser && displayRules.length > 0) {
+            todayUserLogs.forEach(log => {
+                const rule = displayRules.find(r => r.id === log.ruleId);
+                if (rule) {
+                    const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
+                    dailyTotalPoints += pointsToAdd;
+                    const ruleKey = rule.id!;
+                    const currentRuleTotal = dailyAchievementsMap.get(ruleKey) || { ruleId: ruleKey, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0 };
+                    const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
+                    currentRuleTotal.value += valueToAdd;
+                    dailyAchievementsMap.set(ruleKey, currentRuleTotal);
+                }
+            });
+        }
+        const finalAgentDailyAchievementsList = Array.from(dailyAchievementsMap.values()).sort((a, b) => a.ruleName.localeCompare(b.ruleName));
+        const finalAgentDailyAchievements: AgentDailyAchievements = { totalPoints: dailyTotalPoints, achievements: finalAgentDailyAchievementsList };
+        console.log("[AgentDashboard] Memo: Calculated final agent daily achievements:", finalAgentDailyAchievements);
+
+        // --- Calculate Agent's *Competition* Achievements ---
+        let competitionTotalPoints = 0;
+        const competitionAchievementsMap = new Map<string, { ruleId: string; ruleName: string; ruleEmoji: string; value: number }>();
+        if (currentUser && displayRules.length > 0) {
+            dailyLogs.forEach(log => {
+                const rule = displayRules.find(r => r.id === log.ruleId);
+                if (rule) {
+                    const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
+                    competitionTotalPoints += pointsToAdd;
+                    const ruleKey = rule.id!;
+                    const currentRuleTotal = competitionAchievementsMap.get(ruleKey) || { ruleId: ruleKey, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0 };
+                    const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
+                    currentRuleTotal.value += valueToAdd;
+                    competitionAchievementsMap.set(ruleKey, currentRuleTotal);
+                }
+            });
+        }
+        const finalAgentCompetitionAchievementsList = Array.from(competitionAchievementsMap.values()).sort((a, b) => a.ruleName.localeCompare(b.ruleName));
+        const finalAgentCompetitionAchievements: AgentCompetitionAchievements = { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievementsList };
+        console.log("[AgentDashboard] Memo: Calculated final agent competition achievements:", finalAgentCompetitionAchievements);
+
+        // --- Calculate Pod Target Summary for Today ---
+        const dayOfWeek = daysOfWeek[getDay(new Date())];
+        const podRuleTotalsToday: Record<string, number> = {};
+        displayRules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
+        console.log(`[AgentDashboard] Memo: Found ${todayPodLogs.length} logs for pod today.`);
+        todayPodLogs.forEach(log => {
+            if (podRuleTotalsToday.hasOwnProperty(log.ruleId)) {
                  const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
-                 currentRuleTotal.value += valueToAdd;
-                 dailyAchievementsMap.set(ruleKey, currentRuleTotal);
-             }
-         });
-     }
-     const finalAgentDailyAchievementsList = Array.from(dailyAchievementsMap.values()).sort((a, b) => a.ruleName.localeCompare(b.ruleName));
-     const finalAgentDailyAchievements: AgentDailyAchievements = { totalPoints: dailyTotalPoints, achievements: finalAgentDailyAchievementsList };
-     console.log("[AgentDashboard] Memo: Calculated final agent daily achievements:", finalAgentDailyAchievements);
-
-
-    // --- Calculate Agent's *Competition* Achievements ---
-    let competitionTotalPoints = 0;
-    const competitionAchievementsMap = new Map<string, { ruleId: string; ruleName: string; ruleEmoji: string; value: number }>();
-
-    if (currentUser && displayRules.length > 0) {
-        dailyLogs.forEach(log => { // Use ALL dailyLogs for the competition period
-            const rule = displayRules.find(r => r.id === log.ruleId);
-            if (rule) {
-                const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
-                competitionTotalPoints += pointsToAdd;
-                const ruleKey = rule.id!;
-                const currentRuleTotal = competitionAchievementsMap.get(ruleKey) || { ruleId: ruleKey, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0 };
-                const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
-                currentRuleTotal.value += valueToAdd;
-                competitionAchievementsMap.set(ruleKey, currentRuleTotal);
+                podRuleTotalsToday[log.ruleId] += valueToAdd;
             }
-        });
-    }
-    const finalAgentCompetitionAchievementsList = Array.from(competitionAchievementsMap.values()).sort((a, b) => a.ruleName.localeCompare(b.ruleName));
-    const finalAgentCompetitionAchievements: AgentCompetitionAchievements = { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievementsList };
-    console.log("[AgentDashboard] Memo: Calculated final agent competition achievements:", finalAgentCompetitionAchievements);
+         });
+        const finalPodTargetSummary: PodTargetSummary[] = displayRules
+            .map(rule => {
+                if (!rule.id) return null;
+                const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
+                console.log(`[AgentDashboard] Memo: Target for Rule ${rule.name} (${rule.id}) on ${dayOfWeek}: ${targetValue}`);
+                if (targetValue === undefined || targetValue === null || targetValue < 0) return null; // Only show if target is >= 0
+                const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+                 const progress = targetValue > 0 ? Math.min(100, Math.round(((podRuleTotalsToday[rule.id] || 0) / targetValue) * 100)) : 0;
+                return {
+                     ruleId: rule.id,
+                     ruleName: rule.name,
+                     ruleEmoji: emojiToUse,
+                     achieved: podRuleTotalsToday[rule.id] || 0,
+                     target: targetValue,
+                     progress: progress
+                };
+            })
+            .filter((item): item is PodTargetSummary => item !== null)
+            .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
+         console.log("[AgentDashboard] Memo: Calculated pod target summary for today:", finalPodTargetSummary);
+
+         // --- Calculate Leaderboards ---
+         const agentScoresMap: Record<string, number> = {};
+         podAgents.forEach(agent => { if(agent.id) agentScoresMap[agent.id] = 0; });
+         podLogs.forEach(log => {
+            if (agentScoresMap.hasOwnProperty(log.agentId)) {
+                const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
+                agentScoresMap[log.agentId] += pointsToAdd;
+            }
+         });
+         const finalAgentLeaderboard: LeaderboardEntry[] = podAgents
+           .map(agent => ({
+             id: agent.id!,
+             name: agent.name,
+             totalPoints: agentScoresMap[agent.id!] || 0,
+             score: agentScoresMap[agent.id!] || 0,
+             avatarUrl: agent.avatarUrl,
+             avatarInitials: agent.avatarInitials,
+             avatarBgColor: agent.avatarBgColor,
+             isCurrentUser: agent.id === currentUser?.id
+           }))
+           .sort((a, b) => b.totalPoints - a.totalPoints)
+           .map((entry, index) => ({ ...entry, rank: index + 1 }));
+         console.log(`[AgentDashboard] Memo: Calculated agent leaderboard (${finalAgentLeaderboard.length} entries)`);
+
+         const teamScoresMap: Record<string, number> = {};
+         teams.forEach(team => { teamScoresMap[team.id] = 0; });
+         podLogs.forEach(log => {
+            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+            if (agentTeam && teamScoresMap.hasOwnProperty(agentTeam.id)) {
+                const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
+                teamScoresMap[agentTeam.id] += pointsToAdd;
+            }
+         });
+         const finalTeamLeaderboard: LeaderboardEntry[] = teams
+           .map(team => ({
+             id: team.id,
+             name: team.name,
+             totalPoints: teamScoresMap[team.id] || 0,
+             score: teamScoresMap[team.id] || 0,
+             isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || '')
+           }))
+           .sort((a, b) => b.totalPoints - a.totalPoints)
+           .map((entry, index) => ({ ...entry, rank: index + 1 }));
+         console.log(`[AgentDashboard] Memo: Calculated team leaderboard (${finalTeamLeaderboard.length} entries)`);
+
+        return {
+            agentDailyAchievements: finalAgentDailyAchievements,
+            agentCompetitionAchievements: finalAgentCompetitionAchievements,
+            podTargetSummary: finalPodTargetSummary,
+            agentLeaderboard: finalAgentLeaderboard,
+            teamLeaderboard: finalTeamLeaderboard
+        };
+    }, [dailyLogs, podLogs, rules, dailyTargets, currentUser, podAgents, teams]);
 
 
-    // --- Calculate Pod Target Summary for Today ---
-    const dayOfWeek = daysOfWeek[getDay(new Date())];
-    const podRuleTotalsToday: Record<string, number> = {};
-    displayRules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
-    console.log(`[AgentDashboard] Memo: Found ${todayPodLogs.length} logs for pod today.`);
-
-    todayPodLogs.forEach(log => {
-        if (podRuleTotalsToday.hasOwnProperty(log.ruleId)) {
-             const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
-            podRuleTotalsToday[log.ruleId] += valueToAdd;
-        }
-     });
-
-    const finalPodTargetSummary: PodTargetSummary[] = displayRules
-        .map(rule => {
-            if (!rule.id) return null;
-            const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
-            console.log(`[AgentDashboard] Memo: Target for Rule ${rule.name} (${rule.id}) on ${dayOfWeek}: ${targetValue}`);
-            if (targetValue === undefined || targetValue === null) return null;
-            const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-            return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: emojiToUse, achieved: podRuleTotalsToday[rule.id] || 0, target: targetValue };
-        })
-        .filter((item): item is PodTargetSummary => item !== null)
-        .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
-     console.log("[AgentDashboard] Memo: Calculated pod target summary for today:", finalPodTargetSummary);
-
-     // --- Calculate Leaderboards (using all fetched podLogs for the competition duration) ---
-     const agentScoresMap: Record<string, number> = {};
-     podAgents.forEach(agent => { if(agent.id) agentScoresMap[agent.id] = 0; });
-     podLogs.forEach(log => {
-        if (agentScoresMap.hasOwnProperty(log.agentId)) {
-            const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
-            agentScoresMap[log.agentId] += pointsToAdd;
-        }
-     });
-     const finalAgentLeaderboard: LeaderboardEntry[] = podAgents
-       .map(agent => ({
-         id: agent.id!,
-         name: agent.name,
-         totalPoints: agentScoresMap[agent.id!] || 0,
-         score: agentScoresMap[agent.id!] || 0,
-         avatarUrl: agent.avatarUrl,
-         avatarInitials: agent.avatarInitials,
-         avatarBgColor: agent.avatarBgColor,
-         isCurrentUser: agent.id === currentUser?.id
-       }))
-       .sort((a, b) => b.totalPoints - a.totalPoints)
-       .map((entry, index) => ({ ...entry, rank: index + 1 }));
-     console.log(`[AgentDashboard] Memo: Calculated agent leaderboard (${finalAgentLeaderboard.length} entries)`);
-
-
-     const teamScoresMap: Record<string, number> = {};
-     teams.forEach(team => { teamScoresMap[team.id] = 0; });
-     podLogs.forEach(log => {
-        const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-        if (agentTeam && teamScoresMap.hasOwnProperty(agentTeam.id)) {
-            const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
-            teamScoresMap[agentTeam.id] += pointsToAdd;
-        }
-     });
-     const finalTeamLeaderboard: LeaderboardEntry[] = teams
-       .map(team => ({
-         id: team.id,
-         name: team.name,
-         totalPoints: teamScoresMap[team.id] || 0,
-         score: teamScoresMap[team.id] || 0,
-         isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || '')
-       }))
-       .sort((a, b) => b.totalPoints - a.totalPoints)
-       .map((entry, index) => ({ ...entry, rank: index + 1 }));
-     console.log(`[AgentDashboard] Memo: Calculated team leaderboard (${finalTeamLeaderboard.length} entries)`);
-
-    return {
-        agentDailyAchievements: finalAgentDailyAchievements, // Today's achievements
-        agentCompetitionAchievements: finalAgentCompetitionAchievements, // Competition achievements
-        podTargetSummary: finalPodTargetSummary,
-        agentLeaderboard: finalAgentLeaderboard,
-        teamLeaderboard: finalTeamLeaderboard
-    };
-  }, [dailyLogs, podLogs, rules, dailyTargets, currentUser, podAgents, teams]); // Dependency array
-
-
-  // --- Achievement Card Logic (Moved from achievements page) ---
+  // --- Achievement Card Logic ---
   const handleValueChange = useCallback((ruleId: string, change: number) => {
     const currentValue = achievementInputs[ruleId]?.value ?? 0;
     const newValue = Math.max(0, currentValue + change);
@@ -647,7 +655,6 @@ export default function AgentDashboardPage() {
         // Update state with the new ID immediately
         setAchievementInputs(prev => {
           const newState = { ...prev };
-           // Ensure the rule entry exists before trying to update it
            if (!newState[ruleId]) {
                newState[ruleId] = { value: value, existingLogId: addedDoc.id };
            } else {
@@ -665,7 +672,6 @@ export default function AgentDashboardPage() {
   };
 
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     // Ensure all necessary and stable dependencies are included
      [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs] // Removed handleSaveAchievement itself
    );
 
@@ -687,7 +693,6 @@ export default function AgentDashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div>
                     <CardTitle>Today's Achievements</CardTitle>
-                    {/* Removed CardDescription about logging */}
                 </div>
                  {/* Display Daily Score */}
                  <div className="text-right">
@@ -783,24 +788,29 @@ export default function AgentDashboardPage() {
                    <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle>
                    <CardDescription>Your pod's progress towards today's targets.</CardDescription>
               </CardHeader>
-              <CardContent>
-                   {isLoading ? (
+               <CardContent>
+                    {isLoading ? (
                         <div className="space-y-2">
-                           <Skeleton className="h-4 w-full rounded" />
-                           <Skeleton className="h-4 w-5/6 rounded" />
-                           <Skeleton className="h-4 w-3/4 rounded" />
+                            <Skeleton className="h-4 w-full rounded mb-2" />
+                            <Skeleton className="h-2 w-full rounded mb-2" />
+                            <Skeleton className="h-4 w-5/6 rounded mb-2" />
+                            <Skeleton className="h-2 w-full rounded mb-2" />
+                            <Skeleton className="h-4 w-3/4 rounded mb-2" />
+                            <Skeleton className="h-2 w-full rounded" />
                         </div>
                     ) : podTargetSummary.length > 0 ? (
-                       <div className="space-y-1 text-sm">
+                       <div className="space-y-3">
                            {podTargetSummary.map(summary => (
-                               <div key={summary.ruleId} className="flex items-center justify-between whitespace-nowrap">
-                                   <span className="font-medium truncate" title={summary.ruleName}>
-                                       {summary.ruleEmoji} {summary.ruleName}
-                                   </span>
-                                   <span className={cn("font-semibold", summary.target !== null && summary.achieved >= summary.target ? "text-green-600" : "text-muted-foreground")}>
-                                       {summary.achieved.toLocaleString()}
-                                       {summary.target !== null ? ` / ${summary.target.toLocaleString()}` : ''}
-                                   </span>
+                               <div key={summary.ruleId}>
+                                   <div className="flex items-center justify-between text-sm mb-1">
+                                       <span className="font-medium truncate" title={summary.ruleName}>
+                                           {summary.ruleEmoji} {summary.ruleName}
+                                       </span>
+                                       <span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>
+                                           {summary.achieved.toLocaleString()} / {summary.target?.toLocaleString()}
+                                       </span>
+                                   </div>
+                                   <Progress value={summary.progress ?? 0} className="h-2" />
                                </div>
                            ))}
                        </div>

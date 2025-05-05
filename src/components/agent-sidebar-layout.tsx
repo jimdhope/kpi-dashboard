@@ -55,6 +55,10 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
                 email: user.email || '',
                 roles: [], // Default to no roles
                 podId: null,
+                 // Ensure optional avatar fields exist or are initialized
+                 avatarUrl: '',
+                 avatarInitials: '',
+                 avatarBgColor: '',
             });
           }
           setIsLoadingUser(false);
@@ -107,15 +111,6 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
                   <span>My Dashboard</span>
                 </SidebarMenuButton>
               </Link>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-               {/* Use Link for navigation */}
-               <Link href="/agent/achievements" passHref>
-                  <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/agent/achievements'}>
-                    <CheckSquare />
-                    <span>Log Achievements</span>
-                  </SidebarMenuButton>
-               </Link>
             </SidebarMenuItem>
              {/* Removed Daily Scores and Leaderboard Links */}
           </SidebarMenu>
@@ -177,3 +172,4 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
     </SidebarProvider>
   );
 }
+
