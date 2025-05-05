@@ -13,6 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'; // Added Calendar
 import { Button } from '@/components/ui/button'; // Added Button
 import { Label } from '@/components/ui/label'; // Added Label
+import { FormDescription } from '@/components/ui/form'; // Added FormDescription import
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'; // Date functions
 import { cn } from '@/lib/utils'; // For conditional classes
 import type { AppUser } from '@/services/user';
@@ -192,19 +193,22 @@ export default function AdminDashboardPage() {
       const today = startOfDay(new Date()); // Use today's date for calculations
 
       // Determine reference date based on timeframe, use today if selectedDate is undefined
-      const referenceDate = selectedDate || today;
+       const referenceDate = selectedDate || today; // Use selected date if provided, otherwise today
 
       switch (timeframe) {
           case 'daily':
-              startDate = startOfDay(referenceDate); // Use referenceDate for 'daily'
+               // Use start/end of the referenceDate
+              startDate = startOfDay(referenceDate);
               endDate = endOfDay(referenceDate);
               break;
           case 'weekly':
-              startDate = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Use referenceDate
+               // Use start/end of the week containing the referenceDate
+              startDate = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Assuming week starts Monday
               endDate = endOfWeek(referenceDate, { weekStartsOn: 1 });
               break;
           case 'monthly':
-              startDate = startOfMonth(referenceDate); // Use referenceDate
+              // Use start/end of the month containing the referenceDate
+              startDate = startOfMonth(referenceDate);
               endDate = endOfMonth(referenceDate);
               break;
            case 'allTime':
@@ -275,7 +279,7 @@ export default function AdminDashboardPage() {
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
             }))
-             // Removed filter: .filter(entry => entry.score > 0)
+             // Show all agents regardless of score
             .sort((a, b) => b.score - a.score) // Sort by score
             .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -294,7 +298,7 @@ export default function AdminDashboardPage() {
         });
 
         const finalPodLeaderboard: LeaderboardEntry[] = Object.values(podScores)
-            // Removed filter: .filter(pod => pod.score > 0)
+             // Show all pods regardless of score
             .sort((a, b) => b.score - a.score) // Sort by score
              .map((entry, index) => {
                 const podData = allPods.find(p => p.id === entry.id); // Get full pod data for avatar
