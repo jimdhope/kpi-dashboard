@@ -8,9 +8,10 @@ import { generateInitials } from "@/lib/utils"; // Import generateInitials
 import { cn } from "@/lib/utils"; // Import cn for conditional classes
 
 interface LeaderboardEntry {
-  rank: number;
+  id: string; // Added ID for React key prop
+  rank?: number; // Rank might be undefined before sorting
   name: string;
-  score: number;
+  score: number; // Score should be a number
   avatarUrl?: string;
   avatarInitials?: string; // Optional custom initials
   avatarBgColor?: string; // Optional custom background color
@@ -66,18 +67,18 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
           <TableBody>
             {sortedEntries.map((entry) => (
               <TableRow
-                key={entry.rank}
+                key={entry.id} // Use ID for key
                 // Apply highlight style for top 3, override default hover background for these rows
-                style={getRankHighlightStyle(entry.rank)}
+                style={getRankHighlightStyle(entry.rank ?? 0)}
                 // Keep user highlight, but ensure rank highlight takes precedence visually if needed
                 className={cn(
-                    entry.isUser && entry.rank > 3 ? 'bg-accent' : '', // Apply user highlight only if not top 3
-                    entry.rank <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50' // Adjust hover for highlighted rows
+                    entry.isUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '', // Apply user highlight only if not top 3
+                    (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50' // Adjust hover for highlighted rows
                 )}
               >
                 <TableCell className="font-medium text-center align-middle"> {/* Ensure vertical alignment */}
-                  {entry.rank <= 3 ? (
-                    <Medal className={`inline-block h-5 w-5 ${getMedalColor(entry.rank)}`} />
+                  {(entry.rank ?? 0) <= 3 ? (
+                    <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
                   ) : (
                     entry.rank
                   )}
@@ -92,25 +93,26 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
                             initials={entry.avatarInitials || generateInitials(entry.name)}
                             backgroundColor={entry.avatarBgColor}
                              // Ensure fallback text is readable on rank background
-                            className={cn(entry.rank <= 3 ? 'text-gray-800' : '')}
+                            className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-800' : '')}
                          >
                             {!entry.avatarInitials && generateInitials(entry.name)}
                          </AvatarFallback>
                       )}
                     </Avatar>
                     {/* Ensure name text color contrasts with rank background */}
-                    <span className={cn("font-medium truncate", entry.rank <= 3 ? 'text-white' : '')}>{entry.name}</span>
+                    <span className={cn("font-medium truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
                      {/* Adjust badge style for contrast if needed */}
-                     {entry.isUser && <Badge variant={entry.rank <= 3 ? "secondary" : "outline"} className={entry.rank <= 3 ? "border-white/50 text-white/90" : ""}>You</Badge>}
+                     {entry.isUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
                   </div>
                 </TableCell>
                  {/* Ensure score text color contrasts with rank background */}
                 <TableCell className={cn(
                     "text-right font-semibold",
-                    entry.rank <= 3 ? 'text-white' : 'text-primary'
+                    (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary'
                   )}
                 >
-                    {entry.score.toLocaleString()}
+                    {/* Provide default value for score before calling toLocaleString */}
+                    {(entry.score ?? 0).toLocaleString()}
                 </TableCell>
               </TableRow>
             ))}

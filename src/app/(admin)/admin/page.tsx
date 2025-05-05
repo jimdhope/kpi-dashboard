@@ -17,14 +17,15 @@ import { cn } from '@/lib/utils'; // For conditional classes
 import type { AppUser } from '@/services/user';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
-import type { DailyAchievementLog } from '@/app/(admin)/admin/daily-scores/page'; // Reuse type
+// Explicitly import DailyAchievementLog type from its definition file
+import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse type
 
 // Leaderboard Entry Interface (can be reused or adapted)
 interface LeaderboardEntry {
   id: string;
   name: string;
-  totalPoints: number;
+  score: number; // Changed from totalPoints to score to match Leaderboard component prop
   rank?: number;
   avatarUrl?: string;
   avatarInitials?: string;
@@ -63,7 +64,7 @@ function StatCard({ title, value, icon, isLoading, description }: StatCardProps)
         {isLoading ? (
           <Skeleton className="h-8 w-1/2 rounded" />
         ) : (
-          <div className="text-2xl font-bold text-primary">{value.toLocaleString()}</div> // Format numbers
+          <div className="text-2xl font-bold text-primary">{typeof value === 'number' ? value.toLocaleString() : value}</div>
         )}
         {description && !isLoading && (
           <p className="text-xs text-muted-foreground pt-1">{description}</p>
@@ -254,8 +255,10 @@ export default function AdminDashboardPage() {
              if(user.id) agentScores[user.id] = 0;
          });
          achievementLogs.forEach(log => {
+            // Ensure log.points is a number, default to 0 if not
+            const points = typeof log.points === 'number' ? log.points : 0;
             if (agentScores.hasOwnProperty(log.agentId)) {
-                agentScores[log.agentId] += log.points;
+                agentScores[log.agentId] += points; // Use sanitized points
             }
         });
 
@@ -264,30 +267,32 @@ export default function AdminDashboardPage() {
             .map(agent => ({
                 id: agent.id!,
                 name: agent.name,
-                totalPoints: agentScores[agent.id!] || 0,
+                score: agentScores[agent.id!] || 0, // Use score property and ensure it's a number
                 avatarUrl: agent.avatarUrl,
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
             }))
-            .filter(entry => entry.totalPoints > 0) // Optionally hide agents with 0 points
-            .sort((a, b) => b.totalPoints - a.totalPoints)
+            .filter(entry => entry.score > 0) // Optional: Hide agents with 0 points
+            .sort((a, b) => b.score - a.score) // Sort by score
             .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
 
         // 2. Calculate Pod Scores
-        const podScores: Record<string, { name: string; totalPoints: number; id: string }> = {};
+        const podScores: Record<string, { name: string; score: number; id: string }> = {};
         allPods.forEach(pod => {
-             podScores[pod.id] = { id: pod.id, name: pod.name, totalPoints: 0 };
+             podScores[pod.id] = { id: pod.id, name: pod.name, score: 0 }; // Initialize score
         });
         achievementLogs.forEach(log => {
+             // Ensure log.points is a number, default to 0 if not
+             const points = typeof log.points === 'number' ? log.points : 0;
             if (log.podId && podScores[log.podId]) {
-                 podScores[log.podId].totalPoints += log.points;
+                 podScores[log.podId].score += points; // Use sanitized points
             }
         });
 
         const finalPodLeaderboard: LeaderboardEntry[] = Object.values(podScores)
-             .filter(pod => pod.totalPoints > 0) // Optionally hide pods with 0 points
-            .sort((a, b) => b.totalPoints - a.totalPoints)
+             .filter(pod => pod.score > 0) // Optional: Hide pods with 0 points
+            .sort((a, b) => b.score - a.score) // Sort by score
              .map((entry, index) => {
                 const podData = allPods.find(p => p.id === entry.id); // Get full pod data for avatar
                 return {
@@ -309,7 +314,9 @@ export default function AdminDashboardPage() {
              if (!summary[ruleKey]) {
                  summary[ruleKey] = { totalValue: 0 };
              }
-             summary[ruleKey].totalValue += log.value; // Sum the actual value (not points)
+             // Ensure log.value is a number
+             const value = typeof log.value === 'number' ? log.value : 0;
+             summary[ruleKey].totalValue += value; // Sum the actual value (not points)
          });
 
          const finalAchievementSummary: AchievementSummaryEntry[] = Object.entries(summary)
