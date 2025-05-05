@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -15,7 +14,7 @@ import { Button } from '@/components/ui/button'; // Added Button
 import { Label } from '@/components/ui/label'; // Added Label
 import { Form, FormDescription } from '@/components/ui/form'; // Added Form import
 import { useForm } from 'react-hook-form'; // Import useForm
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'; // Date functions
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns'; // Import addDays
 import { cn } from '@/lib/utils'; // For conditional classes
 import type { AppUser } from '@/services/user';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
@@ -45,7 +44,7 @@ interface AchievementSummaryEntry {
 
 
 // Timeframe options
-type Timeframe = 'daily' | 'weekly' | 'monthly' | 'allTime'; // Removed 'custom' for simplicity initially
+type Timeframe = 'daily' | 'weekly' | 'monthly' | 'allTime';
 
 // Interface for stats card props (remains the same)
 interface StatCardProps {
@@ -190,26 +189,27 @@ export default function AdminDashboardPage() {
 
   // Fetch Achievement Logs based on Timeframe
   useEffect(() => {
-      setIsLoadingData(true); // Start loading when timeframe changes
+      setIsLoadingData(true); // Start loading when timeframe or date changes
       setError(null);
 
       let startDate: Date | null = null;
       let endDate: Date | null = null;
-      const today = startOfDay(new Date()); // Use today's date for calculations
+      const today = startOfDay(new Date()); // Use today's date if no specific date selected
 
       // Determine reference date based on timeframe, use today if selectedDate is undefined
        const referenceDate = selectedDate || today; // Use selected date if provided, otherwise today
 
+       console.log(`Timeframe: ${timeframe}, Reference Date: ${referenceDate.toISOString()}`);
+
       switch (timeframe) {
           case 'daily':
-               // Use start/end of the referenceDate
               startDate = startOfDay(referenceDate);
               endDate = endOfDay(referenceDate);
               break;
           case 'weekly':
-               // Use start/end of the week containing the referenceDate
-              startDate = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Assuming week starts Monday
-              endDate = endOfWeek(referenceDate, { weekStartsOn: 1 });
+              // Calculate 7 days starting FROM the referenceDate
+              startDate = startOfDay(referenceDate);
+              endDate = endOfDay(addDays(referenceDate, 6)); // Add 6 days to get a 7-day period
               break;
           case 'monthly':
               // Use start/end of the month containing the referenceDate
@@ -233,6 +233,9 @@ export default function AdminDashboardPage() {
              where('date', '>=', Timestamp.fromDate(startDate)),
              where('date', '<=', Timestamp.fromDate(endDate))
          );
+      } else if (timeframe !== 'allTime') {
+         // This case shouldn't happen with current logic, but good for debugging
+          console.warn("No date range specified, but timeframe is not 'allTime'. Fetching all logs.");
       } else {
          console.log(`Querying all logs`);
       }
@@ -240,6 +243,7 @@ export default function AdminDashboardPage() {
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
           const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+          console.log(`Fetched ${fetchedLogs.length} logs for the timeframe.`);
           setAchievementLogs(fetchedLogs);
           setIsLoadingData(false);
            setError(null);
@@ -252,7 +256,7 @@ export default function AdminDashboardPage() {
 
       return () => unsubscribe(); // Cleanup log listener
 
-  }, [timeframe, selectedDate]);
+  }, [timeframe, selectedDate]); // Dependencies: re-run when timeframe or selectedDate changes
 
 
   // --- Data Calculation (useMemo) ---
@@ -284,8 +288,8 @@ export default function AdminDashboardPage() {
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
             }))
-            .sort((a, b) => b.score - a.score) // Sort by score
-            .map((entry, index) => ({ ...entry, rank: index + 1 }));
+             .sort((a, b) => b.score - a.score) // Sort by score
+             .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
 
         // 2. Calculate Pod Scores
@@ -377,7 +381,7 @@ export default function AdminDashboardPage() {
             <CardTitle>Leaderboard & Summary Timeframe</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4 items-end">
-                <div className="grid gap-1.5"> {/* Keep grid for label + select */}
+                <div className="grid gap-1.5"> {/* Label + select container */}
                     <Label htmlFor="timeframe-select">Select Period</Label>
                     <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
                         <SelectTrigger id="timeframe-select" className="w-[180px]">
@@ -392,7 +396,7 @@ export default function AdminDashboardPage() {
                     </Select>
                 </div>
                 {/* Date Picker - always available for timeframe context */}
-                <div className="grid gap-1.5"> {/* Keep grid for label + popover */}
+                <div className="grid gap-1.5"> {/* Label + popover container */}
                     <Label htmlFor="date-select">Start Date</Label>
                     <Popover>
                         <PopoverTrigger asChild>
@@ -416,9 +420,7 @@ export default function AdminDashboardPage() {
                             />
                         </PopoverContent>
                     </Popover>
-                    {/* Removed FormDescription */}
                 </div>
-                {/* TODO: Add Custom Date Range Pickers if 'custom' timeframe is enabled */}
             </CardContent>
         </Card>
       </Form>
@@ -493,5 +495,3 @@ export default function AdminDashboardPage() {
     </>
   );
 }
-
-    
