@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, Medal, Trophy, ClipboardList, AlertCircle, CalendarIcon, Loader2, Activity, ListChecks } from 'lucide-react';
+import { Target, Medal, Trophy, AlertCircle, Activity, ListChecks } from 'lucide-react'; // Removed CalendarIcon, ClipboardList
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert"; // Renamed to avoid conflict
@@ -174,26 +174,27 @@ export default function AgentDashboardPage() {
                            }
                            return prevPodId;
                        });
+                       setIsLoadingUser(false); // Mark user loading as finished here
                    } else {
                        console.error(`[AgentDashboard] User document not found in Firestore for UID: ${user.uid}`);
                        setError("Could not find your user profile data.");
                        setCurrentUser(null);
                        setAgentPodId(null);
+                       setIsLoadingUser(false); // User loading finished (even if profile not found)
                    }
-                   setIsLoadingUser(false);
                }, (err) => {
                    console.error("[AgentDashboard] Error listening to user document:", err);
                    setError("Failed to load your profile information.");
                    setCurrentUser(null);
                    setAgentPodId(null);
-                   setIsLoadingUser(false);
+                   setIsLoadingUser(false); // User loading finished (on error)
                });
            } else {
                console.log("[AgentDashboard] Auth state changed: No user logged in.");
                setError("You must be logged in.");
                setCurrentUser(null);
                setAgentPodId(null);
-               setIsLoadingUser(false);
+               setIsLoadingUser(false); // User loading finished (no user)
            }
        });
 
@@ -392,11 +393,13 @@ export default function AgentDashboardPage() {
                                  };
                              });
                              setAchievementInputs(initialInputs);
+                             setIsLoadingData(false); // Set loading false after initial inputs are set
                          }, (err) => {
                              if (isMounted) {
                                  console.error("[AgentDashboard] Error listening to daily achievements:", err);
                                  setError("Failed to load today's achievements.");
                                  setAchievementInputs({});
+                                 setIsLoadingData(false); // Set loading false on error too
                              }
                          });
 
@@ -409,24 +412,18 @@ export default function AgentDashboardPage() {
                         setDailyTargets(null);
                         setAchievementInputs({});
                         setError(prevError => prevError?.startsWith("You are not") || prevError?.startsWith("Could not find") || prevError?.startsWith("You must") ? prevError : "No active competition found for your pod today.");
+                        setIsLoadingData(false); // Set loading false when no competition
                     }
-                    setIsLoadingData(false); // Set loading false *after* setting up listeners or clearing state
                     return foundActiveCompetition;
                 }
-                 // If competition didn't change, no need to update listeners or loading state
-                 // Also don't set loading state again if it didn't change
-                 // If it was already false, keep it false.
-                 if (!isLoadingData) {
-                     console.log("[AgentDashboard] Data Effect: Competition unchanged, keeping loading state false.");
-                     // setIsLoadingData(false); // This line caused the infinite loop
-                 }
+                 // If competition didn't change, no need to update listeners
                  return currentActiveComp;
             });
         }, (err) => {
              if (isMounted) {
                  console.error("[AgentDashboard] Error listening to competitions:", err);
                  setError("Failed to load competition data.");
-                 setIsLoadingData(false);
+                 setIsLoadingData(false); // Set loading false on error
              }
         });
 
@@ -670,7 +667,7 @@ export default function AgentDashboardPage() {
   };
 
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs] // Removed handleSaveAchievement itself
+     [agentPodId, currentUser?.id, activeCompetition?.id, rules, toast, achievementInputs] // Dependencies
    );
 
 
@@ -688,20 +685,20 @@ export default function AgentDashboardPage() {
 
         {/* Log Achievements Section */}
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                    <CardTitle>Today's Achievements</CardTitle>
-                </div>
-                 {/* Display Daily Score */}
-                 <div className="text-right">
-                     <p className="text-xs text-muted-foreground">Today's Score</p>
-                     {isLoading ? (
-                         <Skeleton className="h-6 w-16 rounded mt-1"/>
-                     ) : (
-                         <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>
-                     )}
+             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                 <div>
+                     <CardTitle>Today's Achievements</CardTitle>
                  </div>
-            </CardHeader>
+                  {/* Display Daily Score */}
+                  <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Today's Score</p>
+                      {isLoading ? (
+                          <Skeleton className="h-6 w-16 rounded mt-1"/>
+                      ) : (
+                          <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>
+                      )}
+                  </div>
+             </CardHeader>
             <CardContent>
                 {isLoading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -738,63 +735,58 @@ export default function AgentDashboardPage() {
       {/* Scores and Targets Section */}
       <div className="grid gap-6 md:grid-cols-2"> {/* Adjusted grid layout */}
            {/* Your Scores Card */}
-           <Card className="shadow-md"> {/* Removed explicit col span */}
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2"> <ListChecks className="h-5 w-5"/> Your Scores</CardTitle>
-                <CardDescription>Achievements logged for the entire competition period.</CardDescription>
-             </CardHeader>
-             <CardContent className="grid grid-cols-1 gap-6">
-                   <div>
-                      {isLoading ? (
-                           <div className="space-y-2">
-                                <Skeleton className="h-6 w-1/4 rounded mb-1" />
-                                <Skeleton className="h-4 w-full rounded" />
-                                <Skeleton className="h-4 w-5/6 rounded" />
-                           </div>
-                       ) : agentCompetitionAchievements ? (
-                           <>
-                                {/* Competition Total Score */}
-                                <div className="text-2xl font-bold text-primary mb-2">{agentCompetitionAchievements.totalPoints.toLocaleString()} pts</div>
-                                <p className="text-xs text-muted-foreground mb-4">Competition Total</p>
-                                {/* Competition Achievements Breakdown */}
-                                {agentCompetitionAchievements.achievements.length > 0 ? (
-                                    <div className="space-y-1 text-sm">
-                                        {/* Display achievements in a list */}
-                                        {agentCompetitionAchievements.achievements.map(ach => (
-                                            <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap">
-                                                <span className="font-medium truncate" title={ach.ruleName}>
-                                                    {ach.ruleEmoji} {ach.ruleName}
-                                                </span>
-                                                <span className="text-muted-foreground">{ach.value.toLocaleString()}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No achievements logged yet for this competition.</p>
-                                )}
-                           </>
-                       ) : !error ? (
-                           <p className="text-muted-foreground">Could not load your competition scores.</p>
-                       ) : null}
-                   </div>
-             </CardContent>
-           </Card>
+            <Card className="shadow-md flex flex-col h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="h-5 w-5"/>
+                  <CardTitle>Your Scores</CardTitle>
+                </div>
+                {/* Competition Total Score */}
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Competition Total</p>
+                  {isLoading ? (
+                      <Skeleton className="h-6 w-16 rounded mt-1"/>
+                  ) : (
+                      <p className="text-2xl font-bold text-primary">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                  {isLoading ? (
+                      <div className="space-y-2">
+                          <Skeleton className="h-4 w-full rounded mb-1" />
+                          <Skeleton className="h-4 w-5/6 rounded mb-1" />
+                          <Skeleton className="h-4 w-3/4 rounded" />
+                      </div>
+                  ) : agentCompetitionAchievements && agentCompetitionAchievements.achievements.length > 0 ? (
+                      <div className="space-y-1 text-sm">
+                          {agentCompetitionAchievements.achievements.map(ach => (
+                              <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap">
+                                  <span className="font-medium truncate" title={ach.ruleName}>
+                                      {ach.ruleEmoji} {ach.ruleName}
+                                  </span>
+                                  <span className="text-muted-foreground">{ach.value.toLocaleString()}</span>
+                              </div>
+                          ))}
+                      </div>
+                  ) : !error && !isLoading && activeCompetition ? (
+                      <p className="text-sm text-muted-foreground text-center pt-4">No achievements logged yet for this competition.</p>
+                  ) : null }
+              </CardContent>
+            </Card>
 
            {/* Pod Target Summary Card */}
-           <Card className="shadow-md"> {/* Removed explicit col span */}
+            <Card className="shadow-md flex flex-col h-full">
               <CardHeader>
                    <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle>
                    <CardDescription>Your pod's progress towards today's targets.</CardDescription>
               </CardHeader>
-               <CardContent>
+               <CardContent className="flex-grow">
                     {isLoading ? (
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-full rounded mb-2" />
-                            <Skeleton className="h-2 w-full rounded mb-2" />
-                            <Skeleton className="h-4 w-5/6 rounded mb-2" />
-                            <Skeleton className="h-2 w-full rounded mb-2" />
-                            <Skeleton className="h-4 w-3/4 rounded mb-2" />
-                            <Skeleton className="h-2 w-full rounded" />
+                        <div className="space-y-3">
+                            <Skeleton className="h-6 w-full rounded mb-2" />
+                            <Skeleton className="h-6 w-5/6 rounded mb-2" />
+                            <Skeleton className="h-6 w-3/4 rounded" />
                         </div>
                     ) : podTargetSummary.length > 0 ? (
                        <div className="space-y-3">
@@ -813,7 +805,7 @@ export default function AgentDashboardPage() {
                            ))}
                        </div>
                    ) : !error && !isLoading && activeCompetition ? (
-                       <p className="text-muted-foreground text-sm">No targets set for your pod today.</p>
+                       <p className="text-muted-foreground text-sm text-center pt-4">No targets set for your pod today.</p>
                    ) : null }
                </CardContent>
             </Card>
@@ -854,3 +846,4 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
+
