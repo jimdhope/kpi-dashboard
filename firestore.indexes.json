@@ -20,7 +20,7 @@
     },
     {
       "collectionGroup": "dailyAchievements",
-      "queryScope": "COLLECTION_GROUP",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "competitionId",
