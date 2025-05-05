@@ -12,6 +12,7 @@ import {
   orderBy,
   onSnapshot, // Import onSnapshot
   Unsubscribe, // Import Unsubscribe
+  deleteDoc, // Import deleteDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -31,21 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page'; // Import new target type
-
-// Interface for the data stored in Firestore for achievements
-interface DailyAchievementLog {
-  id?: string; // Firestore ID
-  agentId: string;
-  podId: string;
-  competitionId: string;
-  ruleId: string;
-  ruleName: string; // Store name for display convenience
-  date: Timestamp;
-  value: number;
-  points: number; // Stored points (value * rule.points at time of logging)
-  loggedAt: Timestamp;
-  loggedBy?: string | null;
-}
+import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 
 // Interface for processed agent scores
 interface AgentScore {
@@ -281,13 +268,8 @@ export default function AdminDailyScoresPage() {
    // 4. Process data for the table and summary (Memoization adjusted for new targets)
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
      console.log(`Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}`);
-     // Calculate agent scores (remains largely the same)
+     // Calculate agent scores
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
-    agents.forEach(agent => {
-      if (agent.id) {
-        scores[agent.id] = { totalPoints: 0, emojiString: '' };
-      }
-    });
 
     // Initialize rule totals map
     const ruleTotals: Record<string, number> = {}; // ruleId -> total achieved value
@@ -298,22 +280,28 @@ export default function AdminDailyScoresPage() {
     // Aggregate points and achievements per agent and rule totals from *current* dailyLogs state
     dailyLogs.forEach(log => {
       // Agent Scores Accumulation
-      if (scores[log.agentId]) {
-        // Use the stored points value from the log
-        scores[log.agentId].totalPoints += log.points;
-      } else {
-         console.warn(`Log found for agent ${log.agentId} who is not in the current agent list or scores map.`);
-      }
+       if (!scores[log.agentId]) {
+         scores[log.agentId] = { totalPoints: 0, emojiString: '' };
+       }
+       // Ensure log.points is a number
+       const pointsToAdd = typeof log.points === 'number' ? log.points : 0;
+       scores[log.agentId].totalPoints += pointsToAdd;
 
       // Rule Totals for Pod Summary (uses log.value)
       if (ruleTotals.hasOwnProperty(log.ruleId)) {
-         ruleTotals[log.ruleId] += log.value;
+          // Ensure log.value is a number
+         const valueToAdd = typeof log.value === 'number' ? log.value : 0;
+         ruleTotals[log.ruleId] += valueToAdd;
       }
     });
 
     // Build emoji strings for each agent based on current dailyLogs
     agents.forEach(agent => {
-       if (!agent.id || !scores[agent.id]) return;
+       if (!agent.id) return; // Ensure agent has an ID
+        // Initialize score entry if agent has no logs for the day but exists in the pod
+        if (!scores[agent.id]) {
+            scores[agent.id] = { totalPoints: 0, emojiString: '' };
+        }
 
        const agentLogs = dailyLogs.filter(log => log.agentId === agent.id);
        let emojis = '';
@@ -322,7 +310,8 @@ export default function AdminDailyScoresPage() {
        sortedRules.forEach(rule => {
            if (!rule.id) return;
             const logForRule = agentLogs.find(log => log.ruleId === rule.id);
-            if (logForRule && logForRule.value > 0) {
+            // Check if value is a positive number
+            if (logForRule && typeof logForRule.value === 'number' && logForRule.value > 0) {
                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
                 for (let i = 0; i < logForRule.value; i++) {
                     emojis += emojiToUse;
@@ -332,7 +321,7 @@ export default function AdminDailyScoresPage() {
        scores[agent.id].emojiString = emojis;
     });
 
-    // Map to final AgentScore array, adding names and sorting by points
+    // Map to final AgentScore array, adding names and sorting alphabetically by first name
     const finalAgentScores: AgentScore[] = agents
       .map(agent => {
          const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '' };
@@ -343,7 +332,8 @@ export default function AdminDailyScoresPage() {
             emojiString: agentScoreData.emojiString,
           };
       })
-      .sort((a, b) => b.totalPoints - a.totalPoints);
+      // Sort alphabetically by agentFirstName
+      .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
     // Build Pod Target Summary array - FILTERED based on dailyTargets for the selected day
     const dayOfWeek = daysOfWeek[getDay(selectedDate)]; // Get 'mon', 'tue', etc.
