@@ -455,7 +455,7 @@ export default function AgentLeaderboardPage() {
                    ) : (
                     <Table>
                         <TableHeader>
-                        <TableRow>
+                        <TableRow>{/* Remove whitespace here */}
                             <TableHead className="w-[50px]">Rank</TableHead>
                             <TableHead>Agent</TableHead>
                             <TableHead className="text-right">Total Points</TableHead>
@@ -524,7 +524,7 @@ export default function AgentLeaderboardPage() {
                     ) : (
                     <Table>
                         <TableHeader>
-                        <TableRow>
+                        <TableRow>{/* Remove whitespace here */}
                             <TableHead className="w-[50px]">Rank</TableHead>
                             <TableHead>Team</TableHead>
                             <TableHead className="text-right">Total Points</TableHead>
