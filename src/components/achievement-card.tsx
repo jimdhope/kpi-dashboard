@@ -23,16 +23,17 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
       <CardContent className="p-0 flex h-full"> {/* Remove default padding, use flex, ensure full height */}
         {/* Left Section */}
         <div className="flex-grow p-4 pr-2 flex flex-col justify-between"> {/* Added flex-col and justify-between */}
-          <div> {/* Group top elements */}
-            <div className="flex items-start gap-2 mb-1">
+          <div className="flex items-start gap-2 mb-1">
               <span className="text-2xl mt-[-2px]">{displayEmoji}</span>
-              <h3 className="text-sm font-semibold leading-tight flex-grow">{rule.name}</h3>
-            </div>
-            <p className="text-xs text-muted-foreground pl-8">{rule.points} pts each</p> {/* Indent points */}
+              <div className="flex-grow">
+                 <h3 className="text-sm font-semibold leading-tight">{rule.name}</h3>
+                 {/* Display points next to the name */}
+                 <p className="text-xs text-muted-foreground">({rule.points} pts)</p>
+              </div>
           </div>
           <div> {/* Group bottom elements */}
              <p className="text-xl font-bold text-primary mt-2 pl-8">{currentValue}</p> {/* Display current value */}
-             <p className="text-xs text-muted-foreground pl-8">Logged Today</p>
+             {/* Removed "Logged Today" text */}
           </div>
         </div>
 
