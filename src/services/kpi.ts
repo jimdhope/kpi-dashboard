@@ -41,7 +41,7 @@ export async function getKPIs(group: Group): Promise<KPI[]> {
   await new Promise(resolve => setTimeout(resolve, 300));
 
   const kpisForGroup = mockKpis[group.id] || [];
-  console.log(`[getKPIs] Found ${kpisForGroup.length} KPIs for pod ID: ${group.id}`);
+  console.log(`[getKPIs] Found ${kpisForGroup.length} KPIs for pod ID ${group.id}:`, kpisForGroup); // Log the actual KPIs found
 
   // Return mock data based on group ID
   return kpisForGroup;
