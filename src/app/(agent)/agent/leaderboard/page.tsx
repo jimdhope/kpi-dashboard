@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -311,6 +312,7 @@ export default function AgentLeaderboardPage() {
         avatarBgColor: agent.avatarBgColor,
         isCurrentUser: agent.id === currentUser?.id // Flag current user
       }))
+       // Removed filter: .filter(entry => entry.totalPoints > 0)
       .sort((a, b) => b.totalPoints - a.totalPoints)
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -333,6 +335,7 @@ export default function AgentLeaderboardPage() {
         // Identify user's team
         isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || '')
       }))
+       // Removed filter: .filter(entry => entry.totalPoints > 0)
       .sort((a, b) => b.totalPoints - a.totalPoints)
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -570,3 +573,5 @@ export default function AgentLeaderboardPage() {
     </div>
   );
 }
+
+    

@@ -262,7 +262,7 @@ export default function AdminLeaderboardPage() {
               avatarBgColor: agent.avatarBgColor,
               // isCurrentUser: agent.id === currentUser?.id, // Add if needed later
           }))
-           .filter(entry => entry.totalPoints > 0) // Optional: Hide agents with 0 points
+          // Removed filter: .filter(entry => entry.totalPoints > 0)
           .sort((a, b) => b.totalPoints - a.totalPoints)
           .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -289,7 +289,7 @@ export default function AdminLeaderboardPage() {
               totalPoints: teamScores[team.id] || 0,
               // isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || ''), // Add if needed later
            }))
-           .filter(entry => entry.totalPoints > 0) // Optional: Hide teams with 0 points
+           // Removed filter: .filter(entry => entry.totalPoints > 0)
            .sort((a, b) => b.totalPoints - a.totalPoints)
            .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -496,3 +496,5 @@ export default function AdminLeaderboardPage() {
     </div>
   );
 }
+
+    

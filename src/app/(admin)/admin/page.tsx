@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -272,7 +273,7 @@ export default function AdminDashboardPage() {
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
             }))
-            .filter(entry => entry.score > 0) // Optional: Hide agents with 0 points
+             // Removed filter: .filter(entry => entry.score > 0)
             .sort((a, b) => b.score - a.score) // Sort by score
             .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -291,7 +292,7 @@ export default function AdminDashboardPage() {
         });
 
         const finalPodLeaderboard: LeaderboardEntry[] = Object.values(podScores)
-             .filter(pod => pod.score > 0) // Optional: Hide pods with 0 points
+            // Removed filter: .filter(pod => pod.score > 0)
             .sort((a, b) => b.score - a.score) // Sort by score
              .map((entry, index) => {
                 const podData = allPods.find(p => p.id === entry.id); // Get full pod data for avatar
@@ -479,3 +480,5 @@ export default function AdminDashboardPage() {
     </>
   );
 }
+
+    
