@@ -20,24 +20,28 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
 
   return (
     <Card className="shadow-md overflow-hidden"> {/* Added overflow-hidden */}
-      <CardContent className="p-0 flex"> {/* Remove default padding, use flex */}
+      <CardContent className="p-0 flex h-full"> {/* Remove default padding, use flex, ensure full height */}
         {/* Left Section */}
-        <div className="flex-grow p-4 pr-2"> {/* Add padding */}
-          <div className="flex items-start gap-2 mb-1">
-            <span className="text-2xl mt-[-2px]">{displayEmoji}</span>
-            <h3 className="text-sm font-semibold leading-tight flex-grow">{rule.name}</h3>
+        <div className="flex-grow p-4 pr-2 flex flex-col justify-between"> {/* Added flex-col and justify-between */}
+          <div> {/* Group top elements */}
+            <div className="flex items-start gap-2 mb-1">
+              <span className="text-2xl mt-[-2px]">{displayEmoji}</span>
+              <h3 className="text-sm font-semibold leading-tight flex-grow">{rule.name}</h3>
+            </div>
+            <p className="text-xs text-muted-foreground pl-8">{rule.points} pts each</p> {/* Indent points */}
           </div>
-          <p className="text-xs text-muted-foreground pl-8">{rule.points} pts each</p> {/* Indent points */}
-          <p className="text-lg font-bold text-primary mt-2 pl-8">{currentValue}</p> {/* Display current value */}
-           <p className="text-xs text-muted-foreground pl-8">Logged Today</p>
+          <div> {/* Group bottom elements */}
+             <p className="text-xl font-bold text-primary mt-2 pl-8">{currentValue}</p> {/* Display current value */}
+             <p className="text-xs text-muted-foreground pl-8">Logged Today</p>
+          </div>
         </div>
 
-        {/* Right Section (Buttons) */}
-        <div className="flex flex-col w-[70px] border-l"> {/* Fixed width for buttons, add border */}
+        {/* Right Section (Buttons) - Adjusted width and height */}
+        <div className="flex flex-col w-[70px] flex-shrink-0 border-l"> {/* Fixed width, ensure it doesn't shrink */}
           <Button
             variant="ghost" // Use ghost for seamless look
-            size="icon"
-            className="h-1/2 w-full rounded-none flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary border-b" // Full width, no radius, vertical centering
+            size="icon" // Keep size icon for centering, but override h/w
+            className="h-1/2 w-full rounded-none flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary border-b" // Full width, half height, no radius, vertical centering
             onClick={onIncrement}
             disabled={isSaving}
             aria-label={`Increase ${rule.name}`}
@@ -46,8 +50,8 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
           </Button>
           <Button
             variant="ghost" // Use ghost for seamless look
-            size="icon"
-            className="h-1/2 w-full rounded-none flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive" // Full width, no radius, vertical centering
+            size="icon" // Keep size icon for centering, but override h/w
+            className="h-1/2 w-full rounded-none flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive" // Full width, half height, no radius, vertical centering
             onClick={onDecrement}
             disabled={isSaving || currentValue <= 0} // Disable if saving or value is 0
             aria-label={`Decrease ${rule.name}`}
