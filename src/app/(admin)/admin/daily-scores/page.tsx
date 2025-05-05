@@ -166,7 +166,8 @@ export default function AdminDailyScoresPage() {
 
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules & { id: string };
-            if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
+             // Ensure endDate exists and is a Timestamp before calling toDate()
+             if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
                 foundCompetition = comp;
                 break;
             }
@@ -236,7 +237,7 @@ export default function AdminDailyScoresPage() {
               // Filter logs client-side for the selected date
                const fetchedLogs = snapshot.docs
                   .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
-                  .filter(log => log.date.toMillis() === dateTimestamp.toMillis()); // Compare timestamp millis
+                   .filter(log => log.date && log.date.toDate && log.date.toDate().getTime() === dateTimestamp.toDate().getTime());
               console.log(`Filtered to ${fetchedLogs.length} logs for selected date.`);
               setDailyLogs(fetchedLogs);
               setIsLoadingData(false); // Loading complete after logs received
@@ -250,7 +251,7 @@ export default function AdminDailyScoresPage() {
 
           // --- Listen to Daily Targets document ---
          const targetsDocId = `${activeCompetitionId}_${selectedPodId}`;
-         const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocRef);
+         const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId); // Use targetsDocId here
          unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
               if (docSnap.exists()) {
                   console.log("Daily targets data received:", docSnap.data());

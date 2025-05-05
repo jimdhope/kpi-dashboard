@@ -63,15 +63,13 @@ const getMedalColor = (rank: number) => {
 };
 const getRankHighlightStyle = (rank: number): React.CSSProperties => {
     switch (rank) {
-        case 1: return { backgroundColor: '#9f8f5e', color: '#ffffff' };
-        case 2: return { backgroundColor: '#969696', color: '#ffffff' };
-        case 3: return { backgroundColor: '#996b4f', color: '#ffffff' };
+        case 1: return { backgroundColor: '#9f8f5e', color: '#ffffff' }; // Gold-ish background, white text
+        case 2: return { backgroundColor: '#969696', color: '#ffffff' }; // Silver-ish background, white text
+        case 3: return { backgroundColor: '#996b4f', color: '#ffffff' }; // Bronze-ish background, white text
         default: return {}; // No special style for other ranks
     }
 };
 
-// Mock group ID for KPIs (adjust if needed)
-// Removed MOCK_GROUP_ID, will use agentPodId
 
 const kpiIcons: { [key: string]: React.ReactNode } = {
   'Sales': <DollarSign className="h-4 w-4" />,
@@ -277,9 +275,10 @@ export default function AgentDashboardPage() {
                      const filteredLogs = snapshot.docs
                          .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
                          .filter(log => {
+                              if (!activeCompetition?.startDate || !activeCompetition?.endDate) return false; // Add null check
                              const logDate = log.date.toDate();
-                             const compStart = activeCompetition!.startDate.toDate();
-                             const compEnd = activeCompetition!.endDate.toDate();
+                             const compStart = activeCompetition.startDate.toDate();
+                             const compEnd = activeCompetition.endDate.toDate();
                              return logDate >= compStart && logDate <= compEnd;
                          });
                      setDailyLogs(filteredLogs);
@@ -293,6 +292,8 @@ export default function AgentDashboardPage() {
                      achievementsRef,
                      where('podId', '==', agentPodId),
                      where('competitionId', '==', activeCompetition.id)
+                     // Remove the date constraint for pod logs to simplify the query and avoid needing the index
+                     // where('date', '==', todayTimestamp)
                  );
                   // Ensure previous listener is cleaned up
                  if (unsubscribePodLogs) unsubscribePodLogs();
@@ -301,9 +302,10 @@ export default function AgentDashboardPage() {
                      const filteredLogs = snapshot.docs
                          .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
                          .filter(log => {
+                             if (!activeCompetition?.startDate || !activeCompetition?.endDate) return false; // Add null check
                              const logDate = log.date.toDate();
-                             const compStart = activeCompetition!.startDate.toDate();
-                             const compEnd = activeCompetition!.endDate.toDate();
+                             const compStart = activeCompetition.startDate.toDate();
+                             const compEnd = activeCompetition.endDate.toDate();
                              return logDate >= compStart && logDate <= compEnd;
                          });
                      setPodLogs(filteredLogs);
@@ -313,7 +315,7 @@ export default function AgentDashboardPage() {
 
                  // --- Targets Listener ---
                  const targetsDocId = `${activeCompetition.id}_${agentPodId}`;
-                 const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocRef);
+                 const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
                   // Ensure previous listener is cleaned up
                  if (unsubscribeTargets) unsubscribeTargets();
                  unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
