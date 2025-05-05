@@ -63,18 +63,28 @@ export default function ProfileLayout({
           console.log("[ProfileLayout] Initial layout determined:", initialLayout); // Log initial layout
           if (initialLayout) {
              // Check localStorage for persisted preference, otherwise use determined initial
-            const persistedLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
+            let preferredLayout: 'admin' | 'agent' | null = null;
+            try {
+              preferredLayout = localStorage.getItem('preferredLayout') as 'admin' | 'agent';
+            } catch (e) {
+              console.warn("Could not access localStorage for preferredLayout");
+            }
+
              // Only apply persisted layout if it's valid for the user's roles
              // Check if the required role for the persisted layout exists in fetchedRoles
-            const requiredRoleForPersisted = persistedLayout === 'admin' ? ['admin', 'podManager', 'teamLeader'] : ['agent'];
+            const requiredRoleForPersisted = preferredLayout === 'admin' ? ['admin', 'podManager', 'teamLeader'] : ['agent'];
             const hasRequiredRole = fetchedRoles.some(role => requiredRoleForPersisted.includes(role));
 
-            if (persistedLayout && hasRequiredRole) {
-                 setLayoutType(persistedLayout);
-                 console.log(`[ProfileLayout] Set layout from localStorage: ${persistedLayout}`);
+            if (preferredLayout && hasRequiredRole) {
+                 setLayoutType(preferredLayout);
+                 console.log(`[ProfileLayout] Set layout from localStorage: ${preferredLayout}`);
              } else {
                  setLayoutType(initialLayout);
-                 localStorage.setItem('preferredLayout', initialLayout); // Persist the initial layout if preference is invalid or not set
+                 try {
+                   localStorage.setItem('preferredLayout', initialLayout); // Persist the initial layout if preference is invalid or not set
+                 } catch (e) {
+                   console.warn("Could not save preferredLayout to localStorage");
+                 }
                  console.log(`[ProfileLayout] Set initial layout: ${initialLayout}`);
              }
 
@@ -97,7 +107,11 @@ export default function ProfileLayout({
   const handleLayoutChange = useCallback((newLayout: 'admin' | 'agent') => {
     setLayoutType(newLayout);
     // Persist preference in localStorage
-     localStorage.setItem('preferredLayout', newLayout);
+     try {
+       localStorage.setItem('preferredLayout', newLayout);
+     } catch (e) {
+       console.warn("Could not save preferredLayout to localStorage");
+     }
      console.log(`[ProfileLayout] Layout changed to: ${newLayout} and persisted.`);
      // Optional: Consider reloading the page or navigating to the root of the new layout area
      // Example: router.push(newLayout === 'admin' ? '/admin' : '/agent');
@@ -126,10 +140,11 @@ export default function ProfileLayout({
   console.log("[ProfileLayout] Rendering with layout type:", layoutType, "and props:", layoutProps); // Log before rendering
 
   // Render layout based on the current state
+  // Spread the props correctly onto the child layout components
   if (layoutType === 'admin') {
-    return <DashboardLayout {...layoutProps}>{children}</DashboardLayout>; // Spread props
+    return <DashboardLayout {...layoutProps}>{children}</DashboardLayout>;
   } else if (layoutType === 'agent') {
-    return <AgentSidebarLayout {...layoutProps}>{children}</AgentSidebarLayout>; // Spread props
+    return <AgentSidebarLayout {...layoutProps}>{children}</AgentSidebarLayout>;
   } else {
     // Fallback or error state - should ideally be handled by redirects
     console.error("[ProfileLayout] No valid layout type determined.");
