@@ -10,7 +10,7 @@ body {
 
 @layer base {
   body {
-    @apply bg-background text-foreground; /* Keep this */
+    @apply bg-background text-foreground; /* Apply theme background/foreground */
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -105,12 +105,10 @@ body {
     background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-end)) 100%);
   }
 
-  /* Removed geometric background styles */
-
 }
 
 /* Frosted Glass effect for cards */
 .frosted-glass {
   /* Slightly more opaque card background for better glass effect */
-  @apply bg-card/85 backdrop-blur-sm border border-border/60; /* Reduced opacity slightly */
+  @apply bg-card/85 backdrop-blur-sm border border-border/60;
 }

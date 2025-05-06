@@ -15,11 +15,11 @@ export default function PublicLayout({
       className={cn(
         "flex flex-col min-h-screen",
         "bg-gradient-to-br from-primary/10 via-background to-background-end", // Apply gradient
-        "bg-fixed bg-cover bg-center" // Ensure it's fixed and covers the area
+        "bg-fixed bg-cover bg-center" // Make background fixed, cover the area, and center it
       )}
-      // Remove data-ai-hint as it's not relevant for a gradient
     >
       <Header />
+      {/* Ensure main content area can scroll independently if needed */}
       <main className="flex-grow w-full">{children}</main>
       <Footer />
     </div>
