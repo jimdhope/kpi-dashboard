@@ -41,10 +41,12 @@ export function MockupLeaderboardSnippet() {
         <MockLeaderboardEntry rank={1} name="Team Eagles" score={1250} initials="TE" bgColor="#4682B4" />
         <MockLeaderboardEntry rank={2} name="Team Lions" score={1080} initials="TL" bgColor="#32CD32"/>
         <MockLeaderboardEntry rank={3} name="Team Sharks" score={950} initials="TS" bgColor="#FF6347" />
-        {/* Added more entries */}
         <MockLeaderboardEntry rank={4} name="Team Bears" score={820} initials="TB" bgColor="#8A2BE2" />
         <MockLeaderboardEntry rank={5} name="Team Wolves" score={790} initials="TW" bgColor="#A52A2A" />
         <MockLeaderboardEntry rank={6} name="Team Hawks" score={650} initials="TH" bgColor="#DEB887" />
+        {/* Added 7th and 8th place */}
+        <MockLeaderboardEntry rank={7} name="Team Pandas" score={580} initials="TP" bgColor="#696969" />
+        <MockLeaderboardEntry rank={8} name="Team Geckos" score={510} initials="TG" bgColor="#2E8B57" />
       </CardContent>
     </Card>
   );
