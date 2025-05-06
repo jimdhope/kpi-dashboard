@@ -18,9 +18,7 @@ body {
   :root {
     /* Teal Theme - Light Mode */
     --background: 0 0% 96%; /* Slightly off-white #F5F5F5 */
-    /* --background-end: 180 10% 94%; */ /* Removed gradient end */
     --foreground: 0 0% 10%; /* Dark Gray */
-    /* Adjusted card opacity for frosted glass */
     --card: hsla(0, 0%, 100%, 0.80); /* White with 80% opacity */
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
@@ -44,30 +42,33 @@ body {
     --chart-4: 30 80% 60%; /* Orangeish */
     --chart-5: 120 40% 55%; /* Greenish */
     --radius: 0.5rem;
-    /* Adjusted sidebar opacity */
-    --sidebar-background: hsla(0, 0%, 98%, 0.80); /* Off-white with 80% opacity for frosted glass */
-    --sidebar-foreground: 0 0% 20%; /* Dark gray */
-    --sidebar-primary: 180 100% 25%; /* Teal */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 180 50% 90%; /* Lighter Teal */
-    --sidebar-accent-foreground: 180 100% 15%; /* Darker Teal */
-    --sidebar-border: 0 0% 88%; /* Slightly darker border */
-    --sidebar-ring: 180 100% 25%; /* Teal */
+    --sidebar-background: hsla(0, 0%, 98%, 0.80);
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 180 100% 25%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 50% 90%;
+    --sidebar-accent-foreground: 180 100% 15%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 180 100% 25%;
+
+    /* New background blob colors for Light Mode */
+    --background-blob-1: 180 60% 92%; /* Very light teal */
+    --background-blob-2: 180 40% 95%; /* Even lighter, more desaturated teal */
+    --background-blob-3: 51 100% 92%; /* Very light gold */
+    --background-blob-4: 0 0% 97%;   /* Very light gray, almost white */
   }
 
   .dark {
     /* Teal Theme - Dark Mode */
     --background: 210 10% 15%; /* Dark Blue-Gray */
-    /* --background-end: 180 15% 25%; */ /* Removed gradient end */
     --foreground: 0 0% 98%; /* White */
-    /* Adjusted card opacity */
-    --card: hsla(210, 10%, 18%, 0.80); /* Darker card with 80% opacity */
+    --card: hsla(210, 10%, 18%, 0.80);
     --card-foreground: 0 0% 98%;
     --popover: 210 10% 20%;
     --popover-foreground: 0 0% 98%;
     --primary: 180 80% 60%; /* Lighter Teal */
     --primary-foreground: 180 100% 10%; /* Dark Teal */
-    --secondary: 210 10% 25%; /* Slightly lighter than dark end */
+    --secondary: 210 10% 25%;
     --secondary-foreground: 0 0% 98%;
     --muted: 210 10% 25%;
     --muted-foreground: 0 0% 63.9%;
@@ -75,7 +76,7 @@ body {
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 210 10% 30%; /* Slightly lighter border for contrast */
+    --border: 210 10% 30%;
     --input: 210 10% 30%;
     --ring: 180 80% 60%; /* Lighter Teal */
     --chart-1: 51 100% 60%; /* Lighter Gold */
@@ -83,54 +84,45 @@ body {
     --chart-3: 210 40% 60%; /* Blueish gray */
     --chart-4: 30 80% 70%; /* Orangeish */
     --chart-5: 120 40% 65%; /* Greenish */
-    /* Adjusted sidebar opacity */
-    --sidebar-background: hsla(210, 8%, 18%, 0.80); /* Dark blue-gray with 80% opacity */
-    --sidebar-foreground: 0 0% 95%; /* Light gray */
-    --sidebar-primary: 180 80% 60%; /* Lighter Teal */
-    --sidebar-primary-foreground: 180 100% 10%; /* Dark Teal */
-    --sidebar-accent: 180 50% 30%; /* Darker Teal */
-    --sidebar-accent-foreground: 0 0% 98%; /* White */
-    --sidebar-border: 210 10% 25%; /* Slightly lighter dark border */
-    --sidebar-ring: 180 80% 60%; /* Lighter Teal */
+    --sidebar-background: hsla(210, 8%, 18%, 0.80);
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 180 80% 60%;
+    --sidebar-primary-foreground: 180 100% 10%;
+    --sidebar-accent: 180 50% 30%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 210 10% 25%;
+    --sidebar-ring: 180 80% 60%;
+
+    /* New background blob colors for Dark Mode */
+    --background-blob-1: 180 30% 22%; /* Dark, desaturated teal */
+    --background-blob-2: 180 25% 18%; /* Darker, more desaturated teal */
+    --background-blob-3: 51 30% 25%;  /* Dark, desaturated gold */
+    --background-blob-4: 210 10% 12%; /* Very dark blue-gray */
   }
 }
-
-/* Removed the .subtle-geometric-background class definition */
-
 
 @layer base {
   * {
     @apply border-border;
   }
-  /* Remove body styling related to background */
-
-  /* Styles for the gradient background applied to admin/agent layout inset */
-  /* Keep this gradient for the admin/agent areas */
-  [data-gradient-background="true"] {
-    @apply relative overflow-hidden;
-    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-end)) 100%);
-  }
-
 }
 
-/* Frosted Glass effect for cards - Slightly adjust opacity/blur */
+/* Frosted Glass effect for cards */
 .frosted-glass {
-  /* Use card variable with adjusted opacity */
-  @apply bg-card backdrop-blur-md border border-border/50 shadow-sm; /* Adjusted blur, border opacity */
+  @apply bg-card backdrop-blur-md border border-border/50 shadow-sm;
 }
 
-/* Added styles for fixed background and scroll container */
 .fixed-background-container {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1; /* Behind content */
+  z-index: -1;
 }
 
 .scrollable-content-container {
-  position: relative; /* Needed for z-index stacking */
+  position: relative;
   z-index: 1;
   height: 100vh;
   overflow-y: auto;

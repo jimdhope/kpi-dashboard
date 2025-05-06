@@ -9,26 +9,24 @@ const cssContent = `
     100% { transform: rotate(360deg); }
   }
   .out-top {
-    animation: rotate 80s linear infinite; /* Was 20s */
+    animation: rotate 80s linear infinite;
     transform-origin: 13px 25px;
   }
   .in-top {
-    animation: rotate 50s linear infinite; /* Was 10s */
+    animation: rotate 50s linear infinite;
     transform-origin: 13px 25px;
   }
   .out-bottom {
-    animation: rotate 100s linear infinite; /* Was 25s */
+    animation: rotate 100s linear infinite;
     transform-origin: 84px 93px;
   }
   .in-bottom {
-    animation: rotate 65s linear infinite; /* Was 15s */
+    animation: rotate 65s linear infinite;
     transform-origin: 84px 93px;
   }
 `;
 
 export function AnimatedSvgBackground() {
-  // Using fixed positioning and z-index to ensure it's a background
-  // The viewBox and path data are taken directly from the example
   return (
     <svg
       preserveAspectRatio="xMidYMid slice"
@@ -39,30 +37,30 @@ export function AnimatedSvgBackground() {
         left: 0,
         width: '100%',
         height: '100vh',
-        zIndex: -1, // Ensure it's behind other content
+        zIndex: -1,
       }}
     >
       <defs>
         <style dangerouslySetInnerHTML={{ __html: cssContent }} />
       </defs>
-      {/* Paths with fill colors mapped to CSS variables from the theme */}
+      {/* Paths with fill colors mapped to new CSS variables */}
       <path
-        fill="hsl(var(--primary))" /* Teal (was purple #9b5de5) */
+        fill="hsl(var(--background-blob-1))" /* Was Teal */
         className="out-top"
         d="M37-5C25.1-14.7,5.7-19.1-9.2-10-28.5,1.8-32.7,31.1-19.8,49c15.5,21.5,52.6,22,67.2,2.3C59.4,35,53.7,8.5,37-5Z"
       />
       <path
-        fill="hsl(var(--accent))" /* Lighter Teal (was pink #f15bb5) */
+        fill="hsl(var(--background-blob-2))" /* Was Lighter Teal */
         className="in-top"
         d="M20.6,4.1C11.6,1.5-1.9,2.5-8,11.2-16.3,23.1-8.2,45.6,7.4,50S42.1,38.9,41,24.5C40.2,14.1,29.4,6.6,20.6,4.1Z"
       />
       <path
-        fill="hsl(var(--chart-1))" /* Gold (was blue #00bbf9) */
+        fill="hsl(var(--background-blob-3))" /* Was Gold */
         className="out-bottom"
         d="M105.9,48.6c-12.4-8.2-29.3-4.8-39.4.8-23.4,12.8-37.7,51.9-19.1,74.1s63.9,15.3,76-5.6c7.6-13.3,1.8-31.1-2.3-43.8C117.6,63.3,114.7,54.3,105.9,48.6Z"
       />
       <path
-        fill="hsl(var(--secondary))" /* Light Gray (was cyan #00f5d4) */
+        fill="hsl(var(--background-blob-4))" /* Was Light Gray */
         className="in-bottom"
         d="M102,67.1c-9.6-6.1-22-3.1-29.5,2-15.4,10.7-19.6,37.5-7.6,47.8s35.9,3.9,44.5-12.5C115.5,92.6,113.9,74.6,102,67.1Z"
       />
