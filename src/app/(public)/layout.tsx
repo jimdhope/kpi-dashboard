@@ -13,12 +13,11 @@ export default function PublicLayout({
   return (
     <div
       className={cn(
-        "flex flex-col min-h-screen bg-cover bg-fixed bg-center"
+        "flex flex-col min-h-screen",
+        "bg-gradient-to-br from-primary/10 via-background to-background-end", // Apply gradient
+        "bg-fixed bg-cover bg-center" // Ensure it's fixed and covers the area
       )}
-      style={{
-        backgroundImage: "url('https://picsum.photos/1920/1080')",
-      }}
-      data-ai-hint="abstract background"
+      // Remove data-ai-hint as it's not relevant for a gradient
     >
       <Header />
       <main className="flex-grow w-full">{children}</main>
