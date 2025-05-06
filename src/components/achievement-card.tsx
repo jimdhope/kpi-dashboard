@@ -22,20 +22,14 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
     <Card className="shadow-md overflow-hidden">
       <CardContent className="p-0 flex h-full items-stretch"> {/* Ensure parent stretches */}
         {/* Left Section */}
-        <div className="flex-grow p-4 pr-2 flex flex-col justify-center"> {/* Change justify-between to justify-center */}
-          {/* Top part: Emoji, Name, Points */}
-          <div className="flex items-center gap-2 mb-1"> {/* Changed to items-center for vertical alignment */}
-              <span className="text-2xl">{displayEmoji}</span> {/* Emoji */}
-              <div className="flex-grow"> {/* Name and Points */}
-                 <h3 className="text-sm font-semibold leading-tight">{rule.name}</h3>
-                 {/* Display points next to the name */}
-                 <p className="text-xs text-muted-foreground">({rule.points} pts)</p>
-              </div>
-          </div>
-          {/* Bottom part: Current Value */}
-          <div className="pl-8"> {/* Keep padding for alignment */}
-             <p className="text-xl font-bold text-primary mt-2">{currentValue}</p> {/* Display current value */}
-          </div>
+        <div className="flex-grow p-4 pr-2 flex items-center gap-4"> {/* Use flex, items-center, and gap */}
+           <span className="text-2xl">{displayEmoji}</span> {/* Emoji */}
+           {/* Container for Name, Points, and Value */}
+           <div className="flex-grow flex flex-col"> {/* Nested flex column */}
+               <h3 className="text-sm font-semibold leading-tight">{rule.name}</h3>
+               <p className="text-xs text-muted-foreground">({rule.points} pts)</p>
+               <p className="text-xl font-bold text-primary mt-1">{currentValue}</p> {/* Current value below name/points */}
+           </div>
         </div>
 
         {/* Right Section (Buttons) */}
