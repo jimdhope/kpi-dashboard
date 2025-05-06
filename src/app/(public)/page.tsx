@@ -49,18 +49,19 @@ export default function LandingPage() {
     <div className="flex flex-col items-center w-full">
       {/* Hero Section - Apply animated background via data attribute */}
       <section
-        data-animated-background="true" // Ensure this attribute is present
-        className="w-full py-20 md:py-32 lg:py-40 text-center" // Basic section styles
+        data-animated-background="true" // Apply animated background
+        className="w-full py-20 md:py-32 lg:py-40 text-center relative" // Add relative positioning
       >
         {/* Container centers the content and applies padding */}
-        <div className="container mx-auto px-4 md:px-6">
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary animate-fade-in">
+        <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Add relative and z-index */}
+          {/* Removed text animations */}
+          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary">
             Welcome to KpiQuest
           </h1>
-          <p className="mx-auto max-w-[700px] text-foreground/80 md:text-xl mt-4 animate-fade-in animation-delay-200">
+          <p className="mx-auto max-w-[700px] text-foreground/80 md:text-xl mt-4">
             Gamify your team's performance, track KPIs effortlessly, and foster friendly competition to drive results.
           </p>
-          <div className="mt-8 animate-fade-in animation-delay-400">
+          <div className="mt-8">
             <Link href="/login" passHref>
              <Button size="lg">Get Started</Button>
             </Link>
@@ -117,7 +118,8 @@ export default function LandingPage() {
               </div>
 
               {/* Mockup Section */}
-              <div className="space-y-6 animate-fade-in-up"> {/* Added fade-in-up animation */}
+              {/* Removed fade-in-up animation */}
+              <div className="space-y-6">
                   {/* Mock KPI Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        <MockKpiCard title="Sales Calls" value="85" target="120" progress={71} icon={<Target />} />
@@ -148,17 +150,18 @@ export default function LandingPage() {
               Simple Steps to Success
             </h2>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-               <div className="flex flex-col items-center text-center animate-fade-in-up">
+               {/* Removed fade-in-up animation */}
+               <div className="flex flex-col items-center text-center">
                  <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">1</div>
                  <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
                  <p className="text-muted-foreground">Set clear, measurable goals for your campaigns and pods.</p>
                </div>
-               <div className="flex flex-col items-center text-center animate-fade-in-up animation-delay-200">
+               <div className="flex flex-col items-center text-center">
                  <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">2</div>
                  <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
                  <p className="text-muted-foreground">Log daily achievements and monitor performance via dashboards.</p>
                </div>
-                <div className="flex flex-col items-center text-center animate-fade-in-up animation-delay-400">
+                <div className="flex flex-col items-center text-center">
                  <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">3</div>
                  <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
                  <p className="text-muted-foreground">Recognize top performers and motivate with leaderboards.</p>
@@ -187,5 +190,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
