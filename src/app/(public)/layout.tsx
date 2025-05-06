@@ -12,7 +12,7 @@ export default function PublicLayout({
     // Ensure the outer div takes full height and uses flex column layout
     <div className="flex flex-col min-h-screen">
       <Header />
-      {/* Ensure main takes up remaining space and allows content to manage its width */}
+      {/* Ensure main takes up remaining space and uses full width */}
       <main className="flex-grow w-full">{children}</main>
       <Footer />
     </div>
