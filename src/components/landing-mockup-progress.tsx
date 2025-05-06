@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -14,8 +15,8 @@ export function MockupProgressTracking() {
        <CardHeader className="pb-2 pt-4 px-4">
            <CardTitle className="text-sm font-medium">Today's Log</CardTitle>
        </CardHeader>
-      {/* Add space-y-2 to create vertical gap between children */}
-      <CardContent className="p-4 pt-0 space-y-2">
+      {/* Increase vertical spacing between cards */}
+      <CardContent className="p-4 pt-0 space-y-3"> {/* Increased space-y from 2 to 3 */}
         {/* Use AchievementCard with disabled state for mockup */}
         <AchievementCard
           rule={mockRule1}
@@ -35,3 +36,4 @@ export function MockupProgressTracking() {
     </Card>
   );
 }
+
