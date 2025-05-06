@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import { Separator } from './ui/separator'; // Import Separator
 
 export function MockupKpiDefinition() {
   return (
     <Card className="w-full shadow-md frosted-glass overflow-hidden">
       <CardContent className="p-4 space-y-3">
+        {/* First Rule */}
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Rule Name</Label>
           <Input placeholder="e.g., Sales Calls" className="h-8 text-xs bg-card/70" disabled />
@@ -25,7 +27,27 @@ export function MockupKpiDefinition() {
                 <Input type="number" placeholder="5" className="h-8 text-xs bg-card/70" disabled />
             </div>
         </div>
-        <Button variant="outline" size="sm" className="w-full text-xs h-7 mt-2" disabled>
+
+        {/* Separator */}
+        <Separator className="my-3" />
+
+        {/* Second Rule (Disabled/Placeholder) */}
+         <div className="space-y-1 opacity-60"> {/* Add opacity to make it look disabled */}
+           <Label className="text-xs text-muted-foreground">Rule Name</Label>
+           <Input placeholder="e.g., Deals Closed" className="h-8 text-xs bg-card/50" disabled /> {/* Darker background */}
+         </div>
+         <div className="grid grid-cols-2 gap-2 opacity-60">
+             <div className="space-y-1">
+                 <Label className="text-xs text-muted-foreground">Emoji</Label>
+                 <Input placeholder="🤝" className="h-8 text-xs text-center bg-card/50" disabled />
+             </div>
+             <div className="space-y-1">
+                 <Label className="text-xs text-muted-foreground">Points</Label>
+                 <Input type="number" placeholder="20" className="h-8 text-xs bg-card/50" disabled />
+             </div>
+         </div>
+
+        <Button variant="outline" size="sm" className="w-full text-xs h-7 mt-3" disabled> {/* Added mt-3 */}
           <PlusCircle className="mr-1 h-3 w-3" /> Add Rule
         </Button>
       </CardContent>

@@ -7,6 +7,7 @@ import { AchievementCard } from './achievement-card'; // Reuse AchievementCard f
 // Mock Rule Data
 const mockRule1 = { id: 'mock1', name: 'Close Deal', emoji: '💲', points: 10 };
 const mockRule2 = { id: 'mock2', name: 'Log Activity', emoji: '📝', points: 1 };
+const mockRule3 = { id: 'mock3', name: 'Follow Up', emoji: '📞', points: 2 }; // Added third rule
 
 export function MockupProgressTracking() {
   return (
@@ -30,6 +31,14 @@ export function MockupProgressTracking() {
           onIncrement={() => {}}
           onDecrement={() => {}}
         />
+         {/* Added third card */}
+         <AchievementCard
+           rule={mockRule3}
+           currentValue={5}
+           isSaving={false}
+           onIncrement={() => {}}
+           onDecrement={() => {}}
+         />
       </CardContent>
     </Card>
   );

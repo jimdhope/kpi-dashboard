@@ -15,7 +15,8 @@ import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboar
 
 
 // Mock Leaderboard Entry Component
-const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: number, name: string, score: number, initials: string, bgColor?: string }) => (
+// Corrected the props type definition
+const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: number; name: string; score: number; initials: string; bgColor?: string }) => (
   <div className="flex items-center justify-between p-2 rounded-md transition-colors hover:bg-muted/50">
     <div className="flex items-center gap-3">
       <span className="font-mono text-sm w-4 text-center text-muted-foreground">{rank}</span>
@@ -158,8 +159,8 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">1</div>
-                 {/* Wrapper for mockup: Added min-h-[180px] for consistent height */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[180px] flex items-center justify-center flex-shrink-0">
+                 {/* Wrapper for mockup: Adjusted min-h for new mockup size */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[260px] flex items-center justify-center flex-shrink-0"> {/* Increased min-height */}
                     <MockupKpiDefinition />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
@@ -171,8 +172,8 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">2</div>
-                  {/* Wrapper for mockup: Added min-h-[180px] for consistent height */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[180px] flex items-center justify-center flex-shrink-0">
+                  {/* Wrapper for mockup: Adjusted min-h for new mockup size */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[260px] flex items-center justify-center flex-shrink-0"> {/* Increased min-height */}
                     <MockupProgressTracking />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
@@ -184,8 +185,8 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">3</div>
-                  {/* Wrapper for mockup: Added min-h-[180px] for consistent height */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[180px] flex items-center justify-center flex-shrink-0">
+                  {/* Wrapper for mockup: Adjusted min-h for new mockup size */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[260px] flex items-center justify-center flex-shrink-0"> {/* Increased min-height */}
                     <MockupLeaderboardSnippet />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
