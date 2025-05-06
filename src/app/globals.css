@@ -18,9 +18,10 @@ body {
   :root {
     /* Teal Theme - Light Mode */
     --background: 0 0% 96%; /* Slightly off-white #F5F5F5 */
-    --background-end: 180 10% 94%; /* Slightly bluish off-white for gradient end */
+    /* --background-end: 180 10% 94%; */ /* Removed gradient end */
     --foreground: 0 0% 10%; /* Dark Gray */
-    --card: hsla(0, 0%, 100%, 0.85); /* White with opacity */
+    /* Adjusted card opacity for frosted glass */
+    --card: hsla(0, 0%, 100%, 0.80); /* White with 80% opacity */
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
@@ -43,7 +44,8 @@ body {
     --chart-4: 30 80% 60%; /* Orangeish */
     --chart-5: 120 40% 55%; /* Greenish */
     --radius: 0.5rem;
-    --sidebar-background: hsla(0, 0%, 98%, 0.90); /* Off-white with increased opacity (90%) for frosted glass */
+    /* Adjusted sidebar opacity */
+    --sidebar-background: hsla(0, 0%, 98%, 0.80); /* Off-white with 80% opacity for frosted glass */
     --sidebar-foreground: 0 0% 20%; /* Dark gray */
     --sidebar-primary: 180 100% 25%; /* Teal */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
@@ -56,9 +58,10 @@ body {
   .dark {
     /* Teal Theme - Dark Mode */
     --background: 210 10% 15%; /* Dark Blue-Gray */
-    --background-end: 180 15% 25%; /* Dark Tealish-Gray for gradient end */
+    /* --background-end: 180 15% 25%; */ /* Removed gradient end */
     --foreground: 0 0% 98%; /* White */
-    --card: hsla(210, 10%, 18%, 0.85); /* Slightly less transparent card */
+    /* Adjusted card opacity */
+    --card: hsla(210, 10%, 18%, 0.80); /* Darker card with 80% opacity */
     --card-foreground: 0 0% 98%;
     --popover: 210 10% 20%;
     --popover-foreground: 0 0% 98%;
@@ -80,7 +83,8 @@ body {
     --chart-3: 210 40% 60%; /* Blueish gray */
     --chart-4: 30 80% 70%; /* Orangeish */
     --chart-5: 120 40% 65%; /* Greenish */
-    --sidebar-background: hsla(210, 8%, 18%, 0.90); /* Dark blue-gray with increased opacity (90%) */
+    /* Adjusted sidebar opacity */
+    --sidebar-background: hsla(210, 8%, 18%, 0.80); /* Dark blue-gray with 80% opacity */
     --sidebar-foreground: 0 0% 95%; /* Light gray */
     --sidebar-primary: 180 80% 60%; /* Lighter Teal */
     --sidebar-primary-foreground: 180 100% 10%; /* Dark Teal */
@@ -91,6 +95,20 @@ body {
   }
 }
 
+/* Define the subtle geometric background pattern */
+.subtle-geometric-background {
+  background-color: hsl(var(--background)); /* Base color */
+  /* Use very low opacity for subtlety */
+  background-image:
+    linear-gradient(45deg, hsla(var(--primary), 0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, hsla(var(--primary), 0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, hsla(var(--primary), 0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, hsla(var(--primary), 0.03) 75%);
+  background-size: 80px 80px; /* Slightly larger pattern */
+  background-position: 0 0, 0 40px, 40px -40px, -40px 0px;
+}
+
+
 @layer base {
   * {
     @apply border-border;
@@ -98,18 +116,18 @@ body {
   /* Remove body styling related to background */
 
   /* Styles for the gradient background applied to admin/agent layout inset */
+  /* Keep this gradient for the admin/agent areas */
   [data-gradient-background="true"] {
     @apply relative overflow-hidden;
-    /* Use subtle gradient for the main element */
     background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-end)) 100%);
   }
 
 }
 
-/* Frosted Glass effect for cards */
+/* Frosted Glass effect for cards - Slightly adjust opacity/blur */
 .frosted-glass {
-  /* Slightly more opaque card background for better glass effect */
-  @apply bg-card/85 backdrop-blur-sm border border-border/60;
+  /* Use card variable with adjusted opacity */
+  @apply bg-card backdrop-blur-md border border-border/50 shadow-sm; /* Adjusted blur, border opacity */
 }
 
 /* Added styles for fixed background and scroll container */

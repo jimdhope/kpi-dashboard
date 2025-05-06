@@ -11,17 +11,16 @@ export default function PublicLayout({
 }) {
   return (
     <div className="relative min-h-screen"> {/* Changed to relative, min-h-screen */}
-      {/* Fixed Background Container */}
+      {/* Fixed Background Container - Apply new subtle background class */}
       <div
         className={cn(
-          "fixed inset-0 z-[-1]", // Fixed position, behind content
-          "bg-gradient-to-br from-primary/10 via-background to-background-end", // Apply gradient
-          "bg-cover bg-center" // Cover area, center it
+          "fixed-background-container", // Use the dedicated class for positioning
+          "subtle-geometric-background" // Apply the new pattern background
         )}
       />
 
       {/* Scrollable Content Container */}
-      <div className="relative z-[1] h-screen overflow-y-auto"> {/* Changed to h-screen, overflow-y-auto */}
+      <div className="scrollable-content-container"> {/* Use the dedicated class */}
         <Header />
         {/* Main content area within the scrollable container */}
         <main className="w-full"> {/* Removed flex-grow as height is managed by container */}
