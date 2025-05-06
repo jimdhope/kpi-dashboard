@@ -34,6 +34,7 @@ const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: 
 
 export function MockupLeaderboardSnippet() {
   return (
+     // Apply frosted-glass here
     <Card className="w-full shadow-md frosted-glass overflow-hidden">
       <CardHeader className="p-4 pb-2">
         <CardTitle className="text-sm font-medium">Team Rankings</CardTitle>

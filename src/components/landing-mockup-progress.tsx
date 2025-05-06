@@ -10,12 +10,14 @@ const mockRule2 = { id: 'mock2', name: 'Deals Closed', emoji: '🤝', points: 20
 
 export function MockupProgressTracking() {
   return (
+    // Apply frosted-glass here
     <Card className="w-full shadow-md frosted-glass overflow-hidden">
        <CardHeader className="pb-2 pt-4 px-4">
            <CardTitle className="text-sm font-medium">Today's Log</CardTitle>
        </CardHeader>
       {/* Increase vertical spacing between cards and add more padding at the bottom */}
-      <CardContent className="px-4 pt-0 pb-6 space-y-4"> {/* Changed p-4 pt-0 to px-4 pt-0 pb-6, and space-y-3 to space-y-4 */}
+      {/* Adjusted padding and spacing */}
+      <CardContent className="px-4 pt-0 pb-6 space-y-6"> {/* Increased space-y to 6 */}
         {/* Use AchievementCard with disabled state for mockup */}
         <AchievementCard
           rule={mockRule1}
@@ -24,6 +26,7 @@ export function MockupProgressTracking() {
           onIncrement={() => {}}
           onDecrement={() => {}}
         />
+         {/* Increased space between items */}
         <AchievementCard
           rule={mockRule2}
           currentValue={3} // Example value
@@ -31,6 +34,7 @@ export function MockupProgressTracking() {
           onIncrement={() => {}}
           onDecrement={() => {}}
         />
+        {/* Added bottom padding via CardContent pb-6 */}
       </CardContent>
     </Card>
   );

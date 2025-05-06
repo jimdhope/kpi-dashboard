@@ -10,6 +10,7 @@ import { Separator } from './ui/separator';
 
 export function MockupKpiDefinition() {
   return (
+    // Apply frosted-glass here
     <Card className="w-full shadow-md frosted-glass overflow-hidden">
       {/* Add CardHeader for the title */}
       <CardHeader className="pb-2 pt-4 px-4">

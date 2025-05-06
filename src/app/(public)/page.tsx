@@ -30,6 +30,7 @@ const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: 
 
 // Mock KPI Card Component
 const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, value: string, target: string, progress: number, icon: React.ReactNode }) => (
+  // Ensure mock card itself uses frosted glass
   <Card className="text-left shadow-md frosted-glass">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -50,9 +51,9 @@ const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, 
 export default function LandingPage() {
   return (
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Clear background */}
+      {/* Hero Section - Remove frosted-glass, ensure background is transparent */}
       <section
-        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden"
+        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden" // Removed frosted-glass
       >
         {/* Removed: <AnimatedIconBackground /> */} {/* This will be behind the content due to z-index */}
         <div className="container mx-auto px-4 md:px-6 relative z-10">
@@ -118,9 +119,11 @@ export default function LandingPage() {
 
               <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                       {/* These MockKpiCards inherently have frosted-glass applied */}
                        <MockKpiCard title="Sales Calls" value="85" target="120" progress={71} icon={<Target />} />
                        <MockKpiCard title="Customer Rating" value="4.8" target="4.5" progress={100} icon={<CheckCircle />} />
                   </div>
+                  {/* This Card should also have frosted-glass */}
                   <Card className="frosted-glass">
                       <CardHeader>
                           <CardTitle className="text-lg">Pod Leaderboard</CardTitle>
@@ -136,8 +139,8 @@ export default function LandingPage() {
          </div>
        </section>
 
-       {/* How it Works - Clear background */}
-       <section className="w-full py-16 md:py-24 lg:py-32">
+       {/* How it Works - Remove frosted-glass from section, ensure cards inside keep it */}
+       <section className="w-full py-16 md:py-24 lg:py-32"> {/* Removed frosted-glass */}
         <div className="container mx-auto px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
               Simple Steps to Success
@@ -146,6 +149,7 @@ export default function LandingPage() {
               {/* Step 1 */}
               <div className="flex flex-col items-center text-center">
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">1</div>
+                 {/* Ensure Mockup component has frosted-glass */}
                  <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
                     <MockupKpiDefinition />
                  </div>
@@ -156,6 +160,7 @@ export default function LandingPage() {
               {/* Step 2 */}
               <div className="flex flex-col items-center text-center">
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">2</div>
+                  {/* Ensure Mockup component has frosted-glass */}
                  <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
                     <MockupProgressTracking />
                  </div>
@@ -166,6 +171,7 @@ export default function LandingPage() {
                {/* Step 3 */}
               <div className="flex flex-col items-center text-center">
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">3</div>
+                  {/* Ensure Mockup component has frosted-glass */}
                  <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
                     <MockupLeaderboardSnippet />
                  </div>
