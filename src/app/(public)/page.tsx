@@ -47,8 +47,11 @@ export default function LandingPage() {
   return (
     // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Section takes full width, content centered inside container */}
-      <section className="w-full py-20 md:py-32 lg:py-40 bg-gradient-to-b from-primary/10 via-background to-background text-center">
+      {/* Hero Section - Apply animated background via data attribute */}
+      <section
+        data-animated-background="true" // Add this attribute
+        className="w-full py-20 md:py-32 lg:py-40 text-center" // Removed gradient bg
+      >
         {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6">
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary animate-fade-in">
@@ -66,7 +69,7 @@ export default function LandingPage() {
       </section>
 
        {/* Features & Preview Section - Section takes full width, content centered inside container */}
-       <section id="features" className="w-full py-16 md:py-24 lg:py-32">
+       <section id="features" className="w-full py-16 md:py-24 lg:py-32 bg-background"> {/* Standard background */}
          {/* Container centers the content and applies padding */}
          <div className="container mx-auto px-4 md:px-6">
            <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-16">
@@ -138,7 +141,7 @@ export default function LandingPage() {
        </section>
 
        {/* How it Works (Simplified) - Section takes full width, content centered inside container */}
-       <section className="w-full py-16 md:py-24 lg:py-32 bg-muted/40">
+       <section className="w-full py-16 md:py-24 lg:py-32 bg-muted/40"> {/* Standard background */}
         {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
@@ -165,7 +168,7 @@ export default function LandingPage() {
        </section>
 
       {/* CTA Section - Section takes full width, content centered inside container */}
-      <section className="w-full py-20 md:py-32 text-center">
+      <section className="w-full py-20 md:py-32 text-center bg-background"> {/* Standard background */}
         {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">

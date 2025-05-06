@@ -17,7 +17,7 @@ body {
   :root {
     /* Teal Theme - Light Mode */
     --background: 0 0% 96%; /* Slightly off-white #F5F5F5 */
-    --background-end: 0 0% 92%; /* Slightly darker for gradient */
+    --background-end: 180 10% 94%; /* Slightly bluish off-white for gradient end */
     --foreground: 0 0% 10%; /* Dark Gray */
     --card: 0 0% 100%; /* White */
     --card-foreground: 0 0% 10%;
@@ -55,7 +55,7 @@ body {
   .dark {
     /* Teal Theme - Dark Mode */
     --background: 210 10% 15%; /* Dark Blue-Gray */
-    --background-end: 210 10% 20%; /* Slightly lighter Dark Blue-Gray */
+    --background-end: 180 15% 25%; /* Dark Tealish-Gray for gradient end */
     --foreground: 0 0% 98%; /* White */
     --card: 210 10% 20%; /* Card background matches dark end */
     --card-foreground: 0 0% 98%;
@@ -102,23 +102,14 @@ body {
   /* Apply this only to elements that explicitly need it via data attribute */
   [data-animated-background="true"] {
     @apply relative overflow-hidden;
+    /* Use subtle gradient */
     background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-end)) 100%);
   }
 
-  [data-animated-background="true"]::before {
-    content: "";
-    @apply absolute inset-0 z-[-1];
-    background:
-      radial-gradient(circle at 10% 10%, hsl(var(--primary)/0.1) 0%, transparent 30%),
-      radial-gradient(circle at 90% 10%, hsl(var(--primary)/0.08) 0%, transparent 25%),
-      radial-gradient(circle at 10% 90%, hsl(var(--accent)/0.1) 0%, transparent 25%),
-      radial-gradient(circle at 90% 90%, hsl(var(--secondary)/0.1) 0%, transparent 30%),
-      radial-gradient(circle at 50% 50%, hsl(var(--primary)/0.05) 0%, transparent 20%);
-    background-size: 400% 400%;
-    animation: geometric-flow 30s ease infinite alternate;
-  }
+  /* Remove the ::before pseudo-element for the animated icons background */
+  /* [data-animated-background="true"]::before { ... } */
 
-  /* Keyframes for the slow animation */
+  /* Keyframes for the slow animation (kept for potential future use, but not applied by default) */
   @keyframes geometric-flow {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -140,7 +131,7 @@ body {
 /* Frosted Glass effect for cards */
 /* Apply this class explicitly to cards that need the effect */
 .frosted-glass {
-  /* Increased opacity for better visibility, reduced blur */
+  /* Slightly increased opacity for better readability, adjusted blur */
   @apply bg-card/90 backdrop-blur-sm border border-border/60;
 }
 
