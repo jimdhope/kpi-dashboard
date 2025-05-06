@@ -49,8 +49,8 @@ export default function LandingPage() {
     <div className="flex flex-col items-center w-full">
       {/* Hero Section - Apply animated background via data attribute */}
       <section
-        data-animated-background="true" // Add this attribute
-        className="w-full py-20 md:py-32 lg:py-40 text-center" // Removed gradient bg
+        data-animated-background="true" // Ensure this attribute is present
+        className="w-full py-20 md:py-32 lg:py-40 text-center" // Basic section styles
       >
         {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6">
@@ -187,3 +187,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    

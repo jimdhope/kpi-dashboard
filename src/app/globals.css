@@ -57,7 +57,7 @@ body {
     --background: 210 10% 15%; /* Dark Blue-Gray */
     --background-end: 180 15% 25%; /* Dark Tealish-Gray for gradient end */
     --foreground: 0 0% 98%; /* White */
-    --card: 210 10% 20%; /* Card background matches dark end */
+    --card: hsla(210, 10%, 18%, 0.9); /* Slightly more opaque card for better glass effect */
     --card-foreground: 0 0% 98%;
     --popover: 210 10% 20%;
     --popover-foreground: 0 0% 98%;
@@ -102,18 +102,39 @@ body {
   /* Apply this only to elements that explicitly need it via data attribute */
   [data-animated-background="true"] {
     @apply relative overflow-hidden;
-    /* Use subtle gradient */
+    /* Use subtle gradient for the main element */
     background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-end)) 100%);
   }
 
-  /* Remove the ::before pseudo-element for the animated icons background */
-  /* [data-animated-background="true"]::before { ... } */
+  /* Use ::before for the animated icon layer */
+  [data-animated-background="true"]::before {
+    content: "";
+    @apply absolute inset-0 z-[-1] opacity-10 dark:opacity-[0.07]; /* Position behind content, low opacity */
 
-  /* Keyframes for the slow animation (kept for potential future use, but not applied by default) */
+    /* Example using multiple SVG icons as background layers */
+    /* Replace with your actual SVG data URIs or paths */
+    background-image:
+      /* Trophy Icon */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='hsl(var(--foreground))' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-trophy'%3E%3Cpath d='M6 9H4.5a2.5 2.5 0 0 1 0-5H6'%3E%3C/path%3E%3Cpath d='M18 9h1.5a2.5 2.5 0 0 0 0-5H18'%3E%3C/path%3E%3Cpath d='M4 22h16'%3E%3C/path%3E%3Cpath d='M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22'%3E%3C/path%3E%3Cpath d='M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22'%3E%3C/path%3E%3Cpath d='M18 2H6v7c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V2Z'%3E%3C/path%3E%3C/svg%3E"),
+      /* Target Icon */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='hsl(var(--foreground))' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-target'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Ccircle cx='12' cy='12' r='6'%3E%3C/circle%3E%3Ccircle cx='12' cy='12' r='2'%3E%3C/circle%3E%3C/svg%3E"),
+      /* Users Icon */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='hsl(var(--foreground))' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-users'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='9' cy='7' r='4'%3E%3C/circle%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'%3E%3C/path%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'%3E%3C/path%3E%3C/svg%3E"),
+       /* Add more icons as needed */
+       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='hsl(var(--foreground))' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-bar-chart-3'%3E%3Cpath d='M3 3v18h18'%3E%3C/path%3E%3Cpath d='M18 17V9'%3E%3C/path%3E%3Cpath d='M13 17V5'%3E%3C/path%3E%3Cpath d='M8 17v-3'%3E%3C/path%3E%3C/svg%3E");
+
+    background-size: 90px 90px; /* Increased size for spacing */
+    background-position: 0 0, 45px 45px, 0 45px, 45px 0; /* Adjust positions for less overlap */
+    background-repeat: repeat;
+
+    /* Apply the animation */
+    animation: geometric-flow 60s linear infinite;
+  }
+
+  /* Keyframes for the slow animation */
   @keyframes geometric-flow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% { background-position: 0 0, 45px 45px, 0 45px, 45px 0; }
+    100% { background-position: 90px 90px, 135px 135px, 90px 135px, 135px 90px; } /* Adjust end position based on size */
   }
 
   /* Keyframes for landing page animations */
@@ -131,11 +152,11 @@ body {
 /* Frosted Glass effect for cards */
 /* Apply this class explicitly to cards that need the effect */
 .frosted-glass {
-  /* Slightly increased opacity for better readability, adjusted blur */
+  /* Slightly more opaque card background for better glass effect */
   @apply bg-card/90 backdrop-blur-sm border border-border/60;
 }
 
-/* Animation utility classes (can also be done via tailwind.config.js) */
+/* Animation utility classes */
 .animate-fade-in {
   animation: fade-in 0.6s ease-out forwards;
 }
@@ -146,3 +167,5 @@ body {
 
 .animation-delay-200 { animation-delay: 0.2s; }
 .animation-delay-400 { animation-delay: 0.4s; }
+
+    
