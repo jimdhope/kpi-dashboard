@@ -20,9 +20,9 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
 
   return (
     <Card className="shadow-md overflow-hidden">
-      <CardContent className="p-0 flex h-full">
+      <CardContent className="p-0 flex h-full items-stretch"> {/* Ensure parent stretches */}
         {/* Left Section */}
-        <div className="flex-grow p-4 pr-2 flex flex-col justify-between">
+        <div className="flex-grow p-4 pr-2 flex flex-col justify-center"> {/* Change justify-between to justify-center */}
           {/* Top part: Emoji, Name, Points */}
           <div className="flex items-center gap-2 mb-1"> {/* Changed to items-center for vertical alignment */}
               <span className="text-2xl">{displayEmoji}</span> {/* Emoji */}
@@ -33,8 +33,8 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
               </div>
           </div>
           {/* Bottom part: Current Value */}
-          <div>
-             <p className="text-xl font-bold text-primary mt-2 pl-8">{currentValue}</p> {/* Display current value */}
+          <div className="pl-8"> {/* Keep padding for alignment */}
+             <p className="text-xl font-bold text-primary mt-2">{currentValue}</p> {/* Display current value */}
           </div>
         </div>
 
