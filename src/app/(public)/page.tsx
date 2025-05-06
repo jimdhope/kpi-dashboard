@@ -8,13 +8,13 @@ import { CheckCircle, Trophy, Users, BarChart, Zap, Target } from 'lucide-react'
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress'; // Import Progress
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
+// Removed: import AnimatedIconBackground from '@/components/animated-icon-background'; // Import the component
 import { MockupKpiDefinition } from '@/components/landing-mockup-kpi'; // Import KPI Definition Mockup
 import { MockupProgressTracking } from '@/components/landing-mockup-progress'; // Import Progress Tracking Mockup
 import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard'; // Import Leaderboard Mockup
 
 
 // Mock Leaderboard Entry Component
-// Corrected the props type definition
 const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: number; name: string; score: number; initials: string; bgColor?: string }) => (
   <div className="flex items-center justify-between p-2 rounded-md transition-colors hover:bg-muted/50">
     <div className="flex items-center gap-3">
@@ -30,7 +30,6 @@ const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: 
 
 // Mock KPI Card Component
 const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, value: string, target: string, progress: number, icon: React.ReactNode }) => (
-  // Apply frosted glass to the mock cards directly
   <Card className="text-left shadow-md frosted-glass">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -50,18 +49,17 @@ const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, 
 
 export default function LandingPage() {
   return (
-    // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Does not need frosted glass itself, content is on top */}
+      {/* Hero Section - Clear background */}
       <section
-        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden" // Removed background gradient here, it's handled by layout
+        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden"
       >
-        {/* Container centers the content and applies padding, ensuring it's above the background */}
-        <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Keep relative and z-index */}
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg"> {/* Added drop shadow */}
+        {/* Removed: <AnimatedIconBackground /> */} {/* This will be behind the content due to z-index */}
+        <div className="container mx-auto px-4 md:px-6 relative z-10">
+          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg">
             Welcome to KPI Quest
           </h1>
-          <p className="mx-auto max-w-[700px] text-foreground/90 md:text-xl mt-4 drop-shadow-sm"> {/* Increased text opacity */}
+          <p className="mx-auto max-w-[700px] text-foreground/90 md:text-xl mt-4 drop-shadow-sm">
             Gamify your team's performance, track KPIs effortlessly, and foster friendly competition to drive results.
           </p>
           <div className="mt-8">
@@ -72,15 +70,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-       {/* Features & Preview Section - Apply frosted-glass to the section */}
+       {/* Features & Preview Section - Apply frosted-glass */}
        <section id="features" className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
-         {/* Container centers the content and applies padding */}
          <div className="container mx-auto px-4 md:px-6">
            <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-16">
              How KPI Quest Elevates Performance
            </h2>
            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              {/* Feature Text */}
               <div className="space-y-8">
                  <div className="flex items-start gap-4">
                     <div className="bg-primary/10 rounded-full p-3">
@@ -120,16 +116,12 @@ export default function LandingPage() {
                  </div>
               </div>
 
-              {/* Mockup Section */}
               <div className="space-y-6">
-                  {/* Mock KPI Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        <MockKpiCard title="Sales Calls" value="85" target="120" progress={71} icon={<Target />} />
                        <MockKpiCard title="Customer Rating" value="4.8" target="4.5" progress={100} icon={<CheckCircle />} />
                   </div>
-
-                  {/* Mock Leaderboard Snippet */}
-                  <Card className="frosted-glass"> {/* Apply frosted glass */}
+                  <Card className="frosted-glass">
                       <CardHeader>
                           <CardTitle className="text-lg">Pod Leaderboard</CardTitle>
                       </CardHeader>
@@ -144,60 +136,48 @@ export default function LandingPage() {
          </div>
        </section>
 
-       {/* How it Works - Apply frosted-glass to the section */}
-       <section className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
-        {/* Container centers the content and applies padding */}
+       {/* How it Works - Clear background */}
+       <section className="w-full py-16 md:py-24 lg:py-32">
         <div className="container mx-auto px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
               Simple Steps to Success
             </h2>
-            {/* Updated Grid to include mockup components */}
              <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              {/* Step 1: Define KPIs */}
+              {/* Step 1 */}
               <div className="flex flex-col items-center text-center">
-                 {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">1</div>
-                 {/* Wrapper for mockup: Adjusted min-h for new mockup size */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[260px] flex items-center justify-center flex-shrink-0"> {/* Increased min-height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
                     <MockupKpiDefinition />
                  </div>
-                 {/* Ensure heading and paragraph have consistent bottom margin */}
                  <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
-                 <p className="text-muted-foreground mb-4 min-h-[60px]">Set clear, measurable goals for your campaigns and pods.</p> {/* Added min-height */}
+                 <p className="text-muted-foreground mb-4 min-h-[60px]">Set clear, measurable goals for your campaigns and pods.</p>
               </div>
 
-              {/* Step 2: Track Progress */}
+              {/* Step 2 */}
               <div className="flex flex-col items-center text-center">
-                 {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">2</div>
-                  {/* Wrapper for mockup: Adjusted min-h for new mockup size */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[260px] flex items-center justify-center flex-shrink-0"> {/* Increased min-height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
                     <MockupProgressTracking />
                  </div>
-                 {/* Ensure heading and paragraph have consistent bottom margin */}
                  <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
-                 <p className="text-muted-foreground mb-4 min-h-[60px]">Log daily achievements and monitor performance via dashboards.</p> {/* Added min-height */}
+                 <p className="text-muted-foreground mb-4 min-h-[60px]">Log daily achievements and monitor performance via dashboards.</p>
               </div>
 
-              {/* Step 3: Celebrate Wins */}
+               {/* Step 3 */}
               <div className="flex flex-col items-center text-center">
-                 {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">3</div>
-                  {/* Wrapper for mockup: Adjusted min-h for new mockup size */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[260px] flex items-center justify-center flex-shrink-0"> {/* Increased min-height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
                     <MockupLeaderboardSnippet />
                  </div>
-                 {/* Ensure heading and paragraph have consistent bottom margin */}
                  <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
-                 <p className="text-muted-foreground mb-4 min-h-[60px]">Recognize top performers and motivate with leaderboards.</p> {/* Added min-height */}
+                 <p className="text-muted-foreground mb-4 min-h-[60px]">Recognize top performers and motivate with leaderboards.</p>
               </div>
             </div>
           </div>
        </section>
 
-      {/* CTA Section - Apply frosted-glass to the section */}
+      {/* CTA Section - Apply frosted-glass */}
       <section className="w-full py-20 md:py-32 text-center frosted-glass">
-        {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
             Ready to Boost Performance?
