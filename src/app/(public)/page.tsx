@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -167,7 +168,7 @@ export default function LandingPage() {
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
                  <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
-                 <p className="text-muted-foreground mb-4">Set clear, measurable goals for your campaigns and pods.</p>
+                 <p className="text-muted-foreground mb-4 min-h-[60px]">Set clear, measurable goals for your campaigns and pods.</p> {/* Added min-height */}
               </div>
 
               {/* Step 2: Track Progress */}
@@ -180,7 +181,7 @@ export default function LandingPage() {
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
                  <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
-                 <p className="text-muted-foreground mb-4">Log daily achievements and monitor performance via dashboards.</p>
+                 <p className="text-muted-foreground mb-4 min-h-[60px]">Log daily achievements and monitor performance via dashboards.</p> {/* Added min-height */}
               </div>
 
               {/* Step 3: Celebrate Wins */}
@@ -193,7 +194,7 @@ export default function LandingPage() {
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
                  <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
-                 <p className="text-muted-foreground mb-4">Recognize top performers and motivate with leaderboards.</p>
+                 <p className="text-muted-foreground mb-4 min-h-[60px]">Recognize top performers and motivate with leaderboards.</p> {/* Added min-height */}
               </div>
             </div>
           </div>
