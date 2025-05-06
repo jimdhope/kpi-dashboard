@@ -14,6 +14,7 @@ export function MockupProgressTracking() {
        <CardHeader className="pb-2 pt-4 px-4">
            <CardTitle className="text-sm font-medium">Today's Log</CardTitle>
        </CardHeader>
+      {/* Add space-y-2 to create vertical gap between children */}
       <CardContent className="p-4 pt-0 space-y-2">
         {/* Use AchievementCard with disabled state for mockup */}
         <AchievementCard
