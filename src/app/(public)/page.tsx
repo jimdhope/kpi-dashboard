@@ -159,32 +159,41 @@ export default function LandingPage() {
              <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               {/* Step 1: Define KPIs */}
               <div className="flex flex-col items-center text-center">
-                <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">1</div>
-                <div className="mb-4 w-full max-w-xs mx-auto"> {/* Wrapper for mockup */}
-                   <MockupKpiDefinition />
+                 {/* Center the step number and add margin */}
+                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">1</div>
+                 {/* Add margin-bottom to mockup and center it */}
+                 <div className="mb-6 w-full max-w-xs mx-auto"> {/* Wrapper for mockup with mb-6 */}
+                    <MockupKpiDefinition />
                  </div>
-                <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
-                <p className="text-muted-foreground">Set clear, measurable goals for your campaigns and pods.</p>
+                 {/* Ensure heading and paragraph have consistent bottom margin */}
+                 <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
+                 <p className="text-muted-foreground mb-4">Set clear, measurable goals for your campaigns and pods.</p>
               </div>
 
               {/* Step 2: Track Progress */}
               <div className="flex flex-col items-center text-center">
-                <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">2</div>
-                 <div className="mb-4 w-full max-w-xs mx-auto"> {/* Wrapper for mockup */}
-                   <MockupProgressTracking />
+                 {/* Center the step number and add margin */}
+                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">2</div>
+                 {/* Add margin-bottom to mockup and center it */}
+                 <div className="mb-6 w-full max-w-xs mx-auto"> {/* Wrapper for mockup with mb-6 */}
+                    <MockupProgressTracking />
                  </div>
-                <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
-                <p className="text-muted-foreground">Log daily achievements and monitor performance via dashboards.</p>
+                 {/* Ensure heading and paragraph have consistent bottom margin */}
+                 <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
+                 <p className="text-muted-foreground mb-4">Log daily achievements and monitor performance via dashboards.</p>
               </div>
 
               {/* Step 3: Celebrate Wins */}
               <div className="flex flex-col items-center text-center">
-                <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">3</div>
-                 <div className="mb-4 w-full max-w-xs mx-auto"> {/* Wrapper for mockup */}
+                 {/* Center the step number and add margin */}
+                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">3</div>
+                 {/* Add margin-bottom to mockup and center it */}
+                 <div className="mb-6 w-full max-w-xs mx-auto"> {/* Wrapper for mockup with mb-6 */}
                     <MockupLeaderboardSnippet />
                  </div>
-                <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
-                <p className="text-muted-foreground">Recognize top performers and motivate with leaderboards.</p>
+                 {/* Ensure heading and paragraph have consistent bottom margin */}
+                 <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
+                 <p className="text-muted-foreground mb-4">Recognize top performers and motivate with leaderboards.</p>
               </div>
             </div>
           </div>
