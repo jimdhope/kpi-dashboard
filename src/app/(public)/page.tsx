@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -9,7 +8,7 @@ import { CheckCircle, Trophy, Users, BarChart, Zap, Target } from 'lucide-react'
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress'; // Import Progress
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
-// import AnimatedIconBackground from '@/components/animated-icon-background'; // REMOVE Import
+// Removed unused import: import AnimatedIconBackground from '@/components/animated-icon-background';
 import { MockupKpiDefinition } from '@/components/landing-mockup-kpi'; // Import KPI Definition Mockup
 import { MockupProgressTracking } from '@/components/landing-mockup-progress'; // Import Progress Tracking Mockup
 import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard'; // Import Leaderboard Mockup
@@ -52,14 +51,13 @@ export default function LandingPage() {
   return (
     // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Remove relative positioning and canvas */}
+      {/* Hero Section */}
       <section
-        className="w-full py-20 md:py-32 lg:py-40 text-center bg-gradient-to-br from-background to-background-end" // Use gradient background instead of canvas
+        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden bg-gradient-to-br from-primary/10 via-background to-background" // Added gradient background
       >
-         {/* REMOVE the Canvas Background Component */}
-         {/* <AnimatedIconBackground /> */}
+        {/* Removed Animated Background Component */}
 
-        {/* Container centers the content and applies padding */}
+        {/* Container centers the content and applies padding, ensuring it's above the background */}
         <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Keep relative and z-index */}
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg"> {/* Added drop shadow */}
             Welcome to KpiQuest
@@ -160,8 +158,8 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">1</div>
-                 {/* Add margin-bottom to mockup and center it. Set min-height */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[150px] flex items-center justify-center flex-shrink-0"> {/* Wrapper for mockup with mb-6, min-height, flex */}
+                 {/* Wrapper for mockup: Added min-h-[180px] for consistent height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[180px] flex items-center justify-center flex-shrink-0">
                     <MockupKpiDefinition />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
@@ -173,8 +171,8 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">2</div>
-                 {/* Add margin-bottom to mockup and center it. Set min-height */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[150px] flex items-center justify-center flex-shrink-0"> {/* Wrapper for mockup with mb-6, min-height, flex */}
+                  {/* Wrapper for mockup: Added min-h-[180px] for consistent height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[180px] flex items-center justify-center flex-shrink-0">
                     <MockupProgressTracking />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
@@ -186,8 +184,8 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
                  <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">3</div>
-                 {/* Add margin-bottom to mockup and center it. Set min-height */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[150px] flex items-center justify-center flex-shrink-0"> {/* Wrapper for mockup with mb-6, min-height, flex */}
+                  {/* Wrapper for mockup: Added min-h-[180px] for consistent height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[180px] flex items-center justify-center flex-shrink-0">
                     <MockupLeaderboardSnippet />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
