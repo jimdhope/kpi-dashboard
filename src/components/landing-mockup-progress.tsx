@@ -4,10 +4,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AchievementCard } from './achievement-card'; // Reuse AchievementCard for visual consistency
 
-// Mock Rule Data
-const mockRule1 = { id: 'mock1', name: 'Close Deal', emoji: '💲', points: 10 };
-const mockRule2 = { id: 'mock2', name: 'Log Activity', emoji: '📝', points: 1 };
-// Removed third rule: const mockRule3 = { id: 'mock3', name: 'Follow Up', emoji: '📞', points: 2 };
+// Mock Rule Data - Updated
+const mockRule1 = { id: 'mock1', name: 'Sales Calls', emoji: '📞', points: 2 }; // Changed name and emoji
+const mockRule2 = { id: 'mock2', name: 'Deals Closed', emoji: '🤝', points: 20 }; // Changed name and emoji
 
 export function MockupProgressTracking() {
   return (
@@ -19,19 +18,18 @@ export function MockupProgressTracking() {
         {/* Use AchievementCard with disabled state for mockup */}
         <AchievementCard
           rule={mockRule1}
-          currentValue={3}
+          currentValue={8} // Example value
           isSaving={false}
           onIncrement={() => {}}
           onDecrement={() => {}}
         />
         <AchievementCard
           rule={mockRule2}
-          currentValue={12}
+          currentValue={3} // Example value
           isSaving={false}
           onIncrement={() => {}}
           onDecrement={() => {}}
         />
-         {/* Removed third card */}
       </CardContent>
     </Card>
   );
