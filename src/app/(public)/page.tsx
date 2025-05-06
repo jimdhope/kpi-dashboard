@@ -8,7 +8,6 @@ import { CheckCircle, Trophy, Users, BarChart, Zap, Target } from 'lucide-react'
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress'; // Import Progress
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
-// Removed unused import: import AnimatedIconBackground from '@/components/animated-icon-background';
 import { MockupKpiDefinition } from '@/components/landing-mockup-kpi'; // Import KPI Definition Mockup
 import { MockupProgressTracking } from '@/components/landing-mockup-progress'; // Import Progress Tracking Mockup
 import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard'; // Import Leaderboard Mockup
@@ -31,7 +30,8 @@ const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: 
 
 // Mock KPI Card Component
 const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, value: string, target: string, progress: number, icon: React.ReactNode }) => (
-  <Card className="text-left shadow-md frosted-glass"> {/* Apply frosted glass */}
+  // Apply frosted glass to the mock cards directly
+  <Card className="text-left shadow-md frosted-glass">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
        <div className="text-muted-foreground">{icon}</div>
@@ -52,12 +52,10 @@ export default function LandingPage() {
   return (
     // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section */}
+      {/* Hero Section - Does not need frosted glass itself, content is on top */}
       <section
-        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden bg-gradient-to-br from-primary/10 via-background to-background" // Added gradient background
+        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden" // Removed background gradient here, it's handled by layout
       >
-        {/* Removed Animated Background Component */}
-
         {/* Container centers the content and applies padding, ensuring it's above the background */}
         <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Keep relative and z-index */}
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg"> {/* Added drop shadow */}
@@ -74,8 +72,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-       {/* Features & Preview Section - Section takes full width, content centered inside container */}
-       <section id="features" className="w-full py-16 md:py-24 lg:py-32 bg-background"> {/* Standard background */}
+       {/* Features & Preview Section - Apply frosted-glass to the section */}
+       <section id="features" className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
          {/* Container centers the content and applies padding */}
          <div className="container mx-auto px-4 md:px-6">
            <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-16">
@@ -146,8 +144,8 @@ export default function LandingPage() {
          </div>
        </section>
 
-       {/* How it Works (Simplified) - Section takes full width, content centered inside container */}
-       <section className="w-full py-16 md:py-24 lg:py-32 bg-muted/40"> {/* Standard background */}
+       {/* How it Works - Apply frosted-glass to the section */}
+       <section className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
         {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
@@ -197,8 +195,8 @@ export default function LandingPage() {
           </div>
        </section>
 
-      {/* CTA Section - Section takes full width, content centered inside container */}
-      <section className="w-full py-20 md:py-32 text-center bg-background"> {/* Standard background */}
+      {/* CTA Section - Apply frosted-glass to the section */}
+      <section className="w-full py-20 md:py-32 text-center frosted-glass">
         {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">

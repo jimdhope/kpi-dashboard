@@ -2,15 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Remove background properties from body */
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  /* Removed direct background properties from body */
-  overflow-x: hidden; /* Keep this if needed */
+  overflow-x: hidden; /* Keep this */
+  /* Remove overflow-y: hidden if it exists here */
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground; /* Apply theme background/foreground */
+    @apply bg-background text-foreground; /* Apply theme background/foreground, but the fixed div will cover it */
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -42,7 +43,7 @@ body {
     --chart-4: 30 80% 60%; /* Orangeish */
     --chart-5: 120 40% 55%; /* Greenish */
     --radius: 0.5rem;
-    --sidebar-background: hsla(0, 0%, 98%, 0.85); /* Off-white with increased opacity (85%) for frosted glass */
+    --sidebar-background: hsla(0, 0%, 98%, 0.90); /* Off-white with increased opacity (90%) for frosted glass */
     --sidebar-foreground: 0 0% 20%; /* Dark gray */
     --sidebar-primary: 180 100% 25%; /* Teal */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
@@ -79,7 +80,7 @@ body {
     --chart-3: 210 40% 60%; /* Blueish gray */
     --chart-4: 30 80% 70%; /* Orangeish */
     --chart-5: 120 40% 65%; /* Greenish */
-    --sidebar-background: hsla(210, 8%, 18%, 0.85); /* Dark blue-gray with increased opacity (85%) */
+    --sidebar-background: hsla(210, 8%, 18%, 0.90); /* Dark blue-gray with increased opacity (90%) */
     --sidebar-foreground: 0 0% 95%; /* Light gray */
     --sidebar-primary: 180 80% 60%; /* Lighter Teal */
     --sidebar-primary-foreground: 180 100% 10%; /* Dark Teal */
@@ -94,9 +95,7 @@ body {
   * {
     @apply border-border;
   }
-  body {
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
+  /* Remove body styling related to background */
 
   /* Styles for the gradient background applied to admin/agent layout inset */
   [data-gradient-background="true"] {
@@ -111,4 +110,21 @@ body {
 .frosted-glass {
   /* Slightly more opaque card background for better glass effect */
   @apply bg-card/85 backdrop-blur-sm border border-border/60;
+}
+
+/* Added styles for fixed background and scroll container */
+.fixed-background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Behind content */
+}
+
+.scrollable-content-container {
+  position: relative; /* Needed for z-index stacking */
+  z-index: 1;
+  height: 100vh;
+  overflow-y: auto;
 }
