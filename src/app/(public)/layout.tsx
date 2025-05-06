@@ -1,7 +1,9 @@
+// src/app/(public)/layout.tsx
 'use client';
 import React from 'react';
-import { Header } from '@/components/landing-header'; // Create this component later
-import { Footer } from '@/components/landing-footer'; // Create this component later
+import { Header } from '@/components/landing-header';
+import { Footer } from '@/components/landing-footer';
+import { cn } from '@/lib/utils';
 
 export default function PublicLayout({
   children,
@@ -9,10 +11,16 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Ensure the outer div takes full height and uses flex column layout
-    <div className="flex flex-col min-h-screen">
+    <div
+      className={cn(
+        "flex flex-col min-h-screen bg-cover bg-fixed bg-center"
+      )}
+      style={{
+        backgroundImage: "url('https://picsum.photos/1920/1080')",
+      }}
+      data-ai-hint="abstract background"
+    >
       <Header />
-      {/* Ensure main takes up remaining space and uses full width */}
       <main className="flex-grow w-full">{children}</main>
       <Footer />
     </div>
