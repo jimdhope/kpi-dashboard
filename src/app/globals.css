@@ -23,7 +23,7 @@ body {
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-    --primary: 180 100% 25%; /* Teal #008080 - Keeping primary as teal for now */
+    --primary: 180 100% 25%; /* Teal #008080 */
     --primary-foreground: 0 0% 100%; /* White */
     --secondary: 0 0% 90%; /* Slightly darker gray */
     --secondary-foreground: 0 0% 10%;
@@ -50,11 +50,11 @@ body {
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 180 100% 25%;
 
-    /* Light Mode SVG Blob Colors - derived from the new background */
-    --background-blob-1: 203 42% 97%; /* #f5f8fa - Even lighter version */
-    --background-blob-2: 203 42% 97%;
-    --background-blob-3: 203 42% 97%;
-    --background-blob-4: 203 42% 97%;
+    /* Light Mode SVG Blob Colors - HSL for #F5DFD1 is approx H:25 S:59% L:89% */
+    --background-blob-1: 25 59% 89%;
+    --background-blob-2: 25 59% 89%;
+    --background-blob-3: 25 59% 89%;
+    --background-blob-4: 25 59% 89%;
   }
 
   .dark {
@@ -108,7 +108,7 @@ body {
 
 /* Frosted Glass effect for cards */
 .frosted-glass {
-  @apply bg-card backdrop-blur-md border border-border/50 shadow-sm;
+  @apply bg-card/80 backdrop-blur-md border border-border/50 shadow-sm; /* Adjusted bg-card opacity */
 }
 
 .fixed-background-container {
