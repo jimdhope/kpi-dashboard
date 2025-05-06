@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -44,9 +45,9 @@ export function MockupLeaderboardSnippet() {
         <MockLeaderboardEntry rank={4} name="Team Bears" score={820} initials="TB" bgColor="#8A2BE2" />
         <MockLeaderboardEntry rank={5} name="Team Wolves" score={790} initials="TW" bgColor="#A52A2A" />
         <MockLeaderboardEntry rank={6} name="Team Hawks" score={650} initials="TH" bgColor="#DEB887" />
-        {/* Added 7th and 8th place */}
+        {/* Added 7th place */}
         <MockLeaderboardEntry rank={7} name="Team Pandas" score={580} initials="TP" bgColor="#696969" />
-        <MockLeaderboardEntry rank={8} name="Team Geckos" score={510} initials="TG" bgColor="#2E8B57" />
+        {/* Removed 8th place */}
       </CardContent>
     </Card>
   );
