@@ -51,11 +51,11 @@ body {
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 180 100% 25%;
 
-    /* Subtle background blob colors for Light Mode */
-    --background-blob-1: 0 0% 93%;      /* Slightly darker gray */
-    --background-blob-2: 180 20% 95%;  /* Pale teal */
-    --background-blob-3: 0 0% 98%;      /* Slightly lighter gray */
-    --background-blob-4: 180 15% 93%;  /* Another pale teal, slightly different */
+    /* Subtle background blob colors for Light Mode - using light grays and pale teals */
+    --background-blob-1: 0 0% 93%;      /* Slightly darker gray #EDEDED */
+    --background-blob-2: 180 20% 95%;  /* Pale teal #F0FAFA */
+    --background-blob-3: 0 0% 98%;      /* Lighter gray #FAFAFA */
+    --background-blob-4: 180 15% 93%;  /* Another pale teal #E8F7F7 */
   }
 
   .dark {
@@ -93,11 +93,12 @@ body {
     --sidebar-border: 210 10% 25%;
     --sidebar-ring: 180 80% 60%;
 
-    /* Subtle background blob colors for Dark Mode */
-    --background-blob-1: 210 10% 12%; /* Slightly darker blue-gray */
-    --background-blob-2: 180 20% 18%; /* Dark, desaturated teal */
-    --background-blob-3: 210 8% 10%;  /* Very dark blue-gray */
-    --background-blob-4: 180 15% 15%; /* Another dark, desaturated teal */
+    /* Specific dark hex codes for background blobs in Dark Mode */
+    --background-blob-1: #1e1e1e; /* Hex for first dark blob */
+    --background-blob-2: #272729; /* Hex for second dark blob */
+    /* Use variations or slightly lighter shades for the other two */
+    --background-blob-3: #222224; /* Variation of #272729 */
+    --background-blob-4: #1a1a1c; /* Variation of #1e1e1e */
   }
 }
 
