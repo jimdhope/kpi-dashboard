@@ -9,6 +9,9 @@ import Link from 'next/link';
 import { Progress } from '@/components/ui/progress'; // Import Progress
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
 import AnimatedIconBackground from '@/components/animated-icon-background'; // Import the new component
+import { MockupKpiDefinition } from '@/components/landing-mockup-kpi'; // Import KPI Definition Mockup
+import { MockupProgressTracking } from '@/components/landing-mockup-progress'; // Import Progress Tracking Mockup
+import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard'; // Import Leaderboard Mockup
 
 
 // Mock Leaderboard Entry Component
@@ -50,7 +53,6 @@ export default function LandingPage() {
     <div className="flex flex-col items-center w-full">
       {/* Hero Section - Remove animated background attribute, add relative positioning */}
       <section
-        // Removed data-animated-background="true"
         className="w-full py-20 md:py-32 lg:py-40 text-center relative overflow-hidden" // Add relative and overflow-hidden
       >
          {/* Add the Canvas Background Component */}
@@ -153,23 +155,37 @@ export default function LandingPage() {
             <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
               Simple Steps to Success
             </h2>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-               {/* Removed fade-in-up animation */}
-               <div className="flex flex-col items-center text-center">
-                 <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">1</div>
-                 <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
-                 <p className="text-muted-foreground">Set clear, measurable goals for your campaigns and pods.</p>
-               </div>
-               <div className="flex flex-col items-center text-center">
-                 <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">2</div>
-                 <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
-                 <p className="text-muted-foreground">Log daily achievements and monitor performance via dashboards.</p>
-               </div>
-                <div className="flex flex-col items-center text-center">
-                 <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">3</div>
-                 <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
-                 <p className="text-muted-foreground">Recognize top performers and motivate with leaderboards.</p>
-               </div>
+            {/* Updated Grid to include mockup components */}
+             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              {/* Step 1: Define KPIs */}
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">1</div>
+                <div className="mb-4 w-full max-w-xs mx-auto"> {/* Wrapper for mockup */}
+                   <MockupKpiDefinition />
+                 </div>
+                <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
+                <p className="text-muted-foreground">Set clear, measurable goals for your campaigns and pods.</p>
+              </div>
+
+              {/* Step 2: Track Progress */}
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">2</div>
+                 <div className="mb-4 w-full max-w-xs mx-auto"> {/* Wrapper for mockup */}
+                   <MockupProgressTracking />
+                 </div>
+                <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
+                <p className="text-muted-foreground">Log daily achievements and monitor performance via dashboards.</p>
+              </div>
+
+              {/* Step 3: Celebrate Wins */}
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">3</div>
+                 <div className="mb-4 w-full max-w-xs mx-auto"> {/* Wrapper for mockup */}
+                    <MockupLeaderboardSnippet />
+                 </div>
+                <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
+                <p className="text-muted-foreground">Recognize top performers and motivate with leaderboards.</p>
+              </div>
             </div>
           </div>
        </section>
