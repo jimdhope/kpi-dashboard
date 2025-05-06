@@ -46,10 +46,9 @@ const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, 
 export default function LandingPage() {
   return (
     // Use min-h-screen on the outer div if needed, but PublicLayout likely handles it.
-    // The w-full ensures the flex container tries to take the full width.
-    // items-center centers the direct children (the <section> elements) horizontally.
+    // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Already centered by container */}
+      {/* Hero Section - Section takes full width, content centered inside container */}
       <section className="w-full py-20 md:py-32 lg:py-40 bg-gradient-to-b from-primary/10 via-background to-background text-center">
         <div className="container px-4 md:px-6">
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary animate-fade-in">
@@ -66,7 +65,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-       {/* Features & Preview Section - Already centered by container */}
+       {/* Features & Preview Section - Section takes full width, content centered inside container */}
        <section id="features" className="w-full py-16 md:py-24 lg:py-32">
          <div className="container px-4 md:px-6">
            <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-16">
@@ -137,7 +136,7 @@ export default function LandingPage() {
          </div>
        </section>
 
-       {/* How it Works (Simplified) - Already centered by container */}
+       {/* How it Works (Simplified) - Section takes full width, content centered inside container */}
        <section className="w-full py-16 md:py-24 lg:py-32 bg-muted/40">
         <div className="container px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
@@ -163,7 +162,7 @@ export default function LandingPage() {
           </div>
        </section>
 
-      {/* CTA Section - Already centered by container */}
+      {/* CTA Section - Section takes full width, content centered inside container */}
       <section className="w-full py-20 md:py-32 text-center">
         <div className="container px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
@@ -182,52 +181,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-// Add simple animation definitions if not already present in globals.css
-// or tailwind.config.js (tailwindcss-animate might provide these)
-// Example (add to globals.css if needed):
-/*
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out forwards;
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out forwards;
-}
-
-.animation-delay-200 { animation-delay: 0.2s; }
-.animation-delay-400 { animation-delay: 0.4s; }
-*/
-
-// Ensure tailwind.config.js includes these animations if using utility classes
-// Example for tailwind.config.js extend section:
-/*
-extend: {
-  animation: {
-    'fade-in': 'fade-in 0.6s ease-out forwards',
-    'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
-  },
-  keyframes: {
-    'fade-in': {
-      'from': { opacity: '0' },
-      'to': { opacity: '1' },
-    },
-    'fade-in-up': {
-      'from': { opacity: '0', transform: 'translateY(20px)' },
-      'to': { opacity: '1', transform: 'translateY(0)' },
-    }
-  },
-}
-*/
-
-    
