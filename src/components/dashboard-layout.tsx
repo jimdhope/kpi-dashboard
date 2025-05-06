@@ -20,21 +20,21 @@ import {
 import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare } from 'lucide-react'; // Added UserSquare for Agent View
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Button } from '@/components/ui/button'; // Corrected import
+import { Button } from '@/components/ui/button';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { app, db } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
-import type { AppUser, UserRole } from '@/services/user'; // Import UserRole
+import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitcher
+import { RoleSwitcher } from './role-switcher'; // Changed to relative import
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  roles: UserRole[]; // Added roles prop
-  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop
-  onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
+  roles: UserRole[] | undefined;
+  currentLayout: 'admin' | 'agent' | null;
+  onLayoutChange: (newLayout: 'admin' | 'agent') => void;
 }
 
 export function DashboardLayout({ children, roles, currentLayout, onLayoutChange }: DashboardLayoutProps) {
@@ -43,14 +43,10 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
-  // Log received props for debugging
   useEffect(() => {
-    // Use console.log for client-side components
     console.log("[DashboardLayout] Received props:", { roles, currentLayout });
   }, [roles, currentLayout]);
 
-
-  // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
     setIsLoadingUser(true);
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -94,7 +90,6 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
   }, [auth]);
 
   const getInitials = (name?: string | null) => generateInitials(name || '');
-  const bgColor = currentUserData?.avatarBgColor || undefined;
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -110,9 +105,7 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
           </div>
         </SidebarHeader>
         <SidebarContent className="flex-1 overflow-y-auto p-4">
-          {/* Sidebar Menu Items */}
           <SidebarMenu>
-            {/* Dashboard */}
             <SidebarMenuItem>
               <Link href="/admin" passHref>
                 <SidebarMenuButton tooltip="Dashboard" isActive={currentPath === '/admin'}>
@@ -122,7 +115,6 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
               </Link>
             </SidebarMenuItem>
 
-             {/* Logging & Scores */}
               <SidebarGroup>
                   <SidebarGroupLabel>Daily Data</SidebarGroupLabel>
                   <SidebarMenuItem>
@@ -144,12 +136,11 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
               </SidebarGroup>
 
 
-            {/* Competitions Section */}
-             <SidebarGroup>
+            <SidebarGroup>
               <SidebarGroupLabel>Competitions</SidebarGroupLabel>
                <SidebarMenuItem>
                  <Link href="/admin/competitions" passHref>
-                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath.startsWith('/admin/competitions')}> {/* Updated isActive check */}
+                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath.startsWith('/admin/competitions')}>
                       <Trophy />
                       <span>Competitions</span>
                     </SidebarMenuButton>
@@ -181,7 +172,6 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
                    </SidebarMenuItem>
             </SidebarGroup>
 
-             {/* Management Section */}
             <SidebarGroup>
               <SidebarGroupLabel>Management</SidebarGroupLabel>
                <SidebarMenuItem>
@@ -210,7 +200,6 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
               </SidebarMenuItem>
             </SidebarGroup>
 
-             {/* Agent View Link */}
             <SidebarSeparator />
             <SidebarMenuItem>
                 <Link href="/agent" passHref>
@@ -224,7 +213,6 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
-          {/* User Info */}
           <div className="flex items-center gap-3">
              {isLoadingUser ? (
                 <>
@@ -262,16 +250,15 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
         </SidebarFooter>
       </Sidebar>
       <SidebarInset
-        data-gradient-background="true" // Apply gradient background class
+        data-gradient-background="true"
         className="flex flex-col"
       >
          <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2> {/* TODO: Make dynamic */}
+              <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2>
             </div>
             <div className="flex items-center gap-4">
-               {/* Add RoleSwitcher */}
                <RoleSwitcher
                    availableRoles={roles}
                    currentLayout={currentLayout}
