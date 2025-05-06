@@ -3,6 +3,7 @@ import React from 'react';
 import { Header } from '@/components/landing-header';
 import { Footer } from '@/components/landing-footer';
 import { cn } from '@/lib/utils';
+import { AnimatedSvgBackground } from '@/components/animated-svg-background'; // Import the new component
 
 export default function PublicLayout({
   children,
@@ -10,20 +11,18 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen"> {/* Changed to relative, min-h-screen */}
-      {/* Fixed Background Container - Apply new subtle background class */}
+    <div className="relative min-h-screen">
+      {/* Fixed Background Container - Now hosts the animated SVG */}
       <div
-        className={cn(
-          "fixed-background-container", // Use the dedicated class for positioning
-          "subtle-geometric-background" // Apply the new pattern background
-        )}
-      />
+        className="fixed-background-container" // Keep this for positioning
+      >
+        <AnimatedSvgBackground /> {/* Render the animated SVG background */}
+      </div>
 
       {/* Scrollable Content Container */}
-      <div className="scrollable-content-container"> {/* Use the dedicated class */}
+      <div className="scrollable-content-container">
         <Header />
-        {/* Main content area within the scrollable container */}
-        <main className="w-full"> {/* Removed flex-grow as height is managed by container */}
+        <main className="w-full">
           {children}
         </main>
         <Footer />
