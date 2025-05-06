@@ -9,7 +9,7 @@ import { CheckCircle, Trophy, Users, BarChart, Zap, Target } from 'lucide-react'
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress'; // Import Progress
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
-import AnimatedIconBackground from '@/components/animated-icon-background'; // Import the new component
+// import AnimatedIconBackground from '@/components/animated-icon-background'; // REMOVE Import
 import { MockupKpiDefinition } from '@/components/landing-mockup-kpi'; // Import KPI Definition Mockup
 import { MockupProgressTracking } from '@/components/landing-mockup-progress'; // Import Progress Tracking Mockup
 import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard'; // Import Leaderboard Mockup
@@ -52,16 +52,15 @@ export default function LandingPage() {
   return (
     // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Remove animated background attribute, add relative positioning */}
+      {/* Hero Section - Add relative positioning */}
       <section
         className="w-full py-20 md:py-32 lg:py-40 text-center relative overflow-hidden" // Add relative and overflow-hidden
       >
-         {/* Add the Canvas Background Component */}
-         <AnimatedIconBackground />
+         {/* REMOVE the Canvas Background Component */}
+         {/* <AnimatedIconBackground /> */}
 
         {/* Container centers the content and applies padding */}
         <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Keep relative and z-index */}
-          {/* Removed text animations */}
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg"> {/* Added drop shadow */}
             Welcome to KpiQuest
           </h1>
@@ -125,7 +124,6 @@ export default function LandingPage() {
               </div>
 
               {/* Mockup Section */}
-              {/* Removed fade-in-up animation */}
               <div className="space-y-6">
                   {/* Mock KPI Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
