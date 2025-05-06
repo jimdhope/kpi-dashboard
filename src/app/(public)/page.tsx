@@ -8,6 +8,7 @@ import { CheckCircle, Trophy, Users, BarChart, Zap, Target } from 'lucide-react'
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress'; // Import Progress
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
+import AnimatedIconBackground from '@/components/animated-icon-background'; // Import the new component
 
 
 // Mock Leaderboard Entry Component
@@ -47,18 +48,21 @@ export default function LandingPage() {
   return (
     // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Apply animated background via data attribute */}
+      {/* Hero Section - Remove animated background attribute, add relative positioning */}
       <section
-        data-animated-background="true" // Apply animated background
-        className="w-full py-20 md:py-32 lg:py-40 text-center relative" // Add relative positioning
+        // Removed data-animated-background="true"
+        className="w-full py-20 md:py-32 lg:py-40 text-center relative overflow-hidden" // Add relative and overflow-hidden
       >
+         {/* Add the Canvas Background Component */}
+         <AnimatedIconBackground />
+
         {/* Container centers the content and applies padding */}
-        <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Add relative and z-index */}
+        <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Keep relative and z-index */}
           {/* Removed text animations */}
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary">
+          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg"> {/* Added drop shadow */}
             Welcome to KpiQuest
           </h1>
-          <p className="mx-auto max-w-[700px] text-foreground/80 md:text-xl mt-4">
+          <p className="mx-auto max-w-[700px] text-foreground/90 md:text-xl mt-4 drop-shadow-sm"> {/* Increased text opacity */}
             Gamify your team's performance, track KPIs effortlessly, and foster friendly competition to drive results.
           </p>
           <div className="mt-8">
