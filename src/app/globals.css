@@ -16,14 +16,14 @@ body {
   }
 
   :root {
-    /* Teal Theme - Light Mode */
-    --background: 206 17% 94%; /* #ecf0f1 */
+    /* Light Mode - Lighter version of #4281a4 for background */
+    --background: 203 42% 94%; /* #e9f1f6 - Lighter version of #4281a4 */
     --foreground: 0 0% 10%; /* Dark Gray */
     --card: hsla(0, 0%, 100%, 0.80); /* White with 80% opacity */
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-    --primary: 180 100% 25%; /* Teal #008080 */
+    --primary: 180 100% 25%; /* Teal #008080 - Keeping primary as teal for now */
     --primary-foreground: 0 0% 100%; /* White */
     --secondary: 0 0% 90%; /* Slightly darker gray */
     --secondary-foreground: 0 0% 10%;
@@ -41,7 +41,6 @@ body {
     --chart-3: 210 40% 50%; /* Blueish gray */
     --chart-4: 30 80% 60%; /* Orangeish */
     --chart-5: 120 40% 55%; /* Greenish */
-    --radius: 0.5rem;
     --sidebar-background: hsla(0, 0%, 98%, 0.80);
     --sidebar-foreground: 0 0% 20%;
     --sidebar-primary: 180 100% 25%;
@@ -51,15 +50,15 @@ body {
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 180 100% 25%;
 
-    /* Light Mode SVG Blob Colors */
-    --background-blob-1: 0 0% 97%;      /* #f8f8f8 */
-    --background-blob-2: 0 0% 97%;      /* #f8f8f8 */
-    --background-blob-3: 0 0% 97%;      /* #f8f8f8 */
-    --background-blob-4: 0 0% 97%;      /* #f8f8f8 */
+    /* Light Mode SVG Blob Colors - derived from the new background */
+    --background-blob-1: 203 42% 97%; /* #f5f8fa - Even lighter version */
+    --background-blob-2: 203 42% 97%;
+    --background-blob-3: 203 42% 97%;
+    --background-blob-4: 203 42% 97%;
   }
 
   .dark {
-    /* Teal Theme - Dark Mode */
+    /* Dark Mode */
     --background: 0 0% 12%; /* #1e1e1e */
     --foreground: 0 0% 98%; /* White */
     --card: hsla(210, 10%, 18%, 0.80);
