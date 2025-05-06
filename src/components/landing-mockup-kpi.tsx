@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -22,19 +21,19 @@ export function MockupKpiDefinition() {
             {/* Rule Name */}
             <div className="flex items-center gap-2"> {/* Use flex for horizontal layout */}
                 <Label htmlFor="mock-rule-name-1" className="text-xs text-muted-foreground w-12 text-right flex-shrink-0">Name:</Label> {/* Fixed width, right align */}
-                <Input id="mock-rule-name-1" placeholder="e.g., Sales Calls" className="h-8 text-xs bg-card/70 flex-grow" disabled /> {/* Takes remaining space */}
+                <Input id="mock-rule-name-1" placeholder="e.g., Sales Calls" className="h-8 text-xs bg-card/70 flex-grow" /> {/* Removed disabled */}
             </div>
             {/* Emoji and Points */}
             <div className="flex items-center gap-4"> {/* Main flex container for emoji/points row */}
                  {/* Emoji Group */}
                  <div className="flex items-center gap-2 flex-1"> {/* Flex for Emoji Label and Input */}
                      <Label htmlFor="mock-rule-emoji-1" className="text-xs text-muted-foreground w-12 text-right flex-shrink-0">Emoji:</Label>
-                     <Input id="mock-rule-emoji-1" placeholder="📞" className="h-8 text-xs text-center bg-card/70 w-10" disabled /> {/* Fixed width */}
+                     <Input id="mock-rule-emoji-1" placeholder="📞" className="h-8 text-xs text-center bg-card/70 w-10" /> {/* Removed disabled */}
                  </div>
                  {/* Points Group */}
                  <div className="flex items-center gap-2 flex-1"> {/* Flex for Points Label and Input */}
                     <Label htmlFor="mock-rule-points-1" className="text-xs text-muted-foreground w-12 text-right flex-shrink-0">Points:</Label>
-                    <Input id="mock-rule-points-1" type="number" placeholder="5" className="h-8 text-xs bg-card/70 w-16" disabled /> {/* Fixed width */}
+                    <Input id="mock-rule-points-1" type="number" placeholder="5" className="h-8 text-xs bg-card/70 w-16" /> {/* Removed disabled */}
                  </div>
             </div>
         </div>
@@ -44,24 +43,24 @@ export function MockupKpiDefinition() {
              {/* Rule Name */}
              <div className="flex items-center gap-2">
                 <Label htmlFor="mock-rule-name-2" className="text-xs text-muted-foreground w-12 text-right flex-shrink-0">Name:</Label>
-                <Input id="mock-rule-name-2" placeholder="e.g., Deals Closed" className="h-8 text-xs bg-card/70 flex-grow" disabled />
+                <Input id="mock-rule-name-2" placeholder="e.g., Deals Closed" className="h-8 text-xs bg-card/70 flex-grow" /> {/* Removed disabled */}
              </div>
             {/* Emoji and Points */}
              <div className="flex items-center gap-4">
                  <div className="flex items-center gap-2 flex-1">
                      <Label htmlFor="mock-rule-emoji-2" className="text-xs text-muted-foreground w-12 text-right flex-shrink-0">Emoji:</Label>
-                     <Input id="mock-rule-emoji-2" placeholder="🤝" className="h-8 text-xs text-center bg-card/70 w-10" disabled />
+                     <Input id="mock-rule-emoji-2" placeholder="🤝" className="h-8 text-xs text-center bg-card/70 w-10" /> {/* Removed disabled */}
                  </div>
                  <div className="flex items-center gap-2 flex-1">
                     <Label htmlFor="mock-rule-points-2" className="text-xs text-muted-foreground w-12 text-right flex-shrink-0">Points:</Label>
-                    <Input id="mock-rule-points-2" type="number" placeholder="20" className="h-8 text-xs bg-card/70 w-16" disabled />
+                    <Input id="mock-rule-points-2" type="number" placeholder="20" className="h-8 text-xs bg-card/70 w-16" /> {/* Removed disabled */}
                  </div>
              </div>
          </div>
 
 
         {/* Add Rule Button */}
-        <Button variant="outline" size="sm" className="w-full text-xs h-7 mt-3" disabled>
+        <Button variant="outline" size="sm" className="w-full text-xs h-7 mt-3"> {/* Removed disabled */}
           <PlusCircle className="mr-1 h-3 w-3" /> Add Rule
         </Button>
       </CardContent>
