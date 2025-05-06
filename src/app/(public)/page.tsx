@@ -52,9 +52,9 @@ export default function LandingPage() {
   return (
     // Ensure this top-level div uses w-full.
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Add relative positioning */}
+      {/* Hero Section - Remove relative positioning and canvas */}
       <section
-        className="w-full py-20 md:py-32 lg:py-40 text-center relative overflow-hidden" // Add relative and overflow-hidden
+        className="w-full py-20 md:py-32 lg:py-40 text-center bg-gradient-to-br from-background to-background-end" // Use gradient background instead of canvas
       >
          {/* REMOVE the Canvas Background Component */}
          {/* <AnimatedIconBackground /> */}
