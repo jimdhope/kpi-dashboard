@@ -160,9 +160,9 @@ export default function LandingPage() {
               {/* Step 1: Define KPIs */}
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
-                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">1</div>
-                 {/* Add margin-bottom to mockup and center it */}
-                 <div className="mb-6 w-full max-w-xs mx-auto"> {/* Wrapper for mockup with mb-6 */}
+                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">1</div>
+                 {/* Add margin-bottom to mockup and center it. Set min-height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[150px] flex items-center justify-center flex-shrink-0"> {/* Wrapper for mockup with mb-6, min-height, flex */}
                     <MockupKpiDefinition />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
@@ -173,9 +173,9 @@ export default function LandingPage() {
               {/* Step 2: Track Progress */}
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
-                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">2</div>
-                 {/* Add margin-bottom to mockup and center it */}
-                 <div className="mb-6 w-full max-w-xs mx-auto"> {/* Wrapper for mockup with mb-6 */}
+                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">2</div>
+                 {/* Add margin-bottom to mockup and center it. Set min-height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[150px] flex items-center justify-center flex-shrink-0"> {/* Wrapper for mockup with mb-6, min-height, flex */}
                     <MockupProgressTracking />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
@@ -186,9 +186,9 @@ export default function LandingPage() {
               {/* Step 3: Celebrate Wins */}
               <div className="flex flex-col items-center text-center">
                  {/* Center the step number and add margin */}
-                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center">3</div>
-                 {/* Add margin-bottom to mockup and center it */}
-                 <div className="mb-6 w-full max-w-xs mx-auto"> {/* Wrapper for mockup with mb-6 */}
+                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">3</div>
+                 {/* Add margin-bottom to mockup and center it. Set min-height */}
+                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[150px] flex items-center justify-center flex-shrink-0"> {/* Wrapper for mockup with mb-6, min-height, flex */}
                     <MockupLeaderboardSnippet />
                  </div>
                  {/* Ensure heading and paragraph have consistent bottom margin */}
