@@ -9,19 +9,19 @@ const cssContent = `
     100% { transform: rotate(360deg); }
   }
   .out-top {
-    animation: rotate 120s linear infinite; /* Slowed down from 80s */
+    animation: rotate 150s linear infinite; /* Further slowed down */
     transform-origin: 13px 25px;
   }
   .in-top {
-    animation: rotate 80s linear infinite; /* Slowed down from 50s */
+    animation: rotate 100s linear infinite; /* Further slowed down */
     transform-origin: 13px 25px;
   }
   .out-bottom {
-    animation: rotate 150s linear infinite; /* Slowed down from 100s */
+    animation: rotate 180s linear infinite; /* Further slowed down */
     transform-origin: 84px 93px;
   }
   .in-bottom {
-    animation: rotate 100s linear infinite; /* Slowed down from 65s */
+    animation: rotate 120s linear infinite; /* Further slowed down */
     transform-origin: 84px 93px;
   }
 `;
