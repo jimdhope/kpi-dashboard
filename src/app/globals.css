@@ -17,7 +17,7 @@ body {
 
   :root {
     /* Teal Theme - Light Mode */
-    --background: 0 0% 96%; /* Slightly off-white #F5F5F5 */
+    --background: 206 17% 94%; /* #ecf0f1 */
     --foreground: 0 0% 10%; /* Dark Gray */
     --card: hsla(0, 0%, 100%, 0.80); /* White with 80% opacity */
     --card-foreground: 0 0% 10%;
@@ -51,16 +51,16 @@ body {
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 180 100% 25%;
 
-    /* Subtle background blob colors for Light Mode - using light grays and pale teals */
-    --background-blob-1: 0 0% 93%;      /* Slightly darker gray #EDEDED */
-    --background-blob-2: 180 20% 95%;  /* Pale teal #F0FAFA */
-    --background-blob-3: 0 0% 98%;      /* Lighter gray #FAFAFA */
-    --background-blob-4: 180 15% 93%;  /* Another pale teal #E8F7F7 */
+    /* Light Mode SVG Blob Colors */
+    --background-blob-1: 0 0% 97%;      /* #f8f8f8 */
+    --background-blob-2: 0 0% 97%;      /* #f8f8f8 */
+    --background-blob-3: 0 0% 97%;      /* #f8f8f8 */
+    --background-blob-4: 0 0% 97%;      /* #f8f8f8 */
   }
 
   .dark {
     /* Teal Theme - Dark Mode */
-    --background: 210 10% 15%; /* Dark Blue-Gray */
+    --background: 0 0% 12%; /* #1e1e1e */
     --foreground: 0 0% 98%; /* White */
     --card: hsla(210, 10%, 18%, 0.80);
     --card-foreground: 0 0% 98%;
@@ -93,12 +93,11 @@ body {
     --sidebar-border: 210 10% 25%;
     --sidebar-ring: 180 80% 60%;
 
-    /* Specific dark hex codes for background blobs in Dark Mode */
-    --background-blob-1: #1e1e1e; /* Hex for first dark blob */
-    --background-blob-2: #272729; /* Hex for second dark blob */
-    /* Use variations or slightly lighter shades for the other two */
-    --background-blob-3: #222224; /* Variation of #272729 */
-    --background-blob-4: #1a1a1c; /* Variation of #1e1e1e */
+    /* Dark Mode SVG Blob Colors */
+    --background-blob-1: 0 0% 15%; /* #272729 */
+    --background-blob-2: 0 0% 15%; /* #272729 */
+    --background-blob-3: 0 0% 15%; /* #272729 */
+    --background-blob-4: 0 0% 15%; /* #272729 */
   }
 }
 
