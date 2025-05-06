@@ -17,7 +17,7 @@ export function Footer() {
               <path fillRule="evenodd" d="M12.75 3a.75.75 0 01.75-.75 8.25 8.25 0 018.25 8.25.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V3z" clipRule="evenodd" />
             </svg>
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-            Built for fun. © {currentYear} KpiQuest. All rights reserved.
+            Built for fun. © {currentYear} KPI Quest. All rights reserved.
           </p>
         </div>
         {/* Add social links or other footer content here if needed */}

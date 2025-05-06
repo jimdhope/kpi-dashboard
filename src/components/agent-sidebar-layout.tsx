@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, Settings, CheckSquare } from 'lucide-react'; // Added CheckSquare
+import { Home, Settings, CheckSquare, UserSquare } from 'lucide-react'; // Added CheckSquare and UserSquare
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -22,21 +22,30 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { app, db } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
-import type { AppUser } from '@/services/user'; // Import UserRole
+import type { AppUser, UserRole } from '@/services/user'; // Import UserRole
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-// Removed RoleSwitcher import
+import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitcher
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
-  // Removed roles, currentLayout, onLayoutChange props
+  roles: UserRole[]; // Added roles prop
+  currentLayout: 'admin' | 'agent' | null; // Added currentLayout prop
+  onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Added onLayoutChange prop
 }
 
-export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
+export function AgentSidebarLayout({ children, roles, currentLayout, onLayoutChange }: AgentSidebarLayoutProps) {
   const currentPath = usePathname();
-    const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
+
+    // Log received props for debugging
+    useEffect(() => {
+        // Use console.log for client-side components
+        console.log("[AgentSidebarLayout] Received props:", { roles, currentLayout });
+    }, [roles, currentLayout]);
+
 
   // Fetch user data (keep this as it provides name/avatar)
   useEffect(() => {
@@ -93,7 +102,7 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
               <path fillRule="evenodd" d="M2.25 13.5a8.25 8.25 0 018.25-8.25.75.75 0 01.75.75v6.75H18a.75.75 0 01.75.75 8.25 8.25 0 01-16.5 0z" clipRule="evenodd" />
               <path fillRule="evenodd" d="M12.75 3a.75.75 0 01.75-.75 8.25 8.25 0 018.25 8.25.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V3z" clipRule="evenodd" />
             </svg>
-            <h1 className="text-xl font-semibold">KpiQuest</h1>
+            <h1 className="text-xl font-semibold">KPI Quest</h1>
              <span className="text-xs text-muted-foreground ml-1">(Agent)</span>
           </div>
         </SidebarHeader>
@@ -107,6 +116,7 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+            {/* Add Agent-specific menu items here if needed */}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
@@ -148,16 +158,21 @@ export function AgentSidebarLayout({ children }: AgentSidebarLayoutProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset
-        data-animated-background="true"
+        data-gradient-background="true" // Apply gradient background class
         className="flex flex-col"
       >
          <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2> {/* Changed title */}
+              <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2>
             </div>
             <div className="flex items-center gap-4">
-               {/* Removed RoleSwitcher */}
+               {/* Add RoleSwitcher */}
+               <RoleSwitcher
+                   availableRoles={roles}
+                   currentLayout={currentLayout}
+                   onLayoutChange={onLayoutChange}
+               />
                <ThemeToggle />
                <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>

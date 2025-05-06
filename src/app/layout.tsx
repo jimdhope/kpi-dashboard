@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
 
 export const metadata: Metadata = {
-  title: 'KpiQuest',
+  title: 'KPI Quest',
   description: 'Track KPI achievements and gamify progress.',
 };
 

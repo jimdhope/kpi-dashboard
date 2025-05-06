@@ -61,7 +61,7 @@ export default function LandingPage() {
         {/* Container centers the content and applies padding, ensuring it's above the background */}
         <div className="container mx-auto px-4 md:px-6 relative z-10"> {/* Keep relative and z-index */}
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg"> {/* Added drop shadow */}
-            Welcome to KpiQuest
+            Welcome to KPI Quest
           </h1>
           <p className="mx-auto max-w-[700px] text-foreground/90 md:text-xl mt-4 drop-shadow-sm"> {/* Increased text opacity */}
             Gamify your team's performance, track KPIs effortlessly, and foster friendly competition to drive results.
@@ -79,7 +79,7 @@ export default function LandingPage() {
          {/* Container centers the content and applies padding */}
          <div className="container mx-auto px-4 md:px-6">
            <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-16">
-             How KpiQuest Elevates Performance
+             How KPI Quest Elevates Performance
            </h2>
            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               {/* Feature Text */}
@@ -205,7 +205,7 @@ export default function LandingPage() {
             Ready to Boost Performance?
           </h2>
           <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl mt-4 mb-8">
-            Log in to start your KpiQuest adventure today.
+            Log in to start your KPI Quest adventure today.
           </p>
            <Link href="/login" passHref>
              <Button size="lg" variant="default">

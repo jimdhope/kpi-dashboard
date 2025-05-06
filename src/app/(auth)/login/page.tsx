@@ -123,7 +123,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/5 via-background to-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Login to KpiQuest</CardTitle>
+          <CardTitle className="text-2xl font-bold">Login to KPI Quest</CardTitle>
           <CardDescription>Enter your credentials below</CardDescription>
         </CardHeader>
         <CardContent>
