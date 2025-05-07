@@ -19,86 +19,52 @@ export interface PodTargetSummaryForTeams {
     target: number | null;
 }
 
-// Function to format the message for Microsoft Teams using MessageCard format
-const formatTeamsMessageCard = (
+// Function to format the data needed for the Adaptive Card
+const formatDataForAdaptiveCard = (
     podName: string,
     date: Date,
     rules: RuleFormData[],
     agentScores: AgentScoreForTeams[],
     podTargetSummary: PodTargetSummaryForTeams[]
-): object => {
-    console.log(`[formatTeamsMessageCard] Formatting message for Pod: ${podName}, Date: ${date.toISOString()}`);
-    console.log("[formatTeamsMessageCard] Rules:", rules);
-    console.log("[formatTeamsMessageCard] Agent Scores:", agentScores);
-    console.log("[formatTeamsMessageCard] Pod Target Summary:", podTargetSummary);
+): { title: string; kpiKey: string; kpiTable: string; kpiTargets: string } => {
+    console.log(`[formatDataForAdaptiveCard] Formatting data for Pod: ${podName}, Date: ${date.toISOString()}`);
 
-    const formattedDate = format(date, 'PPPP');
+    const formattedDate = format(date, 'PPPP'); // e.g., Monday, May 5th, 2025
+    const title = `${podName} - Daily Scores (${formattedDate})`;
 
-    const ruleKeyString = rules
-        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} ${rule.name} (${rule.points} pts)`)
-        .join('  \n'); // Use newline for better readability in Teams facts
-    console.log("[formatTeamsMessageCard] Rule Key String:", ruleKeyString);
+    const kpiKey = rules
+        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
+        .join('  \n'); // Use newline for better readability in Adaptive Card
 
-    let tableMarkdown = "";
+    let kpiTable = "";
     if (agentScores.length > 0) {
-        tableMarkdown += "Agent Name | Achievements | Score\n";
-        tableMarkdown += "---|---|---\n";
-        agentScores.forEach(score => {
-            // Replace pipes in emoji string to avoid breaking Markdown table
-            const safeEmojiString = score.emojiString.replace(/\|/g, '');
-            tableMarkdown += `${score.agentFirstName} | ${safeEmojiString || '-'} | **${score.totalPoints}**\n`;
-        });
+        // Note: Adaptive Cards don't directly support Markdown tables like MessageCard.
+        // We'll format this as lines of text. You might need a more complex Adaptive Card structure (e.g., ColumnSet) for a true table.
+        kpiTable = agentScores.map(score => {
+            // Escape characters that might interfere with Adaptive Card processing if needed
+            const safeEmojiString = score.emojiString || '-';
+            return `- **${score.agentFirstName}:** ${safeEmojiString} (${score.totalPoints} pts)`;
+        }).join('  \n'); // Newline between agents
     } else {
-        tableMarkdown = "_No scores logged today._";
+        kpiTable = "_No scores logged today._";
     }
-    console.log("[formatTeamsMessageCard] Table Markdown:", tableMarkdown);
 
-    let podSummaryString = "";
+    let kpiTargets = "";
     if (podTargetSummary.length > 0) {
-        podSummaryString = podTargetSummary
-            // Use newline for better readability in Teams text section
+        kpiTargets = podTargetSummary
             .map(summary => `${summary.ruleEmoji} ${summary.ruleName} ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
-            .join('  \n');
+            .join('  \n'); // Use newline between targets
     } else {
-        podSummaryString = "_No targets set for today._";
+        kpiTargets = "_No targets set for today._";
     }
-    console.log("[formatTeamsMessageCard] Pod Summary String:", podSummaryString);
 
-    const messageCard = {
-        "@type": "MessageCard",
-        "@context": "http://schema.org/extensions",
-        "summary": `KpiQuest Daily Scores for ${podName} - ${formattedDate}`,
-        "themeColor": "008080", // Teal color
-        "sections": [
-            {
-                "title": `**${podName} - Daily Scores (${formattedDate})**`,
-                "facts": [
-                    {
-                        "name": "Rule Key:",
-                        "value": ruleKeyString // Use formatted string with newlines
-                    }
-                ],
-                "markdown": true
-            },
-            {
-                "title": "**Agent Scores**",
-                "text": tableMarkdown, // Use generated Markdown table
-                "markdown": true
-            },
-            {
-                "title": "**Pod Targets Today**",
-                "text": podSummaryString, // Use generated summary string with newlines
-                "markdown": true
-            }
-        ]
-    };
-    // Corrected log to show the actual object being returned
-    console.log("[formatTeamsMessageCard] Generated MessageCard Payload:", messageCard);
-    return messageCard;
+    const formattedData = { title, kpiKey, kpiTable, kpiTargets };
+    console.log("[formatDataForAdaptiveCard] Generated Data:", formattedData);
+    return formattedData;
 };
 
 
-// Updated function: Now accepts all necessary data as parameters
+// Function to send the Adaptive Card payload to Teams
 export const sendTeamsUpdate = async (
     podName: string,
     webhookUrl: string,
@@ -116,11 +82,57 @@ export const sendTeamsUpdate = async (
             throw new Error(`No webhook URL configured for pod ${podName}.`);
         }
 
-        currentStep = "Formatting MessageCard";
-        // Ensure the variable is assigned correctly
-        const messageCardPayload = formatTeamsMessageCard(podName, date, rules, agentScores, podTargetSummary);
+        currentStep = "Formatting Data for Adaptive Card";
+        const cardData = formatDataForAdaptiveCard(podName, date, rules, agentScores, podTargetSummary);
 
-        console.log(`[sendTeamsUpdate] Sending formatted MessageCard to webhook for pod ${podName}. URL: ${webhookUrl}`);
+        currentStep = "Constructing Adaptive Card Payload";
+        // Construct the Adaptive Card JSON using the formatted data
+        const adaptiveCardJson = {
+            "type": "AdaptiveCard",
+            "body": [
+                {
+                    "type": "TextBlock",
+                    "size": "Medium",
+                    "weight": "Bolder",
+                    "text": cardData.title // Use the title generated
+                },
+                {
+                    "type": "TextBlock",
+                    "text": cardData.kpiKey, // Use the generated key
+                    "wrap": true,
+                    "separator": true // Add a separator
+                },
+                {
+                    "type": "TextBlock",
+                    "text": cardData.kpiTable, // Use the generated table string
+                    "wrap": true,
+                    "separator": true
+                },
+                {
+                    "type": "TextBlock",
+                    "text": cardData.kpiTargets, // Use the generated targets string
+                    "wrap": true
+                }
+            ],
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "version": "1.6" // Use a supported version
+        };
+
+        // Construct the final payload for the Teams webhook
+        const webhookPayload = {
+            "type": "message",
+            "attachments": [
+                {
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "contentUrl": null, // Required, but can be null
+                    "content": adaptiveCardJson // Embed the Adaptive Card JSON here
+                }
+            ]
+        };
+
+        console.log(`[sendTeamsUpdate] Sending Adaptive Card payload to webhook for pod ${podName}. URL: ${webhookUrl}`);
+        console.log("[sendTeamsUpdate] Payload:", JSON.stringify(webhookPayload, null, 2)); // Log the full payload
+
 
         currentStep = "Sending Webhook Request";
         const response = await fetch(webhookUrl, {
@@ -128,8 +140,7 @@ export const sendTeamsUpdate = async (
             headers: {
                 'Content-Type': 'application/json',
             },
-             // Use the assigned variable here
-            body: JSON.stringify(messageCardPayload),
+            body: JSON.stringify(webhookPayload),
         });
         console.log(`[sendTeamsUpdate] Webhook response status: ${response.status}, ok: ${response.ok}`);
 
@@ -138,7 +149,8 @@ export const sendTeamsUpdate = async (
             console.error(`[sendTeamsUpdate] Failed to send webhook to Teams for pod ${podName}. Status: ${response.status}, Response: ${errorText}`);
             throw new Error(`Teams webhook failed with status ${response.status}: ${errorText}`);
         } else {
-            console.log(`[sendTeamsUpdate] Successfully sent webhook update for pod ${podName}.`);
+            const responseText = await response.text(); // Read response text even on success
+            console.log(`[sendTeamsUpdate] Successfully sent webhook update for pod ${podName}. Response: ${responseText}`);
         }
 
     } catch (error: any) {
@@ -147,6 +159,7 @@ export const sendTeamsUpdate = async (
             console.error(`[sendTeamsUpdate] Network error calling Teams webhook during step "${currentStep}":`, error.message);
             throw new Error(`Network error calling Teams webhook: ${error.message}`);
         } else {
+            // Re-throw other errors to be caught by the calling function
             throw error;
         }
     }
