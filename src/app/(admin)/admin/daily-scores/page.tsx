@@ -1,3 +1,4 @@
+
 // src/app/(admin)/admin/daily-scores/page.tsx
 'use client';
 
@@ -367,23 +368,34 @@ export default function AdminDailyScoresPage() {
       return;
     }
 
-    setIsSendingToTeams(true);
-    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, date: ${selectedDate}, podName: ${podName}`);
-    try {
-      // Prepare data for the server action in the format it expects
-      const agentScoresForTeams: AgentScoreForTeams[] = agentScores.map(as => ({
+    // Prepare data payload *before* calling the server action
+    const agentScoresForTeams: AgentScoreForTeams[] = agentScores.map(as => ({
         agentFirstName: as.agentFirstName,
         emojiString: as.emojiString,
         totalPoints: as.totalPoints,
-      }));
+    }));
 
-      const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = podTargetSummary.map(pts => ({
+    const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = podTargetSummary.map(pts => ({
         ruleName: pts.ruleName,
         ruleEmoji: pts.ruleEmoji,
         achieved: pts.achieved,
         target: pts.target,
-      }));
+    }));
 
+    // Log the payload in the browser console
+    console.log("[DailyScoresPage] Data being sent to Teams:", {
+        podName: podName,
+        webhookUrl: webhookUrl, // Careful logging webhook URLs, maybe omit in production logs
+        date: selectedDate,
+        rules: rules,
+        agentScoresForTeams: agentScoresForTeams,
+        podTargetSummaryForTeams: podTargetSummaryForTeams
+    });
+
+    setIsSendingToTeams(true);
+    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, date: ${selectedDate}, podName: ${podName}`);
+    try {
+      // Call the server action with the prepared data
       await sendTeamsUpdate(
         podName,
         webhookUrl,
