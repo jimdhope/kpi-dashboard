@@ -16,14 +16,15 @@ import type { AppUser } from '@/services/user';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { format, startOfDay } from 'date-fns';
 
-interface AgentScore {
+// Interface for agent scores passed TO this function
+export interface AgentScoreForTeams {
     agentFirstName: string;
     totalPoints: number;
     emojiString: string;
 }
 
-interface PodTargetSummary {
-    ruleId: string;
+// Interface for pod target summary passed TO this function
+export interface PodTargetSummaryForTeams {
     ruleName: string;
     ruleEmoji: string;
     achieved: number;
@@ -35,21 +36,24 @@ interface PodTargetSummary {
 const generateKpiKey = (rules: RuleFormData[]): string => {
   return rules
     .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
-    .join('  ');
+    .join('  \n'); // Use newline for better formatting in Teams
 };
 
-// Helper function to generate the agent scores table (Markdown)
-const generateAgentScoresTable = (agentScores: AgentScore[]): string => {
+// Helper function to generate the agent scores table (Markdown for Teams)
+const generateAgentScoresTable = (agentScores: AgentScoreForTeams[]): string => {
   if (agentScores.length === 0) return "No agent scores recorded for today.";
-  let table = "- **Agent:** Achievements (Total Score)\n"; // Simple list format
+  let table = "**Agent** | **Achievements** | **Total Score**\n";
+  table += ":---|:---|:---\n"; // Markdown table header separator
   agentScores.forEach(score => {
-    table += `- **${score.agentFirstName}:** ${score.emojiString || '-'} (${score.totalPoints} pts)\n`;
+    // Ensure emojiString is not empty before trying to display it
+    const achievementsDisplay = score.emojiString && score.emojiString.trim() !== '' ? score.emojiString : '-';
+    table += `${score.agentFirstName} | ${achievementsDisplay} | ${score.totalPoints} pts\n`;
   });
   return table;
 };
 
 // Helper function to generate the pod targets summary string
-const generatePodTargetsSummary = (podTargetSummary: PodTargetSummary[]): string => {
+const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[]): string => {
   if (podTargetSummary.length === 0) return "No pod targets set for today.";
   return podTargetSummary
     .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
@@ -62,8 +66,8 @@ export const sendTeamsUpdate = async (
     webhookUrl: string,
     date: Date,
     rules: RuleFormData[],
-    agentScores: AgentScore[],
-    podTargetSummary: PodTargetSummary[]
+    agentScores: AgentScoreForTeams[],
+    podTargetSummary: PodTargetSummaryForTeams[]
 ) => {
     console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}, Webhook URL Provided: ${!!webhookUrl}`);
     let currentStep = "Initial Checks";
@@ -80,57 +84,55 @@ export const sendTeamsUpdate = async (
         const kpiTable = generateAgentScoresTable(agentScores);
         const kpiTargets = generatePodTargetsSummary(podTargetSummary);
 
-        // Construct the final payload for the Teams webhook
-        // This payload uses Adaptive Card templating syntax
+        // Construct the final payload for the Teams webhook using Adaptive Card format
         const webhookPayload = {
             "type": "message",
             "attachments": [
                 {
                     "contentType": "application/vnd.microsoft.card.adaptive",
-                    "contentUrl": null,
+                    "contentUrl": null, // Required even if null
                     "content": {
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
-                        "version": "1.6",
+                        "version": "1.6", // Specify version
                         "body": [
                             {
                                 "type": "TextBlock",
                                 "size": "Medium",
                                 "weight": "Bolder",
-                                "text": "{{title}}" // Use data binding syntax
+                                "text": title // Bind title directly
                             },
                             {
                                 "type": "TextBlock",
-                                "text": "{{kpiKey}}", // Use data binding syntax
+                                "text": kpiKey, // Bind kpiKey directly
                                 "wrap": true,
-                                "separator": true
+                                "separator": true,
+                                "spacing": "Medium" // Add spacing
                             },
                             {
                                 "type": "TextBlock",
-                                "text": "{{kpiTable}}", // Use data binding syntax
+                                "text": kpiTable, // Bind kpiTable directly
                                 "wrap": true,
-                                "separator": true
+                                "separator": true,
+                                "spacing": "Medium" // Add spacing
                             },
                             {
                                 "type": "TextBlock",
-                                "text": "{{kpiTargets}}", // Use data binding syntax
-                                "wrap": true
+                                "text": kpiTargets, // Bind kpiTargets directly
+                                "wrap": true,
+                                "spacing": "Medium" // Add spacing
                             }
-                        ],
-                        // Provide the data context using $data
-                        "$data": {
-                            "title": title,
-                            "kpiKey": kpiKey,
-                            "kpiTable": kpiTable,
-                            "kpiTargets": kpiTargets
-                        }
+                        ]
+                         // No need for $data block when sending directly to Teams webhook with this structure
                     }
                 }
             ]
         };
 
+
         currentStep = "Sending Webhook Request";
-        console.log("[sendTeamsUpdate] Sending payload:", JSON.stringify(webhookPayload, null, 2));
+        // *** Log the payload before sending ***
+        console.log("[sendTeamsUpdate] Webhook Payload being sent:", JSON.stringify(webhookPayload, null, 2));
 
         const response = await fetch(webhookUrl, {
             method: 'POST',
@@ -139,8 +141,10 @@ export const sendTeamsUpdate = async (
             },
             body: JSON.stringify(webhookPayload),
         });
+
         console.log(`[sendTeamsUpdate] Webhook response status: ${response.status}, ok: ${response.ok}`);
-        console.log("[sendTeamsUpdate] Full Response Headers:", response.headers); // Log all headers
+        // Removed full header log for brevity, uncomment if needed
+        // console.log("[sendTeamsUpdate] Full Response Headers:", response.headers);
 
         if (!response.ok) {
             const errorText = await response.text();
