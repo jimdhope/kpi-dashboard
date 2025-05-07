@@ -19,8 +19,8 @@ import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Remove AvatarImage import
-import { Edit, Trash2, PlusCircle, Loader2, Users, Shield, UserPlus, Search } from 'lucide-react'; // Added Search
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Edit, Trash2, PlusCircle, Loader2, Users, Shield, UserPlus, Search } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -41,30 +41,31 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { PodForm, PodFormData } from '@/components/pod-form';
-import { ManagePodAgentsDialog } from '@/components/manage-pod-agents-dialog'; // Import the new dialog
+import { ManagePodAgentsDialog } from '@/components/manage-pod-agents-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
-import { createUser, AppUser, updateUserPodAssignment } from '@/services/user'; // Import AppUser and updateUserPodAssignment
-import { Input } from '@/components/ui/input'; // Import Input
-import { generateInitials } from '@/lib/utils'; // Import generateInitials
+import { createUser, AppUser, updateUserPodAssignment } from '@/services/user';
+import { Input } from '@/components/ui/input';
+import { generateInitials } from '@/lib/utils';
 
-// Pod type definition - Added logoInitials and logoBgColor
+// Pod type definition - Added teamsWebhookUrl
 export interface Pod {
   id: string;
   name: string;
-  logoUrl?: string; // Keep URL for data storage, but don't display image
-  logoInitials?: string; // Optional custom initials
-  logoBgColor?: string; // Optional custom background color
+  logoUrl?: string;
+  logoInitials?: string;
+  logoBgColor?: string;
   campaignId: string;
   podManagerId: string;
   teamLeaderId: string;
-  agentIds?: string[]; // Add agent IDs array
+  agentIds?: string[];
+  teamsWebhookUrl?: string; // Optional Teams webhook URL
   // Derived data (optional, fetch separately or join)
   campaignName?: string;
   podManagerName?: string;
   teamLeaderName?: string;
-  agentNames?: string[]; // Optional: derived agent names for display
+  agentNames?: string[];
 }
 
 const podsCollectionRef = collection(db, 'pods');
@@ -80,11 +81,11 @@ export default function AdminPodsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [isManageAgentsOpen, setIsManageAgentsOpen] = useState(false); // State for manage agents dialog
+  const [isManageAgentsOpen, setIsManageAgentsOpen] = useState(false);
   const [selectedPod, setSelectedPod] = useState<Pod | null>(null);
-  const [selectedPodForAgents, setSelectedPodForAgents] = useState<Pod | null>(null); // Pod selected for agent management
+  const [selectedPodForAgents, setSelectedPodForAgents] = useState<Pod | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
-  const [searchTerm, setSearchTerm] = useState(''); // State for table search
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   // Fetch Campaigns and Users
@@ -92,7 +93,7 @@ export default function AdminPodsPage() {
       const fetchRelatedData = async () => {
           setIsLoadingRelatedData(true);
           setError(null);
-          let unsubscribeUsers: Unsubscribe = () => {}; // Initialize with empty function
+          let unsubscribeUsers: Unsubscribe = () => {};
 
           try {
               const campaignSnapshot = await getDocs(query(campaignsCollectionRef, orderBy('name')));
@@ -103,8 +104,8 @@ export default function AdminPodsPage() {
               unsubscribeUsers = onSnapshot(usersQuery, (userSnapshot) => {
                   const fetchedUsers = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
                   setUsers(fetchedUsers);
-                  setError(null); // Clear error on successful user fetch/update
-                  setIsLoadingRelatedData(false); // Mark related data as loaded AFTER users are fetched
+                  setError(null);
+                  setIsLoadingRelatedData(false);
               }, (err) => {
                    console.error("Error fetching users with snapshot:", err);
                    setError("Failed to load users data. Pod management may be limited.");
@@ -113,7 +114,7 @@ export default function AdminPodsPage() {
                         title: "Data Loading Error",
                         description: "Could not load users.",
                     });
-                    setIsLoadingRelatedData(false); // Still mark as loaded even if error
+                    setIsLoadingRelatedData(false);
               });
 
           } catch (err) {
@@ -124,18 +125,17 @@ export default function AdminPodsPage() {
                   title: "Data Loading Error",
                   description: "Could not load campaigns.",
               });
-               setIsLoadingRelatedData(false); // Mark as loaded even on error
+               setIsLoadingRelatedData(false);
           }
-          return unsubscribeUsers; // Return the unsubscribe function for cleanup
+          return unsubscribeUsers;
       };
 
      const unsubscribePromise = fetchRelatedData();
 
-     // Cleanup function for the user listener
      return () => {
          unsubscribePromise.then(unsub => {
              if (typeof unsub === 'function') {
-                 unsub(); // Ensure it's a function before calling
+                 unsub();
              }
          }).catch(err => console.error("Error unsubscribing from users", err));
      };
@@ -145,10 +145,10 @@ export default function AdminPodsPage() {
 
   // Fetch Pods with real-time updates and enrich data
   useEffect(() => {
-     if (isLoadingRelatedData) return; // Don't fetch pods until campaigns/users are available
+     if (isLoadingRelatedData) return;
 
     setIsLoadingPods(true);
-    setError(null); // Reset error when starting to fetch pods
+    setError(null);
 
     const q = query(podsCollectionRef, orderBy('name'));
 
@@ -160,25 +160,25 @@ export default function AdminPodsPage() {
         const teamLeader = users.find(u => u.id === data.teamLeaderId);
         const agentNames = (data.agentIds || [])
             .map(id => users.find(u => u.id === id)?.name)
-            .filter((name): name is string => !!name); // Filter out undefined names
+            .filter((name): name is string => !!name);
 
         return {
           id: doc.id,
           ...data,
-          agentIds: data.agentIds || [], // Ensure agentIds is always an array
+          agentIds: data.agentIds || [],
           campaignName: campaign?.name || 'Unknown Campaign',
           podManagerName: podManager?.name || 'N/A',
           teamLeaderName: teamLeader?.name || 'N/A',
           agentNames: agentNames,
-          // Keep logoUrl, logoInitials, logoBgColor as they are from Firestore
           logoUrl: data.logoUrl || '',
           logoInitials: data.logoInitials || '',
           logoBgColor: data.logoBgColor || '',
+          teamsWebhookUrl: data.teamsWebhookUrl || '', // Include teamsWebhookUrl
         };
       });
       setPods(fetchedPods);
       setIsLoadingPods(false);
-      setError(null); // Clear error on successful pod fetch/update
+      setError(null);
     }, (err) => {
       console.error("Error fetching pods with snapshot:", err);
       setError("Failed to fetch pods. Please check your connection or permissions.");
@@ -190,7 +190,7 @@ export default function AdminPodsPage() {
       setIsLoadingPods(false);
     });
 
-    return () => unsubscribePods(); // Cleanup pod listener
+    return () => unsubscribePods();
   }, [toast, campaigns, users, isLoadingRelatedData]);
 
   // Filter pods based on search term
@@ -224,11 +224,9 @@ export default function AdminPodsPage() {
      setIsManageAgentsOpen(true);
    };
 
-   // Updated Pod Form Submission Handler using logoUrl, logoInitials, logoBgColor
    const handleFormSubmit = async (data: PodFormData) => {
         console.log("Pod Form Data Received:", data);
 
-        // --- 1. Handle User Creation ---
         let finalPodManagerId = data.podManagerId;
         let finalTeamLeaderId = data.teamLeaderId;
 
@@ -239,7 +237,7 @@ export default function AdminPodsPage() {
                     data.createPodManagerName,
                     data.createPodManagerEmail,
                     data.createPodManagerPassword,
-                    ['podManager'] // Assign appropriate role
+                    ['podManager']
                 );
                 finalPodManagerId = newManager.id!;
                 toast({ title: "Pod Manager Created", description: `${newManager.name} added.` });
@@ -251,7 +249,7 @@ export default function AdminPodsPage() {
                     data.createTeamLeaderName,
                     data.createTeamLeaderEmail,
                     data.createTeamLeaderPassword,
-                    ['teamLeader'] // Assign appropriate role
+                    ['teamLeader']
                 );
                 finalTeamLeaderId = newLeader.id!;
                 toast({ title: "Team Leader Created", description: `${newLeader.name} added.` });
@@ -263,10 +261,9 @@ export default function AdminPodsPage() {
                 title: "User Creation Failed",
                 description: userCreationError.message || "Could not create the specified user.",
             });
-            return; // Stop if user creation fails
+            return;
         }
 
-        // --- 2. Prepare Data for Firestore ---
          if (!data.campaignId || !finalPodManagerId || !finalTeamLeaderId) {
              toast({
                 variant: "destructive",
@@ -276,20 +273,19 @@ export default function AdminPodsPage() {
             return;
         }
 
-        // Include new logo customization fields
         const podDataToSave: Omit<Pod, 'id' | 'campaignName' | 'podManagerName' | 'teamLeaderName' | 'agentNames'> = {
             name: data.name,
-            logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '', // Save URL or empty string
-            logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '', // Save custom initials or empty string
-            logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '', // Save custom color or empty string
+            logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '',
+            logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '',
+            logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '',
             campaignId: data.campaignId,
             podManagerId: finalPodManagerId,
             teamLeaderId: finalTeamLeaderId,
-            agentIds: dialogMode === 'edit' ? (selectedPod?.agentIds || []) : [], // Preserve agents on edit, empty on add
+            agentIds: dialogMode === 'edit' ? (selectedPod?.agentIds || []) : [],
+            teamsWebhookUrl: data.teamsWebhookUrl || '', // Save webhook URL
         };
 
 
-        // --- 3. Save to Firestore ---
         if (dialogMode === 'add') {
             try {
                 await addDoc(podsCollectionRef, podDataToSave);
@@ -310,16 +306,15 @@ export default function AdminPodsPage() {
         } else if (dialogMode === 'edit' && selectedPod) {
             try {
                 const podDoc = doc(db, 'pods', selectedPod.id);
-                // Update only the fields that might have changed, including logo customization
                  const updates: Partial<Pod> = {
                     name: data.name,
-                    logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '', // Update or save empty string
-                    logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '', // Update or save empty string
-                    logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '', // Update or save empty string
+                    logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '',
+                    logoInitials: data.logoType === 'custom' ? data.logoInitials || '' : '',
+                    logoBgColor: data.logoType === 'custom' ? data.logoBgColor || '' : '',
                     campaignId: data.campaignId,
                     podManagerId: finalPodManagerId,
                     teamLeaderId: finalTeamLeaderId,
-                    // agentIds are managed separately
+                    teamsWebhookUrl: data.teamsWebhookUrl || '', // Update webhook URL
                 };
                 await updateDoc(podDoc, updates);
                 toast({
@@ -341,19 +336,15 @@ export default function AdminPodsPage() {
 
   const handleConfirmDelete = async () => {
     if (selectedPod) {
-       const podToDelete = selectedPod; // Store data before resetting state
+       const podToDelete = selectedPod;
       try {
-         // 1. Unassign agents from this pod
          if (podToDelete.agentIds && podToDelete.agentIds.length > 0) {
              await Promise.all(podToDelete.agentIds.map(agentId => updateUserPodAssignment(agentId, null)));
              console.log(`Unassigned agents from pod ${podToDelete.id}`);
          }
 
-         // 2. Delete Firestore Document
         const podDoc = doc(db, 'pods', podToDelete.id);
         await deleteDoc(podDoc);
-
-         // 3. No need to delete logo from Storage
 
         toast({
           title: "Pod Deleted",
@@ -372,7 +363,6 @@ export default function AdminPodsPage() {
     }
   };
 
-   // Handler for saving assigned agents
    const handleSavePodAgents = async (podId: string, selectedAgentIds: string[]) => {
      if (!selectedPodForAgents) return;
 
@@ -386,26 +376,22 @@ export default function AdminPodsPage() {
      console.log(`Agents to Remove: ${agentsToRemove.join(', ')}`);
 
      try {
-       // 1. Update the pod document with the new list of agentIds
        const podDocRef = doc(db, 'pods', podId);
        await updateDoc(podDocRef, {
          agentIds: selectedAgentIds,
        });
        console.log(`Updated pod document ${podId} with agentIds: ${selectedAgentIds.join(', ')}`);
 
-       // 2. Update the podId field on each added/removed user document
        const updatePromises: Promise<void>[] = [];
 
-       // Assign podId to newly added agents
        agentsToAdd.forEach(agentId => {
          console.log(`Assigning pod ${podId} to user ${agentId}`);
          updatePromises.push(updateUserPodAssignment(agentId, podId));
        });
 
-       // Remove podId from removed agents
        agentsToRemove.forEach(agentId => {
           console.log(`Unassigning user ${agentId} from pod ${podId}`);
-         updatePromises.push(updateUserPodAssignment(agentId, null)); // Pass null to unassign
+         updatePromises.push(updateUserPodAssignment(agentId, null));
        });
 
        await Promise.all(updatePromises);
@@ -415,7 +401,7 @@ export default function AdminPodsPage() {
          title: "Agents Updated",
          description: `Agent assignments for pod "${selectedPodForAgents.name}" have been saved.`,
        });
-       setIsManageAgentsOpen(false); // Close the dialog
+       setIsManageAgentsOpen(false);
        setSelectedPodForAgents(null);
      } catch (err: any) {
        console.error("Error updating pod agents:", err);
@@ -435,16 +421,13 @@ export default function AdminPodsPage() {
         ? "Cannot add pods until Campaigns and Users are available."
         : "Add a new pod";
 
-    // Pass the full Pod object to the form for editing, including logo fields
     const initialFormData = dialogMode === 'edit' ? selectedPod : undefined;
 
 
   return (
     <div className="space-y-6">
-      {/* Wrap everything in the Dialog and AlertDialog providers */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
          <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-            {/* Dialog for Managing Agents */}
              <Dialog open={isManageAgentsOpen} onOpenChange={setIsManageAgentsOpen}>
                  {selectedPodForAgents && (
                     <ManagePodAgentsDialog
@@ -456,7 +439,6 @@ export default function AdminPodsPage() {
                  )}
              </Dialog>
 
-            {/* Main Card for displaying the list of pods */}
             <Card>
                 <CardHeader className="flex flex-row items-start justify-between gap-4">
                     <div className='flex-1'>
@@ -464,7 +446,6 @@ export default function AdminPodsPage() {
                         <CardDescription>View, add, edit, delete pods, and manage agents.</CardDescription>
                     </div>
                      <div className='flex gap-2 items-start flex-wrap'>
-                        {/* Search Input */}
                          <div className="relative max-w-xs flex-grow">
                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                              <Input
@@ -476,7 +457,6 @@ export default function AdminPodsPage() {
                                  disabled={isLoadingPods || isLoadingRelatedData}
                              />
                          </div>
-                          {/* Trigger for the Add/Edit Pod Dialog (inside the Dialog context) */}
                          <DialogTrigger asChild>
                             <Button onClick={openAddDialog} disabled={isAddDisabled} title={addButtonTooltip}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Pod
@@ -494,7 +474,7 @@ export default function AdminPodsPage() {
 
                     <Table>
                         <TableHeader>
-                            <TableRow>{/* Remove whitespace here */}
+                            <TableRow>
                                 <TableHead className="w-[80px]">Logo</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Campaign</TableHead>
@@ -506,9 +486,8 @@ export default function AdminPodsPage() {
                         </TableHeader>
                         <TableBody>
                         {isLoadingPods || isLoadingRelatedData ? (
-                            // Loading Skeleton Rows
                             Array.from({ length: 3 }).map((_, index) => (
-                            <TableRow key={`loading-${index}`}>{/* Remove whitespace here */}
+                            <TableRow key={`loading-${index}`}>
                                 <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
@@ -525,22 +504,20 @@ export default function AdminPodsPage() {
                             </TableRow>
                             ))
                         ) : filteredPods.length === 0 && !error ? (
-                            <TableRow>{/* Remove whitespace here */}
+                            <TableRow>
                                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                     {searchTerm ? `No pods found matching "${searchTerm}".` : "No pods found. Create one to get started!"}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredPods.map((pod) => (
-                            <TableRow key={pod.id}>{/* Remove whitespace here */}
+                            <TableRow key={pod.id}>
                                 <TableCell>
                                 <Avatar className="h-10 w-10">
-                                    {/* Always use Fallback */}
                                     <AvatarFallback
                                         initials={pod.logoInitials || generateInitials(pod.name)}
-                                        backgroundColor={pod.logoBgColor} // Pass custom color
+                                        backgroundColor={pod.logoBgColor}
                                     >
-                                        {/* Render default initials only if no custom/generated */}
                                         {!pod.logoInitials && generateInitials(pod.name)}
                                     </AvatarFallback>
                                 </Avatar>
@@ -564,7 +541,6 @@ export default function AdminPodsPage() {
                                 </TableCell>
                                 <TableCell className="text-right">
                                 <div className="flex gap-1 justify-end">
-                                        {/* Manage Agents Button - Triggers the *separate* Manage Agents Dialog */}
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -574,7 +550,6 @@ export default function AdminPodsPage() {
                                     >
                                         <UserPlus className="h-4 w-4" />
                                     </Button>
-                                        {/* Edit Pod Button - Triggers the *main* Add/Edit Pod Dialog */}
                                     <DialogTrigger asChild>
                                         <Button
                                             variant="ghost"
@@ -587,7 +562,6 @@ export default function AdminPodsPage() {
                                             <Edit className="h-4 w-4" />
                                         </Button>
                                     </DialogTrigger>
-                                    {/* Delete Pod Button - Triggers the AlertDialog */}
                                     <AlertDialogTrigger asChild>
                                         <Button
                                             variant="ghost"
@@ -609,7 +583,6 @@ export default function AdminPodsPage() {
                         </TableBody>
                     </Table>
 
-                    {/* AlertDialog Content for Delete Confirmation */}
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -627,7 +600,6 @@ export default function AdminPodsPage() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
 
-                     {/* Add/Edit Pod Dialog Content */}
                     <DialogContent className="sm:max-w-lg">
                         <DialogHeader>
                             <DialogTitle>{dialogMode === 'add' ? 'Add New Pod' : 'Edit Pod'}</DialogTitle>
@@ -639,10 +611,10 @@ export default function AdminPodsPage() {
                             <PodForm
                                 onSubmit={handleFormSubmit}
                                 onCancel={() => setIsFormOpen(false)}
-                                initialData={initialFormData} // Pass initial data including logo fields
+                                initialData={initialFormData}
                                 campaigns={campaigns}
                                 users={users}
-                                key={initialFormData?.id ?? 'add'} // Key forces re-render
+                                key={initialFormData?.id ?? 'add'}
                             />
                         ) : (
                             <div className="p-6 text-center">

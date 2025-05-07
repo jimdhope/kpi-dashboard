@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'; // Import RadioGroup
-import { ScrollArea } from '@/components/ui/scroll-area'; // Import ScrollArea
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     Select,
     SelectContent,
@@ -27,9 +27,9 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
-import type { Pod } from '@/app/(admin)/admin/pods/page'; // Keep Pod type
-import type { AppUser } from '@/services/user'; // Import AppUser type
-import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
+import type { Pod } from '@/app/(admin)/admin/pods/page';
+import type { AppUser } from '@/services/user';
+import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
 import { Loader2 } from 'lucide-react';
 import { PasswordInput } from './ui/password-input';
 
@@ -37,25 +37,25 @@ import { PasswordInput } from './ui/password-input';
 // Define the validation schema using Zod
 const podFormSchema = z.object({
   name: z.string().min(3, { message: 'Pod name must be at least 3 characters.' }).max(50, { message: 'Pod name must be 50 characters or less.' }),
-  logoType: z.enum(['url', 'custom'], { required_error: "Please select a logo type."}), // Radio button value
-  logoUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')), // Optional URL
-  logoInitials: z.string().max(2, { message: "Initials can be max 2 characters."}).optional(), // Optional custom initials (max 2 chars)
-  logoBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')), // Optional hex color
+  logoType: z.enum(['url', 'custom'], { required_error: "Please select a logo type."}),
+  logoUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  logoInitials: z.string().max(2, { message: "Initials can be max 2 characters."}).optional(),
+  logoBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')),
   campaignId: z.string().min(1, { message: 'Please select a campaign.' }),
   podManagerId: z.string().min(1, { message: 'Please select or create a Pod Manager.' }),
   teamLeaderId: z.string().min(1, { message: 'Please select or create a Team Leader.' }),
+  teamsWebhookUrl: z.string().url({ message: "Please enter a valid webhook URL." }).optional().or(z.literal('')), // Optional webhook URL
 
   // Fields for creating a new Pod Manager (optional)
   createPodManagerName: z.string().optional(),
-  createPodManagerEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')), // Allow empty string for optional
-  createPodManagerPassword: z.string().optional(), // Password optional overall, required conditionally
+  createPodManagerEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')),
+  createPodManagerPassword: z.string().optional(),
 
   // Fields for creating a new Team Leader (optional)
   createTeamLeaderName: z.string().optional(),
-  createTeamLeaderEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')), // Allow empty string for optional
-  createTeamLeaderPassword: z.string().optional(), // Password optional overall, required conditionally
+  createTeamLeaderEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')),
+  createTeamLeaderPassword: z.string().optional(),
 }).superRefine((data, ctx) => {
-    // Require logoUrl if logoType is 'url'
     if (data.logoType === 'url' && !data.logoUrl) {
          ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -63,7 +63,6 @@ const podFormSchema = z.object({
             path: ['logoUrl'],
          });
     }
-    // Validate Pod Manager creation fields if 'create_new' is selected
     if (data.podManagerId === 'create_new') {
         if (!data.createPodManagerName) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Manager name is required.', path: ['createPodManagerName'] });
@@ -77,7 +76,6 @@ const podFormSchema = z.object({
              ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Manager password must be at least 6 characters.', path: ['createPodManagerPassword'] });
         }
     }
-     // Validate Team Leader creation fields if 'create_new' is selected
      if (data.teamLeaderId === 'create_new') {
         if (!data.createTeamLeaderName) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Leader name is required.', path: ['createTeamLeaderName'] });
@@ -101,20 +99,19 @@ export type PodFormData = z.infer<typeof podFormSchema>;
 interface PodFormProps {
   onSubmit: (data: PodFormData) => Promise<void> | void;
   onCancel: () => void;
-  initialData?: Pod; // Optional initial data for editing
+  initialData?: Pod;
   campaigns: Campaign[];
-  users: AppUser[]; // Use AppUser type
+  users: AppUser[];
 }
 
 export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: PodFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-     // Determine initial logo type based on existing data
     const getInitialLogoType = (): 'url' | 'custom' => {
         if (initialData?.logoUrl) {
             return 'url';
         }
-        return 'custom'; // Default to custom if no URL
+        return 'custom';
     };
 
 
@@ -122,14 +119,14 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
         resolver: zodResolver(podFormSchema),
         defaultValues: {
             name: initialData?.name || '',
-            logoType: getInitialLogoType(), // Use helper
+            logoType: getInitialLogoType(),
             logoUrl: initialData?.logoUrl || '',
             logoInitials: initialData?.logoInitials || '',
             logoBgColor: initialData?.logoBgColor || '',
             campaignId: initialData?.campaignId || '',
             podManagerId: initialData?.podManagerId || '',
             teamLeaderId: initialData?.teamLeaderId || '',
-            // Initialize create user fields
+            teamsWebhookUrl: initialData?.teamsWebhookUrl || '', // Initialize webhook URL
             createPodManagerName: '',
             createPodManagerEmail: '',
             createPodManagerPassword: '',
@@ -137,16 +134,14 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             createTeamLeaderEmail: '',
             createTeamLeaderPassword: '',
         },
-        mode: 'onChange', // Validate on change for better UX with conditional fields
+        mode: 'onChange',
     });
 
-    // Watch selected IDs and logo type
     const watchPodManagerId = form.watch('podManagerId');
     const watchTeamLeaderId = form.watch('teamLeaderId');
     const watchLogoType = form.watch('logoType');
 
 
-  // Reset form if initialData changes (for edit mode)
   useEffect(() => {
     const initialType = getInitialLogoType();
     if (initialData) {
@@ -159,7 +154,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
         campaignId: initialData.campaignId,
         podManagerId: initialData.podManagerId,
         teamLeaderId: initialData.teamLeaderId,
-         // Clear creation fields when editing existing pod
+        teamsWebhookUrl: initialData.teamsWebhookUrl || '', // Reset webhook URL
          createPodManagerName: '',
          createPodManagerEmail: '',
          createPodManagerPassword: '',
@@ -168,16 +163,16 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
          createTeamLeaderPassword: '',
       });
     } else {
-        // Reset for add mode
         form.reset({
             name: '',
-            logoType: 'custom', // Default to custom for new
+            logoType: 'custom',
             logoUrl: '',
             logoInitials: '',
             logoBgColor: '',
             campaignId: '',
             podManagerId: '',
             teamLeaderId: '',
+            teamsWebhookUrl: '', // Reset webhook URL
             createPodManagerName: '',
             createPodManagerEmail: '',
             createPodManagerPassword: '',
@@ -191,7 +186,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
    const handleFormSubmit = async (data: PodFormData) => {
         setIsSubmitting(true);
 
-         // Clear unused logo fields based on selection
          const submitData = {
             ...data,
              logoUrl: data.logoType === 'url' ? data.logoUrl || '' : '',
@@ -200,7 +194,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
          };
 
         try {
-            await onSubmit(submitData); // Call the onSubmit passed from parent
+            await onSubmit(submitData);
         } catch (error) {
              console.error("Error during form submission process:", error);
         } finally {
@@ -208,16 +202,13 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
         }
     };
 
-  // Filter users based on potential roles (adapt as needed)
-  // Consider adding role filtering later if needed, for now use all users
   const potentialManagers = users;
   const potentialLeaders = users;
 
 
   return (
     <Form {...form}>
-     {/* Use ScrollArea to make the form content scrollable */}
-      <ScrollArea className="h-[65vh] pr-6"> {/* Adjust height as needed */}
+      <ScrollArea className="h-[65vh] pr-6">
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4 pl-2 pr-1">
             {/* Pod Name */}
             <FormField
@@ -234,7 +225,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             )}
             />
 
-             {/* Logo Type Selection */}
             <FormField
                 control={form.control}
                 name="logoType"
@@ -245,7 +235,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                             <RadioGroup
                             onValueChange={field.onChange}
                             defaultValue={field.value}
-                            value={field.value} // Control the value
+                            value={field.value}
                             className="flex space-x-4"
                             disabled={isSubmitting}
                             >
@@ -269,7 +259,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             />
 
 
-            {/* Conditional Logo URL Input */}
             {watchLogoType === 'url' && (
                 <FormField
                 control={form.control}
@@ -286,7 +275,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                 />
             )}
 
-            {/* Conditional Custom Avatar Inputs */}
              {watchLogoType === 'custom' && (
                 <div className="space-y-4 rounded-md border p-4 mt-2">
                     <p className="text-sm font-medium text-muted-foreground">
@@ -346,7 +334,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
              )}
 
 
-            {/* Campaign Selection */}
             <FormField
             control={form.control}
             name="campaignId"
@@ -360,7 +347,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                     </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                        {campaigns.length === 0 && <SelectItem value="loading" disabled>Loading campaigns...</SelectItem>}
+                        {campaigns.length === 0 && <SelectItem value="-" disabled>Loading campaigns...</SelectItem>}
                         {campaigns.map((campaign) => (
                         <SelectItem key={campaign.id} value={campaign.id}>
                             {campaign.name}
@@ -373,7 +360,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             )}
             />
 
-            {/* Pod Manager Selection */}
             <FormField
             control={form.control}
             name="podManagerId"
@@ -388,10 +374,10 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                     </FormControl>
                     <SelectContent>
                         <SelectItem value="create_new">-- Create New Manager --</SelectItem>
-                        {potentialManagers.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
+                        {potentialManagers.length === 0 && <SelectItem value="-" disabled>Loading users...</SelectItem>}
                         {potentialManagers.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
-                                {user.name} ({user.email}) {/* Display email for clarity */}
+                                {user.name} ({user.email})
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -401,7 +387,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             )}
             />
 
-            {/* --- Create New Pod Manager Fields (Conditional) --- */}
             {watchPodManagerId === 'create_new' && (
                 <div className="pl-4 border-l-2 border-primary ml-2 space-y-3 mt-2 mb-4 pt-2 pb-3">
                     <p className="text-sm font-medium text-primary">Create New Pod Manager</p>
@@ -442,7 +427,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             )}
 
 
-            {/* Team Leader Selection */}
             <FormField
             control={form.control}
             name="teamLeaderId"
@@ -457,7 +441,7 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                     </FormControl>
                     <SelectContent>
                         <SelectItem value="create_new">-- Create New Leader --</SelectItem>
-                        {potentialLeaders.length === 0 && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
+                        {potentialLeaders.length === 0 && <SelectItem value="-" disabled>Loading users...</SelectItem>}
                         {potentialLeaders.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
                                 {user.name} ({user.email})
@@ -470,7 +454,6 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
             )}
             />
 
-            {/* --- Create New Team Leader Fields (Conditional) --- */}
             {watchTeamLeaderId === 'create_new' && (
                 <div className="pl-4 border-l-2 border-primary ml-2 space-y-3 mt-2 mb-4 pt-2 pb-3">
                     <p className="text-sm font-medium text-primary">Create New Team Leader</p>
@@ -509,17 +492,39 @@ export function PodForm({ onSubmit, onCancel, initialData, campaigns, users }: P
                     />
                 </div>
             )}
+
+            {/* Teams Webhook URL Input */}
+            <FormField
+                control={form.control}
+                name="teamsWebhookUrl"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Microsoft Teams Webhook URL (Optional)</FormLabel>
+                        <FormControl>
+                            <Input
+                                type="url"
+                                placeholder="https://your-org.webhook.office.com/..."
+                                {...field}
+                                disabled={isSubmitting}
+                            />
+                        </FormControl>
+                        <FormDescription>
+                            Used to send daily score summaries to the pod's Teams channel.
+                        </FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+
         </form>
     </ScrollArea>
 
-    {/* Footer outside the scroll area */}
     <DialogFooter className="mt-4 pt-4 border-t">
         <DialogClose asChild>
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                 Cancel
             </Button>
         </DialogClose>
-        {/* Manually trigger form submission from footer button */}
         <Button type="button" onClick={form.handleSubmit(handleFormSubmit)} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isSubmitting ? 'Saving...' : 'Save Pod'}
