@@ -88,6 +88,7 @@ export const sendTeamsUpdate = async (
 
         currentStep = "Constructing Adaptive Card Payload";
         // Construct the Adaptive Card JSON using the correctly mapped data
+        // Use {{...}} syntax for placeholders
         const adaptiveCardJson = {
             "type": "AdaptiveCard",
             "body": [
@@ -95,29 +96,69 @@ export const sendTeamsUpdate = async (
                     "type": "TextBlock",
                     "size": "Medium",
                     "weight": "Bolder",
-                    "text": cardData.title // Use the generated title
+                    "text": `{{title}}` // Changed placeholder
                 },
                 {
                     "type": "TextBlock",
-                    "text": cardData.kpiKey, // Use the generated key string
+                    "text": `{{kpiKey}}`, // Changed placeholder
                     "wrap": true,
                     "separator": true
                 },
                 {
                     "type": "TextBlock",
-                    "text": cardData.kpiTable, // Use the generated table string
+                    "text": `{{kpiTable}}`, // Changed placeholder
                     "wrap": true,
                     "separator": true
                 },
                 {
                     "type": "TextBlock",
-                    "text": cardData.kpiTargets, // Use the generated targets string
+                    "text": `{{kpiTargets}}`, // Changed placeholder
                     "wrap": true
                 }
             ],
             "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
             "version": "1.6"
         };
+
+         // Prepare the actual data to be sent, mapping our generated values
+         // to the keys used in the {{...}} placeholders.
+         // Note: We are sending the data alongside the card template.
+         // The receiving end (Power Automate/Teams) needs to handle merging this data.
+         // Alternatively, replace placeholders directly before sending if the receiver doesn't support templating.
+         // For simplicity here, we'll replace directly in the outgoing JSON.
+
+         // Direct Replacement Method:
+          const populatedAdaptiveCardJson = {
+             "type": "AdaptiveCard",
+             "body": [
+                 {
+                     "type": "TextBlock",
+                     "size": "Medium",
+                     "weight": "Bolder",
+                     "text": cardData.title // Directly insert data
+                 },
+                 {
+                     "type": "TextBlock",
+                     "text": cardData.kpiKey, // Directly insert data
+                     "wrap": true,
+                     "separator": true
+                 },
+                 {
+                     "type": "TextBlock",
+                     "text": cardData.kpiTable, // Directly insert data
+                     "wrap": true,
+                     "separator": true
+                 },
+                 {
+                     "type": "TextBlock",
+                     "text": cardData.kpiTargets, // Directly insert data
+                     "wrap": true
+                 }
+             ],
+             "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+             "version": "1.6"
+         };
+
 
         // Construct the final payload for the Teams webhook
         const webhookPayload = {
@@ -126,7 +167,7 @@ export const sendTeamsUpdate = async (
                 {
                     "contentType": "application/vnd.microsoft.card.adaptive",
                     "contentUrl": null,
-                    "content": adaptiveCardJson
+                    "content": populatedAdaptiveCardJson // Send the card with data inserted
                 }
             ]
         };
@@ -156,6 +197,7 @@ export const sendTeamsUpdate = async (
 
     } catch (error: any) {
         console.error(`[sendTeamsUpdate] Error occurred during step "${currentStep}" for pod ${podName}:`, error);
-        throw error;
+        // Re-throw the original error or a new one for the caller to handle
+        throw new Error(`Failed to send Teams update: ${error.message || 'Unknown error'}`);
     }
 };
