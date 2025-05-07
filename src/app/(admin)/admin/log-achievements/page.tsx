@@ -37,7 +37,8 @@ import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { sendTeamsUpdate } from '@/services/teamsWebhook'; // Import the Teams update function
+// Removed Teams update function import
+// import { sendTeamsUpdate } from '@/services/teamsWebhook';
 
 // Interface for the data stored in Firestore
 export interface DailyAchievementLog {
@@ -64,7 +65,7 @@ interface AchievementInputState {
   };
 }
 
-// --- Debounce Helper ---
+// --- Debounce Helper (kept for potential future use, but not for Teams update) ---
 const debounce = (func: Function, delay: number) => {
     let timeoutId: NodeJS.Timeout | null = null;
     return (...args: any[]) => {
@@ -172,28 +173,28 @@ export default function AdminLogAchievementsPage() {
         // 2. Find a Competition active on the *selected date* involving this pod
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-        // Query to find ANY competition involving the pod
+        // Query for competitions involving this pod
         const competitionQuery = query(
-          competitionsRef,
-          where('podIds', 'array-contains', selectedPodId), // Check if pod is in the array
-          orderBy('startDate', 'desc') // Get the most recent starting first
+            competitionsRef,
+            where('podIds', 'array-contains', selectedPodId),
+            orderBy('startDate', 'desc') // Get the most recent starting first
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let competitionForDate: (Competition & { id: string }) | null = null;
 
-        // Find the competition that BRACKETS the selected date (most recent one if multiple overlap)
-        for (const docSnap of competitionSnapshot.docs) {
-            const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-            const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
-            const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
+         // Find the competition that BRACKETS the selected date (most recent one if multiple overlap)
+         for (const docSnap of competitionSnapshot.docs) {
+             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
+             const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
+             const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
 
-            // Ensure start and end dates are valid before comparing
-             if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
-                 competitionForDate = comp;
-                 console.log(`Found competition "${competitionForDate.name}" that includes ${selectedDate.toLocaleDateString()}`);
-                break; // Found the most relevant competition for the selected date
-            }
-        }
+             // Ensure start and end dates are valid before comparing
+              if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
+                  competitionForDate = comp;
+                  console.log(`[LogAch.] Found competition "${competitionForDate.name}" that includes ${selectedDate.toLocaleDateString()}`);
+                 break; // Found the most relevant competition for the selected date
+             }
+         }
 
 
         if (competitionForDate) {
@@ -259,19 +260,8 @@ export default function AdminLogAchievementsPage() {
     fetchPodData();
   }, [selectedPodId, selectedDate, toast]);
 
-    // Debounced function to send Teams update
-    const debouncedSendTeamsUpdate = useMemo(
-        () => debounce(() => {
-            if (selectedPodId) {
-                console.log(`[AdminLogAchievements] Calling debouncedSendTeamsUpdate for pod ${selectedPodId} and date ${selectedDate.toISOString()}`);
-                sendTeamsUpdate(selectedPodId, selectedDate).catch(err => { // Pass the current selectedDate
-                    console.error("Error sending Teams update from debounce:", err);
-                    // Optionally show a toast here if the webhook send fails
-                });
-            }
-        }, 3000), // Wait 3 seconds after the last save before sending the update
-        [selectedPodId, selectedDate] // Dependencies for the debounce setup
-    );
+    // Removed Teams update debounced function
+    // const debouncedSendTeamsUpdate = useMemo(...)
 
   const handleInputChange = (agentId: string, ruleId: string, value: string) => {
     setAchievementInputs(prev => ({
@@ -384,11 +374,11 @@ export default function AdminLogAchievementsPage() {
            // console.log(`Log skipped for ${rule.name} (value 0)`);
        }
 
-       // If a change occurred, trigger the debounced Teams update
-        if (changeOccurred) {
-            console.log(`[AdminLogAchievements] Change occurred for ${rule.name}. Triggering debounced Teams update for date ${selectedDate.toISOString()}`);
-            debouncedSendTeamsUpdate(); // Uses selectedDate from component's state
-        }
+       // Removed call to debounced Teams update
+       // if (changeOccurred) {
+       //     console.log(`[AdminLogAchievements] Change occurred for ${rule.name}. Triggering debounced Teams update for date ${selectedDate.toISOString()}`);
+       //     debouncedSendTeamsUpdate(); // Uses selectedDate from component's state
+       // }
 
 
     } catch (err) {
@@ -403,7 +393,7 @@ export default function AdminLogAchievementsPage() {
    // Create the debounced save function
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), // Debounce for 1 second
      // Dependencies: recreate debounce function if these change
-      [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId, debouncedSendTeamsUpdate] // Added activeCompetitionId and debouncedSendTeamsUpdate
+      [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId] // Removed debouncedSendTeamsUpdate
   );
 
 
@@ -492,7 +482,7 @@ export default function AdminLogAchievementsPage() {
               </div>
            ) : !canLog && !error ? (
                <p className="text-muted-foreground text-center py-6">
-                  {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition found for this pod active on ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
+                  {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition includes the selected date: ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
                </p>
             ) : (
             <Table>
@@ -551,12 +541,6 @@ export default function AdminLogAchievementsPage() {
              )}
         </CardContent>
       </Card>
-
-       {/* Display Existing Logs (Read-only view below input table - Optional) */}
-       {/* Consider adding a separate component or view for browsing historical logs */}
-
     </div>
   );
 }
-
-

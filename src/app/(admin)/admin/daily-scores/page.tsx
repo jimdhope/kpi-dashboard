@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -22,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Trophy, Target } from 'lucide-react'; // Added Target
+import { CalendarIcon, Loader2, AlertCircle, Trophy, Target, Send } from 'lucide-react'; // Added Target & Send
 import { format, startOfDay, getDay } from 'date-fns'; // Added getDay
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -33,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page'; // Import new target type
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
+import { sendTeamsUpdate } from '@/services/teamsWebhook'; // Import the webhook function
 
 // Interface for processed agent scores
 interface AgentScore {
@@ -70,6 +72,7 @@ export default function AdminDailyScoresPage() {
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null); // State for daily targets
   const [isLoadingPods, setIsLoadingPods] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false); // Loading competition, agents, logs, targets
+  const [isSendingToTeams, setIsSendingToTeams] = useState(false); // State for Teams sending
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null); // Store active competition ID
@@ -362,7 +365,7 @@ export default function AdminDailyScoresPage() {
      // Generate Rule Key String (remains the same)
      const finalRuleKeyString = rules
         .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
-        .join(' ');
+        .join('  '); // Use double space as separator
 
      // Generate Pod Target Summary String - using the FILTERED summary for the day
      const finalPodTargetSummaryString = finalPodTargetSummary
@@ -378,10 +381,33 @@ export default function AdminDailyScoresPage() {
     // Dependencies ensure recalculation when logs, agents, rules, or targets change
   }, [dailyLogs, agents, rules, dailyTargets, selectedDate]);
 
+  // 5. Handle Send to Teams button click
+  const handleSendToTeams = async () => {
+    if (!selectedPodId || !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl) {
+      toast({ variant: "destructive", title: "Missing Webhook", description: "No Teams webhook URL configured for this pod." });
+      return;
+    }
+    if (agentScores.length === 0 && podTargetSummary.length === 0) {
+        toast({ variant: "default", title: "No Data", description: "Nothing to send to Teams for this day." });
+        return;
+    }
+
+    setIsSendingToTeams(true);
+    try {
+       await sendTeamsUpdate(selectedPodId, selectedDate);
+       toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
+    } catch (err) {
+       console.error("Error sending to Teams:", err);
+       toast({ variant: "destructive", title: "Send Failed", description: "Could not send summary to Teams." });
+    } finally {
+       setIsSendingToTeams(false);
+    }
+  };
 
 
   const isLoading = isLoadingPods || isLoadingData;
   const canDisplay = !isLoading && selectedPodId && rules.length > 0 && agents.length > 0;
+  const canSendToTeams = !isLoading && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl; // Check if webhook exists
 
   return (
     <div className="space-y-6">
@@ -391,52 +417,63 @@ export default function AdminDailyScoresPage() {
           <CardDescription>View daily scores and pod target progress for the selected pod and date.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Selection Controls */}
-          <div className="flex flex-wrap gap-4 mb-6 items-end">
-            {/* Pod Select */}
-            <div className="grid gap-2">
-              <Label htmlFor="pod-select">Pod</Label>
-              <Select onValueChange={setSelectedPodId} value={selectedPodId} disabled={isLoadingPods || isLoadingData}>
-                <SelectTrigger id="pod-select" className="w-[200px]">
-                  <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pods.map(pod => (
-                    <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                  ))}
-                  {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Selection Controls & Teams Button */}
+          <div className="flex flex-wrap gap-4 mb-6 items-end justify-between">
+            <div className="flex flex-wrap gap-4 items-end">
+                 {/* Pod Select */}
+                 <div className="grid gap-2">
+                 <Label htmlFor="pod-select">Pod</Label>
+                 <Select onValueChange={setSelectedPodId} value={selectedPodId} disabled={isLoadingPods || isLoadingData}>
+                     <SelectTrigger id="pod-select" className="w-[200px]">
+                     <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
+                     </SelectTrigger>
+                     <SelectContent>
+                     {pods.map(pod => (
+                         <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                     ))}
+                     {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
+                     </SelectContent>
+                 </Select>
+                 </div>
 
-            {/* Date Select */}
-            <div className="grid gap-2">
-              <Label htmlFor="date-select">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date-select"
-                    variant={"outline"}
-                    className={cn(
-                      "w-[200px] justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                     disabled={isLoadingData}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50"> {/* Added z-50 */}
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+                 {/* Date Select */}
+                 <div className="grid gap-2">
+                 <Label htmlFor="date-select">Date</Label>
+                 <Popover>
+                     <PopoverTrigger asChild>
+                     <Button
+                         id="date-select"
+                         variant={"outline"}
+                         className={cn(
+                         "w-[200px] justify-start text-left font-normal",
+                         !selectedDate && "text-muted-foreground"
+                         )}
+                         disabled={isLoadingData}
+                     >
+                         <CalendarIcon className="mr-2 h-4 w-4" />
+                         {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                     </Button>
+                     </PopoverTrigger>
+                     <PopoverContent className="w-auto p-0 z-50"> {/* Added z-50 */}
+                     <Calendar
+                         mode="single"
+                         selected={selectedDate}
+                         onSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                         initialFocus
+                     />
+                     </PopoverContent>
+                 </Popover>
+                 </div>
             </div>
+            {/* Send to Teams Button */}
+             <Button
+                 onClick={handleSendToTeams}
+                 disabled={!canSendToTeams}
+                 title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : "Send summary to Teams"}
+             >
+                 {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                 {isSendingToTeams ? "Sending..." : "Send to Teams"}
+             </Button>
           </div>
 
           {error && <p className="text-destructive mb-4">{error}</p>}
