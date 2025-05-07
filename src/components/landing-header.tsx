@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle'; // Assuming you have this
+import { AppLogo } from './app-logo'; // Import the new AppLogo component
 
 export function Header() {
   return (
@@ -15,10 +16,7 @@ export function Header() {
         <div className="container mx-auto flex items-center justify-between px-4 md:px-6">
             {/* Left side: Logo and App Name */}
             <Link href="/" className="mr-6 flex items-center space-x-2">
-               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-primary">
-                  <path fillRule="evenodd" d="M2.25 13.5a8.25 8.25 0 018.25-8.25.75.75 0 01.75.75v6.75H18a.75.75 0 01.75.75 8.25 8.25 0 01-16.5 0z" clipRule="evenodd" />
-                  <path fillRule="evenodd" d="M12.75 3a.75.75 0 01.75-.75 8.25 8.25 0 018.25 8.25.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V3z" clipRule="evenodd" />
-                </svg>
+              <AppLogo className="w-6 h-6 text-primary" />
               <span className="font-bold sm:inline-block">KPI Quest</span>
             </Link>
             {/* Right side: Navigation (Theme Toggle, Login) */}

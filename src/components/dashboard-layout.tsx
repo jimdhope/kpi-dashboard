@@ -1,3 +1,4 @@
+// src/components/dashboard-layout.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -29,6 +30,7 @@ import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { RoleSwitcher } from './role-switcher'; // Changed to relative import
+import { AppLogo } from './app-logo'; // Import the new AppLogo component
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -96,10 +98,7 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
       <Sidebar>
         <SidebarHeader className="p-4">
           <div className="flex items-center gap-2">
-             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-primary">
-              <path fillRule="evenodd" d="M2.25 13.5a8.25 8.25 0 018.25-8.25.75.75 0 01.75.75v6.75H18a.75.75 0 01.75.75 8.25 8.25 0 01-16.5 0z" clipRule="evenodd" />
-              <path fillRule="evenodd" d="M12.75 3a.75.75 0 01.75-.75 8.25 8.25 0 018.25 8.25.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V3z" clipRule="evenodd" />
-            </svg>
+            <AppLogo className="w-6 h-6 text-primary" />
             <h1 className="text-xl font-semibold">KPI Quest</h1>
              <span className="text-xs text-muted-foreground ml-1">(Admin)</span>
           </div>
