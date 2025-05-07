@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -121,7 +120,7 @@ export default function AdminDailyScoresPage() {
     let unsubscribeTargets: Unsubscribe = () => {};
 
     const fetchAgentsAndCompetition = async () => {
-      console.log(`Fetching agents for Pod: ${selectedPodId}`);
+      console.log(`[DailyScoresPage] Fetching agents for Pod: ${selectedPodId}`);
       try {
         // Fetch Agents (remains the same)
         const usersRef = collection(db, 'users');
@@ -164,19 +163,19 @@ export default function AdminDailyScoresPage() {
         }
 
         if (foundCompetition) {
-          console.log(`Active competition found: ${foundCompetition.id}`);
+          console.log(`[DailyScoresPage] Active competition found: ${foundCompetition.id}`);
           setRules(foundCompetition.rules || []); // Update rules state
           setActiveCompetitionId(foundCompetition.id); // Set active competition ID
            // Listeners will be set up in the next effect based on activeCompetitionId
         } else {
-          console.log("No active competition found.");
+          console.log("[DailyScoresPage] No active competition found.");
           setRules([]);
           setActiveCompetitionId(null);
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date." });
         }
 
       } catch (err) {
-        console.error("Error fetching agents/competition:", err);
+        console.error("[DailyScoresPage] Error fetching agents/competition:", err);
         setError("Failed to load initial data.");
         toast({ variant: "destructive", title: "Error", description: "Could not load competition or agent data." });
         setAgents([]);
@@ -207,7 +206,7 @@ export default function AdminDailyScoresPage() {
              return () => {}; // Return empty cleanup
          }
 
-         console.log(`Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}`);
+         console.log(`[DailyScoresPage] Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}`);
          setIsLoadingData(true); // Indicate loading logs/targets
 
          let unsubscribeLogs: Unsubscribe = () => {};
@@ -222,18 +221,18 @@ export default function AdminDailyScoresPage() {
              where('competitionId', '==', activeCompetitionId)
          );
           unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-              console.log(`Received ${snapshot.docs.length} raw achievement logs from listener.`);
+              console.log(`[DailyScoresPage] Received ${snapshot.docs.length} raw achievement logs from listener.`);
               const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
               // Filter logs client-side for the selected date
                const fetchedLogs = snapshot.docs
                   .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
                    .filter(log => log.date && log.date.toDate && log.date.toDate().getTime() === dateTimestamp.toDate().getTime());
-              console.log(`Filtered to ${fetchedLogs.length} logs for selected date.`);
+              console.log(`[DailyScoresPage] Filtered to ${fetchedLogs.length} logs for selected date.`);
               setDailyLogs(fetchedLogs);
               setIsLoadingData(false); // Loading complete after logs received
                setError(null); // Clear errors on success
           }, (err) => {
-              console.error("Error listening to achievements:", err);
+              console.error("[DailyScoresPage] Error listening to achievements:", err);
               setError("Failed to load real-time achievement data.");
               setDailyLogs([]);
               setIsLoadingData(false);
@@ -244,16 +243,16 @@ export default function AdminDailyScoresPage() {
          const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId); // Use targetsDocId here
          unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
               if (docSnap.exists()) {
-                  console.log("Daily targets data received:", docSnap.data());
+                  console.log("[DailyScoresPage] Daily targets data received:", docSnap.data());
                   setDailyTargets(docSnap.data() as DailyTargetData);
               } else {
-                  console.log("No daily targets document found for:", targetsDocId);
+                  console.log("[DailyScoresPage] No daily targets document found for:", targetsDocId);
                   setDailyTargets(null); // No targets set for this combo
               }
                // Don't set loading false here, let the logs listener handle it
                // setError(null); // Clear errors on success
          }, (err) => {
-              console.error("Error listening to daily targets:", err);
+              console.error("[DailyScoresPage] Error listening to daily targets:", err);
               setError("Failed to load daily target data.");
               setDailyTargets(null);
                // Don't set loading false here, let the logs listener handle it
@@ -261,7 +260,7 @@ export default function AdminDailyScoresPage() {
 
          // Cleanup function: Unsubscribe from listeners when competition/pod changes or unmounts
          return () => {
-             console.log("Unsubscribing from daily logs and targets listeners");
+             console.log("[DailyScoresPage] Unsubscribing from daily logs and targets listeners");
              unsubscribeLogs();
              unsubscribeTargets();
          };
@@ -270,7 +269,7 @@ export default function AdminDailyScoresPage() {
 
    // 4. Process data for the table and summary (Memoization adjusted for new targets)
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
-     console.log(`Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}`);
+     console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}`);
      // Calculate agent scores
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
 
@@ -383,7 +382,19 @@ export default function AdminDailyScoresPage() {
 
   // 5. Handle Send to Teams button click
   const handleSendToTeams = async () => {
-    if (!selectedPodId || !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl) {
+    console.log(`[DailyScoresPage] handleSendToTeams clicked for pod ID: ${selectedPodId}`);
+    const currentPod = pods.find(p => p.id === selectedPodId);
+
+    if (!currentPod) {
+        console.error(`[DailyScoresPage] Selected pod with ID ${selectedPodId} not found in pods list.`);
+        toast({ variant: "destructive", title: "Pod Not Found", description: "Selected pod data could not be found." });
+        return;
+    }
+
+    const webhookUrl = currentPod.teamsWebhookUrl;
+    console.log(`[DailyScoresPage] Webhook URL for pod ${currentPod.name}: ${webhookUrl}`);
+
+    if (!webhookUrl) {
       toast({ variant: "destructive", title: "Missing Webhook", description: "No Teams webhook URL configured for this pod." });
       return;
     }
@@ -393,11 +404,13 @@ export default function AdminDailyScoresPage() {
     }
 
     setIsSendingToTeams(true);
+    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, date: ${selectedDate}`);
     try {
        await sendTeamsUpdate(selectedPodId, selectedDate);
        toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
+       console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ID: ${selectedPodId}`);
     } catch (err) {
-       console.error("Error sending to Teams:", err);
+       console.error("[DailyScoresPage] Error sending to Teams:", err);
        toast({ variant: "destructive", title: "Send Failed", description: "Could not send summary to Teams." });
     } finally {
        setIsSendingToTeams(false);
@@ -568,3 +581,4 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
+
