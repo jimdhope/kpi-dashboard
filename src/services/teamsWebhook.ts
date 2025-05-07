@@ -58,19 +58,20 @@ export const sendTeamsUpdate = async (
     console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}, Webhook URL Provided: ${!!webhookUrl}`);
     let currentStep = "Initial Checks";
 
-    try { // Keep top-level try...catch
+    try {
         if (!webhookUrl) {
             console.log(`[sendTeamsUpdate] No webhook URL provided for pod ${podName}. Skipping notification.`);
             throw new Error(`No webhook URL configured for pod ${podName}.`);
         }
 
         currentStep = "Formatting Data";
+        // Calculate the actual values
         const title = `Daily Scores - ${podName} (${format(date, 'PPP')})`;
         const kpiKey = generateKpiKey(rules);
         const kpiTable = generateAgentScoresTable(agentScores);
         const kpiTargets = generatePodTargetsSummary(podTargetSummary);
 
-        // Construct the final payload for the Teams webhook using Adaptive Card format
+        // Construct the payload with actual values embedded
         const webhookPayload = {
             "type": "message",
             "attachments": [
@@ -86,25 +87,25 @@ export const sendTeamsUpdate = async (
                                 "type": "TextBlock",
                                 "size": "Medium",
                                 "weight": "Bolder",
-                                "text": title // Use title variable directly
+                                "text": title // Embed the actual title string
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiKey, // Use kpiKey variable directly
+                                "text": kpiKey, // Embed the actual kpiKey string
                                 "wrap": true,
                                 "separator": true,
                                 "spacing": "Medium" // Add spacing
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTable, // Use kpiTable variable directly
+                                "text": kpiTable, // Embed the actual kpiTable string
                                 "wrap": true,
                                 "separator": true,
                                 "spacing": "Medium" // Add spacing
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTargets, // Use kpiTargets variable directly
+                                "text": kpiTargets, // Embed the actual kpiTargets string
                                 "wrap": true,
                                 "spacing": "Medium" // Add spacing
                             }
@@ -116,7 +117,7 @@ export const sendTeamsUpdate = async (
 
 
         currentStep = "Sending Webhook Request";
-        // *** Log the payload before sending ***
+        // Log the final payload before sending
         console.log("[sendTeamsUpdate] Webhook Payload being sent:", JSON.stringify(webhookPayload, null, 2));
 
         const response = await fetch(webhookUrl, {
