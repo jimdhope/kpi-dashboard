@@ -1,20 +1,7 @@
 'use server';
 
-import {
-    collection,
-    query,
-    where,
-    getDocs,
-    Timestamp,
-    doc,
-    getDoc,
-    orderBy,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
-import type { AppUser } from '@/services/user';
+import { format } from 'date-fns';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
-import { format, startOfDay } from 'date-fns';
 
 // Interface for agent scores passed TO this function
 export interface AgentScoreForTeams {
@@ -42,21 +29,20 @@ const generateKpiKey = (rules: RuleFormData[]): string => {
 // Helper function to generate the agent scores table (Markdown for Teams)
 const generateAgentScoresTable = (agentScores: AgentScoreForTeams[]): string => {
   if (agentScores.length === 0) return "No agent scores recorded for today.";
-  let table = "**Agent** | **Achievements** | **Total Score**\n";
-  table += ":---|:---|:---\n"; // Markdown table header separator
+  // Use Markdown bullet points for better readability in Teams Adaptive Cards
+  let list = "";
   agentScores.forEach(score => {
-    // Ensure emojiString is not empty before trying to display it
     const achievementsDisplay = score.emojiString && score.emojiString.trim() !== '' ? score.emojiString : '-';
-    table += `${score.agentFirstName} | ${achievementsDisplay} | ${score.totalPoints} pts\n`;
+    list += `- **${score.agentFirstName}:** ${achievementsDisplay} (${score.totalPoints} pts)\n`;
   });
-  return table;
+  return list.trim(); // Trim trailing newline
 };
 
 // Helper function to generate the pod targets summary string
 const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[]): string => {
   if (podTargetSummary.length === 0) return "No pod targets set for today.";
   return podTargetSummary
-    .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
+    .map(summary => `${summary.ruleEmoji} ${summary.ruleName} ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
     .join(' | ');
 };
 
@@ -100,30 +86,29 @@ export const sendTeamsUpdate = async (
                                 "type": "TextBlock",
                                 "size": "Medium",
                                 "weight": "Bolder",
-                                "text": title // Bind title directly
+                                "text": title // Use title variable directly
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiKey, // Bind kpiKey directly
+                                "text": kpiKey, // Use kpiKey variable directly
                                 "wrap": true,
                                 "separator": true,
                                 "spacing": "Medium" // Add spacing
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTable, // Bind kpiTable directly
+                                "text": kpiTable, // Use kpiTable variable directly
                                 "wrap": true,
                                 "separator": true,
                                 "spacing": "Medium" // Add spacing
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTargets, // Bind kpiTargets directly
+                                "text": kpiTargets, // Use kpiTargets variable directly
                                 "wrap": true,
                                 "spacing": "Medium" // Add spacing
                             }
                         ]
-                         // No need for $data block when sending directly to Teams webhook with this structure
                     }
                 }
             ]
@@ -143,8 +128,6 @@ export const sendTeamsUpdate = async (
         });
 
         console.log(`[sendTeamsUpdate] Webhook response status: ${response.status}, ok: ${response.ok}`);
-        // Removed full header log for brevity, uncomment if needed
-        // console.log("[sendTeamsUpdate] Full Response Headers:", response.headers);
 
         if (!response.ok) {
             const errorText = await response.text();
