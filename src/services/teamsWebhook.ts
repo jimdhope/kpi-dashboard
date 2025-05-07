@@ -1,7 +1,7 @@
 // src/services/teamsWebhook.ts
 'use server';
 
-import { Timestamp } from 'firebase/firestore'; // Only Timestamp is needed now
+import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 
@@ -23,9 +23,9 @@ export interface PodTargetSummaryForTeams {
 const formatTeamsMessageCard = (
     podName: string,
     date: Date,
-    rules: RuleFormData[], // Rules are passed directly
-    agentScores: AgentScoreForTeams[], // Processed agent scores are passed
-    podTargetSummary: PodTargetSummaryForTeams[] // Processed pod target summary is passed
+    rules: RuleFormData[],
+    agentScores: AgentScoreForTeams[],
+    podTargetSummary: PodTargetSummaryForTeams[]
 ): object => {
     console.log(`[formatTeamsMessageCard] Formatting message for Pod: ${podName}, Date: ${date.toISOString()}`);
     console.log("[formatTeamsMessageCard] Rules:", rules);
@@ -36,7 +36,7 @@ const formatTeamsMessageCard = (
 
     const ruleKeyString = rules
         .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} ${rule.name} (${rule.points} pts)`)
-        .join('  \n');
+        .join('  \n'); // Use newline for better readability in Teams facts
     console.log("[formatTeamsMessageCard] Rule Key String:", ruleKeyString);
 
     let tableMarkdown = "";
@@ -44,6 +44,7 @@ const formatTeamsMessageCard = (
         tableMarkdown += "Agent Name | Achievements | Score\n";
         tableMarkdown += "---|---|---\n";
         agentScores.forEach(score => {
+            // Replace pipes in emoji string to avoid breaking Markdown table
             const safeEmojiString = score.emojiString.replace(/\|/g, '');
             tableMarkdown += `${score.agentFirstName} | ${safeEmojiString || '-'} | **${score.totalPoints}**\n`;
         });
@@ -55,6 +56,7 @@ const formatTeamsMessageCard = (
     let podSummaryString = "";
     if (podTargetSummary.length > 0) {
         podSummaryString = podTargetSummary
+            // Use newline for better readability in Teams text section
             .map(summary => `${summary.ruleEmoji} ${summary.ruleName} ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
             .join('  \n');
     } else {
@@ -66,43 +68,44 @@ const formatTeamsMessageCard = (
         "@type": "MessageCard",
         "@context": "http://schema.org/extensions",
         "summary": `KpiQuest Daily Scores for ${podName} - ${formattedDate}`,
-        "themeColor": "008080",
+        "themeColor": "008080", // Teal color
         "sections": [
             {
                 "title": `**${podName} - Daily Scores (${formattedDate})**`,
                 "facts": [
                     {
                         "name": "Rule Key:",
-                        "value": ruleKeyString
+                        "value": ruleKeyString // Use formatted string with newlines
                     }
                 ],
                 "markdown": true
             },
             {
                 "title": "**Agent Scores**",
-                "text": tableMarkdown,
+                "text": tableMarkdown, // Use generated Markdown table
                 "markdown": true
             },
             {
                 "title": "**Pod Targets Today**",
-                "text": podSummaryString,
+                "text": podSummaryString, // Use generated summary string with newlines
                 "markdown": true
             }
         ]
     };
-    console.log("[formatTeamsMessageCard] Generated MessageCard Payload:", messageCardPayload);
+    // Corrected log to show the actual object being returned
+    console.log("[formatTeamsMessageCard] Generated MessageCard Payload:", messageCard);
     return messageCard;
 };
 
 
 // Updated function: Now accepts all necessary data as parameters
 export const sendTeamsUpdate = async (
-    podName: string,          // Passed from client
-    webhookUrl: string,       // Passed from client
-    date: Date,               // Passed from client
-    rules: RuleFormData[],    // Passed from client
-    agentScores: AgentScoreForTeams[], // Passed from client
-    podTargetSummary: PodTargetSummaryForTeams[] // Passed from client
+    podName: string,
+    webhookUrl: string,
+    date: Date,
+    rules: RuleFormData[],
+    agentScores: AgentScoreForTeams[],
+    podTargetSummary: PodTargetSummaryForTeams[]
 ) => {
     console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}, Webhook URL Provided: ${!!webhookUrl}`);
     let currentStep = "Initial Checks";
@@ -114,6 +117,7 @@ export const sendTeamsUpdate = async (
         }
 
         currentStep = "Formatting MessageCard";
+        // Ensure the variable is assigned correctly
         const messageCardPayload = formatTeamsMessageCard(podName, date, rules, agentScores, podTargetSummary);
 
         console.log(`[sendTeamsUpdate] Sending formatted MessageCard to webhook for pod ${podName}. URL: ${webhookUrl}`);
@@ -124,6 +128,7 @@ export const sendTeamsUpdate = async (
             headers: {
                 'Content-Type': 'application/json',
             },
+             // Use the assigned variable here
             body: JSON.stringify(messageCardPayload),
         });
         console.log(`[sendTeamsUpdate] Webhook response status: ${response.status}, ok: ${response.ok}`);
@@ -138,7 +143,7 @@ export const sendTeamsUpdate = async (
 
     } catch (error: any) {
         console.error(`[sendTeamsUpdate] Error occurred during step "${currentStep}" for pod ${podName}:`, error);
-        if (error.message.includes("Failed to fetch")) {
+        if (error instanceof Error && error.message.includes("Failed to fetch")) {
             console.error(`[sendTeamsUpdate] Network error calling Teams webhook during step "${currentStep}":`, error.message);
             throw new Error(`Network error calling Teams webhook: ${error.message}`);
         } else {
