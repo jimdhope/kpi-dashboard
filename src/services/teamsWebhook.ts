@@ -64,6 +64,7 @@ const formatTeamsMessageCard = (
         tableMarkdown += "Agent Name | Achievements | Score\n";
         tableMarkdown += "---|---|---\n"; // Markdown table header separator
         agentScores.forEach(score => {
+            // Ensure emojis don't contain characters that break markdown tables (like '|')
             const safeEmojiString = score.emojiString.replace(/\|/g, '');
             tableMarkdown += `${score.agentFirstName} | ${safeEmojiString || '-'} | **${score.totalPoints}**\n`;
         });
@@ -120,6 +121,7 @@ const formatTeamsMessageCard = (
 // Function to fetch all necessary data and send the webhook
 export const sendTeamsUpdate = async (podId: string, date: Date) => {
     console.log(`[sendTeamsUpdate] Triggered for Pod ID: ${podId}, Date: ${date.toISOString()}`);
+    let currentStep = "Fetching Pod Data"; // Track current operation for error logging
 
     try {
         // 1. Fetch Pod Data (for Webhook URL and name)
@@ -141,6 +143,7 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
         }
 
         // 2. Find Active Competition and Rules
+        currentStep = "Finding Active Competition";
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(date));
         const competitionQuery = query(
@@ -153,6 +156,7 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
         let activeCompetition: Competition | null = null;
         for (const docSnap of competitionSnapshot.docs) {
              const comp = { id: docSnap.id, ...docSnap.data() } as Competition;
+             // Ensure endDate exists and is a Timestamp before comparing
              if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
                  activeCompetition = comp;
                  break;
@@ -161,15 +165,14 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
 
         if (!activeCompetition || !activeCompetition.id) {
             console.log(`[sendTeamsUpdate] No active competition found for pod ${podId} on ${date.toDateString()}. Skipping.`);
-            // Not throwing an error here, as it might be valid that there's no competition.
-            // The calling function can decide if this is an error or just a "no data to send" scenario.
-            return;
+            return; // Exit gracefully if no competition found
         }
         const rules = activeCompetition.rules || [];
         const competitionId = activeCompetition.id;
         console.log(`[sendTeamsUpdate] Active Competition for pod ${podId}: ${competitionId}, Rules count: ${rules.length}`);
 
         // 3. Fetch Pod Agents
+        currentStep = "Fetching Pod Agents";
         const usersRef = collection(db, 'users');
         const agentsQuery = query(usersRef, where('podId', '==', podId), where('roles', 'array-contains', 'agent'), orderBy('name'));
         const agentsSnapshot = await getDocs(agentsQuery);
@@ -177,6 +180,7 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
         console.log(`[sendTeamsUpdate] Fetched ${agents.length} agents for pod ${podId}.`);
 
         // 4. Fetch Daily Logs for the Pod on the specific date for the active competition
+        currentStep = `Fetching Daily Logs (Comp: ${competitionId}, Date: ${date.toDateString()})`;
         const achievementsRef = collection(db, 'dailyAchievements');
         const logsQuery = query(
             achievementsRef,
@@ -189,6 +193,7 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
         console.log(`[sendTeamsUpdate] Fetched ${dailyLogs.length} daily logs for pod ${podId}, competition ${competitionId}, date ${date.toDateString()}.`);
 
         // 5. Fetch Daily Targets
+        currentStep = "Fetching Daily Targets";
         const targetsDocId = `${competitionId}_${podId}`;
         const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
         const targetsDocSnap = await getDoc(targetsDocRef);
@@ -196,18 +201,25 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
         console.log(`[sendTeamsUpdate] Daily targets data for ${targetsDocId} exists: ${targetsDocSnap.exists()}`, dailyTargetsData);
 
 
-        // --- Process Data (similar to daily-scores page logic) ---
+        // --- Process Data ---
+        currentStep = "Processing Data";
         const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
         const ruleTotalsToday: Record<string, number> = {};
         rules.forEach(rule => { if(rule.id) ruleTotalsToday[rule.id] = 0; });
 
         dailyLogs.forEach(log => {
+            // Ensure log points are valid numbers
+            const pointsToAdd = typeof log.points === 'number' && !isNaN(log.points) ? log.points : 0;
+             // Ensure log value is valid number for totals
+             const valueToAdd = typeof log.value === 'number' && !isNaN(log.value) ? log.value : 0;
+
             if (!scores[log.agentId]) {
                 scores[log.agentId] = { totalPoints: 0, emojiString: '' };
             }
-            scores[log.agentId].totalPoints += log.points;
+            scores[log.agentId].totalPoints += pointsToAdd;
+
             if (ruleTotalsToday.hasOwnProperty(log.ruleId)) {
-                ruleTotalsToday[log.ruleId] += log.value;
+                ruleTotalsToday[log.ruleId] += valueToAdd;
             }
         });
 
@@ -218,17 +230,20 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
             const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
             sortedRules.forEach(rule => {
                 if (!rule.id) return;
-                const logForRule = agentLogs.find(log => log.ruleId === rule.id);
-                if (logForRule && logForRule.value > 0) {
+                 const logForRule = agentLogs.find(log => log.ruleId === rule.id);
+                 // Ensure log value is a positive number before adding emoji
+                 const logValue = logForRule && typeof logForRule.value === 'number' && !isNaN(logForRule.value) ? logForRule.value : 0;
+
+                 if (logValue > 0) {
                     const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-                    emojis += emojiToUse.repeat(logForRule.value);
+                    emojis += emojiToUse.repeat(logValue); // Repeat emoji based on value
                 }
             });
-            if (scores[agent.id]) {
-                scores[agent.id].emojiString = emojis;
-            } else {
+             // Initialize score if agent has no logs but exists in the pod
+             if (!scores[agent.id]) {
                 scores[agent.id] = { totalPoints: 0, emojiString: '' };
             }
+             scores[agent.id].emojiString = emojis;
         });
 
         const finalAgentScores: AgentScore[] = agents
@@ -250,8 +265,8 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
             .map(rule => {
                 if (!rule.id) return null;
                 const targetValue = dailyTargetsData?.[rule.id]?.[dayOfWeek];
-                // Only include if target is explicitly set for the day
-                if (targetValue === undefined || targetValue === null) return null;
+                // Only include if target is explicitly set for the day and >= 0
+                if (targetValue === undefined || targetValue === null || targetValue < 0) return null;
                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
                 return {
                     ruleName: rule.name,
@@ -266,16 +281,17 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
 
 
         // --- Format and Send ---
+        currentStep = "Formatting MessageCard";
         const messageCardPayload = formatTeamsMessageCard(podName, date, rules, finalAgentScores, finalPodTargetSummary);
 
         console.log(`[sendTeamsUpdate] Sending formatted MessageCard to webhook for pod ${podName}. URL: ${webhookUrl}`);
-        console.log("[sendTeamsUpdate] Payload being sent:", JSON.stringify(messageCardPayload, null, 2));
+        // console.log("[sendTeamsUpdate] Payload being sent:", JSON.stringify(messageCardPayload, null, 2)); // Verbose logging
 
-
+        currentStep = "Sending Webhook Request";
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json', // Correct content type for MessageCard
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify(messageCardPayload),
         });
@@ -289,9 +305,17 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
             console.log(`[sendTeamsUpdate] Successfully sent webhook update for pod ${podId}.`);
         }
 
-    } catch (error) {
-        console.error(`[sendTeamsUpdate] Error occurred while sending Teams update for pod ${podId}:`, error);
-        throw error; // Re-throw the error so the calling function can catch it
+    } catch (error: any) {
+        // Log the specific step where the error occurred
+        console.error(`[sendTeamsUpdate] Error occurred during step "${currentStep}" for pod ${podId}:`, error);
+
+        // Check if it's a FirebaseError and specifically a permissions error
+         if (error.name === 'FirebaseError' && error.code === 'permission-denied') {
+             console.error(`[sendTeamsUpdate] Firestore Permission Denied: The server function lacks permission to read necessary data during step: "${currentStep}". Check Firestore rules.`);
+              throw new Error(`Firestore Permission Denied during step: ${currentStep}. Check rules.`);
+         } else {
+            // Rethrow other errors
+            throw error;
+         }
     }
 };
-
