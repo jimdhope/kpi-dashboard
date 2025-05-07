@@ -37,6 +37,7 @@ import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { sendTeamsUpdate } from '@/services/teamsWebhook'; // Import the Teams update function
 
 // Interface for the data stored in Firestore
 export interface DailyAchievementLog {
@@ -62,6 +63,18 @@ interface AchievementInputState {
     };
   };
 }
+
+// --- Debounce Helper ---
+const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    return (...args: any[]) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            func.apply(null, args);
+        }, delay);
+    };
+};
+
 
 export default function AdminLogAchievementsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -159,14 +172,11 @@ export default function AdminLogAchievementsPage() {
         // 2. Find a Competition active on the *selected date* involving this pod
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-        // Query to find ANY competition involving the pod, active on the date.
+        // Query to find ANY competition involving the pod
         const competitionQuery = query(
           competitionsRef,
           where('podIds', 'array-contains', selectedPodId), // Check if pod is in the array
-          // Remove date constraints to allow backdating
-          // where('startDate', '<=', dateTimestamp),
           orderBy('startDate', 'desc') // Get the most recent starting first
-          // Filter by end date client-side is no longer needed here, but might be useful elsewhere
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let competitionForDate: (Competition & { id: string }) | null = null;
@@ -177,7 +187,8 @@ export default function AdminLogAchievementsPage() {
             const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
             const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
 
-            if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
+            // Ensure start and end dates are valid before comparing
+             if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
                  competitionForDate = comp;
                  console.log(`Found competition "${competitionForDate.name}" that includes ${selectedDate.toLocaleDateString()}`);
                 break; // Found the most relevant competition for the selected date
@@ -248,6 +259,20 @@ export default function AdminLogAchievementsPage() {
     fetchPodData();
   }, [selectedPodId, selectedDate, toast]);
 
+    // Debounced function to send Teams update
+    const debouncedSendTeamsUpdate = useMemo(
+        () => debounce(() => {
+            if (selectedPodId) {
+                console.log(`[AdminLogAchievements] Calling debouncedSendTeamsUpdate for pod ${selectedPodId}`);
+                sendTeamsUpdate(selectedPodId, selectedDate).catch(err => {
+                    console.error("Error sending Teams update from debounce:", err);
+                    // Optionally show a toast here if the webhook send fails
+                });
+            }
+        }, 3000), // Wait 3 seconds after the last save before sending the update
+        [selectedPodId, selectedDate] // Dependencies for the debounce setup
+    );
+
   const handleInputChange = (agentId: string, ruleId: string, value: string) => {
     setAchievementInputs(prev => ({
       ...prev,
@@ -262,17 +287,6 @@ export default function AdminLogAchievementsPage() {
      // Trigger save automatically on change after a short delay (debounced)
      debouncedSave(agentId, ruleId, value);
   };
-
-   // Debounce function
-   const debounce = (func: Function, delay: number) => {
-       let timeoutId: NodeJS.Timeout;
-       return (...args: any[]) => {
-           clearTimeout(timeoutId);
-           timeoutId = setTimeout(() => {
-               func.apply(null, args);
-           }, delay);
-       };
-   };
 
     const handleSaveAchievement = async (agentId: string, ruleId: string, valueStr: string | undefined) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) { // Check activeCompetitionId state
@@ -301,6 +315,7 @@ export default function AdminLogAchievementsPage() {
 
      const savingKey = `${agentId}-${ruleId}`;
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
+     let changeOccurred = false; // Flag to track if data actually changed
 
     try {
        const points = rule.points * value;
@@ -328,6 +343,7 @@ export default function AdminLogAchievementsPage() {
          if (value === 0) {
              await deleteDoc(docRef);
              console.log(`Achievement deleted for ${rule.name} (value set to 0)`);
+             changeOccurred = true;
              // Update state to remove existingLogId immediately
              setAchievementInputs(prev => {
                  const newState = { ...prev };
@@ -337,11 +353,19 @@ export default function AdminLogAchievementsPage() {
                  return newState;
              });
          } else {
-             await setDoc(docRef, logEntry, { merge: true });
-             console.log(`Achievement updated for ${rule.name} to ${value}`);
+              // Check if value actually changed before updating
+             const existingDocSnap = await getDoc(docRef);
+             if (!existingDocSnap.exists() || (existingDocSnap.data() as DailyAchievementLog).value !== value) {
+                await setDoc(docRef, logEntry, { merge: true });
+                console.log(`Achievement updated for ${rule.name} to ${value}`);
+                changeOccurred = true;
+             } else {
+                  console.log(`Log skipped for ${rule.name} (value unchanged)`);
+             }
          }
        } else if (value > 0) { // Only create if value > 0
          const addedDoc = await addDoc(achievementsRef, logEntry);
+         changeOccurred = true;
          // Update state with the new ID immediately
          setAchievementInputs(prev => {
              const newState = { ...prev };
@@ -360,6 +384,13 @@ export default function AdminLogAchievementsPage() {
            // console.log(`Log skipped for ${rule.name} (value 0)`);
        }
 
+       // If a change occurred, trigger the debounced Teams update
+        if (changeOccurred) {
+            console.log(`[AdminLogAchievements] Change occurred for ${rule.name}. Triggering debounced Teams update.`);
+            debouncedSendTeamsUpdate();
+        }
+
+
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
       // Consider a less intrusive error indicator than toast for auto-save
@@ -372,7 +403,7 @@ export default function AdminLogAchievementsPage() {
    // Create the debounced save function
    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), // Debounce for 1 second
      // Dependencies: recreate debounce function if these change
-      [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId] // Added activeCompetitionId
+      [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId, debouncedSendTeamsUpdate] // Added activeCompetitionId and debouncedSendTeamsUpdate
   );
 
 
@@ -527,4 +558,5 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
+
 
