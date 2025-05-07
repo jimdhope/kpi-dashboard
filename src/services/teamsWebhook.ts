@@ -28,79 +28,84 @@ interface AgentScore {
     emojiString: string;
 }
 
-interface PodTargetSummary {
-    ruleId: string;
+interface PodTargetSummaryForTeams {
     ruleName: string;
     ruleEmoji: string;
     achieved: number;
     target: number | null;
 }
 
-// Helper function to get agent names
-const getAgentNames = async (agentIds: string[]): Promise<Map<string, string>> => {
-    const names = new Map<string, string>();
-    if (agentIds.length === 0) return names;
 
-    // Fetch users in batches if necessary, but for typical pod sizes, fetching all might be okay.
-    // Consider batching if you expect very large pods.
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('__name__', 'in', agentIds)); // Query by document ID
-    const snapshot = await getDocs(q);
-    snapshot.forEach(doc => {
-        names.set(doc.id, (doc.data() as AppUser).name || 'Unknown Agent');
-    });
-    return names;
-}
-
-
-// Function to format the message for Microsoft Teams
-const formatTeamsMessage = (
+// Function to format the message for Microsoft Teams using MessageCard format
+const formatTeamsMessageCard = (
     podName: string,
     date: Date,
     rules: RuleFormData[],
     agentScores: AgentScore[],
-    podTargetSummary: PodTargetSummary[]
-): string => {
+    podTargetSummary: PodTargetSummaryForTeams[]
+): object => { // Return type is now object for the MessageCard
 
-    // 1. Header
     const formattedDate = format(date, 'PPPP'); // e.g., Monday, May 5th, 2025
-    let message = `**${podName} - Daily Scores Update (${formattedDate})**\n\n---\n\n`;
 
-    // 2. Rule Key
+    // 1. Rule Key
     const ruleKeyString = rules
-        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
-        .join('  |  '); // Use double space | double space for better separation in Teams Markdown
-    message += `**Key:** ${ruleKeyString}\n\n---\n\n`;
+        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} ${rule.name} (${rule.points} pts)`)
+        .join('  \n'); // Use newline for better readability in Teams MessageCard
 
-    // 3. Scores Table (Simple Markdown)
+    // 2. Scores Table (Markdown)
+    let tableMarkdown = "";
     if (agentScores.length > 0) {
-        message += "**Agent Scores:**\n";
-        // Header Row
-        message += "| Agent | Achievements | Score |\n";
-        message += "|---|---|---|\n";
-        // Data Rows
+        tableMarkdown += "Agent Name | Achievements | Score\n";
+        tableMarkdown += "---|---|---\n"; // Markdown table header separator
         agentScores.forEach(score => {
-             // Replace vertical pipe if present in emoji string to avoid breaking Markdown table
             const safeEmojiString = score.emojiString.replace(/\|/g, '');
-            message += `| ${score.agentFirstName} | ${safeEmojiString || '-'} | **${score.totalPoints}** |\n`;
+            tableMarkdown += `${score.agentFirstName} | ${safeEmojiString || '-'} | **${score.totalPoints}**\n`;
         });
-        message += "\n---\n\n"; // Separator after table
     } else {
-        message += "**Agent Scores:**\n_No scores logged today._\n\n---\n\n";
+        tableMarkdown = "_No scores logged today._";
     }
 
-
-    // 4. Pod Target Summary
+    // 3. Pod Target Summary
+    let podSummaryString = "";
     if (podTargetSummary.length > 0) {
-        const podSummaryString = podTargetSummary
+        podSummaryString = podTargetSummary
             .map(summary => `${summary.ruleEmoji} ${summary.ruleName} ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
-            .join('  |  '); // Use double space | double space
-        message += `**Pod Targets Today:** ${podSummaryString}\n\n`;
+            .join('  \n'); // Use newline for better readability
     } else {
-         message += `**Pod Targets Today:** _No targets set for today._\n\n`;
+        podSummaryString = "_No targets set for today._";
     }
 
-    return message;
+    // Construct the MessageCard payload
+    const messageCard = {
+        "@type": "MessageCard",
+        "@context": "http://schema.org/extensions",
+        "summary": `KpiQuest Daily Scores for ${podName} - ${formattedDate}`,
+        "themeColor": "008080", // Teal color
+
+        "sections": [
+            {
+                "title": `**${podName} - Daily Scores (${formattedDate})**`,
+                "facts": [ // Using facts for a cleaner look in Teams if preferred
+                    {
+                        "name": "Rule Key:",
+                        "value": ruleKeyString
+                    }
+                ],
+                "markdown": true // Ensure markdown is enabled for this section if using text directly
+            },
+            {
+                "title": "**Agent Scores**",
+                "text": tableMarkdown, // Table is pure markdown
+                "markdown": true
+            },
+            {
+                "title": "**Pod Targets Today**",
+                "text": podSummaryString,
+                "markdown": true
+            }
+        ]
+    };
+    return messageCard;
 };
 
 // Function to fetch all necessary data and send the webhook
@@ -132,7 +137,6 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
             where('podIds', 'array-contains', podId),
             where('startDate', '<=', dateTimestamp),
             orderBy('startDate', 'desc')
-            // Filter for endDate >= dateTimestamp client-side or in a more complex query if needed
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let activeCompetition: Competition | null = null;
@@ -149,49 +153,44 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
             return;
         }
         const rules = activeCompetition.rules || [];
-         const competitionId = activeCompetition.id; // Get competition ID
+        const competitionId = activeCompetition.id;
 
         // 3. Fetch Pod Agents
         const usersRef = collection(db, 'users');
         const agentsQuery = query(usersRef, where('podId', '==', podId), where('roles', 'array-contains', 'agent'), orderBy('name'));
         const agentsSnapshot = await getDocs(agentsQuery);
         const agents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-        const agentNameMap = new Map(agents.map(agent => [agent.id!, agent.name]));
+        // const agentNameMap = new Map(agents.map(agent => [agent.id!, agent.name])); // Not directly used in message card, but good for debugging
 
-        // 4. Fetch Daily Logs for the Pod on the specific date
+        // 4. Fetch Daily Logs for the Pod on the specific date for the active competition
         const achievementsRef = collection(db, 'dailyAchievements');
         const logsQuery = query(
             achievementsRef,
             where('podId', '==', podId),
-            where('competitionId', '==', competitionId), // Filter by active competition
+            where('competitionId', '==', competitionId),
             where('date', '==', dateTimestamp)
         );
         const logsSnapshot = await getDocs(logsQuery);
         const dailyLogs = logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
 
-
         // 5. Fetch Daily Targets
         const targetsDocId = `${competitionId}_${podId}`;
         const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
         const targetsDocSnap = await getDoc(targetsDocRef);
-        const dailyTargets = targetsDocSnap.exists() ? targetsDocSnap.data() as DailyTargetData : null;
+        const dailyTargetsData = targetsDocSnap.exists() ? targetsDocSnap.data() as DailyTargetData : null;
 
         // --- Process Data (similar to daily-scores page logic) ---
-
         const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
-        const ruleTotals: Record<string, number> = {};
-        rules.forEach(rule => { if(rule.id) ruleTotals[rule.id] = 0; });
+        const ruleTotalsToday: Record<string, number> = {};
+        rules.forEach(rule => { if(rule.id) ruleTotalsToday[rule.id] = 0; });
 
         dailyLogs.forEach(log => {
-            // Agent Scores
             if (!scores[log.agentId]) {
                 scores[log.agentId] = { totalPoints: 0, emojiString: '' };
             }
             scores[log.agentId].totalPoints += log.points;
-
-            // Rule Totals for Pod Summary
-            if (ruleTotals.hasOwnProperty(log.ruleId)) {
-                ruleTotals[log.ruleId] += log.value;
+            if (ruleTotalsToday.hasOwnProperty(log.ruleId)) {
+                ruleTotalsToday[log.ruleId] += log.value;
             }
         });
 
@@ -211,7 +210,7 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
             if (scores[agent.id]) {
                 scores[agent.id].emojiString = emojis;
             } else {
-                scores[agent.id] = { totalPoints: 0, emojiString: '' }; // Ensure entry exists
+                scores[agent.id] = { totalPoints: 0, emojiString: '' };
             }
         });
 
@@ -227,57 +226,45 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
             })
             .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
-        // Build Pod Target Summary
         const dayOfWeek = daysOfWeek[getDay(date)];
-        const finalPodTargetSummary: PodTargetSummary[] = rules
+        const finalPodTargetSummary: PodTargetSummaryForTeams[] = rules
             .map(rule => {
                 if (!rule.id) return null;
-                const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
+                const targetValue = dailyTargetsData?.[rule.id]?.[dayOfWeek];
+                // Only include if target is explicitly set for the day
                 if (targetValue === undefined || targetValue === null) return null;
                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
                 return {
-                    ruleId: rule.id,
                     ruleName: rule.name,
                     ruleEmoji: emojiToUse,
-                    achieved: ruleTotals[rule.id] || 0,
+                    achieved: ruleTotalsToday[rule.id] || 0,
                     target: targetValue,
                 };
             })
-            .filter((item): item is PodTargetSummary => item !== null)
+            .filter((item): item is PodTargetSummaryForTeams => item !== null)
             .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
         // --- Format and Send ---
+        const messageCardPayload = formatTeamsMessageCard(podName, date, rules, finalAgentScores, finalPodTargetSummary);
 
-        const messageContent = formatTeamsMessage(podName, date, rules, finalAgentScores, finalPodTargetSummary);
-
-        console.log(`[sendTeamsUpdate] Sending formatted message to webhook for pod ${podName}`);
+        console.log(`[sendTeamsUpdate] Sending formatted MessageCard to webhook for pod ${podName}`);
 
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json', // Correct content type for MessageCard
             },
-            body: JSON.stringify({ text: messageContent }), // Send as simple text/markdown
-            // For Adaptive Cards, use 'application/adaptivecard+json' and structure accordingly
-            // body: JSON.stringify({
-            //     type: 'message',
-            //     attachments: [{
-            //         contentType: 'application/vnd.microsoft.card.adaptive',
-            //         content: { /* Adaptive Card JSON structure here */ }
-            //     }]
-            // })
+            body: JSON.stringify(messageCardPayload),
         });
 
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`[sendTeamsUpdate] Failed to send webhook to Teams for pod ${podId}. Status: ${response.status}, Response: ${errorText}`);
-            // Optionally notify admin via toast or other means
         } else {
             console.log(`[sendTeamsUpdate] Successfully sent webhook update for pod ${podId}.`);
         }
 
     } catch (error) {
         console.error(`[sendTeamsUpdate] Error occurred while sending Teams update for pod ${podId}:`, error);
-        // Handle error appropriately (e.g., log it, notify admin)
     }
 };

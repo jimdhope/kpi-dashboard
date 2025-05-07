@@ -263,8 +263,8 @@ export default function AdminLogAchievementsPage() {
     const debouncedSendTeamsUpdate = useMemo(
         () => debounce(() => {
             if (selectedPodId) {
-                console.log(`[AdminLogAchievements] Calling debouncedSendTeamsUpdate for pod ${selectedPodId}`);
-                sendTeamsUpdate(selectedPodId, selectedDate).catch(err => {
+                console.log(`[AdminLogAchievements] Calling debouncedSendTeamsUpdate for pod ${selectedPodId} and date ${selectedDate.toISOString()}`);
+                sendTeamsUpdate(selectedPodId, selectedDate).catch(err => { // Pass the current selectedDate
                     console.error("Error sending Teams update from debounce:", err);
                     // Optionally show a toast here if the webhook send fails
                 });
@@ -386,8 +386,8 @@ export default function AdminLogAchievementsPage() {
 
        // If a change occurred, trigger the debounced Teams update
         if (changeOccurred) {
-            console.log(`[AdminLogAchievements] Change occurred for ${rule.name}. Triggering debounced Teams update.`);
-            debouncedSendTeamsUpdate();
+            console.log(`[AdminLogAchievements] Change occurred for ${rule.name}. Triggering debounced Teams update for date ${selectedDate.toISOString()}`);
+            debouncedSendTeamsUpdate(); // Uses selectedDate from component's state
         }
 
 
