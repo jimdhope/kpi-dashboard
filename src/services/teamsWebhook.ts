@@ -119,26 +119,20 @@ const formatTeamsMessageCard = (
 };
 
 // Function to fetch all necessary data and send the webhook
-export const sendTeamsUpdate = async (podId: string, date: Date) => {
-    console.log(`[sendTeamsUpdate] Triggered for Pod ID: ${podId}, Date: ${date.toISOString()}`);
-    let currentStep = "Fetching Pod Data"; // Track current operation for error logging
+// Accepts podName and webhookUrl as arguments
+export const sendTeamsUpdate = async (
+    podId: string,
+    date: Date,
+    podName: string,
+    webhookUrl: string
+) => {
+    console.log(`[sendTeamsUpdate] Triggered for Pod ID: ${podId}, Date: ${date.toISOString()}, Pod Name: ${podName}, Webhook URL Provided: ${!!webhookUrl}`);
+    let currentStep = "Initial Checks"; // Track current operation for error logging
 
     try {
-        // 1. Fetch Pod Data (for Webhook URL and name)
-        const podDocRef = doc(db, 'pods', podId);
-        const podDocSnap = await getDoc(podDocRef);
-        if (!podDocSnap.exists()) {
-            console.warn(`[sendTeamsUpdate] Pod document ${podId} not found.`);
-            throw new Error(`Pod with ID ${podId} not found.`);
-        }
-        const podData = podDocSnap.data() as Pod;
-        const webhookUrl = podData.teamsWebhookUrl;
-        const podName = podData.name;
-        console.log(`[sendTeamsUpdate] Pod Data for ${podId}:`, { podName, webhookUrl });
-
-
+        // 1. Initial Checks (Webhook URL already provided)
         if (!webhookUrl) {
-            console.log(`[sendTeamsUpdate] No webhook URL configured for pod ${podName} (${podId}). Skipping notification.`);
+            console.log(`[sendTeamsUpdate] No webhook URL provided for pod ${podName} (${podId}). Skipping notification.`);
             throw new Error(`No webhook URL configured for pod ${podName}.`);
         }
 
@@ -282,6 +276,7 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
 
         // --- Format and Send ---
         currentStep = "Formatting MessageCard";
+        // Use the podName passed as an argument
         const messageCardPayload = formatTeamsMessageCard(podName, date, rules, finalAgentScores, finalPodTargetSummary);
 
         console.log(`[sendTeamsUpdate] Sending formatted MessageCard to webhook for pod ${podName}. URL: ${webhookUrl}`);
@@ -313,6 +308,10 @@ export const sendTeamsUpdate = async (podId: string, date: Date) => {
          if (error.name === 'FirebaseError' && error.code === 'permission-denied') {
              console.error(`[sendTeamsUpdate] Firestore Permission Denied: The server function lacks permission to read necessary data during step: "${currentStep}". Check Firestore rules.`);
               throw new Error(`Firestore Permission Denied during step: ${currentStep}. Check rules.`);
+         } else if (error.message.includes("Failed to fetch")) {
+              // Handle network-related errors when calling the webhook
+              console.error(`[sendTeamsUpdate] Network error calling Teams webhook during step "${currentStep}":`, error.message);
+              throw new Error(`Network error calling Teams webhook: ${error.message}`);
          } else {
             // Rethrow other errors
             throw error;

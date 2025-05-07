@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   collection,
   query,
@@ -50,6 +50,7 @@ interface PodTargetSummary {
   ruleEmoji: string;
   achieved: number;
   target: number | null; // Target might not be set
+  progress?: number; // Optional progress percentage
 }
 
 // Competition interface (no podTargets needed)
@@ -349,12 +350,15 @@ export default function AdminDailyScoresPage() {
             }
 
             const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+            const achieved = ruleTotals[rule.id] || 0;
+            const progress = targetValue > 0 ? Math.min(100, Math.round((achieved / targetValue) * 100)) : (achieved > 0 ? 100 : 0); // Handle target 0
             return {
                 ruleId: rule.id,
                 ruleName: rule.name,
                 ruleEmoji: emojiToUse,
-                achieved: ruleTotals[rule.id] || 0,
+                achieved: achieved,
                 target: targetValue, // Use the target for the specific day
+                progress: progress,
             };
         })
         .filter((item): item is PodTargetSummary => item !== null) // Remove null entries
@@ -386,34 +390,44 @@ export default function AdminDailyScoresPage() {
     const currentPod = pods.find(p => p.id === selectedPodId);
 
     if (!currentPod) {
-        console.error(`[DailyScoresPage] Selected pod with ID ${selectedPodId} not found in pods list.`);
-        toast({ variant: "destructive", title: "Pod Not Found", description: "Selected pod data could not be found." });
-        return;
+      console.error(`[DailyScoresPage] Selected pod with ID ${selectedPodId} not found in pods list.`);
+      toast({ variant: "destructive", title: "Pod Not Found", description: "Selected pod data could not be found." });
+      return;
     }
 
     const webhookUrl = currentPod.teamsWebhookUrl;
-    console.log(`[DailyScoresPage] Webhook URL for pod ${currentPod.name}: ${webhookUrl}`);
+    const podName = currentPod.name; // Get pod name
+    console.log(`[DailyScoresPage] Webhook URL for pod ${podName}: ${webhookUrl}`);
 
     if (!webhookUrl) {
       toast({ variant: "destructive", title: "Missing Webhook", description: "No Teams webhook URL configured for this pod." });
       return;
     }
     if (agentScores.length === 0 && podTargetSummary.length === 0) {
-        toast({ variant: "default", title: "No Data", description: "Nothing to send to Teams for this day." });
-        return;
+      toast({ variant: "default", title: "No Data", description: "Nothing to send to Teams for this day." });
+      return;
     }
 
     setIsSendingToTeams(true);
-    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, date: ${selectedDate}`);
+    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, date: ${selectedDate}, podName: ${podName}`);
     try {
-       await sendTeamsUpdate(selectedPodId, selectedDate);
-       toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
-       console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ID: ${selectedPodId}`);
-    } catch (err) {
-       console.error("[DailyScoresPage] Error sending to Teams:", err);
-       toast({ variant: "destructive", title: "Send Failed", description: "Could not send summary to Teams." });
+      // Pass necessary data to the server action
+      await sendTeamsUpdate(
+        selectedPodId,
+        selectedDate,
+        podName, // Pass pod name
+        webhookUrl // Pass webhook URL
+        // We still need to fetch the rest of the data (competition, rules, logs, agents, targets)
+        // within the server action because it needs server-side context for permissions.
+      );
+      toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
+      console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ID: ${selectedPodId}`);
+    } catch (err: any) {
+      console.error("[DailyScoresPage] Error sending to Teams:", err);
+      // Display more specific error from the server action if possible
+      toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
     } finally {
-       setIsSendingToTeams(false);
+      setIsSendingToTeams(false);
     }
   };
 
@@ -581,4 +595,5 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
+
 
