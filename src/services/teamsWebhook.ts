@@ -86,7 +86,7 @@ export const sendTeamsUpdate = async (
         const cardData = formatDataForAdaptiveCard(podName, date, rules, agentScores, podTargetSummary);
 
         currentStep = "Constructing Adaptive Card Payload";
-        // Construct the Adaptive Card JSON using the formatted data
+        // Construct the Adaptive Card JSON using the formatted data and placeholders
         const adaptiveCardJson = {
             "type": "AdaptiveCard",
             "body": [
@@ -94,11 +94,12 @@ export const sendTeamsUpdate = async (
                     "type": "TextBlock",
                     "size": "Medium",
                     "weight": "Bolder",
-                    "text": cardData.title // Use the title generated
+                    // Use correct placeholder syntax for Adaptive Cards
+                    "text": cardData.title // Directly use the title string
                 },
                 {
                     "type": "TextBlock",
-                    "text": cardData.kpiKey, // Use the generated key
+                    "text": cardData.kpiKey, // Use the generated key string
                     "wrap": true,
                     "separator": true // Add a separator
                 },
@@ -155,12 +156,7 @@ export const sendTeamsUpdate = async (
 
     } catch (error: any) {
         console.error(`[sendTeamsUpdate] Error occurred during step "${currentStep}" for pod ${podName}:`, error);
-        if (error instanceof Error && error.message.includes("Failed to fetch")) {
-            console.error(`[sendTeamsUpdate] Network error calling Teams webhook during step "${currentStep}":`, error.message);
-            throw new Error(`Network error calling Teams webhook: ${error.message}`);
-        } else {
-            // Re-throw other errors to be caught by the calling function
-            throw error;
-        }
+        // Re-throw other errors to be caught by the calling function
+        throw error;
     }
 };

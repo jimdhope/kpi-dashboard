@@ -5,23 +5,23 @@
             "type": "TextBlock",
             "size": "Medium",
             "weight": "Bolder",
-            "text": "Pod Name - Daily Scores (Date)"
+            "text": "${title}"
         },
         {
             "type": "TextBlock",
-            "text": "Rule Emoji = Rule Name (Points pts)",
+            "text": "${kpiKey}",
             "wrap": true,
             "separator": true
         },
         {
             "type": "TextBlock",
-            "text": "- **Agent Name:** Emoji String (Total Points pts)",
+            "text": "${kpiTable}",
             "wrap": true,
             "separator": true
         },
         {
             "type": "TextBlock",
-            "text": "Target Emoji Target Name Achieved / Target",
+            "text": "${kpiTargets}",
             "wrap": true
         }
     ],
