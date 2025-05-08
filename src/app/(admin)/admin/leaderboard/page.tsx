@@ -274,15 +274,16 @@ export default function AdminLeaderboardPage() {
         // Assign ranks using dense ranking (1, 2, 2, 3...)
         let agentRank = 0;
         let previousAgentScore = -Infinity;
+        let rankCounter = 0; // Use a separate counter for rank assignment
         const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index) => {
             if (entry.totalPoints < previousAgentScore) {
-                 agentRank++; // Increment rank only when score decreases
+                rankCounter = index + 1; // Rank is the index + 1 when score decreases
             } else if (index === 0) {
-                 agentRank = 1; // First item is always rank 1
+                rankCounter = 1; // First item is always rank 1
             }
-            // Score is same or first item, use current rank
+             // Otherwise, score is same, use the *same rank counter* as the previous item with this score
             previousAgentScore = entry.totalPoints; // Update score for next comparison
-            return { ...entry, rank: agentRank };
+            return { ...entry, rank: rankCounter };
         });
 
 
@@ -318,15 +319,16 @@ export default function AdminLeaderboardPage() {
         // Assign ranks using dense ranking (1, 2, 2, 3...)
         let teamRank = 0;
         let previousTeamScore = -Infinity;
+        let teamRankCounter = 0; // Use a separate counter
         const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index) => {
              if (entry.totalPoints < previousTeamScore) {
-                 teamRank++; // Increment rank only when score decreases
+                 teamRankCounter = index + 1; // Rank is the index + 1 when score decreases
              } else if (index === 0) {
-                 teamRank = 1; // First item is always rank 1
+                 teamRankCounter = 1; // First item is always rank 1
              }
-             // Score is same or first item, use current rank
+              // Otherwise, score is same, use the *same rank counter* as the previous item with this score
              previousTeamScore = entry.totalPoints; // Update score for next comparison
-             return { ...entry, rank: teamRank };
+             return { ...entry, rank: teamRankCounter };
          });
 
         return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };

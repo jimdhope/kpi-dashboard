@@ -100,8 +100,8 @@ export default function CertificateGenerationPage() {
         return `${names.join(', ')} & ${last}`;
     };
 
-     // --- Updated Rank Assignment Logic (Sequential after ties) ---
-     const assignRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+    // --- Dense Ranking Logic (1, 2, 2, 3...) ---
+    const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         if (items.length === 0) return [];
 
         const rankedItems = [];
@@ -110,14 +110,15 @@ export default function CertificateGenerationPage() {
 
         for (let i = 0; i < items.length; i++) {
             const currentItem = items[i];
-            // If score is lower than the previous item's score, assign the next rank based on position
+            // Increment rank only if score decreases
             if (currentItem.score < previousScore) {
-                currentRank = i + 1; // Rank is the position (1-based)
+                currentRank = rankedItems.length > 0 ? rankedItems[rankedItems.length - 1].rank + 1 : 1; // Increment based on the last assigned rank's number
+            } else if (i === 0) {
+                 currentRank = 1; // First item is always rank 1
             }
-            // If score is the same, assign the *same* rank as the previous person assigned this rank
-            // If it's the first item, rank is always 1.
+             // Otherwise, score is same or first item, use currentRank
             rankedItems.push({ ...currentItem, rank: currentRank });
-            previousScore = currentItem.score; // Update previous score for the next iteration
+            previousScore = currentItem.score;
         }
         return rankedItems;
     };
@@ -195,7 +196,7 @@ export default function CertificateGenerationPage() {
             });
             const agentScores = podAgentUsers
                 .map(agent => ({ ...agent, score: agentScoresMap[agent.id!] || 0 }))
-                .sort((a, b) => b.score - a.score);
+                .sort((a, b) => b.score - a.score); // Sort descending for ranking
 
             // Team Scores
             const teamScoresMap: { [teamId: string]: number } = {};
@@ -208,11 +209,11 @@ export default function CertificateGenerationPage() {
             });
             const teamScores = competitionTeams
                 .map(team => ({ ...team, score: teamScoresMap[team.id] || 0 }))
-                .sort((a, b) => b.score - a.score);
+                .sort((a, b) => b.score - a.score); // Sort descending for ranking
 
-            // Assign ranks using the updated logic
-            const rankedAgents = assignRanks(agentScores);
-            const rankedTeams = assignRanks(teamScores);
+            // Assign ranks using dense ranking logic
+            const rankedAgents = assignDenseRanks(agentScores);
+            const rankedTeams = assignDenseRanks(teamScores);
 
 
             // --- SVG Templates (Kept signature font) ---
