@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Brush+Script+MT&display=swap'); /* Added Brush Script MT import */
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap'); /* Added Dancing Script import */
 
 @tailwind base;
 @tailwind components;
@@ -23,7 +23,7 @@ body {
     /* Light Mode - Lighter version of #4281a4 for background blobs */
     --background: 203 42% 94%; /* #e9f1f6 - Lighter version of #4281a4 (Used by layouts for scroll area) */
     --foreground: 0 0% 10%; /* Dark Gray */
-    --card: hsla(0, 0%, 100%, 0.80); /* White with 80% opacity */
+    --card: hsla(0, 0%, 100%, 0.85); /* White with 85% opacity */
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
@@ -67,7 +67,7 @@ body {
     /* Dark Mode */
     --background: 0 0% 12%; /* #1e1e1e (Used by layouts for scroll area) */
     --foreground: 0 0% 98%; /* White */
-    --card: hsla(210, 10%, 18%, 0.80);
+    --card: hsla(210, 10%, 18%, 0.85); /* Dark Blueish Gray with 85% opacity */
     --card-foreground: 0 0% 98%;
     --popover: 210 10% 20%;
     --popover-foreground: 0 0% 98%;
@@ -115,9 +115,7 @@ body {
 
 /* Frosted Glass effect for cards */
 .frosted-glass {
-  /* Adjusted bg-card opacity for slightly more blur visibility */
-  /* Increased opacity from 80 to 85 */
-  @apply bg-card/85 backdrop-blur-lg border border-border/50 shadow-sm;
+  @apply bg-card/85 backdrop-blur-md border border-border/50 shadow-sm;
 }
 
 .fixed-background-container {
@@ -136,8 +134,6 @@ body {
   z-index: 1; /* Place above the fixed background */
   min-height: 100vh; /* Ensure it covers the viewport height */
   overflow-y: auto; /* Enable scrolling only for this container */
-  /* Apply the theme's default background to the scrollable area if needed */
-  /* background-color: hsl(var(--background)); */
    background-color: transparent; /* Make scrollable container transparent */
 }
 
@@ -145,5 +141,3 @@ body {
 .certificate-svg-container svg {
   @apply max-w-full h-auto block max-h-full; /* Ensure SVG scales down and maintains aspect ratio within container */
 }
-
-    

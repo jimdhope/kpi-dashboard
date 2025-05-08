@@ -213,81 +213,84 @@ export default function CertificateGenerationPage() {
             const rankedTeams = assignDenseRanks(teamScores);
 
 
-             // --- SVG Templates (Use Web-Safe Fonts, removed external import) ---
+             // --- SVG Templates (Use Google Font) ---
              const svgDefs = `
                  <defs>
                     <style type="text/css">
-                        /* Use common web-safe fonts */
+                        /* Use common web-safe fonts for body/title */
                         .body-font { font-family: Arial, Helvetica, sans-serif; }
                         .title-font { font-family: Arial, Helvetica, sans-serif; font-weight: bold; }
-                        .name-font { font-family: 'Brush Script MT', cursive, sans-serif; font-weight: bold; } /* Fancy font for names */
-                        .signature-font { font-family: 'Brush Script MT', cursive, sans-serif; font-size: 52px; } /* Signature */
+                        /* Use Dancing Script Google Font for names and signatures */
+                        .name-font { font-family: 'Dancing Script', cursive; font-weight: 700; } /* Specify weight */
+                        .signature-font { font-family: 'Dancing Script', cursive; font-size: 52px; font-weight: 700; } /* Specify weight */
                     </style>
                 </defs>
              `;
 
+             // Updated Templates with Highlight Colors and Font Families
              const svgTemplateFirst = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                  <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#9f8f5e" stroke-width="15"/>
+                  <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#9f8f5e" stroke-width="15"/> {/* Gold border */}
                   <text x="50%" y="100" class="title-font" font-size="40" fill="#333" text-anchor="middle">Certificate of Achievement</text>
                   <text x="50%" y="160" class="body-font" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="50%" y="250" class="name-font" font-size="50" fill="#9f8f5e" text-anchor="middle">{{Agent Name}}</text>
+                  <text x="50%" y="250" class="name-font" font-size="60" fill="#9f8f5e" text-anchor="middle">{{Agent Name}}</text> {/* Gold Name */}
                   <text x="50%" y="320" class="body-font" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
-                  <text x="50%" y="380" class="title-font" font-size="40" fill="#9f8f5e" text-anchor="middle">1st Place</text>
+                  <text x="50%" y="380" class="title-font" font-size="40" fill="#9f8f5e" text-anchor="middle">1st Place</text> {/* Gold Rank */}
                   <text x="50%" y="440" class="body-font" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
                   <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
                   <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
-                  <circle cx="100" cy="100" r="40" fill="#9f8f5e"/>
+                  <circle cx="100" cy="100" r="40" fill="#9f8f5e"/> {/* Gold Circle */}
                   <text x="100" y="105" class="title-font" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle">1st</text>
                 </svg>`;
              const svgTemplateSecond = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                  <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#969696" stroke-width="15"/>
+                  <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#969696" stroke-width="15"/> {/* Silver border */}
                   <text x="50%" y="100" class="title-font" font-size="40" fill="#333" text-anchor="middle">Certificate of Achievement</text>
                   <text x="50%" y="160" class="body-font" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="50%" y="250" class="name-font" font-size="50" fill="#969696" text-anchor="middle">{{Agent Name}}</text>
+                  <text x="50%" y="250" class="name-font" font-size="60" fill="#969696" text-anchor="middle">{{Agent Name}}</text> {/* Silver Name */}
                   <text x="50%" y="320" class="body-font" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
-                  <text x="50%" y="380" class="title-font" font-size="40" fill="#969696" text-anchor="middle">2nd Place</text>
+                  <text x="50%" y="380" class="title-font" font-size="40" fill="#969696" text-anchor="middle">2nd Place</text> {/* Silver Rank */}
                   <text x="50%" y="440" class="body-font" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
                   <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
                   <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
-                  <circle cx="100" cy="100" r="40" fill="#969696"/>
+                  <circle cx="100" cy="100" r="40" fill="#969696"/> {/* Silver Circle */}
                   <text x="100" y="105" class="title-font" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle">2nd</text>
                 </svg>`;
             const svgTemplateThird = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                    <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#996b4f" stroke-width="15"/>
+                    <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#996b4f" stroke-width="15"/> {/* Bronze border */}
                     <text x="50%" y="100" class="title-font" font-size="40" fill="#333" text-anchor="middle">Certificate of Achievement</text>
                     <text x="50%" y="160" class="body-font" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                    <text x="50%" y="250" class="name-font" font-size="50" fill="#996b4f" text-anchor="middle">{{Agent Name}}</text>
+                    <text x="50%" y="250" class="name-font" font-size="60" fill="#996b4f" text-anchor="middle">{{Agent Name}}</text> {/* Bronze Name */}
                     <text x="50%" y="320" class="body-font" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
-                    <text x="50%" y="380" class="title-font" font-size="40" fill="#996b4f" text-anchor="middle">3rd Place</text>
+                    <text x="50%" y="380" class="title-font" font-size="40" fill="#996b4f" text-anchor="middle">3rd Place</text> {/* Bronze Rank */}
                     <text x="50%" y="440" class="body-font" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
                     <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
                     <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
-                    <circle cx="100" cy="100" r="40" fill="#996b4f"/>
+                    <circle cx="100" cy="100" r="40" fill="#996b4f"/> {/* Bronze Circle */}
                     <text x="100" y="105" class="title-font" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle">3rd</text>
                  </svg>`;
             const svgTemplateTeam = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#e0f2f7"/>
-                    <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#625fc3" stroke-width="15"/>
+                    <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#625fc3" stroke-width="15"/> {/* Team color border */}
                     <text x="50%" y="100" class="title-font" font-size="40" fill="#333" text-anchor="middle">Winning Team Award</text>
                     <text x="50%" y="160" class="body-font" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
-                    <text x="50%" y="250" class="name-font" font-size="50" fill="#625fc3" text-anchor="middle">{{Team Name}}</text>
+                    <text x="50%" y="250" class="name-font" font-size="60" fill="#625fc3" text-anchor="middle">{{Team Name}}</text> {/* Team color Name */}
                     <text x="50%" y="320" class="body-font" font-size="24" fill="#555" text-anchor="middle">For winning the {{Pod Name}} KPI Competition</text>
                     <text x="50%" y="420" class="body-font" font-size="16" fill="#555" text-anchor="middle">Team Members: {{Members}}</text>
                     <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
                     <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                     <text x="100" y="110" font-family="Arial, sans-serif" font-size="60" text-anchor="middle" fill="#625fc3">🏆</text> {/* Emoji uses default system font */}
                  </svg>`;
+
 
             // --- Replace Placeholders ---
             const generated: CertificateData[] = [];
@@ -574,5 +577,3 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-
-    
