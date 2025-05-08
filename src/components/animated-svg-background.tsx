@@ -2,26 +2,30 @@
 
 import React from 'react';
 
-// Adjusted animation durations for even slower movement
+// Adjusted animation durations for even slower movement (lava lamp effect)
 const cssContent = `
   @keyframes rotate {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
   .out-top {
-    animation: rotate 150s linear infinite; /* Further slowed down */
+    /* Significantly slowed down */
+    animation: rotate 250s linear infinite;
     transform-origin: 13px 25px;
   }
   .in-top {
-    animation: rotate 100s linear infinite; /* Further slowed down */
+    /* Significantly slowed down */
+    animation: rotate 200s linear infinite;
     transform-origin: 13px 25px;
   }
   .out-bottom {
-    animation: rotate 180s linear infinite; /* Further slowed down */
+     /* Significantly slowed down */
+    animation: rotate 300s linear infinite;
     transform-origin: 84px 93px;
   }
   .in-bottom {
-    animation: rotate 120s linear infinite; /* Further slowed down */
+     /* Significantly slowed down */
+    animation: rotate 220s linear infinite;
     transform-origin: 84px 93px;
   }
 `;
@@ -30,7 +34,9 @@ export function AnimatedSvgBackground() {
   return (
     <svg
       preserveAspectRatio="xMidYMid slice"
-      viewBox="10 10 80 80"
+       // Adjust viewBox to "zoom out", making blobs appear smaller relative to the viewport
+       // Increased from "10 10 80 80" to "0 0 100 100" or even wider like "-10 -10 120 120"
+       viewBox="-10 -10 120 120"
       style={{
         position: 'fixed',
         top: 0,
@@ -44,6 +50,7 @@ export function AnimatedSvgBackground() {
         <style dangerouslySetInnerHTML={{ __html: cssContent }} />
       </defs>
       {/* Paths with fill colors mapped to new CSS variables */}
+      {/* Path data remains the same, the viewBox change controls the apparent size */}
       <path
         fill="hsl(var(--background-blob-1))" // Uses theme variable
         className="out-top"

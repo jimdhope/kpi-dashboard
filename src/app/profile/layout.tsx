@@ -9,6 +9,7 @@ import { AgentSidebarLayout } from '@/components/agent-sidebar-layout'; // For A
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 import { Loader2 } from 'lucide-react'; // Import Loader2
 import type { AppUser, UserRole } from '@/services/user'; // Import types
+import { AnimatedSvgBackground } from '@/components/animated-svg-background'; // Import the animated background
 
 // Helper function to fetch user roles from Firestore
 async function fetchUserRoles(uid: string): Promise<UserRole[] | null> {
@@ -36,55 +37,76 @@ export default function ProfileLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [roles, setRoles] = useState<UserRole[] | null>(null);
+  const [roles, setRoles] = useState<UserRole[]>([]); // Initialize with empty array
   const [layoutType, setLayoutType] = useState<'admin' | 'agent' | null>(null); // State for current layout
   const [isLoading, setIsLoading] = useState(true); // Combined loading state
   const [authChecked, setAuthChecked] = useState(false); // Track initial auth check
   const router = useRouter();
 
-  // Function to determine layout based on roles
-  const determineInitialLayout = useCallback((userRoles: UserRole[] | null): 'admin' | 'agent' | null => {
+  // Function to determine initial layout based on roles
+  const determineInitialLayout = useCallback((userRoles: UserRole[]): 'admin' | 'agent' | null => {
       console.log("[determineInitialLayout] Determining layout for roles:", userRoles);
-      if (!userRoles || userRoles.length === 0) {
+      if (userRoles.length === 0) {
         console.log("[determineInitialLayout] No roles, returning null.");
         return null; // No roles, no specific layout
       }
       // Prioritize admin/manager/leader view
       if (userRoles.includes('admin') || userRoles.includes('podManager') || userRoles.includes('teamLeader')) {
-         console.log("[determineInitialLayout] Found admin/manager/leader role, returning 'admin'.");
+        console.log("[determineInitialLayout] Found admin/manager/leader role, returning 'admin'.");
         return 'admin';
       } else if (userRoles.includes('agent')) {
-         console.log("[determineInitialLayout] Found agent role, returning 'agent'.");
+        console.log("[determineInitialLayout] Found agent role, returning 'agent'.");
         return 'agent';
       }
-       console.log("[determineInitialLayout] No suitable role found, returning null.");
+      console.log("[determineInitialLayout] No suitable role found, returning null.");
       return null; // No recognized role for layout
     }, []);
+
+  // Function to handle layout change from RoleSwitcher
+  const handleLayoutChange = useCallback((newLayout: 'admin' | 'agent') => {
+    console.log(`[ProfileLayout] handleLayoutChange called with: ${newLayout}`);
+    setLayoutType(newLayout);
+     // Optional: Redirect if necessary, though changing layout might be enough
+     if (newLayout === 'admin') {
+        router.push('/admin'); // Ensure user is on the admin route
+     } else {
+        router.push('/agent'); // Ensure user is on the agent route
+     }
+  }, [router]);
+
 
   // Effect to handle authentication, role fetching, and layout setting
   useEffect(() => {
     console.log("[ProfileLayout] Auth Effect Running");
     setIsLoading(true); // Start loading when checking auth
     setAuthChecked(false); // Reset auth check status
-    setRoles(null); // Reset roles on auth change
+    setRoles([]); // Reset roles on auth change
     setLayoutType(null); // Reset layout type on auth change
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
       console.log("[ProfileLayout] Auth State Changed. Current User:", currentUser?.uid || 'None');
       if (currentUser) {
         const fetchedRoles = await fetchUserRoles(currentUser.uid);
-        console.log("[ProfileLayout] Setting roles state to:", fetchedRoles);
-        // Ensure roles is always an array, even if null was fetched
         const rolesToSet = Array.isArray(fetchedRoles) ? fetchedRoles : [];
-        setRoles(rolesToSet);
+        console.log("[ProfileLayout] Setting roles state to:", rolesToSet);
+        setRoles(rolesToSet); // Set roles (even if empty)
 
-        if (fetchedRoles === null || rolesToSet.length === 0) {
-          console.warn("[ProfileLayout] User has no roles or roles couldn't be fetched. Redirecting to login.");
+        if (!fetchedRoles) { // Check if fetch returned null (error or profile not found)
+          console.error("[ProfileLayout] Roles couldn't be fetched or user profile missing. Redirecting to login.");
           setLayoutType(null);
            setIsLoading(false); // Stop loading before redirect
            setAuthChecked(true);
           router.push('/login');
           return; // Important to return here
+        }
+
+        if (rolesToSet.length === 0) {
+             console.warn("[ProfileLayout] User has no roles assigned. Redirecting to login.");
+             setLayoutType(null);
+             setIsLoading(false);
+             setAuthChecked(true);
+             router.push('/login'); // Or maybe a "pending assignment" page?
+             return;
         }
 
         const defaultLayout = determineInitialLayout(rolesToSet);
@@ -98,12 +120,15 @@ export default function ProfileLayout({
           router.push('/login'); // Redirect if no suitable role found
           return; // Stop further processing
         }
-        setLayoutType(defaultLayout); // Set the layout based solely on roles
+         // Determine initial layout based on roles
+         const initialLayout = determineInitialLayout(rolesToSet);
+         console.log("[ProfileLayout] Initial layout determined:", initialLayout);
+         setLayoutType(initialLayout); // Set initial layout type
 
       } else {
         // No user logged in
         console.log("[ProfileLayout] No user logged in, redirecting to login.");
-        setRoles(null); // Clear roles
+        setRoles([]); // Clear roles
         setLayoutType(null); // Clear layoutType
          setIsLoading(false); // Stop loading before redirect
          setAuthChecked(true);
@@ -122,47 +147,55 @@ export default function ProfileLayout({
   }, [router, determineInitialLayout]); // Dependencies
 
 
-  // Combine roles and layoutType into props object *after* state updates
-  // Removed props for role switcher
-  console.log("[ProfileLayout] Preparing to render layout...");
+  // Props object to pass down
+  const layoutProps = {
+    roles: roles, // Pass the fetched roles
+    currentLayout: layoutType,
+    onLayoutChange: handleLayoutChange,
+  };
+  console.log("[ProfileLayout] Preparing to render layout with props:", layoutProps);
 
   // Render loading state until auth is checked and layout determined
-   if (isLoading || !authChecked) {
-    console.log(`[ProfileLayout] Rendering Loading State: isLoading=${isLoading}, authChecked=${authChecked}`);
+   if (isLoading || !authChecked || (firebaseAuth.currentUser && !layoutType && roles.length === 0)) { // Add roles check
+    console.log(`[ProfileLayout] Rendering Loading State: isLoading=${isLoading}, authChecked=${authChecked}, layoutType=${layoutType}, rolesLength=${roles.length}`);
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+       <div className="relative min-h-screen">
+         {/* Fixed Background Container */}
+         <div className="fixed-background-container">
+           <AnimatedSvgBackground />
+         </div>
+         {/* Loading Indicator Centered */}
+         <div className="absolute inset-0 flex items-center justify-center">
+           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+         </div>
+       </div>
     );
-  }
-
-  // Check if user is logged in but layout determination is still pending
-   if (authChecked && firebaseAuth.currentUser && !layoutType) {
-     console.log(`[ProfileLayout] Rendering Loading State: Layout determination pending. Roles state:`, roles);
-      // Show loading state only if roles are still null (being fetched/processed)
-      if(roles === null) {
-          return (
-              <div className="flex h-screen items-center justify-center bg-background">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-          );
-      }
-      // If roles are set but layout is still null, something went wrong (likely redirecting)
-      console.log("[ProfileLayout] Rendering null because layout determination failed or redirecting.");
-      return null;
   }
 
 
   // Render based on layoutType
-  if (layoutType === 'admin') {
-    console.log("[ProfileLayout] Rendering DashboardLayout...");
-    return <DashboardLayout>{children}</DashboardLayout>;
-  } else if (layoutType === 'agent') {
-    console.log("[ProfileLayout] Rendering AgentSidebarLayout...");
-    return <AgentSidebarLayout>{children}</AgentSidebarLayout>;
-  } else {
-    // Fallback if layoutType is null (e.g., during redirect or if no suitable layout found)
-    console.log("[ProfileLayout] Rendering null because layoutType is null (likely redirecting or no suitable role).");
-    return null;
-  }
+   // Add the background and scrollable container structure here
+   return (
+    <div className="relative min-h-screen">
+      {/* Fixed Background Container */}
+      <div className="fixed-background-container">
+        <AnimatedSvgBackground />
+      </div>
+       {/* Scrollable Content Container */}
+      <div className="scrollable-content-container">
+        {layoutType === 'admin' && (
+          <DashboardLayout {...layoutProps}>
+            {children}
+          </DashboardLayout>
+        )}
+        {layoutType === 'agent' && (
+          <AgentSidebarLayout {...layoutProps}>
+            {children}
+          </AgentSidebarLayout>
+        )}
+         {/* Render null or a redirect/error component if layoutType is null */}
+         {!layoutType && null}
+      </div>
+    </div>
+   );
 }

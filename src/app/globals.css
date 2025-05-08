@@ -2,22 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Remove background properties from body */
+/* Remove background properties from body, ensure it allows transparency */
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   overflow-x: hidden; /* Keep this */
-  /* Remove overflow-y: hidden if it exists here */
+  background-color: transparent; /* Ensure body itself is transparent */
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground; /* Apply theme background/foreground, but the fixed div will cover it */
+    @apply text-foreground; /* Apply theme foreground */
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   :root {
-    /* Light Mode - Lighter version of #4281a4 for background */
-    --background: 203 42% 94%; /* #e9f1f6 - Lighter version of #4281a4 */
+    /* Light Mode - Lighter version of #4281a4 for background blobs */
+    --background: 203 42% 94%; /* #e9f1f6 - Lighter version of #4281a4 (Used by layouts for scroll area) */
     --foreground: 0 0% 10%; /* Dark Gray */
     --card: hsla(0, 0%, 100%, 0.80); /* White with 80% opacity */
     --card-foreground: 0 0% 10%;
@@ -50,16 +50,18 @@ body {
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 180 100% 25%;
 
-    /* Light Mode SVG Blob Colors - HSL for #F5DFD1 is approx H:25 S:59% L:89% */
-    --background-blob-1: 25 59% 89%;
-    --background-blob-2: 25 59% 89%;
-    --background-blob-3: 25 59% 89%;
-    --background-blob-4: 25 59% 89%;
+    /* Light Mode SVG Blob Colors */
+    /* Using softer, pastel-like versions based on #F5DFD1 (H:25 S:59% L:89%) */
+     /* Base HSL: H:25 S:59% L:89% */
+    --background-blob-1: 25 59% 89%; /* Original base */
+    --background-blob-2: 25 50% 92%; /* Slightly lighter/less saturated */
+    --background-blob-3: 30 65% 88%; /* Slightly more orange/saturated */
+    --background-blob-4: 20 55% 90%; /* Slightly more yellow/desaturated */
   }
 
   .dark {
     /* Dark Mode */
-    --background: 0 0% 12%; /* #1e1e1e */
+    --background: 0 0% 12%; /* #1e1e1e (Used by layouts for scroll area) */
     --foreground: 0 0% 98%; /* White */
     --card: hsla(210, 10%, 18%, 0.80);
     --card-foreground: 0 0% 98%;
@@ -92,11 +94,12 @@ body {
     --sidebar-border: 210 10% 25%;
     --sidebar-ring: 180 80% 60%;
 
-    /* Dark Mode SVG Blob Colors */
-    --background-blob-1: 0 0% 15%; /* #272729 */
-    --background-blob-2: 0 0% 15%; /* #272729 */
-    --background-blob-3: 0 0% 15%; /* #272729 */
-    --background-blob-4: 0 0% 15%; /* #272729 */
+    /* Dark Mode SVG Blob Colors - Using subtle dark greys/blues */
+    /* Base HSL: H:210 S:10% L:15% */
+    --background-blob-1: 210 10% 15%; /* #242629 - Original base */
+    --background-blob-2: 210 8% 18%; /* Slightly lighter grey-blue */
+    --background-blob-3: 205 12% 14%; /* Slightly darker/bluer */
+    --background-blob-4: 215 9% 16%; /* Slightly lighter/purplish */
   }
 }
 
@@ -108,7 +111,8 @@ body {
 
 /* Frosted Glass effect for cards */
 .frosted-glass {
-  @apply bg-card/80 backdrop-blur-md border border-border/50 shadow-sm; /* Adjusted bg-card opacity */
+  /* Adjusted bg-card opacity for slightly more blur visibility */
+  @apply bg-card/80 backdrop-blur-md border border-border/50 shadow-sm;
 }
 
 .fixed-background-container {
@@ -117,19 +121,22 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1;
+  z-index: -1; /* Ensures background is behind everything */
+  overflow: hidden; /* Prevent scrollbars on the background itself */
 }
 
+/* This container holds the scrollable content (layouts, main area) */
 .scrollable-content-container {
-  position: relative;
-  z-index: 1;
-  height: 100vh;
-  overflow-y: auto;
+  position: relative; /* Needed for z-index stacking */
+  z-index: 1; /* Place above the fixed background */
+  min-height: 100vh; /* Ensure it covers the viewport height */
+  overflow-y: auto; /* Enable scrolling only for this container */
+  /* Apply the theme's default background to the scrollable area if needed */
+  /* background-color: hsl(var(--background)); */
+   background-color: transparent; /* Make scrollable container transparent */
 }
 
 /* Style for SVG certificate container */
 .certificate-svg-container svg {
   @apply max-w-full h-auto block max-h-full; /* Ensure SVG scales down and maintains aspect ratio within container */
 }
-
-      

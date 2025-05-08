@@ -3,7 +3,7 @@ import React from 'react';
 import { Header } from '@/components/landing-header';
 import { Footer } from '@/components/landing-footer';
 import { cn } from '@/lib/utils';
-import { AnimatedSvgBackground } from '@/components/animated-svg-background'; // Import the new component
+import { AnimatedSvgBackground } from '@/components/animated-svg-background'; // Import the animated background
 
 export default function PublicLayout({
   children,
@@ -12,9 +12,9 @@ export default function PublicLayout({
 }) {
   return (
     <div className="relative min-h-screen">
-      {/* Fixed Background Container - Now hosts the animated SVG */}
+      {/* Fixed Background Container */}
       <div
-        className="fixed-background-container" // Keep this for positioning
+        className="fixed-background-container"
       >
         <AnimatedSvgBackground /> {/* Render the animated SVG background */}
       </div>
