@@ -29,18 +29,18 @@ import { generateInitials } from '@/lib/utils';
 import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { RoleSwitcher } from '@/components/role-switcher'; // Import RoleSwitcher
+import { RoleSwitcher } from './role-switcher'; // Use updated path
 import { AppLogo } from './app-logo';
-import { AnimatedSvgBackground } from './animated-svg-background'; // Import the animated background
+import { AnimatedSvgBackground } from './animated-svg-background';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  roles?: UserRole[]; // Make optional if ProfileLayout always provides it
-  currentLayout?: 'admin' | 'agent' | null; // Make optional
-  onLayoutChange?: (newLayout: 'admin' | 'agent') => void; // Make optional
+  roles: UserRole[]; // Use the passed roles
+  currentLayout: 'admin' | 'agent' | null;
+  onLayoutChange: (newLayout: 'admin' | 'agent') => void;
 }
 
-export function DashboardLayout({ children, roles = [], currentLayout = null, onLayoutChange }: DashboardLayoutProps) {
+export function DashboardLayout({ children, roles, currentLayout, onLayoutChange }: DashboardLayoutProps) {
   const currentPath = usePathname();
     const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
@@ -48,6 +48,7 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
 
   // Log received props for debugging
   useEffect(() => {
+    // Use console.log for client-side components
     console.log("[DashboardLayout] Received props:", { roles, currentLayout });
   }, [roles, currentLayout]);
 
@@ -268,8 +269,8 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
         </Sidebar>
 
         {/* Scrollable Main Content Area */}
-        <div className="flex-1 flex flex-col h-screen">
-           <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6">
+        <div className="flex-1 flex flex-col h-screen w-full"> {/* Added w-full here */}
+           <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6 w-full"> {/* Added w-full here */}
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="md:hidden" />
                 <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2>
