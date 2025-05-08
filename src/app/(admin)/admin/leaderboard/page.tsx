@@ -240,7 +240,48 @@ export default function AdminLeaderboardPage() {
     }, [competitions, pods, selectedCompetitionId]);
 
 
-    // 5. Calculate Leaderboard Scores (useMemo) - Reverted to Dense Ranking Logic (1, 2, 2, 3...)
+    // Dense Ranking Logic (1, 2, 2, 3...)
+    const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+        if (items.length === 0) return [];
+
+        const rankedItems: (T & { rank: number })[] = [];
+        let currentRank = 1;
+        let previousScore = items[0].score;
+
+        for (let i = 0; i < items.length; i++) {
+            const currentItem = items[i];
+            // Increment rank number only if score decreases
+            if (i > 0 && currentItem.score < previousScore) {
+                 // Rank is the number of unique scores seen so far + 1
+                 // Or simply, the rank of the previous distinct score + 1
+                 currentRank = rankedItems[i-1].rank + 1; // Increment from previous distinct rank
+            } else if (i === 0) {
+                currentRank = 1; // First item is always rank 1
+            } else if (currentItem.score === previousScore) {
+                 currentRank = rankedItems[i-1].rank; // Same rank as previous if score is tied
+            }
+
+            rankedItems.push({ ...currentItem, rank: currentRank });
+            previousScore = currentItem.score;
+        }
+
+        // Recalculate rank based on the first occurrence of each score for true dense ranking
+         const scoreRankMap = new Map<number, number>();
+         let rankCounter = 1;
+         for (const item of items) { // Iterate through sorted items
+             if (!scoreRankMap.has(item.score)) {
+                 scoreRankMap.set(item.score, rankCounter++);
+             }
+         }
+
+         return items.map(item => ({
+             ...item,
+             rank: scoreRankMap.get(item.score)!
+         }));
+
+    };
+
+    // 5. Calculate Leaderboard Scores (useMemo)
     const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
         // Filter agents based on selectedPodId if necessary
         const relevantAgents = selectedPodId
@@ -272,41 +313,10 @@ export default function AdminLeaderboardPage() {
             }))
             .sort((a, b) => b.totalPoints - a.totalPoints); // Sort descending by points
 
-        // --- Dense Ranking Logic for Agents (1, 2, 2, 3...) ---
-        const finalAgentLeaderboard: LeaderboardEntry[] = [];
-        if (agentLeaderboardData.length > 0) {
-            let currentRank = 1;
-            let previousScore = agentLeaderboardData[0].totalPoints;
 
-            for (let i = 0; i < agentLeaderboardData.length; i++) {
-                const currentItem = agentLeaderboardData[i];
-                if (currentItem.totalPoints < previousScore) {
-                    // Increment rank only if score is lower than the previous one
-                    currentRank = finalAgentLeaderboard.length > 0 ? finalAgentLeaderboard[finalAgentLeaderboard.length - 1].rank! + 1 : 1;
-                    // Adjust rank calculation: It should be the *index* + 1 of the *first* item with this score if we want 1,2,2,3
-                    // Let's use a simpler dense rank: increment rank number when score decreases
-                    currentRank = i + 1; // Simpler approach: Rank based on position after sort if score decreases
-                } else if (i > 0 && currentItem.totalPoints === previousScore) {
-                    // If score is the same, use the rank of the previous item
-                     currentRank = finalAgentLeaderboard[i-1].rank!;
-                } else {
-                     currentRank = 1; // First item is rank 1
-                }
+        // --- Dense Ranking Logic for Agents ---
+        const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardData);
 
-                finalAgentLeaderboard.push({ ...currentItem, rank: currentRank });
-                previousScore = currentItem.totalPoints;
-            }
-             // Re-calculate dense rank (1, 2, 2, 3...) correctly
-             finalAgentLeaderboard.forEach((entry, index, arr) => {
-                 if (index === 0) {
-                     entry.rank = 1;
-                 } else if (entry.totalPoints === arr[index - 1].totalPoints) {
-                     entry.rank = arr[index - 1].rank; // Same rank as previous if score is tied
-                 } else {
-                     entry.rank = arr[index - 1].rank! + 1; // Increment rank if score decreased
-                 }
-             });
-        }
 
         // Team calculations
         const teamScores: Record<string, number> = {};
@@ -338,24 +348,9 @@ export default function AdminLeaderboardPage() {
             })
            .sort((a, b) => b.totalPoints - a.totalPoints); // Sort descending by points
 
-        // --- Dense Ranking Logic for Teams (1, 2, 2, 3...) ---
-         const finalTeamLeaderboard: LeaderboardEntry[] = [];
-         if (teamLeaderboardData.length > 0) {
-             let currentRank = 1;
-             let previousScore = teamLeaderboardData[0].totalPoints;
-             for (let i = 0; i < teamLeaderboardData.length; i++) {
-                 const currentItem = teamLeaderboardData[i];
-                  if (i === 0) {
-                     currentRank = 1;
-                 } else if (currentItem.totalPoints === previousScore) {
-                     currentRank = finalTeamLeaderboard[i-1].rank!; // Same rank as previous if score is tied
-                 } else {
-                     currentRank = finalTeamLeaderboard[i-1].rank! + 1; // Increment rank if score decreased
-                 }
-                 finalTeamLeaderboard.push({ ...currentItem, rank: currentRank });
-                 previousScore = currentItem.totalPoints;
-             }
-         }
+        // --- Dense Ranking Logic for Teams ---
+        const finalTeamLeaderboard = assignDenseRanks(teamLeaderboardData);
+
 
         return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
     }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid]); // Added participatingPods dependency
@@ -366,21 +361,21 @@ export default function AdminLeaderboardPage() {
   const currentUser = auth.currentUser; // Get current user for highlighting
 
   return (
-    <TooltipProvider> {/* Ensure TooltipProvider wraps the component */}
+    <TooltipProvider>
       <div className="space-y-6">
-        <Card>
+        {/* Filters Card */}
+        <Card className="frosted-glass">
           <CardHeader>
-            <CardTitle>Competition Leaderboards</CardTitle>
-            <CardDescription>View agent and team rankings for a specific competition.</CardDescription>
+            <CardTitle>Leaderboard Filters</CardTitle>
+            <CardDescription>Select a competition and optionally filter by pod.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Selection Controls */}
-            <div className="flex flex-wrap gap-4 mb-6 items-end">
+            <div className="flex flex-wrap gap-4 items-end">
               {/* Competition Select */}
               <div className="grid gap-2">
                 <Label htmlFor="competition-select">Competition</Label>
                 <Select
-                  onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); /* Reset pod filter */ }}
+                  onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); }}
                   value={selectedCompetitionId}
                   disabled={isLoadingBase}
                 >
@@ -424,161 +419,153 @@ export default function AdminLeaderboardPage() {
                 </Select>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {error && <p className="text-destructive mb-4">{error}</p>}
+        {error && <p className="text-destructive mb-4">{error}</p>}
 
-            {/* Leaderboard Display */}
-            {!selectedCompetitionId && !isLoadingBase && (
-              <p className="text-muted-foreground text-center py-4">Please select a competition to view leaderboards.</p>
-            )}
+        {/* Leaderboard Display Area */}
+        {!selectedCompetitionId && !isLoadingBase && (
+            <p className="text-muted-foreground text-center py-4">Please select a competition to view leaderboards.</p>
+        )}
 
-            {selectedCompetitionId && isLoading ? (
-              <div className="grid md:grid-cols-2 gap-6">
-                  <Skeleton className="h-[400px] w-full" />
-                  <Skeleton className="h-[400px] w-full" />
-              </div>
-            ) : selectedCompetitionId && !isLoading && (
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Agent Leaderboard */}
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-lg font-semibold">Agent Leaderboard</CardTitle>
-                       <Users className="h-5 w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                     {agentLeaderboard.length === 0 ? (
-                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
-                     ) : (
-                      <Table>
-                          <TableHeader>
-                              <TableRow>{/* Remove whitespace here */}
-                                  <TableHead className="w-[50px]">Rank</TableHead>
-                                  <TableHead>Agent</TableHead>
-                                  <TableHead className="text-right">Total Points</TableHead>
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                          {agentLeaderboard.map((entry) => (
-                               <TableRow
-                                  key={entry.id}
-                                  style={getRankHighlightStyle(entry.rank ?? 0)}
-                                  className={cn(
-                                      entry.isCurrentUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
-                                      (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
-                                  )}
-                               >
-                              <TableCell className="font-medium text-center align-middle">
-                                  {(entry.rank ?? 0) <= 3 ? (
-                                      <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
-                                  ) : (
-                                      entry.rank
-                                  )}
-                              </TableCell>
-                              <TableCell>
-                                  <div className="flex items-center gap-2">
-                                       <Avatar className="h-7 w-7">
-                                            {/* Always use Fallback */}
+        {selectedCompetitionId && isLoading ? (
+            <div className="grid md:grid-cols-2 gap-6">
+                <Skeleton className="h-[400px] w-full frosted-glass" />
+                <Skeleton className="h-[400px] w-full frosted-glass" />
+            </div>
+        ) : selectedCompetitionId && !isLoading && (
+            <div className="grid md:grid-cols-2 gap-6">
+            {/* Agent Leaderboard Card */}
+            <Card className="frosted-glass">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg font-semibold">Agent Leaderboard</CardTitle>
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    {agentLeaderboard.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
+                    ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>{/* Remove whitespace here */}
+                                <TableHead className="w-[50px]">Rank</TableHead>
+                                <TableHead>Agent</TableHead>
+                                <TableHead className="text-right">Total Points</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {agentLeaderboard.map((entry) => (
+                                <TableRow
+                                key={entry.id}
+                                style={getRankHighlightStyle(entry.rank ?? 0)}
+                                className={cn(
+                                    entry.isCurrentUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
+                                    (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
+                                )}
+                                >
+                                <TableCell className="font-medium text-center align-middle">
+                                    {(entry.rank ?? 0) <= 3 ? (
+                                        <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                                    ) : (
+                                        entry.rank
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-7 w-7">
                                             <AvatarFallback
                                                 initials={entry.avatarInitials || generateInitials(entry.name)}
                                                 backgroundColor={entry.avatarBgColor}
-                                                // Use a very dark color for fallbacks on light rank backgrounds
                                                 className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
                                             >
                                                 {!entry.avatarInitials && generateInitials(entry.name)}
                                             </AvatarFallback>
-                                       </Avatar>
-                                        {/* Ensure name text color contrasts with rank background (explicitly white) */}
-                                       <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
-                                       {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
-                                   </div>
-                              </TableCell>
-                               {/* Ensure score text color contrasts with rank background (explicitly white) */}
-                              <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
-                                  {(entry.totalPoints ?? 0).toLocaleString()}
-                              </TableCell>
-                              </TableRow>
-                          ))}
-                          </TableBody>
-                      </Table>
-                      )}
-                  </CardContent>
-                </Card>
+                                        </Avatar>
+                                        <span className={cn("truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
+                                        {entry.isCurrentUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
+                                    </div>
+                                </TableCell>
+                                <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
+                                    {(entry.totalPoints ?? 0).toLocaleString()}
+                                </TableCell>
+                                </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    )}
+                </CardContent>
+            </Card>
 
-                {/* Team Leaderboard */}
-                <Card>
-                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-lg font-semibold">Team Leaderboard</CardTitle>
-                       <Trophy className="h-5 w-5 text-muted-foreground" />
-                   </CardHeader>
-                  <CardContent>
-                       {teams.length === 0 ? (
-                           <p className="text-muted-foreground text-center py-4">No teams defined for this competition.</p>
-                       ) : teamLeaderboard.length === 0 ? (
-                           <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
-                       ) : (
-                          <Table>
-                              <TableHeader>
-                                  <TableRow>{/* Remove whitespace here */}
-                                      <TableHead className="w-[50px]">Rank</TableHead>
-                                      <TableHead>Team</TableHead>
-                                      <TableHead className="text-right">Total Points</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                              {teamLeaderboard.map((entry) => (
-                                  <TableRow
-                                      key={entry.id}
-                                      style={getRankHighlightStyle(entry.rank ?? 0)}
-                                      className={cn(
-                                          entry.isCurrentUserTeam && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
-                                          (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
-                                      )}
-                                  >
-                                  <TableCell className="font-medium text-center align-middle">
-                                      {(entry.rank ?? 0) <= 3 ? (
-                                          <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
-                                      ) : (
-                                          entry.rank
-                                      )}
-                                  </TableCell>
-                                  {/* Ensure name text color contrasts with rank background (explicitly white) */}
-                                  <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
-                                      <div className="flex flex-col">
-                                          <div className="flex items-center gap-1">
-                                              <span className="font-semibold">{entry.name}</span>
-                                              {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
-                                          </div>
-                                           {/* Display agent first names */}
-                                           {entry.agentFirstNames && entry.agentFirstNames.length > 0 && (
-                                               <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        {/* Ensure list text color contrasts with rank background (adjust opacity) */}
-                                                        <span className={cn("text-xs cursor-help", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
-                                                            {entry.agentFirstNames.join(', ')}
-                                                        </span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Team Members: {entry.agentFirstNames.join(', ')}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                           )}
-                                      </div>
-                                  </TableCell>
-                                  {/* Ensure score text color contrasts with rank background (explicitly white) */}
-                                  <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
-                                      {(entry.totalPoints ?? 0).toLocaleString()}
-                                  </TableCell>
-                              </TableRow>
-                          ))}
-                          </TableBody>
-                      </Table>
-                      )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            {/* Team Leaderboard Card */}
+            <Card className="frosted-glass">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg font-semibold">Team Leaderboard</CardTitle>
+                    <Trophy className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    {teams.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-4">No teams defined for this competition.</p>
+                    ) : teamLeaderboard.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>{/* Remove whitespace here */}
+                                    <TableHead className="w-[50px]">Rank</TableHead>
+                                    <TableHead>Team</TableHead>
+                                    <TableHead className="text-right">Total Points</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {teamLeaderboard.map((entry) => (
+                                <TableRow
+                                    key={entry.id}
+                                    style={getRankHighlightStyle(entry.rank ?? 0)}
+                                    className={cn(
+                                        entry.isCurrentUserTeam && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
+                                        (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
+                                    )}
+                                >
+                                <TableCell className="font-medium text-center align-middle">
+                                    {(entry.rank ?? 0) <= 3 ? (
+                                        <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                                    ) : (
+                                        entry.rank
+                                    )}
+                                </TableCell>
+                                <TableCell className={cn("font-medium", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold">{entry.name}</span>
+                                            {entry.isCurrentUserTeam && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>Your Team</Badge>}
+                                        </div>
+                                        {entry.agentFirstNames && entry.agentFirstNames.length > 0 && (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className={cn("text-xs cursor-help", (entry.rank ?? 0) <= 3 ? 'text-white/80' : 'text-muted-foreground')}>
+                                                        {entry.agentFirstNames.join(', ')}
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Team Members: {entry.agentFirstNames.join(', ')}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        )}
+                                    </div>
+                                </TableCell>
+                                <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
+                                    {(entry.totalPoints ?? 0).toLocaleString()}
+                                </TableCell>
+                            </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+            </div>
+        )}
       </div>
     </TooltipProvider>
   );
