@@ -18,7 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator, // Import Separator
 } from '@/components/ui/sidebar';
-import { Home, Users, BarChart3, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare } from 'lucide-react'; // Added UserSquare for Agent View
+import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText } from 'lucide-react'; // Added FileText
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import { generateInitials } from '@/lib/utils';
 import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { RoleSwitcher } from './role-switcher'; // Changed to relative import
+import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo'; // Import the new AppLogo component
 
 interface DashboardLayoutProps {
@@ -45,9 +45,12 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
+  // Log received props for debugging
   useEffect(() => {
+    // Use console.log for client-side components
     console.log("[DashboardLayout] Received props:", { roles, currentLayout });
   }, [roles, currentLayout]);
+
 
   useEffect(() => {
     setIsLoadingUser(true);
@@ -166,6 +169,14 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
                        <SidebarMenuButton tooltip="Competition Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
                            <Star />
                            <span>Leaderboard</span>
+                       </SidebarMenuButton>
+                       </Link>
+                   </SidebarMenuItem>
+                    <SidebarMenuItem>
+                       <Link href="/admin/certificates" passHref>
+                       <SidebarMenuButton tooltip="Generate Certificates" isActive={currentPath === '/admin/certificates'}>
+                           <FileText /> {/* Changed icon */}
+                           <span>Certificates</span>
                        </SidebarMenuButton>
                        </Link>
                    </SidebarMenuItem>
