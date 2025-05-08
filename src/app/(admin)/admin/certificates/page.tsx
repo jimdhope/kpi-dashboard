@@ -219,7 +219,7 @@ export default function CertificateGenerationPage() {
              const svgDefs = `
                  <defs>
                     <style type="text/css">
-                         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Dancing+Script:wght@700&display=swap');
+                         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;family=Dancing+Script:wght@700&amp;display=swap');
                         /* Use Inter font family */
                         .body-font { font-family: 'Inter', Arial, Helvetica, sans-serif; }
                         .title-font { font-family: 'Inter', Arial, Helvetica, sans-serif; font-weight: 700; }
@@ -408,69 +408,95 @@ export default function CertificateGenerationPage() {
 
     // --- Helper to Download SVG as JPG ---
     const downloadSvgAsJpg = (svgContent: string, filename: string) => {
+        console.log("[downloadSvgAsJpg] Starting conversion for:", filename);
+        console.log("[downloadSvgAsJpg] SVG Content Length:", svgContent.length);
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) {
+             console.error("[downloadSvgAsJpg] Could not create canvas context.");
              toast({ variant: "destructive", title: "Error", description: "Could not create canvas context." });
             return;
         }
 
         const img = new Image();
 
-        // Convert SVG string to base64 data URL
-        // Using Blob + createObjectURL is generally more efficient for larger SVGs
-        const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
+        // Convert SVG string to base64 data URL using btoa
+        let dataUrl;
+        try {
+            // Ensure SVG has XML namespace
+            const svgWithXmlns = svgContent.includes('xmlns=') ? svgContent : svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+            const base64Svg = btoa(unescape(encodeURIComponent(svgWithXmlns)));
+            dataUrl = `data:image/svg+xml;base64,${base64Svg}`;
+            console.log("[downloadSvgAsJpg] Generated Base64 Data URL (length):", dataUrl.length);
+            // console.log("[downloadSvgAsJpg] Data URL (first 100 chars):", dataUrl.substring(0, 100)); // Log start of URL
+        } catch (e: any) {
+            console.error("[downloadSvgAsJpg] Error creating Base64 Data URL:", e);
+            toast({ variant: "destructive", title: "SVG Encoding Error", description: `Failed to encode SVG: ${e.message}` });
+            return;
+        }
+
 
         img.onload = () => {
-            console.log("SVG Image loaded into Image object");
-            // Set canvas dimensions based on SVG size (ensure SVG has width/height)
-            canvas.width = SVG_WIDTH; // Use defined dimensions
+            console.log("[downloadSvgAsJpg] SVG Image loaded successfully into Image object.");
+            // Set canvas dimensions based on SVG size
+            canvas.width = SVG_WIDTH;
             canvas.height = SVG_HEIGHT;
+            console.log(`[downloadSvgAsJpg] Canvas dimensions set to: ${canvas.width}x${canvas.height}`);
 
              // Fill canvas with white background before drawing SVG
-             // This ensures transparency in the SVG doesn't become black in the JPG
              ctx.fillStyle = '#ffffff'; // White background
              ctx.fillRect(0, 0, canvas.width, canvas.height);
-            console.log("Canvas background filled white");
+             console.log("[downloadSvgAsJpg] Canvas background filled white.");
 
             // Draw the SVG image onto the canvas
             try {
                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                 console.log("SVG drawn onto canvas");
+                 console.log("[downloadSvgAsJpg] SVG drawn onto canvas successfully.");
 
-                 // Convert canvas to JPG data URL (adjust quality 0.0-1.0)
-                 const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.9); // 0.9 is high quality
-                 console.log("Canvas converted to JPG data URL");
+                 // Convert canvas to JPG data URL
+                 const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.9); // High quality JPG
+                 console.log("[downloadSvgAsJpg] Canvas converted to JPG data URL (length):", jpgDataUrl.length);
 
                  // Trigger download
                  const a = document.createElement('a');
                  a.href = jpgDataUrl;
-                 a.download = filename; // Filename already ends with .jpg
+                 a.download = filename; // Filename should end with .jpg
                  document.body.appendChild(a);
                  a.click();
                  document.body.removeChild(a);
-                 console.log("Download triggered for:", filename);
+                 console.log("[downloadSvgAsJpg] Download triggered for:", filename);
 
-                 // Revoke the object URL to free up memory AFTER download link is clicked
-                 URL.revokeObjectURL(url);
-                 console.log("Blob URL revoked");
-
-            } catch (drawError) {
-                 console.error("Error drawing SVG onto canvas:", drawError);
-                 toast({ variant: "destructive", title: "Drawing Error", description: "Could not draw certificate image." });
-                 URL.revokeObjectURL(url); // Clean up URL on error
+            } catch (drawError: any) {
+                 console.error("[downloadSvgAsJpg] Error drawing SVG onto canvas:", drawError);
+                 toast({ variant: "destructive", title: "Drawing Error", description: `Could not draw certificate image: ${drawError.message}` });
+            } finally {
+                 // Clean up if using Object URLs (not needed with btoa approach)
+                 // if (url.startsWith('blob:')) {
+                 //     URL.revokeObjectURL(url);
+                 //     console.log("Blob URL revoked");
+                 // }
             }
         };
 
         img.onerror = (errorEvent) => {
-            console.error("Error loading SVG into Image object:", errorEvent);
-            toast({ variant: "destructive", title: "SVG Load Error", description: "Could not load certificate image for conversion." });
-             URL.revokeObjectURL(url); // Clean up URL on error
+            // More detailed error logging
+            console.error("[downloadSvgAsJpg] Error loading SVG into Image object:", errorEvent);
+            let errorDescription = "Could not load certificate image for conversion.";
+            if (typeof errorEvent === 'string') {
+                errorDescription += ` Details: ${errorEvent}`;
+            } else if (errorEvent instanceof Event) {
+                errorDescription += ` Event type: ${errorEvent.type}`;
+            }
+             // Attempt to load the Data URL in a new tab for debugging
+             console.log("[downloadSvgAsJpg] Attempting to open SVG Data URL in new tab for debugging...");
+             window.open(dataUrl, '_blank');
+
+            toast({ variant: "destructive", title: "SVG Load Error", description: errorDescription });
         };
 
-        console.log("Setting Image src to blob URL:", url);
-        img.src = url;
+        console.log("[downloadSvgAsJpg] Setting Image src to data URL...");
+        img.src = dataUrl;
     };
 
 
