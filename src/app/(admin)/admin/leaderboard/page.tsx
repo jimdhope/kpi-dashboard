@@ -240,7 +240,7 @@ export default function AdminLeaderboardPage() {
     }, [competitions, pods, selectedCompetitionId]);
 
 
-  // 5. Calculate Leaderboard Scores (useMemo) - Updated Ranking Logic
+  // 5. Calculate Leaderboard Scores (useMemo) - Updated Ranking Logic (Sequential after ties)
   const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
       // Filter agents based on selectedPodId if necessary
       const relevantAgents = selectedPodId
@@ -274,16 +274,18 @@ export default function AdminLeaderboardPage() {
           }))
           .sort((a, b) => b.totalPoints - a.totalPoints);
 
-       // Assign ranks considering ties (1st, 2nd, 2nd, 3rd, ...)
-       let rank = 1;
-       const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index, arr) => {
-           if (index > 0 && entry.totalPoints < arr[index - 1].totalPoints) {
-                rank = index + 1; // Rank based on position if score is different
+       // Assign ranks considering ties (1st, 2nd, 2nd, 3rd, 4th...)
+       let agentRank = 1;
+       let previousAgentScore = -Infinity;
+       const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index) => {
+           if (index > 0 && entry.totalPoints < previousAgentScore) {
+                agentRank = index + 1; // Rank is the position if score is different
            } else if (index === 0) {
-                rank = 1; // First person is always rank 1
+                agentRank = 1; // First person is always rank 1
            }
-           // If scores are tied, the rank remains the same as the previous entry's rank
-           return { ...entry, rank: rank };
+           // If scores are tied, the rank remains the same as the previous entry's assigned rank
+           previousAgentScore = entry.totalPoints; // Update score for next comparison
+           return { ...entry, rank: agentRank };
        });
 
       // Team calculations
@@ -317,16 +319,18 @@ export default function AdminLeaderboardPage() {
            })
           .sort((a, b) => b.totalPoints - a.totalPoints);
 
-       // Assign ranks considering ties (1st, 2nd, 2nd, 3rd, ...)
-       rank = 1; // Reset rank for teams
-       const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index, arr) => {
-            if (index > 0 && entry.totalPoints < arr[index - 1].totalPoints) {
-                rank = index + 1; // Rank based on position if score is different
+       // Assign ranks considering ties (1st, 2nd, 2nd, 3rd, 4th...)
+       let teamRank = 1; // Reset rank for teams
+       let previousTeamScore = -Infinity;
+       const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index) => {
+            if (index > 0 && entry.totalPoints < previousTeamScore) {
+                teamRank = index + 1; // Rank is the position if score is different
             } else if (index === 0) {
-                rank = 1; // First team is always rank 1
+                teamRank = 1; // First team is always rank 1
             }
-            // If scores are tied, the rank remains the same as the previous entry's rank
-            return { ...entry, rank: rank };
+            // If scores are tied, the rank remains the same as the previous entry's assigned rank
+            previousTeamScore = entry.totalPoints; // Update score for next comparison
+            return { ...entry, rank: teamRank };
         });
 
       return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
@@ -554,4 +558,3 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
-    

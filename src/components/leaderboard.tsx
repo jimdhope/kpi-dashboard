@@ -47,16 +47,22 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
    // Sort entries by score descending
    const sortedEntries = [...entries].sort((a, b) => b.score - a.score);
 
-   // Assign ranks considering ties (1st, 2nd, 2nd, 4th, ...) - Corrected Logic
-   let rank = 1;
-   const rankedEntries = sortedEntries.map((entry, index) => {
-       if (index > 0 && entry.score < sortedEntries[index - 1].score) {
-           // Rank is the current position (index + 1) if score is lower than previous
-           rank = index + 1;
-       } else if (index === 0) {
-            rank = 1; // First entry is always rank 1
+   // Assign ranks considering ties (1st, 2nd, 2nd, 3rd, 4th...) - Corrected Logic
+   const rankedEntries = sortedEntries.map((entry, index, arr) => {
+       let rank = 1;
+       if (index > 0) {
+           if (entry.score < arr[index - 1].score) {
+               // If the score is lower than the previous, the rank is the current position (index + 1)
+               rank = index + 1;
+           } else {
+               // If the score is the same as the previous, find the rank of the previous entry
+               // This requires searching back in the already processed part of the array
+               // or storing the rank of the previous entry with the same score.
+               // Let's recalculate based on the first item with the same score's index
+               const firstIndexWithSameScore = arr.findIndex(e => e.score === entry.score);
+               rank = firstIndexWithSameScore + 1;
+           }
        }
-       // If scores are tied, the rank remains the same as the previous entry's calculated rank
        return { ...entry, rank };
    });
 
@@ -132,4 +138,3 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
     </Card>
   );
 }
-    

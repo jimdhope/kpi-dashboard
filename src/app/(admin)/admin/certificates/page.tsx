@@ -100,22 +100,24 @@ export default function CertificateGenerationPage() {
         return `${names.join(', ')} & ${last}`;
     };
 
-     // --- Updated Rank Assignment Logic ---
-    const assignRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+     // --- Updated Rank Assignment Logic (Sequential after ties) ---
+     const assignRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         if (items.length === 0) return [];
 
-        let rank = 1;
-        const rankedItems = [{ ...items[0], rank: 1 }];
+        const rankedItems = [];
+        let currentRank = 1;
+        let previousScore = items[0].score;
 
-        for (let i = 1; i < items.length; i++) {
-            // Assign the same rank if scores are equal to the previous item
-            if (items[i].score === items[i - 1].score) {
-                rankedItems.push({ ...items[i], rank: rank });
-            } else {
-                // Increment rank based on the position in the sorted array (not the previous rank)
-                rank = i + 1;
-                rankedItems.push({ ...items[i], rank: rank });
+        for (let i = 0; i < items.length; i++) {
+            const currentItem = items[i];
+            // If score is lower than the previous item's score, assign the next rank based on position
+            if (currentItem.score < previousScore) {
+                currentRank = i + 1; // Rank is the position (1-based)
             }
+            // If score is the same, assign the *same* rank as the previous person assigned this rank
+            // If it's the first item, rank is always 1.
+            rankedItems.push({ ...currentItem, rank: currentRank });
+            previousScore = currentItem.score; // Update previous score for the next iteration
         }
         return rankedItems;
     };
@@ -553,4 +555,3 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-    
