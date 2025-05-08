@@ -182,8 +182,7 @@ export default function CertificateGenerationPage() {
                   <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#9f8f5e" text-anchor="middle" font-weight="bold">{Agent Name}</text>
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text>
-                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
-                  <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Pod Name} {Competition Name} KPI Competition</text>
                   <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
                   <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
                   <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
@@ -201,8 +200,7 @@ export default function CertificateGenerationPage() {
                   <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#969696" text-anchor="middle" font-weight="bold">{Agent Name}</text>
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#969696" text-anchor="middle" font-weight="bold">2nd Place</text>
-                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
-                  <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Pod Name} {Competition Name} KPI Competition</text>
                   <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
                   <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
                   <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
@@ -220,8 +218,7 @@ export default function CertificateGenerationPage() {
                   <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#996b4f" text-anchor="middle" font-weight="bold">{Agent Name}</text>
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text>
-                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
-                  <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Pod Name} {Competition Name} KPI Competition</text>
                   <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
                   <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
                   <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
@@ -237,8 +234,7 @@ export default function CertificateGenerationPage() {
                     <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
                     <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
                     <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#625fc3" text-anchor="middle" font-weight="bold">{Team Name}</text>
-                    <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {Competition Name} competition</text>
-                    <text x="400" y="350" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                    <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {Pod Name} {Competition Name} KPI Competition</text>
                     <text x="400" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {Members}</text>
                     <line x1="150" y1="500" x2="350" y2="500" stroke="#555" stroke-width="1"/>
                     <line x1="450" y1="500" x2="650" y2="500" stroke="#555" stroke-width="1"/>
