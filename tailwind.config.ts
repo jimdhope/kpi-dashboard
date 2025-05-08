@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { fontFamily } from "tailwindcss/defaultTheme"; // Import default theme
 
 export default {
     darkMode: "class",
@@ -9,6 +10,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Remove Geist Sans and rely on the body style in globals.css
+        sans: ['Inter', ...fontFamily.sans], // Use Inter as primary, fallback to Tailwind defaults
+      },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
@@ -82,14 +87,22 @@ export default {
         'fade-in-up': { // Added for landing page
           'from': { opacity: '0', transform: 'translateY(20px)' },
           'to': { opacity: '1', transform: 'translateY(0)' },
-        }
-        // Removed geometric-flow keyframes
+        },
+        'rotate': { // Added for blob animation
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.6s ease-out forwards',
         'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
+         // Added for blob animation - use separate names if speeds differ
+         'rotate-slow': 'rotate 250s linear infinite',
+         'rotate-medium': 'rotate 200s linear infinite',
+         'rotate-fast': 'rotate 150s linear infinite',
+         'rotate-extra-slow': 'rotate 300s linear infinite',
       }
     }
   },

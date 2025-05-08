@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { GeistSans } from 'geist/font/sans';
+// Removed Geist Sans import
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
@@ -16,8 +16,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* Add suppressHydrationWarning to body as well */}
-      <body className={`${GeistSans.variable} antialiased`} suppressHydrationWarning>
+      {/* Removed GeistSans.variable from body className */}
+      <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

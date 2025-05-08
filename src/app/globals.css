@@ -1,10 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Remove background properties from body, ensure it allows transparency */
 body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  /* Use the Inter font family */
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
   overflow-x: hidden; /* Keep this */
   background-color: transparent; /* Ensure body itself is transparent */
 }
@@ -52,11 +55,11 @@ body {
 
     /* Light Mode SVG Blob Colors */
     /* Using softer, pastel-like versions based on #F5DFD1 (H:25 S:59% L:89%) */
-     /* Base HSL: H:25 S:59% L:89% */
-    --background-blob-1: 25 59% 89%; /* Original base */
-    --background-blob-2: 25 50% 92%; /* Slightly lighter/less saturated */
-    --background-blob-3: 30 65% 88%; /* Slightly more orange/saturated */
-    --background-blob-4: 20 55% 90%; /* Slightly more yellow/desaturated */
+     /* Base HSL: H:203 S:42% L:94% */
+    --background-blob-1: 203 42% 94%; /* Original base #e9f1f6 */
+    --background-blob-2: 203 50% 92%; /* Slightly lighter/more saturated */
+    --background-blob-3: 198 60% 90%; /* Slightly greener/more saturated */
+    --background-blob-4: 208 55% 91%; /* Slightly purpler/desaturated */
   }
 
   .dark {
@@ -112,7 +115,8 @@ body {
 /* Frosted Glass effect for cards */
 .frosted-glass {
   /* Adjusted bg-card opacity for slightly more blur visibility */
-  @apply bg-card/80 backdrop-blur-md border border-border/50 shadow-sm;
+  /* Increased opacity from 80 to 85 */
+  @apply bg-card/85 backdrop-blur-lg border border-border/50 shadow-sm;
 }
 
 .fixed-background-container {
