@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -174,9 +173,21 @@ export default function CertificateGenerationPage() {
                 .sort((a, b) => b.score - a.score);
 
 
-            // --- SVG Templates (Updated Fonts, Removed Lines, Increased Font Size) ---
+            // --- SVG Templates (Added subtle pattern) ---
+             const svgDefs = `
+                <defs>
+                  <pattern id="subtle-dots-pattern" patternUnits="userSpaceOnUse" width="10" height="10">
+                     {/* Use a semi-transparent fill based on the typical foreground color */}
+                    <circle cx="5" cy="5" r="1" fill="hsla(0, 0%, 10%, 0.05)" /> {/* Subtle dark dots */}
+                  </pattern>
+                </defs>
+              `;
+
             const svgTemplateFirst = `
-                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                  ${svgDefs}
+                  <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
+                  <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
                   <rect x="20" y="20" width="760" height="560" fill="none" stroke="#9f8f5e" stroke-width="15"/>
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -184,16 +195,16 @@ export default function CertificateGenerationPage() {
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text>
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                  {/* Removed signature lines */}
                   <text x="250" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Date}}</text>
                   <text x="550" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
-                  {/* Graphic placeholder */}
                   <circle cx="100" cy="100" r="40" fill="#9f8f5e"/>
-                   {/* Updated text for 1st Place, centered */}
                   <text x="100" y="100" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text>
                 </svg>`;
              const svgTemplateSecond = `
-                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                  ${svgDefs}
+                  <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
+                  <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
                   <rect x="20" y="20" width="760" height="560" fill="none" stroke="#969696" stroke-width="15"/>
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -201,43 +212,41 @@ export default function CertificateGenerationPage() {
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#969696" text-anchor="middle" font-weight="bold">2nd Place</text>
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                  {/* Removed signature lines */}
                   <text x="250" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Date}}</text>
                   <text x="550" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
-                  {/* Graphic placeholder */}
                   <circle cx="100" cy="100" r="40" fill="#969696"/>
-                  {/* Updated text for 2nd Place, centered */}
                   <text x="100" y="100" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text>
                 </svg>`;
             const svgTemplateThird = `
-                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
-                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#996b4f" stroke-width="15"/>
-                  <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
-                  <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#996b4f" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
-                  <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
-                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text>
-                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                  {/* Removed signature lines */}
-                  <text x="250" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Date}}</text>
-                  <text x="550" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
-                  {/* Graphic placeholder */}
-                  <circle cx="100" cy="100" r="40" fill="#996b4f"/>
-                  {/* Updated text for 3rd Place, centered */}
-                  <text x="100" y="100" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text>
+                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                    ${svgDefs}
+                    <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
+                    <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
+                    <rect x="20" y="20" width="760" height="560" fill="none" stroke="#996b4f" stroke-width="15"/>
+                    <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
+                    <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
+                    <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#996b4f" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
+                    <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
+                    <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text>
+                    <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
+                    <text x="250" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Date}}</text>
+                    <text x="550" y="550" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
+                    <circle cx="100" cy="100" r="40" fill="#996b4f"/>
+                    <text x="100" y="100" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text>
                  </svg>`;
             const svgTemplateTeam = `
-                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #e0f2f7;">
+                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                    ${svgDefs}
+                    <rect x="0" y="0" width="100%" height="100%" fill="#e0f2f7"/>
+                    <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
                     <rect x="20" y="20" width="760" height="560" fill="none" stroke="#625fc3" stroke-width="15"/>
                     <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
                     <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
                     <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#625fc3" text-anchor="middle" font-weight="bold">{{Team Name}}</text>
                     <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {{Pod Name}} KPI Competition</text>
                     <text x="400" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {{Members}}</text>
-                    {/* Removed signature lines */}
                     <text x="250" y="520" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Date}}</text>
                     <text x="550" y="520" font-family="'Brush Script MT', cursive" font-size="22" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
-                    {/* Trophy graphic placeholder */}
                     <text x="100" y="110" font-family="Arial" font-size="60" text-anchor="middle" fill="#625fc3">🏆</text>
                  </svg>`;
 
@@ -451,4 +460,3 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-
