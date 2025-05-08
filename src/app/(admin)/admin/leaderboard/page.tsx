@@ -102,7 +102,7 @@ const dailyAchievementsCollectionRef = collection(db, 'dailyAchievements');
 export default function AdminLeaderboardPage() {
   // State changes: removed timeframe/date, added selectedCompetitionId
   const [pods, setPods] = useState<Pod[]>([]);
-  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>(''); // New state for competition selection
+  const [selectedCompetitionId, setSelectedCompetitionId] = React.useState<string>(''); // New state for competition selection
   const [selectedPodId, setSelectedPodId] = useState<string>(''); // Filter by pod within the competition
   const [competitions, setCompetitions] = useState<Competition[]>([]); // Store all competitions
   const [agents, setAgents] = useState<AppUser[]>([]); // All users, will filter by pod if needed
@@ -274,22 +274,16 @@ export default function AdminLeaderboardPage() {
           }))
           .sort((a, b) => b.totalPoints - a.totalPoints);
 
-       // Assign ranks considering ties
-       let currentRank = 0;
-       let previousScore = -Infinity;
-       let tiedCount = 0;
-       const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index) => {
-           if (entry.totalPoints < previousScore) {
-                currentRank += tiedCount;
-                tiedCount = 1;
-           } else { // score is equal or it's the first entry
-                 if (index === 0) { // Handle first entry
-                    currentRank = 1;
-                 }
-                tiedCount++;
+       // Assign ranks considering ties (1st, 2nd, 2nd, 3rd, ...)
+       let rank = 1;
+       const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index, arr) => {
+           if (index > 0 && entry.totalPoints < arr[index - 1].totalPoints) {
+                rank = index + 1; // Rank based on position if score is different
+           } else if (index === 0) {
+                rank = 1; // First person is always rank 1
            }
-           previousScore = entry.totalPoints;
-           return { ...entry, rank: currentRank };
+           // If scores are tied, the rank remains the same as the previous entry's rank
+           return { ...entry, rank: rank };
        });
 
       // Team calculations
@@ -323,26 +317,20 @@ export default function AdminLeaderboardPage() {
            })
           .sort((a, b) => b.totalPoints - a.totalPoints);
 
-       // Assign ranks considering ties
-       currentRank = 0;
-       previousScore = -Infinity;
-       tiedCount = 0;
-       const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index) => {
-           if (entry.totalPoints < previousScore) {
-                currentRank += tiedCount;
-                tiedCount = 1;
-           } else {
-                 if (index === 0) {
-                    currentRank = 1;
-                 }
-                tiedCount++;
-           }
-           previousScore = entry.totalPoints;
-           return { ...entry, rank: currentRank };
-       });
+       // Assign ranks considering ties (1st, 2nd, 2nd, 3rd, ...)
+       rank = 1; // Reset rank for teams
+       const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index, arr) => {
+            if (index > 0 && entry.totalPoints < arr[index - 1].totalPoints) {
+                rank = index + 1; // Rank based on position if score is different
+            } else if (index === 0) {
+                rank = 1; // First team is always rank 1
+            }
+            // If scores are tied, the rank remains the same as the previous entry's rank
+            return { ...entry, rank: rank };
+        });
 
       return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-  }, [allLogs, agents, participatingPods, teams, selectedPodId]);
+  }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid]); // Added dependency
 
   const isLoading = isLoadingBase || isLoadingData;
   const competition = competitions.find(c => c.id === selectedCompetitionId);
@@ -566,5 +554,4 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
-
     

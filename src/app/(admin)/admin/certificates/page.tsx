@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -96,10 +95,31 @@ export default function CertificateGenerationPage() {
         if (names.length === 0) return 'N/A';
         if (names.length === 1) return names[0];
         if (names.length === 2) return names.join(' & ');
-        if (names.length === 3) return names.join(', ') + ' & ' + names.pop();
+        // For 3 or more, use commas and '&' before the last name
         const last = names.pop();
         return `${names.join(', ')} & ${last}`;
     };
+
+     // --- Updated Rank Assignment Logic ---
+    const assignRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+        if (items.length === 0) return [];
+
+        let rank = 1;
+        const rankedItems = [{ ...items[0], rank: 1 }];
+
+        for (let i = 1; i < items.length; i++) {
+            // Assign the same rank if scores are equal to the previous item
+            if (items[i].score === items[i - 1].score) {
+                rankedItems.push({ ...items[i], rank: rank });
+            } else {
+                // Increment rank based on the position in the sorted array (not the previous rank)
+                rank = i + 1;
+                rankedItems.push({ ...items[i], rank: rank });
+            }
+        }
+        return rankedItems;
+    };
+
 
     // --- Handle Generate Certificates ---
     const handleGenerateCertificates = async () => {
@@ -188,29 +208,12 @@ export default function CertificateGenerationPage() {
                 .map(team => ({ ...team, score: teamScoresMap[team.id] || 0 }))
                 .sort((a, b) => b.score - a.score);
 
-            // Assign ranks considering ties
-            const assignRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
-                let rank = 0;
-                let previousScore = -Infinity;
-                let tiedCount = 0;
-                return items.map((item, index) => {
-                     if (item.score < previousScore) {
-                        rank += tiedCount;
-                        tiedCount = 1;
-                     } else {
-                        if (index === 0) rank = 1; // Assign rank 1 to the first item(s)
-                        tiedCount++;
-                     }
-                    previousScore = item.score;
-                    return { ...item, rank };
-                });
-            };
-
+            // Assign ranks using the updated logic
             const rankedAgents = assignRanks(agentScores);
             const rankedTeams = assignRanks(teamScores);
 
 
-            // --- SVG Templates (Removed subtle pattern, kept signature font) ---
+            // --- SVG Templates (Kept signature font) ---
              const svgDefs = `
                 <defs>
                   <style type="text/css">
@@ -324,14 +327,16 @@ export default function CertificateGenerationPage() {
                  else if (rank === 2) svgTemplate = svgTemplateSecond;
                  else if (rank === 3) svgTemplate = svgTemplateThird;
 
-                 generated.push({
-                     svgContent: replacePlaceholders(svgTemplate, templateData),
-                     filename: `${pod.name}_Agent_${rank}.jpg`,
-                     title: `${agentNames} - ${rank}${rankSuffix} Place`
-                 });
+                 if (svgTemplate) { // Only generate if a template exists for the rank
+                    generated.push({
+                        svgContent: replacePlaceholders(svgTemplate, templateData),
+                        filename: `${pod.name}_Agent_Rank_${rank}.jpg`, // Adjust filename for clarity
+                        title: `${agentNames} - ${rank}${rankSuffix} Place`
+                    });
+                 }
              }
 
-            // Generate for Winning Team(s) - Handling ties
+            // Generate for Winning Team(s) - Handling ties (Only Rank 1)
              const winningTeams = rankedTeams.filter(team => team.rank === 1);
              if (winningTeams.length > 0) {
                 const winningTeamNames = formatNames(winningTeams.map(t => t.name));
@@ -354,7 +359,6 @@ export default function CertificateGenerationPage() {
                 };
                 generated.push({
                     svgContent: replacePlaceholders(svgTemplateTeam, teamTemplateData),
-                     // Adjust filename if multiple winning teams
                     filename: `${pod.name}_WinningTeam${winningTeams.length > 1 ? 's' : ''}.jpg`,
                     title: `Winning Team(s) - ${winningTeamNames}`
                 });
@@ -549,5 +553,4 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-
     

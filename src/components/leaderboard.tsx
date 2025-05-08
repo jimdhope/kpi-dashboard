@@ -15,6 +15,7 @@ interface LeaderboardEntry {
   avatarInitials?: string; // Optional custom initials
   avatarBgColor?: string; // Optional custom background color
   isUser?: boolean; // Flag to highlight the current user/team
+  // Removed isCurrentUser/isCurrentUserTeam, using isUser generic flag
 }
 
 interface LeaderboardProps {
@@ -43,10 +44,22 @@ const getRankHighlightStyle = (rank: number): React.CSSProperties => {
 };
 
 export function Leaderboard({ title, description, entries }: LeaderboardProps) {
-  // Sort entries by score descending, then assign ranks
-  const sortedEntries = [...entries]
-    .sort((a, b) => b.score - a.score)
-    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+   // Sort entries by score descending
+   const sortedEntries = [...entries].sort((a, b) => b.score - a.score);
+
+   // Assign ranks considering ties (1st, 2nd, 2nd, 4th, ...) - Corrected Logic
+   let rank = 1;
+   const rankedEntries = sortedEntries.map((entry, index) => {
+       if (index > 0 && entry.score < sortedEntries[index - 1].score) {
+           // Rank is the current position (index + 1) if score is lower than previous
+           rank = index + 1;
+       } else if (index === 0) {
+            rank = 1; // First entry is always rank 1
+       }
+       // If scores are tied, the rank remains the same as the previous entry's calculated rank
+       return { ...entry, rank };
+   });
+
 
   return (
     <Card className="shadow-md">
@@ -64,7 +77,7 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedEntries.map((entry) => (
+            {rankedEntries.map((entry) => (
               <TableRow
                 key={entry.id} // Use ID for key
                 // Apply highlight style for top 3, override default hover background for these rows
@@ -119,3 +132,4 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
     </Card>
   );
 }
+    
