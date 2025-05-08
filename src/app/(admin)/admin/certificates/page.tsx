@@ -178,7 +178,7 @@ export default function CertificateGenerationPage() {
                 .sort((a, b) => b.score - a.score);
 
 
-            // --- SVG Templates (Added subtle pattern) ---
+            // --- SVG Templates (Added subtle pattern and signature font) ---
              const svgDefs = `
                 <defs>
                   <pattern id="subtle-dots-pattern" patternUnits="userSpaceOnUse" width="10" height="10">
@@ -191,11 +191,6 @@ export default function CertificateGenerationPage() {
                   </style>
                 </defs>
               `;
-
-            // NOTE: The internal coordinates (x, y, text sizes etc.) are NOT automatically scaled.
-            // They remain based on the original 800x600 design.
-            // This will likely result in the content appearing smaller within the larger A4 canvas.
-            // A full redesign of the SVG layout would be needed for perfect A4 scaling.
 
             const svgTemplateFirst = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
@@ -212,7 +207,7 @@ export default function CertificateGenerationPage() {
                   <text x="25%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
                   <text x="75%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
                   <circle cx="100" cy="100" r="40" fill="#9f8f5e"/>
-                  <text x="100" y="100" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text>
+                  <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text> {/* Adjusted Y for centering */}
                 </svg>`;
              const svgTemplateSecond = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
@@ -229,7 +224,7 @@ export default function CertificateGenerationPage() {
                   <text x="25%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
                   <text x="75%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
                   <circle cx="100" cy="100" r="40" fill="#969696"/>
-                   <text x="100" y="100" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text>
+                   <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text> {/* Adjusted Y for centering */}
                 </svg>`;
             const svgTemplateThird = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
@@ -246,7 +241,7 @@ export default function CertificateGenerationPage() {
                     <text x="25%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
                     <text x="75%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
                     <circle cx="100" cy="100" r="40" fill="#996b4f"/>
-                     <text x="100" y="100" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text>
+                     <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text> {/* Adjusted Y for centering */}
                  </svg>`;
             const svgTemplateTeam = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
@@ -485,18 +480,24 @@ export default function CertificateGenerationPage() {
                                         <CardHeader className="p-3 bg-muted/50">
                                             <CardTitle className="text-sm">{cert.title}</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-4 flex flex-col items-center gap-4">
-                                            {/* Render SVG directly with responsive styling */}
+                                        {/* Adjusted CardContent and container div for height limit */}
+                                        <CardContent className="p-4 flex flex-col items-center gap-4 max-h-[400px]"> {/* Limit card content height */}
+                                            {/* Container for the SVG preview with max height */}
                                             <div
-                                                className="certificate-svg-container border rounded-md overflow-hidden w-full aspect-[1.414]" // Use A4 aspect ratio
-                                                style={{ '--aspect-ratio': `${SVG_WIDTH}/${SVG_HEIGHT}` } as React.CSSProperties} // Set aspect ratio via CSS variable if needed
-                                                dangerouslySetInnerHTML={{ __html: cert.svgContent }}
-                                            />
+                                                className="certificate-svg-container border rounded-md overflow-hidden w-full max-h-[300px] flex items-center justify-center" // Added max-h and flex centering
+                                            >
+                                                {/* Render SVG, it will scale down within the container */}
+                                                <div
+                                                    className="w-full h-auto" // Let inner div scale width, height auto
+                                                     // Removed aspect ratio here, let SVG inherent ratio work
+                                                    dangerouslySetInnerHTML={{ __html: cert.svgContent }}
+                                                />
+                                            </div>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => downloadSvgAsJpg(cert.svgContent, cert.filename)} // Use new download function
-                                                className="w-full"
+                                                className="w-full mt-auto" // Push button to bottom
                                             >
                                                 <Download className="mr-2 h-4 w-4" />
                                                 Download JPG {/* Changed button text */}
@@ -512,5 +513,3 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-
-    
