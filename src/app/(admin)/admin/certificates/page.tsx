@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -174,67 +173,67 @@ export default function CertificateGenerationPage() {
                 .sort((a, b) => b.score - a.score);
 
 
-            // --- SVG Templates (Embedded as Strings - Replace with your actual SVGs) ---
+            // --- SVG Templates (Updated Colors) ---
             const svgTemplateFirst = `
                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
-                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#9f8f5e" stroke-width="15"/>
+                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#9f8f5e" stroke-width="15"/> {/* Highlight Color */}
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text>
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Keep original name color */}
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
-                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text>
+                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text> {/* Highlight Color */}
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
                   <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
                   <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
                   <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
                   <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
                   <text x="550" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
-                  {/* Gold Medal graphic placeholder */}
-                  <circle cx="100" cy="100" r="40" fill="#FFD700"/>
-                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">1</text>
+                  {/* Graphic placeholder */}
+                  <circle cx="100" cy="100" r="40" fill="#9f8f5e"/> {/* Highlight Color */}
+                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">1</text> {/* White text for contrast */}
                 </svg>`;
              const svgTemplateSecond = `
                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
-                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#a0a0a0" stroke-width="15"/>
+                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#969696" stroke-width="15"/> {/* Highlight Color */}
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text>
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Keep original name color */}
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
-                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#a0a0a0" text-anchor="middle" font-weight="bold">2nd Place</text>
+                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#969696" text-anchor="middle" font-weight="bold">2nd Place</text> {/* Highlight Color */}
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
                   <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
                   <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
                   <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
                   <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
                   <text x="550" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
-                   {/* Silver Medal graphic placeholder */}
-                  <circle cx="100" cy="100" r="40" fill="#C0C0C0"/>
-                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">2</text>
+                  {/* Graphic placeholder */}
+                  <circle cx="100" cy="100" r="40" fill="#969696"/> {/* Highlight Color */}
+                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">2</text> {/* White text for contrast */}
                 </svg>`;
             const svgTemplateThird = `
                  <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
-                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#cd7f32" stroke-width="15"/>
+                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#996b4f" stroke-width="15"/> {/* Highlight Color */}
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text>
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Keep original name color */}
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
-                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#cd7f32" text-anchor="middle" font-weight="bold">3rd Place</text>
+                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text> {/* Highlight Color */}
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
                   <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
                   <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
                   <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
                   <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
                   <text x="550" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
-                   {/* Bronze Medal graphic placeholder */}
-                  <circle cx="100" cy="100" r="40" fill="#CD7F32"/>
-                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">3</text>
+                  {/* Graphic placeholder */}
+                  <circle cx="100" cy="100" r="40" fill="#996b4f"/> {/* Highlight Color */}
+                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">3</text> {/* White text for contrast */}
                  </svg>`;
             const svgTemplateTeam = `
                  <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #e0f2f7;">
-                    <rect x="20" y="20" width="760" height="560" fill="none" stroke="#008080" stroke-width="15"/>
+                    <rect x="20" y="20" width="760" height="560" fill="none" stroke="#625fc3" stroke-width="15"/> {/* Highlight Color */}
                     <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
                     <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
-                    <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Team Name}</text>
+                    <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Team Name}</text> {/* Keep original team name color */}
                     <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {Competition Name} competition</text>
                     <text x="400" y="350" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
                     <text x="400" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {Members}</text>
@@ -243,7 +242,7 @@ export default function CertificateGenerationPage() {
                     <text x="250" y="520" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
                     <text x="550" y="520" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
                     {/* Trophy graphic placeholder */}
-                    <text x="100" y="110" font-family="Arial" font-size="60" text-anchor="middle">🏆</text>
+                    <text x="100" y="110" font-family="Arial" font-size="60" text-anchor="middle" fill="#625fc3">🏆</text> {/* Optional: Use highlight color for trophy */}
                  </svg>`;
 
             // --- Replace Placeholders ---
