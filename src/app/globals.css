@@ -126,3 +126,8 @@ body {
   height: 100vh;
   overflow-y: auto;
 }
+
+/* Style for SVG certificate container */
+.certificate-svg-container svg {
+  @apply max-w-full h-auto block; /* Ensure SVG scales down and maintains aspect ratio */
+}

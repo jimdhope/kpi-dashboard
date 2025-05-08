@@ -179,7 +179,7 @@ export default function CertificateGenerationPage() {
                   <rect x="20" y="20" width="760" height="560" fill="none" stroke="#9f8f5e" stroke-width="15"/> {/* Highlight Color */}
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Keep original name color */}
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#9f8f5e" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Highlight Color */}
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text> {/* Highlight Color */}
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
@@ -197,7 +197,7 @@ export default function CertificateGenerationPage() {
                   <rect x="20" y="20" width="760" height="560" fill="none" stroke="#969696" stroke-width="15"/> {/* Highlight Color */}
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Keep original name color */}
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#969696" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Highlight Color */}
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#969696" text-anchor="middle" font-weight="bold">2nd Place</text> {/* Highlight Color */}
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
@@ -215,7 +215,7 @@ export default function CertificateGenerationPage() {
                   <rect x="20" y="20" width="760" height="560" fill="none" stroke="#996b4f" stroke-width="15"/> {/* Highlight Color */}
                   <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Keep original name color */}
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#996b4f" text-anchor="middle" font-weight="bold">{Agent Name}</text> {/* Highlight Color */}
                   <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text> {/* Highlight Color */}
                   <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
@@ -233,7 +233,7 @@ export default function CertificateGenerationPage() {
                     <rect x="20" y="20" width="760" height="560" fill="none" stroke="#625fc3" stroke-width="15"/> {/* Highlight Color */}
                     <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
                     <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
-                    <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Team Name}</text> {/* Keep original team name color */}
+                    <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#625fc3" text-anchor="middle" font-weight="bold">{Team Name}</text> {/* Highlight Color */}
                     <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {Competition Name} competition</text>
                     <text x="400" y="350" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
                     <text x="400" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {Members}</text>
@@ -431,9 +431,9 @@ export default function CertificateGenerationPage() {
                                             <CardTitle className="text-sm">{cert.title}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4 flex flex-col items-center gap-4">
-                                            {/* Render SVG directly */}
+                                            {/* Render SVG directly with responsive styling */}
                                             <div
-                                                className="border rounded-md overflow-hidden w-full aspect-[4/3]" // Adjust aspect ratio if needed
+                                                className="certificate-svg-container border rounded-md overflow-hidden w-full aspect-[4/3]" // Add class and maintain aspect ratio
                                                 dangerouslySetInnerHTML={{ __html: cert.svgContent }}
                                             />
                                             <Button
