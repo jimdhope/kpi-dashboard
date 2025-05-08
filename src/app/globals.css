@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Brush+Script+MT&display=swap'); /* Added Brush Script MT import */
 
 @tailwind base;
 @tailwind components;
@@ -144,3 +145,5 @@ body {
 .certificate-svg-container svg {
   @apply max-w-full h-auto block max-h-full; /* Ensure SVG scales down and maintains aspect ratio within container */
 }
+
+    
