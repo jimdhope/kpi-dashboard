@@ -1,3 +1,4 @@
+
 // src/components/dashboard-layout.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
@@ -29,27 +30,27 @@ import { generateInitials } from '@/lib/utils';
 import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { RoleSwitcher } from './role-switcher';
+import { RoleSwitcher } from './role-switcher'; // Changed to relative import
 import { AppLogo } from './app-logo'; // Import the new AppLogo component
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  roles: UserRole[] | undefined;
-  currentLayout: 'admin' | 'agent' | null;
-  onLayoutChange: (newLayout: 'admin' | 'agent') => void;
+  roles: UserRole[]; // Propagate roles
+  currentLayout: 'admin' | 'agent' | null; // Propagate current layout
+  onLayoutChange: (newLayout: 'admin' | 'agent') => void; // Propagate layout change handler
 }
 
 export function DashboardLayout({ children, roles, currentLayout, onLayoutChange }: DashboardLayoutProps) {
   const currentPath = usePathname();
-  const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
+    const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
-  // Log received props for debugging
-  useEffect(() => {
-    // Use console.log for client-side components
-    console.log("[DashboardLayout] Received props:", { roles, currentLayout });
-  }, [roles, currentLayout]);
+    // Log received props for debugging
+    useEffect(() => {
+        // Use console.log for client-side components
+        console.log("[DashboardLayout] Received props:", { roles, currentLayout });
+    }, [roles, currentLayout]);
 
 
   useEffect(() => {
@@ -269,11 +270,14 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
               <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2>
             </div>
             <div className="flex items-center gap-4">
-               <RoleSwitcher
-                   availableRoles={roles}
-                   currentLayout={currentLayout}
-                   onLayoutChange={onLayoutChange}
-               />
+                {/* Conditionally render RoleSwitcher only if onLayoutChange is provided */}
+               {onLayoutChange && (
+                 <RoleSwitcher
+                     availableRoles={roles || []} // Pass roles or empty array
+                     currentLayout={currentLayout}
+                     onLayoutChange={onLayoutChange}
+                 />
+               )}
                <ThemeToggle />
                  <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>
@@ -285,4 +289,3 @@ export function DashboardLayout({ children, roles, currentLayout, onLayoutChange
     </SidebarProvider>
   );
 }
-```

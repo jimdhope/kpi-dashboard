@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -100,16 +101,20 @@ export default function CertificateGenerationPage() {
             const competition = competitions.find(c => c.id === selectedCompetitionId);
             const pod = pods.find(p => p.id === selectedPodId);
 
-            if (!competition || !pod || !pod.podManagerId) {
-                 throw new Error("Could not load competition or pod details, or pod manager ID is missing.");
-            }
-
-            // Fetch Pod Manager
-             const podManagerSnap = await getDoc(doc(db, 'users', pod.podManagerId));
-             if (!podManagerSnap.exists()) {
-                 throw new Error(`Pod manager with ID ${pod.podManagerId} not found.`);
+             // Fetch Pod Manager details
+             let podManager: AppUser | null = null;
+             if (pod?.podManagerId) {
+                 const podManagerSnap = await getDoc(doc(db, 'users', pod.podManagerId));
+                 if (podManagerSnap.exists()) {
+                     podManager = podManagerSnap.data() as AppUser;
+                 } else {
+                     console.warn(`Pod manager with ID ${pod.podManagerId} not found.`);
+                 }
              }
-             const podManager = podManagerSnap.data() as AppUser;
+
+             if (!competition || !pod) {
+                 throw new Error("Could not load competition or pod details.");
+             }
 
 
             // Fetch Users in the Pod
@@ -249,7 +254,8 @@ export default function CertificateGenerationPage() {
              const replacePlaceholders = (template: string, data: Record<string, string>): string => {
                  let result = template;
                  for (const key in data) {
-                     result = result.replace(new RegExp(`{${key}}`, 'g'), data[key]);
+                     // Use a regex that handles curly braces and is case-insensitive for placeholders
+                     result = result.replace(new RegExp(`\\{${key}\\}`, 'gi'), data[key] || ''); // Replace with empty string if data[key] is undefined
                  }
                  return result;
              };
@@ -262,10 +268,9 @@ export default function CertificateGenerationPage() {
                 const templateData = {
                     'Agent Name': agent.name,
                     'Pod Name': pod.name,
-                    'Pod Manager Name': podManager.name,
+                    'Pod Manager Name': podManager?.name || 'N/A', // Use fetched name or N/A
                     'Competition Name': competition.name,
                     'Date': dateStr,
-                     // Add rank if needed in template, e.g., '{Rank}': `${rank}${rankSuffix} Place`
                 };
                  let svgTemplate = '';
                  if (rank === 1) svgTemplate = svgTemplateFirst;
@@ -295,7 +300,7 @@ export default function CertificateGenerationPage() {
                 const teamTemplateData = {
                     'Team Name': winningTeam.name,
                     'Pod Name': pod.name,
-                    'Pod Manager Name': podManager.name,
+                    'Pod Manager Name': podManager?.name || 'N/A', // Use fetched name or N/A
                     'Competition Name': competition.name,
                     'Date': dateStr,
                     'Members': membersStr || 'N/A',
@@ -452,4 +457,3 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-```
