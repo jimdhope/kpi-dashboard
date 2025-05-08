@@ -91,6 +91,16 @@ export default function CertificateGenerationPage() {
         return pods.filter(pod => competition.podIds.includes(pod.id));
     }, [competitions, pods, selectedCompetitionId]);
 
+    // --- Helper to format names with '&' ---
+    const formatNames = (names: string[]): string => {
+        if (names.length === 0) return 'N/A';
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return names.join(' & ');
+        if (names.length === 3) return names.join(', ') + ' & ' + names.pop();
+        const last = names.pop();
+        return `${names.join(', ')} & ${last}`;
+    };
+
     // --- Handle Generate Certificates ---
     const handleGenerateCertificates = async () => {
         if (!selectedCompetitionId || !selectedPodId) {
@@ -132,7 +142,7 @@ export default function CertificateGenerationPage() {
              if (!compDocSnap.exists()) {
                  throw new Error(`Competition with ID ${selectedCompetitionId} not found.`);
              }
-            const compData = compDocSnap.data() as Competition & { teams?: Team[] }; // Fixed: Replaced &amp; with &
+            const compData = compDocSnap.data() as Competition & { teams?: Team[] };
              // Ensure teams have IDs, filter teams relevant to this pod's agents
             const competitionTeams = (compData.teams || [])
                  .map((team, index) => ({ ...team, id: team.id || `team-${index}` }))
@@ -154,38 +164,58 @@ export default function CertificateGenerationPage() {
 
             // --- Calculate Scores ---
             // Agent Scores
-            const agentScores: { [agentId: string]: number } = {};
-            podAgentUsers.forEach(agent => { agentScores[agent.id!] = 0; });
+            const agentScoresMap: { [agentId: string]: number } = {};
+            podAgentUsers.forEach(agent => { agentScoresMap[agent.id!] = 0; });
             logs.forEach(log => {
-                if (agentScores.hasOwnProperty(log.agentId)) {
-                    agentScores[log.agentId] += log.points;
+                if (agentScoresMap.hasOwnProperty(log.agentId)) {
+                    agentScoresMap[log.agentId] += log.points;
                 }
             });
-            const rankedAgents = podAgentUsers
-                .map(agent => ({ ...agent, score: agentScores[agent.id!] || 0 }))
+            const agentScores = podAgentUsers
+                .map(agent => ({ ...agent, score: agentScoresMap[agent.id!] || 0 }))
                 .sort((a, b) => b.score - a.score);
 
             // Team Scores
-            const teamScores: { [teamId: string]: number } = {};
-            competitionTeams.forEach(team => { teamScores[team.id] = 0; });
+            const teamScoresMap: { [teamId: string]: number } = {};
+            competitionTeams.forEach(team => { teamScoresMap[team.id] = 0; });
             logs.forEach(log => {
                 const agentTeam = competitionTeams.find(team => team.agentIds?.includes(log.agentId));
                 if (agentTeam) {
-                    teamScores[agentTeam.id] += log.points;
+                    teamScoresMap[agentTeam.id] += log.points;
                 }
             });
-            const rankedTeams = competitionTeams
-                .map(team => ({ ...team, score: teamScores[team.id] || 0 }))
+            const teamScores = competitionTeams
+                .map(team => ({ ...team, score: teamScoresMap[team.id] || 0 }))
                 .sort((a, b) => b.score - a.score);
+
+            // Assign ranks considering ties
+            const assignRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+                let rank = 0;
+                let previousScore = -Infinity;
+                let tiedCount = 0;
+                return items.map((item, index) => {
+                     if (item.score < previousScore) {
+                        rank += tiedCount;
+                        tiedCount = 1;
+                     } else {
+                        if (index === 0) rank = 1; // Assign rank 1 to the first item(s)
+                        tiedCount++;
+                     }
+                    previousScore = item.score;
+                    return { ...item, rank };
+                });
+            };
+
+            const rankedAgents = assignRanks(agentScores);
+            const rankedTeams = assignRanks(teamScores);
 
 
             // --- SVG Templates (Removed subtle pattern, kept signature font) ---
              const svgDefs = `
                 <defs>
-                   {/* Removed pattern definition */}
                   <style type="text/css">
                      @import url('https://fonts.googleapis.com/css2?family=Brush+Script+MT&display=swap');
-                     .signature-font { font-family: 'Brush Script MT', cursive; font-size: 48px; } {/* Increased font size */}
+                     .signature-font { font-family: 'Brush Script MT', cursive; font-size: 48px; }
                   </style>
                 </defs>
               `;
@@ -194,7 +224,6 @@ export default function CertificateGenerationPage() {
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                  {/* Removed pattern application rectangle */}
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#9f8f5e" stroke-width="15"/>
                   <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -202,16 +231,15 @@ export default function CertificateGenerationPage() {
                   <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text>
                   <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                  <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
-                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
+                  <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                   <circle cx="100" cy="100" r="40" fill="#9f8f5e"/>
-                  <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text> {/* Adjusted Y for centering */}
+                  <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text>
                 </svg>`;
              const svgTemplateSecond = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                  {/* Removed pattern application rectangle */}
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#969696" stroke-width="15"/>
                   <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -219,16 +247,15 @@ export default function CertificateGenerationPage() {
                   <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#969696" text-anchor="middle" font-weight="bold">2nd Place</text>
                   <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                   <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
-                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
+                   <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                   <circle cx="100" cy="100" r="40" fill="#969696"/>
-                   <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text> {/* Adjusted Y for centering */}
+                   <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text>
                 </svg>`;
             const svgTemplateThird = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                    {/* Removed pattern application rectangle */}
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#996b4f" stroke-width="15"/>
                     <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                     <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -236,93 +263,100 @@ export default function CertificateGenerationPage() {
                     <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                     <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text>
                     <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
-                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
+                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                     <circle cx="100" cy="100" r="40" fill="#996b4f"/>
-                     <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text> {/* Adjusted Y for centering */}
+                     <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text>
                  </svg>`;
             const svgTemplateTeam = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#e0f2f7"/>
-                    {/* Removed pattern application rectangle */}
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#625fc3" stroke-width="15"/>
                     <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
                     <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
                     <text x="50%" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#625fc3" text-anchor="middle" font-weight="bold">{{Team Name}}</text>
                     <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {{Pod Name}} KPI Competition</text>
                     <text x="50%" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {{Members}}</text>
-                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
-                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
+                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                     <text x="100" y="110" font-family="Arial" font-size="60" text-anchor="middle" fill="#625fc3">🏆</text>
                  </svg>`;
 
             // --- Replace Placeholders ---
             const generated: CertificateData[] = [];
             const endDateObj = competition.endDate instanceof Timestamp ? competition.endDate.toDate() : competition.endDate;
-            // Use the 'd MMMM yyyy' format (e.g., 6 May 2025)
             const dateStr = format(endDateObj, 'd MMMM yyyy');
 
              const replacePlaceholders = (template: string, data: Record<string, string>): string => {
                  let result = template;
                  for (const key in data) {
-                    // Use a global, case-insensitive regex to replace all occurrences
-                    result = result.replace(new RegExp(`{{${key}}}`, 'gi'), data[key] || ''); // Replace with empty string if data[key] is undefined
+                    result = result.replace(new RegExp(`{{${key}}}`, 'gi'), data[key] || '');
                  }
                  return result;
              };
 
-            // Generate for Top 3 Agents
-            for (let i = 0; i < Math.min(3, rankedAgents.length); i++) {
-                const agent = rankedAgents[i];
-                const rank = i + 1;
-                const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : 'rd';
-                const templateData = {
-                    'Agent Name': agent.name,
-                    'Pod Name': pod.name,
-                    'Team Manager Name': podManager?.name || 'N/A', // Fixed placeholder key
-                    'Date': dateStr, // Use formatted date
-                };
+             // Group agents by rank
+             const agentsByRank: { [rank: number]: AppUser[] } = {};
+             rankedAgents.forEach(agent => {
+                 if (!agentsByRank[agent.rank]) {
+                     agentsByRank[agent.rank] = [];
+                 }
+                 agentsByRank[agent.rank].push(agent);
+             });
+
+             // Generate certificates for top 3 ranks (handling ties)
+             for (let rank = 1; rank <= 3; rank++) {
+                 const agentsAtRank = agentsByRank[rank];
+                 if (!agentsAtRank || agentsAtRank.length === 0) continue; // Skip if no one achieved this rank
+
+                 const agentNames = formatNames(agentsAtRank.map(a => a.name));
+                 const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : 'rd';
+                 const templateData = {
+                     'Agent Name': agentNames,
+                     'Pod Name': pod.name,
+                     'Team Manager Name': podManager?.name || 'N/A',
+                     'Date': dateStr,
+                 };
+
                  let svgTemplate = '';
                  if (rank === 1) svgTemplate = svgTemplateFirst;
                  else if (rank === 2) svgTemplate = svgTemplateSecond;
                  else if (rank === 3) svgTemplate = svgTemplateThird;
 
-                generated.push({
-                    svgContent: replacePlaceholders(svgTemplate, templateData),
-                    // Change filename extension to .jpg
-                    filename: `${pod.name}_Agent_${rank}.jpg`,
-                    title: `${agent.name} - ${rank}${rankSuffix} Place`
-                });
-            }
+                 generated.push({
+                     svgContent: replacePlaceholders(svgTemplate, templateData),
+                     filename: `${pod.name}_Agent_${rank}.jpg`,
+                     title: `${agentNames} - ${rank}${rankSuffix} Place`
+                 });
+             }
 
-            // Generate for Winning Team
-            if (rankedTeams.length > 0) {
-                const winningTeam = rankedTeams[0];
-                 // Format members list
-                 const memberNames = (winningTeam.agentIds || [])
+            // Generate for Winning Team(s) - Handling ties
+             const winningTeams = rankedTeams.filter(team => team.rank === 1);
+             if (winningTeams.length > 0) {
+                const winningTeamNames = formatNames(winningTeams.map(t => t.name));
+
+                // Aggregate members from all winning teams (unique)
+                const allWinningAgentIds = new Set<string>();
+                winningTeams.forEach(team => (team.agentIds || []).forEach(id => allWinningAgentIds.add(id)));
+
+                const memberNames = Array.from(allWinningAgentIds)
                     .map(id => podAgentUsers.find(u => u.id === id)?.name)
                     .filter((name): name is string => !!name);
-                 let membersStr = memberNames.join(', ');
-                 if (memberNames.length > 1) {
-                     const lastCommaIndex = membersStr.lastIndexOf(',');
-                      if (lastCommaIndex !== -1) {
-                          membersStr = membersStr.substring(0, lastCommaIndex) + ' & ' + membersStr.substring(lastCommaIndex + 1).trim(); // Replaced &amp; with &
-                      }
-                 }
+                const membersStr = formatNames(memberNames);
 
                 const teamTemplateData = {
-                    'Team Name': winningTeam.name,
+                    'Team Name': winningTeamNames, // Show all tied team names
                     'Pod Name': pod.name,
-                    'Team Manager Name': podManager?.name || 'N/A', // Fixed placeholder key
-                    'Date': dateStr, // Use formatted date
-                    'Members': membersStr || 'N/A',
+                    'Team Manager Name': podManager?.name || 'N/A',
+                    'Date': dateStr,
+                    'Members': membersStr,
                 };
                 generated.push({
                     svgContent: replacePlaceholders(svgTemplateTeam, teamTemplateData),
-                    // Change filename extension to .jpg
-                    filename: `${pod.name}_WinningTeam_${winningTeam.name}.jpg`,
-                    title: `Winning Team - ${winningTeam.name}`
+                     // Adjust filename if multiple winning teams
+                    filename: `${pod.name}_WinningTeam${winningTeams.length > 1 ? 's' : ''}.jpg`,
+                    title: `Winning Team(s) - ${winningTeamNames}`
                 });
             }
 
@@ -466,8 +500,8 @@ export default function CertificateGenerationPage() {
                         <div className="mt-6 space-y-4">
                             <Skeleton className="h-8 w-1/3" />
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <Skeleton className="h-[300px] w-full" />
-                                <Skeleton className="h-[300px] w-full" />
+                                <Skeleton className="h-[300px] w-full frosted-glass" />
+                                <Skeleton className="h-[300px] w-full frosted-glass" />
                             </div>
                         </div>
                     )}
@@ -478,7 +512,7 @@ export default function CertificateGenerationPage() {
                             <h3 className="text-lg font-semibold">Generated Certificates</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {generatedCertificates.map((cert, index) => (
-                                    <Card key={index} className="overflow-hidden shadow-md">
+                                    <Card key={index} className="overflow-hidden shadow-md frosted-glass">
                                         <CardHeader className="p-3 bg-muted/50">
                                             <CardTitle className="text-sm">{cert.title}</CardTitle>
                                         </CardHeader>
@@ -515,6 +549,5 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-
 
     

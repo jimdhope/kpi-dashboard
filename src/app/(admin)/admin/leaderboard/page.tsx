@@ -26,7 +26,7 @@ import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Remove AvatarImage import
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -34,7 +34,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // Correct import path
+} from "@/components/ui/tooltip";
 
 
 // Interface for daily achievement logs (same as before)
@@ -240,7 +240,7 @@ export default function AdminLeaderboardPage() {
     }, [competitions, pods, selectedCompetitionId]);
 
 
-  // 5. Calculate Leaderboard Scores (useMemo)
+  // 5. Calculate Leaderboard Scores (useMemo) - Updated Ranking Logic
   const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
       // Filter agents based on selectedPodId if necessary
       const relevantAgents = selectedPodId
@@ -251,69 +251,97 @@ export default function AdminLeaderboardPage() {
 
         // Agent calculations
       const agentScores: Record<string, number> = {};
+      // Initialize scores for all relevant agents
       relevantAgents.forEach(agent => { agentScores[agent.id!] = 0; });
 
       allLogs.forEach(log => {
-          // Only count logs for agents currently in the relevantAgents list
          if (agentScores.hasOwnProperty(log.agentId)) {
-              agentScores[log.agentId] += log.points;
+              const points = typeof log.points === 'number' ? log.points : 0;
+              agentScores[log.agentId] += points;
           }
       });
 
-      const finalAgentLeaderboard: LeaderboardEntry[] = relevantAgents
+      const agentLeaderboardData = relevantAgents
           .map(agent => ({
               id: agent.id!,
               name: agent.name,
               totalPoints: agentScores[agent.id!] || 0,
-              score: agentScores[agent.id!] || 0, // Add score for compatibility
+              score: agentScores[agent.id!] || 0,
               avatarUrl: agent.avatarUrl,
               avatarInitials: agent.avatarInitials,
               avatarBgColor: agent.avatarBgColor,
-              isCurrentUser: agent.id === auth.currentUser?.uid, // Add if needed later
+              isCurrentUser: agent.id === auth.currentUser?.uid,
           }))
-          .sort((a, b) => b.totalPoints - a.totalPoints)
-          .map((entry, index) => ({ ...entry, rank: index + 1 }));
+          .sort((a, b) => b.totalPoints - a.totalPoints);
 
-      // Team calculations - uses the `teams` state fetched for the competition
+       // Assign ranks considering ties
+       let currentRank = 0;
+       let previousScore = -Infinity;
+       let tiedCount = 0;
+       const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index) => {
+           if (entry.totalPoints < previousScore) {
+                currentRank += tiedCount;
+                tiedCount = 1;
+           } else { // score is equal or it's the first entry
+                 if (index === 0) { // Handle first entry
+                    currentRank = 1;
+                 }
+                tiedCount++;
+           }
+           previousScore = entry.totalPoints;
+           return { ...entry, rank: currentRank };
+       });
+
+      // Team calculations
       const teamScores: Record<string, number> = {};
+       // Initialize scores for all teams in the competition
        teams.forEach(team => { teamScores[team.id] = 0; });
 
        allLogs.forEach(log => {
-            // Ensure log points are valid
             const points = typeof log.points === 'number' ? log.points : 0;
-
-           // Find the team the agent belongs to *within the competition's teams*
             const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
              if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
                  teamScores[agentTeam.id] += points;
              }
        });
 
-
-       const finalTeamLeaderboard: LeaderboardEntry[] = teams
+       const teamLeaderboardData = teams
            .map(team => {
-               // Get agent first names for this team
                const agentFirstNames = (team.agentIds || [])
-                   .map(agentId => {
-                       const agent = agents.find(a => a.id === agentId);
-                       return agent ? agent.name.split(' ')[0] : null; // Get first name
-                   })
-                   .filter((name): name is string => !!name); // Remove nulls
+                   .map(agentId => agents.find(a => a.id === agentId)?.name.split(' ')[0])
+                   .filter((name): name is string => !!name)
+                   .sort();
 
                return {
                    id: team.id,
                    name: team.name,
                    totalPoints: teamScores[team.id] || 0,
-                   score: teamScores[team.id] || 0, // Add score for compatibility
-                   agentFirstNames: agentFirstNames.sort(), // Sort names alphabetically
-                   isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''), // Add if needed later
+                   score: teamScores[team.id] || 0,
+                   agentFirstNames: agentFirstNames,
+                   isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''),
                };
            })
-          .sort((a, b) => b.totalPoints - a.totalPoints)
-          .map((entry, index) => ({ ...entry, rank: index + 1 }));
+          .sort((a, b) => b.totalPoints - a.totalPoints);
+
+       // Assign ranks considering ties
+       currentRank = 0;
+       previousScore = -Infinity;
+       tiedCount = 0;
+       const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index) => {
+           if (entry.totalPoints < previousScore) {
+                currentRank += tiedCount;
+                tiedCount = 1;
+           } else {
+                 if (index === 0) {
+                    currentRank = 1;
+                 }
+                tiedCount++;
+           }
+           previousScore = entry.totalPoints;
+           return { ...entry, rank: currentRank };
+       });
 
       return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-   // Dependencies: logs, filtered agents, competition teams, all agents (for name lookup)
   }, [allLogs, agents, participatingPods, teams, selectedPodId]);
 
   const isLoading = isLoadingBase || isLoadingData;
@@ -449,7 +477,7 @@ export default function AdminLeaderboardPage() {
                               </TableCell>
                                {/* Ensure score text color contrasts with rank background (explicitly white) */}
                               <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
-                                  {entry.totalPoints.toLocaleString()}
+                                  {(entry.totalPoints ?? 0).toLocaleString()}
                               </TableCell>
                               </TableRow>
                           ))}
@@ -521,7 +549,7 @@ export default function AdminLeaderboardPage() {
                                   </TableCell>
                                   {/* Ensure score text color contrasts with rank background (explicitly white) */}
                                   <TableCell className={cn("text-right font-semibold", (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary')}>
-                                      {entry.totalPoints.toLocaleString()}
+                                      {(entry.totalPoints ?? 0).toLocaleString()}
                                   </TableCell>
                               </TableRow>
                           ))}
@@ -538,3 +566,5 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
+
+    
