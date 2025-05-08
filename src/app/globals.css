@@ -129,5 +129,7 @@ body {
 
 /* Style for SVG certificate container */
 .certificate-svg-container svg {
-  @apply max-w-full h-auto block; /* Ensure SVG scales down and maintains aspect ratio */
+  @apply max-w-full h-auto block max-h-full; /* Ensure SVG scales down and maintains aspect ratio within container */
 }
+
+      

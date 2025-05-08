@@ -31,9 +31,9 @@ interface Team {
   agentIds: string[];
 }
 
-// Define A4 Landscape Dimensions
-const SVG_WIDTH = 1123;
-const SVG_HEIGHT = 794;
+// Define A4 Landscape Dimensions in pixels (approx 300 DPI)
+const SVG_WIDTH = 1123; // Width for A4 landscape at 96 DPI (standard screen)
+const SVG_HEIGHT = 794; // Height for A4 landscape at 96 DPI
 
 
 export default function CertificateGenerationPage() {
@@ -183,7 +183,7 @@ export default function CertificateGenerationPage() {
                 <defs>
                   <pattern id="subtle-dots-pattern" patternUnits="userSpaceOnUse" width="10" height="10">
                      {/* Use a semi-transparent fill based on the typical foreground color */}
-                    <circle cx="5" cy="5" r="1" fill="hsla(0, 0%, 10%, 0.05)" /> {/* Subtle dark dots */}
+                    <circle cx="5" cy="5" r="1" fill="hsla(var(--foreground), 0.05)" /> {/* Subtle dots using foreground HSL */}
                   </pattern>
                   <style type="text/css">
                      @import url('https://fonts.googleapis.com/css2?family=Brush+Script+MT&display=swap');
@@ -193,7 +193,7 @@ export default function CertificateGenerationPage() {
               `;
 
             const svgTemplateFirst = `
-                <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+                <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                   <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
@@ -210,7 +210,7 @@ export default function CertificateGenerationPage() {
                   <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text> {/* Adjusted Y for centering */}
                 </svg>`;
              const svgTemplateSecond = `
-                <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+                <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                   <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
@@ -227,7 +227,7 @@ export default function CertificateGenerationPage() {
                    <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text> {/* Adjusted Y for centering */}
                 </svg>`;
             const svgTemplateThird = `
-                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                     <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
@@ -244,7 +244,7 @@ export default function CertificateGenerationPage() {
                      <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text> {/* Adjusted Y for centering */}
                  </svg>`;
             const svgTemplateTeam = `
-                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#e0f2f7"/>
                     <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
@@ -482,14 +482,14 @@ export default function CertificateGenerationPage() {
                                         </CardHeader>
                                         {/* Adjusted CardContent and container div for height limit */}
                                         <CardContent className="p-4 flex flex-col items-center gap-4 max-h-[400px]"> {/* Limit card content height */}
-                                            {/* Container for the SVG preview with max height */}
+                                            {/* Container for the SVG preview with max height and flex centering */}
                                             <div
                                                 className="certificate-svg-container border rounded-md overflow-hidden w-full max-h-[300px] flex items-center justify-center" // Added max-h and flex centering
                                             >
-                                                {/* Render SVG, it will scale down within the container */}
+                                                {/* Render SVG wrapper with scaling styles */}
                                                 <div
-                                                    className="w-full h-auto" // Let inner div scale width, height auto
-                                                     // Removed aspect ratio here, let SVG inherent ratio work
+                                                    className="w-full h-full flex items-center justify-center" // Inner div also uses flex to center content
+                                                    style={{ aspectRatio: `${SVG_WIDTH} / ${SVG_HEIGHT}` }} // Maintain aspect ratio
                                                     dangerouslySetInnerHTML={{ __html: cert.svgContent }}
                                                 />
                                             </div>
@@ -513,3 +513,5 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
+
+      
