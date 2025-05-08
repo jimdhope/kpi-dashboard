@@ -100,28 +100,25 @@ export default function CertificateGenerationPage() {
         return `${names.join(', ')} & ${last}`;
     };
 
-    // --- Dense Ranking Logic (1, 2, 2, 3...) ---
-    const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
-        if (items.length === 0) return [];
+     // --- Dense Ranking Logic ---
+     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+         if (items.length === 0) return [];
 
-        const rankedItems = [];
-        let currentRank = 1;
-        let previousScore = items[0].score;
+         const sortedItems = [...items].sort((a, b) => b.score - a.score); // Ensure sorted descending
+         const scoreRankMap = new Map<number, number>();
+         let rankCounter = 1;
 
-        for (let i = 0; i < items.length; i++) {
-            const currentItem = items[i];
-            // Increment rank only if score decreases
-            if (currentItem.score < previousScore) {
-                currentRank = rankedItems.length > 0 ? rankedItems[rankedItems.length - 1].rank + 1 : 1; // Increment based on the last assigned rank's number
-            } else if (i === 0) {
-                 currentRank = 1; // First item is always rank 1
-            }
-             // Otherwise, score is same or first item, use currentRank
-            rankedItems.push({ ...currentItem, rank: currentRank });
-            previousScore = currentItem.score;
-        }
-        return rankedItems;
-    };
+         for (const item of sortedItems) {
+             if (!scoreRankMap.has(item.score)) {
+                 scoreRankMap.set(item.score, rankCounter++);
+             }
+         }
+
+         return sortedItems.map(item => ({
+             ...item,
+             rank: scoreRankMap.get(item.score)!
+         }));
+     };
 
 
     // --- Handle Generate Certificates ---
@@ -216,29 +213,29 @@ export default function CertificateGenerationPage() {
             const rankedTeams = assignDenseRanks(teamScores);
 
 
-            // --- SVG Templates (Kept signature font) ---
+             // --- SVG Templates (Removed external font import, increased signature size) ---
              const svgDefs = `
                 <defs>
                   <style type="text/css">
-                     @import url('https://fonts.googleapis.com/css2?family=Brush+Script+MT&display=swap');
-                     .signature-font { font-family: 'Brush Script MT', cursive; font-size: 48px; }
+                     /* Removed @import */
+                     .signature-font { font-family: cursive, 'Brush Script MT', sans-serif; font-size: 52px; } /* Increased font size, added fallbacks */
                   </style>
                 </defs>
               `;
 
-            const svgTemplateFirst = `
+             const svgTemplateFirst = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#9f8f5e" stroke-width="15"/>
                   <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="50%" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#9f8f5e" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
+                  <text x="50%" y="250" font-family="cursive, 'Brush Script MT', sans-serif" font-size="50" fill="#9f8f5e" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
                   <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text>
                   <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                  <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
+                  <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                  <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                   <circle cx="100" cy="100" r="40" fill="#9f8f5e"/>
                   <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text>
                 </svg>`;
@@ -249,12 +246,12 @@ export default function CertificateGenerationPage() {
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#969696" stroke-width="15"/>
                   <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                  <text x="50%" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#969696" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
+                  <text x="50%" y="250" font-family="cursive, 'Brush Script MT', sans-serif" font-size="50" fill="#969696" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
                   <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#969696" text-anchor="middle" font-weight="bold">2nd Place</text>
                   <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                   <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
+                   <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                  <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                   <circle cx="100" cy="100" r="40" fill="#969696"/>
                    <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text>
                 </svg>`;
@@ -265,12 +262,12 @@ export default function CertificateGenerationPage() {
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#996b4f" stroke-width="15"/>
                     <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                     <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
-                    <text x="50%" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#996b4f" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
+                    <text x="50%" y="250" font-family="cursive, 'Brush Script MT', sans-serif" font-size="50" fill="#996b4f" text-anchor="middle" font-weight="bold">{{Agent Name}}</text>
                     <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                     <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text>
                     <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
+                     <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                    <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                     <circle cx="100" cy="100" r="40" fill="#996b4f"/>
                      <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text>
                  </svg>`;
@@ -281,11 +278,11 @@ export default function CertificateGenerationPage() {
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#625fc3" stroke-width="15"/>
                     <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
                     <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
-                    <text x="50%" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#625fc3" text-anchor="middle" font-weight="bold">{{Team Name}}</text>
+                    <text x="50%" y="250" font-family="cursive, 'Brush Script MT', sans-serif" font-size="50" fill="#625fc3" text-anchor="middle" font-weight="bold">{{Team Name}}</text>
                     <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {{Pod Name}} KPI Competition</text>
                     <text x="50%" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {{Members}}</text>
-                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
+                     <text x="25%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                    <text x="75%" y="${SVG_HEIGHT - 100}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                     <text x="100" y="110" font-family="Arial" font-size="60" text-anchor="middle" fill="#625fc3">🏆</text>
                  </svg>`;
 
@@ -394,41 +391,58 @@ export default function CertificateGenerationPage() {
         const img = new Image();
 
         // Convert SVG string to base64 data URL
+        // Using Blob + createObjectURL is generally more efficient for larger SVGs
         const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(svgBlob);
 
         img.onload = () => {
-            // Set canvas dimensions based on SVG size
-            canvas.width = SVG_WIDTH;
+            console.log("SVG Image loaded into Image object");
+            // Set canvas dimensions based on SVG size (ensure SVG has width/height)
+            canvas.width = SVG_WIDTH; // Use defined dimensions
             canvas.height = SVG_HEIGHT;
 
              // Fill canvas with white background before drawing SVG
+             // This ensures transparency in the SVG doesn't become black in the JPG
              ctx.fillStyle = '#ffffff'; // White background
              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            console.log("Canvas background filled white");
 
             // Draw the SVG image onto the canvas
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            try {
+                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                 console.log("SVG drawn onto canvas");
 
-            // Convert canvas to JPG data URL (adjust quality 0.0-1.0)
-            const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.9); // 0.9 is high quality
+                 // Convert canvas to JPG data URL (adjust quality 0.0-1.0)
+                 const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.9); // 0.9 is high quality
+                 console.log("Canvas converted to JPG data URL");
 
-            // Trigger download
-            const a = document.createElement('a');
-            a.href = jpgDataUrl;
-            a.download = filename; // Filename already ends with .jpg
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+                 // Trigger download
+                 const a = document.createElement('a');
+                 a.href = jpgDataUrl;
+                 a.download = filename; // Filename already ends with .jpg
+                 document.body.appendChild(a);
+                 a.click();
+                 document.body.removeChild(a);
+                 console.log("Download triggered for:", filename);
 
-            // Revoke the object URL to free up memory
-            URL.revokeObjectURL(url);
+                 // Revoke the object URL to free up memory AFTER download link is clicked
+                 URL.revokeObjectURL(url);
+                 console.log("Blob URL revoked");
+
+            } catch (drawError) {
+                 console.error("Error drawing SVG onto canvas:", drawError);
+                 toast({ variant: "destructive", title: "Drawing Error", description: "Could not draw certificate image." });
+                 URL.revokeObjectURL(url); // Clean up URL on error
+            }
         };
 
-        img.onerror = () => {
-            toast({ variant: "destructive", title: "Error", description: "Could not load SVG image for conversion." });
-             URL.revokeObjectURL(url);
+        img.onerror = (errorEvent) => {
+            console.error("Error loading SVG into Image object:", errorEvent);
+            toast({ variant: "destructive", title: "SVG Load Error", description: "Could not load certificate image for conversion." });
+             URL.revokeObjectURL(url); // Clean up URL on error
         };
 
+        console.log("Setting Image src to blob URL:", url);
         img.src = url;
     };
 
