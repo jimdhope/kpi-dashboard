@@ -32,9 +32,9 @@ interface Team {
   agentIds: string[];
 }
 
-// Define A4 Landscape Dimensions in pixels (approx 300 DPI)
-const SVG_WIDTH = 1123; // Width for A4 landscape at 96 DPI (standard screen)
-const SVG_HEIGHT = 794; // Height for A4 landscape at 96 DPI
+// Define A4 Landscape Dimensions in pixels (approx 96 DPI)
+const SVG_WIDTH = 1123;
+const SVG_HEIGHT = 794;
 
 
 export default function CertificateGenerationPage() {
@@ -105,16 +105,19 @@ export default function CertificateGenerationPage() {
      const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
          if (items.length === 0) return [];
 
-         const sortedItems = [...items].sort((a, b) => b.score - a.score); // Ensure sorted descending
+         // Ensure items are sorted by score descending first
+         const sortedItems = [...items].sort((a, b) => b.score - a.score);
          const scoreRankMap = new Map<number, number>();
          let rankCounter = 1;
 
+         // Assign ranks based on score
          for (const item of sortedItems) {
              if (!scoreRankMap.has(item.score)) {
                  scoreRankMap.set(item.score, rankCounter++);
              }
          }
 
+         // Map ranks back to items
          return sortedItems.map(item => ({
              ...item,
              rank: scoreRankMap.get(item.score)!
@@ -220,34 +223,42 @@ export default function CertificateGenerationPage() {
                  <defs>
                     <style type="text/css">
                          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;family=Dancing+Script:wght@700&amp;display=swap');
-                        /* Use Inter font family */
+                        /* Use Inter font family for body/title */
                         .body-font { font-family: 'Inter', Arial, Helvetica, sans-serif; }
                         .title-font { font-family: 'Inter', Arial, Helvetica, sans-serif; font-weight: 700; }
                         /* Use Dancing Script Google Font for names and signatures */
-                        .name-font { font-family: 'Dancing Script', cursive; font-weight: 700; } /* Specify weight */
+                        .name-font { font-family: 'Dancing Script', cursive; font-weight: 700; } /* Ensure weight is specified */
                         /* Make signatures even larger */
-                        .signature-font { font-family: 'Dancing Script', cursive; font-size: 64px; font-weight: 700; } /* Increased size */
+                        .signature-font { font-family: 'Dancing Script', cursive; font-size: 64px; font-weight: 700; } /* Increased size and specified weight */
                     </style>
                 </defs>
              `;
 
-             // Updated Templates with Highlight Colors and Font Families - Adjusted y-coordinates and font-sizes
-             // Added seal elements and rank text inside seals
-             const sealRadius = 60; // Increased radius for seals
+             // Updated Templates with Rosette Paths
              const sealY = SVG_HEIGHT / 2; // Vertically center the seals
              const sealLeftX = 120; // X position for left seal
              const sealRightX = SVG_WIDTH - 120; // X position for right seal
              const rankTextFontSize = 32; // Font size for the rank text inside the seal
+
+             // Example rosette path (simple 12-point star) centered at (0,0)
+             const rosettePathData = "M 0 -60 L 13 -50 L 30 -52 L 26 -35 L 52 -30 L 35 -26 L 50 -13 L 30 0 L 50 13 L 35 26 L 52 30 L 26 35 L 30 52 L 13 50 L 0 60 L -13 50 L -30 52 L -26 35 L -52 30 L -35 26 L -50 13 L -30 0 L -50 -13 L -35 -26 L -52 -30 L -26 -35 L -30 -52 L -13 -50 Z";
 
              const svgTemplateFirst = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#9f8f5e" stroke-width="15"/> {/* Gold border */}
-                  <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#9f8f5e"/> {/* Left Seal */}
-                  <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text inside Left Seal */}
-                  <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#9f8f5e"/> {/* Right Seal */}
-                  <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text inside Right Seal */}
+                  {/* Left Rosette Seal */}
+                  <g transform="translate(${sealLeftX}, ${sealY})">
+                    <path d="${rosettePathData}" fill="#9f8f5e"/>
+                    <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
+                  </g>
+                  {/* Right Rosette Seal */}
+                  <g transform="translate(${sealRightX}, ${sealY})">
+                     <path d="${rosettePathData}" fill="#9f8f5e"/>
+                     <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
+                  </g>
+                  {/* Rest of the certificate content */}
                   <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text>
                   <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text>
                   <text x="50%" y="300" class="name-font" font-size="72" fill="#9f8f5e" text-anchor="middle">{{Agent Name}}</text>
@@ -262,10 +273,17 @@ export default function CertificateGenerationPage() {
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#969696" stroke-width="15"/> {/* Silver border */}
-                   <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#969696"/> {/* Left Seal */}
-                   <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">2nd</text> {/* Rank Text inside Left Seal */}
-                  <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#969696"/> {/* Right Seal */}
-                  <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">2nd</text> {/* Rank Text inside Right Seal */}
+                  {/* Left Rosette Seal */}
+                  <g transform="translate(${sealLeftX}, ${sealY})">
+                    <path d="${rosettePathData}" fill="#969696"/>
+                    <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">2nd</text> {/* Rank Text */}
+                  </g>
+                  {/* Right Rosette Seal */}
+                   <g transform="translate(${sealRightX}, ${sealY})">
+                     <path d="${rosettePathData}" fill="#969696"/>
+                     <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">2nd</text> {/* Rank Text */}
+                  </g>
+                   {/* Rest of the certificate content */}
                   <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text>
                   <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text>
                   <text x="50%" y="300" class="name-font" font-size="72" fill="#969696" text-anchor="middle">{{Agent Name}}</text>
@@ -280,10 +298,17 @@ export default function CertificateGenerationPage() {
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#996b4f" stroke-width="15"/> {/* Bronze border */}
-                    <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#996b4f"/> {/* Left Seal */}
-                    <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">3rd</text> {/* Rank Text inside Left Seal */}
-                    <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#996b4f"/> {/* Right Seal */}
-                    <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">3rd</text> {/* Rank Text inside Right Seal */}
+                    {/* Left Rosette Seal */}
+                    <g transform="translate(${sealLeftX}, ${sealY})">
+                       <path d="${rosettePathData}" fill="#996b4f"/>
+                       <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">3rd</text> {/* Rank Text */}
+                    </g>
+                    {/* Right Rosette Seal */}
+                    <g transform="translate(${sealRightX}, ${sealY})">
+                       <path d="${rosettePathData}" fill="#996b4f"/>
+                       <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">3rd</text> {/* Rank Text */}
+                    </g>
+                     {/* Rest of the certificate content */}
                     <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text>
                     <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text>
                     <text x="50%" y="300" class="name-font" font-size="72" fill="#996b4f" text-anchor="middle">{{Agent Name}}</text>
@@ -298,10 +323,17 @@ export default function CertificateGenerationPage() {
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#e0f2f7"/>
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#625fc3" stroke-width="15"/> {/* Team color border */}
-                    <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#625fc3"/> {/* Left Seal */}
-                     <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
-                    <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#625fc3"/> {/* Right Seal */}
-                    <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
+                    {/* Left Rosette Seal */}
+                    <g transform="translate(${sealLeftX}, ${sealY})">
+                       <path d="${rosettePathData}" fill="#625fc3"/>
+                       <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
+                    </g>
+                    {/* Right Rosette Seal */}
+                    <g transform="translate(${sealRightX}, ${sealY})">
+                       <path d="${rosettePathData}" fill="#625fc3"/>
+                       <text x="0" y="0" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
+                    </g>
+                     {/* Rest of the certificate content */}
                     <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Winning Team Award</text>
                     <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">Presented to</text>
                     <text x="50%" y="300" class="name-font" font-size="72" fill="#625fc3" text-anchor="middle">{{Team Name}}</text>
@@ -623,3 +655,4 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
+
