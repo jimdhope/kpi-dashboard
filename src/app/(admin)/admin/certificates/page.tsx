@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -131,7 +132,7 @@ export default function CertificateGenerationPage() {
              if (!compDocSnap.exists()) {
                  throw new Error(`Competition with ID ${selectedCompetitionId} not found.`);
              }
-            const compData = compDocSnap.data() as Competition & { teams?: Team[] };
+            const compData = compDocSnap.data() as Competition & { teams?: Team[] }; // Fixed: Replaced &amp; with &
              // Ensure teams have IDs, filter teams relevant to this pod's agents
             const competitionTeams = (compData.teams || [])
                  .map((team, index) => ({ ...team, id: team.id || `team-${index}` }))
@@ -178,16 +179,13 @@ export default function CertificateGenerationPage() {
                 .sort((a, b) => b.score - a.score);
 
 
-            // --- SVG Templates (Added subtle pattern and signature font) ---
+            // --- SVG Templates (Removed subtle pattern, kept signature font) ---
              const svgDefs = `
                 <defs>
-                  <pattern id="subtle-dots-pattern" patternUnits="userSpaceOnUse" width="10" height="10">
-                     {/* Use a semi-transparent fill based on the typical foreground color */}
-                    <circle cx="5" cy="5" r="1" fill="hsla(var(--foreground), 0.05)" /> {/* Subtle dots using foreground HSL */}
-                  </pattern>
+                   {/* Removed pattern definition */}
                   <style type="text/css">
                      @import url('https://fonts.googleapis.com/css2?family=Brush+Script+MT&display=swap');
-                     .signature-font { font-family: 'Brush Script MT', cursive; font-size: 32px; }
+                     .signature-font { font-family: 'Brush Script MT', cursive; font-size: 48px; } {/* Increased font size */}
                   </style>
                 </defs>
               `;
@@ -196,7 +194,7 @@ export default function CertificateGenerationPage() {
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                  <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
+                  {/* Removed pattern application rectangle */}
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#9f8f5e" stroke-width="15"/>
                   <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -204,8 +202,8 @@ export default function CertificateGenerationPage() {
                   <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text>
                   <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                  <text x="25%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                  <text x="75%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
+                  <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
+                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
                   <circle cx="100" cy="100" r="40" fill="#9f8f5e"/>
                   <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1st</text> {/* Adjusted Y for centering */}
                 </svg>`;
@@ -213,7 +211,7 @@ export default function CertificateGenerationPage() {
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                  <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
+                  {/* Removed pattern application rectangle */}
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#969696" stroke-width="15"/>
                   <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                   <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -221,8 +219,8 @@ export default function CertificateGenerationPage() {
                   <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                   <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#969696" text-anchor="middle" font-weight="bold">2nd Place</text>
                   <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                  <text x="25%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                  <text x="75%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
+                   <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
+                  <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
                   <circle cx="100" cy="100" r="40" fill="#969696"/>
                    <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2nd</text> {/* Adjusted Y for centering */}
                 </svg>`;
@@ -230,7 +228,7 @@ export default function CertificateGenerationPage() {
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
-                    <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
+                    {/* Removed pattern application rectangle */}
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#996b4f" stroke-width="15"/>
                     <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
                     <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
@@ -238,8 +236,8 @@ export default function CertificateGenerationPage() {
                     <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
                     <text x="50%" y="380" font-family="Arial, sans-serif" font-size="40" fill="#996b4f" text-anchor="middle" font-weight="bold">3rd Place</text>
                     <text x="50%" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
-                    <text x="25%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                    <text x="75%" y="${SVG_HEIGHT - 80}" class="signature-font" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
+                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
+                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
                     <circle cx="100" cy="100" r="40" fill="#996b4f"/>
                      <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3rd</text> {/* Adjusted Y for centering */}
                  </svg>`;
@@ -247,15 +245,15 @@ export default function CertificateGenerationPage() {
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#e0f2f7"/>
-                    <rect x="0" y="0" width="100%" height="100%" fill="url(#subtle-dots-pattern)"/>
+                    {/* Removed pattern application rectangle */}
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#625fc3" stroke-width="15"/>
                     <text x="50%" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
                     <text x="50%" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
                     <text x="50%" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#625fc3" text-anchor="middle" font-weight="bold">{{Team Name}}</text>
                     <text x="50%" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {{Pod Name}} KPI Competition</text>
                     <text x="50%" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {{Members}}</text>
-                    <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
-                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Pod Manager Name}}</text>
+                     <text x="25%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted Y position */}
+                    <text x="75%" y="${SVG_HEIGHT - 110}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted Y position */}
                     <text x="100" y="110" font-family="Arial" font-size="60" text-anchor="middle" fill="#625fc3">🏆</text>
                  </svg>`;
 
@@ -282,7 +280,7 @@ export default function CertificateGenerationPage() {
                 const templateData = {
                     'Agent Name': agent.name,
                     'Pod Name': pod.name,
-                    'Pod Manager Name': podManager?.name || 'N/A', // Use fetched name or N/A
+                    'Team Manager Name': podManager?.name || 'N/A', // Fixed placeholder key
                     'Date': dateStr, // Use formatted date
                 };
                  let svgTemplate = '';
@@ -309,14 +307,14 @@ export default function CertificateGenerationPage() {
                  if (memberNames.length > 1) {
                      const lastCommaIndex = membersStr.lastIndexOf(',');
                       if (lastCommaIndex !== -1) {
-                          membersStr = membersStr.substring(0, lastCommaIndex) + ' & ' + membersStr.substring(lastCommaIndex + 1).trim();
+                          membersStr = membersStr.substring(0, lastCommaIndex) + ' & ' + membersStr.substring(lastCommaIndex + 1).trim(); // Replaced &amp; with &
                       }
                  }
 
                 const teamTemplateData = {
                     'Team Name': winningTeam.name,
                     'Pod Name': pod.name,
-                    'Pod Manager Name': podManager?.name || 'N/A', // Use fetched name or N/A
+                    'Team Manager Name': podManager?.name || 'N/A', // Fixed placeholder key
                     'Date': dateStr, // Use formatted date
                     'Members': membersStr || 'N/A',
                 };
@@ -362,6 +360,10 @@ export default function CertificateGenerationPage() {
             // Set canvas dimensions based on SVG size
             canvas.width = SVG_WIDTH;
             canvas.height = SVG_HEIGHT;
+
+             // Fill canvas with white background before drawing SVG
+             ctx.fillStyle = '#ffffff'; // White background
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw the SVG image onto the canvas
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -514,4 +516,5 @@ export default function CertificateGenerationPage() {
     );
 }
 
-      
+
+    
