@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -231,67 +232,83 @@ export default function CertificateGenerationPage() {
              `;
 
              // Updated Templates with Highlight Colors and Font Families - Adjusted y-coordinates and font-sizes
+             // Added seal elements and rank text inside seals
+             const sealRadius = 60; // Increased radius for seals
+             const sealY = SVG_HEIGHT / 2; // Vertically center the seals
+             const sealLeftX = 120; // X position for left seal
+             const sealRightX = SVG_WIDTH - 120; // X position for right seal
+             const rankTextFontSize = 32; // Font size for the rank text inside the seal
+
              const svgTemplateFirst = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#9f8f5e" stroke-width="15"/> {/* Gold border */}
-                  <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text> {/* Increased size, moved up */}
-                  <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text> {/* Increased size, moved up */}
-                  <text x="50%" y="300" class="name-font" font-size="72" fill="#9f8f5e" text-anchor="middle">{{Agent Name}}</text> {/* Increased size, moved up */}
-                  <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For achieving</text> {/* Increased size, moved up */}
-                  <text x="50%" y="460" class="title-font" font-size="56" fill="#9f8f5e" text-anchor="middle">1st Place</text> {/* Increased size, moved up */}
-                  <text x="50%" y="530" class="body-font" font-size="24" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text> {/* Increased size, moved up */}
-                  <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted y, larger size */}
-                  <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted y, larger size */}
-                  <circle cx="100" cy="100" r="50" fill="#9f8f5e"/> {/* Slightly larger circle */}
-                  <text x="100" y="105" class="title-font" font-size="24" fill="white" text-anchor="middle" dominant-baseline="middle">1st</text> {/* Increased font size */}
+                  <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#9f8f5e"/> {/* Left Seal */}
+                  <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text inside Left Seal */}
+                  <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#9f8f5e"/> {/* Right Seal */}
+                  <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text inside Right Seal */}
+                  <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text>
+                  <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text>
+                  <text x="50%" y="300" class="name-font" font-size="72" fill="#9f8f5e" text-anchor="middle">{{Agent Name}}</text>
+                  <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For achieving</text>
+                  <text x="50%" y="460" class="title-font" font-size="56" fill="#9f8f5e" text-anchor="middle">1st Place</text>
+                  <text x="50%" y="530" class="body-font" font-size="24" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
+                  <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                  <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                 </svg>`;
              const svgTemplateSecond = `
                 <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                   ${svgDefs}
                   <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                   <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#969696" stroke-width="15"/> {/* Silver border */}
-                  <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text> {/* Increased size, moved up */}
-                  <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text> {/* Increased size, moved up */}
-                  <text x="50%" y="300" class="name-font" font-size="72" fill="#969696" text-anchor="middle">{{Agent Name}}</text> {/* Increased size, moved up */}
-                  <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For achieving</text> {/* Increased size, moved up */}
-                  <text x="50%" y="460" class="title-font" font-size="56" fill="#969696" text-anchor="middle">2nd Place</text> {/* Increased size, moved up */}
-                  <text x="50%" y="530" class="body-font" font-size="24" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text> {/* Increased size, moved up */}
-                  <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted y, larger size */}
-                  <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted y, larger size */}
-                  <circle cx="100" cy="100" r="50" fill="#969696"/> {/* Slightly larger circle */}
-                  <text x="100" y="105" class="title-font" font-size="24" fill="white" text-anchor="middle" dominant-baseline="middle">2nd</text> {/* Increased font size */}
+                   <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#969696"/> {/* Left Seal */}
+                   <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">2nd</text> {/* Rank Text inside Left Seal */}
+                  <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#969696"/> {/* Right Seal */}
+                  <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">2nd</text> {/* Rank Text inside Right Seal */}
+                  <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text>
+                  <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text>
+                  <text x="50%" y="300" class="name-font" font-size="72" fill="#969696" text-anchor="middle">{{Agent Name}}</text>
+                  <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For achieving</text>
+                  <text x="50%" y="460" class="title-font" font-size="56" fill="#969696" text-anchor="middle">2nd Place</text>
+                  <text x="50%" y="530" class="body-font" font-size="24" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
+                  <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                  <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                 </svg>`;
             const svgTemplateThird = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#f0f0f0"/>
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#996b4f" stroke-width="15"/> {/* Bronze border */}
-                    <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text> {/* Increased size, moved up */}
-                    <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text> {/* Increased size, moved up */}
-                    <text x="50%" y="300" class="name-font" font-size="72" fill="#996b4f" text-anchor="middle">{{Agent Name}}</text> {/* Increased size, moved up */}
-                    <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For achieving</text> {/* Increased size, moved up */}
-                    <text x="50%" y="460" class="title-font" font-size="56" fill="#996b4f" text-anchor="middle">3rd Place</text> {/* Increased size, moved up */}
-                    <text x="50%" y="530" class="body-font" font-size="24" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text> {/* Increased size, moved up */}
-                    <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted y, larger size */}
-                    <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted y, larger size */}
-                    <circle cx="100" cy="100" r="50" fill="#996b4f"/> {/* Slightly larger circle */}
-                    <text x="100" y="105" class="title-font" font-size="24" fill="white" text-anchor="middle" dominant-baseline="middle">3rd</text> {/* Increased font size */}
+                    <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#996b4f"/> {/* Left Seal */}
+                    <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">3rd</text> {/* Rank Text inside Left Seal */}
+                    <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#996b4f"/> {/* Right Seal */}
+                    <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">3rd</text> {/* Rank Text inside Right Seal */}
+                    <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Certificate of Achievement</text>
+                    <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">This certificate is awarded to</text>
+                    <text x="50%" y="300" class="name-font" font-size="72" fill="#996b4f" text-anchor="middle">{{Agent Name}}</text>
+                    <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For achieving</text>
+                    <text x="50%" y="460" class="title-font" font-size="56" fill="#996b4f" text-anchor="middle">3rd Place</text>
+                    <text x="50%" y="530" class="body-font" font-size="24" fill="#555" text-anchor="middle">in the {{Pod Name}} KPI Competition</text>
+                    <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                    <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                  </svg>`;
             const svgTemplateTeam = `
                  <svg width="${SVG_WIDTH}" height="${SVG_HEIGHT}" viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
                     ${svgDefs}
                     <rect x="0" y="0" width="100%" height="100%" fill="#e0f2f7"/>
                     <rect x="20" y="20" width="${SVG_WIDTH - 40}" height="${SVG_HEIGHT - 40}" fill="none" stroke="#625fc3" stroke-width="15"/> {/* Team color border */}
-                    <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Winning Team Award</text> {/* Increased size, moved up */}
-                    <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">Presented to</text> {/* Increased size, moved up */}
-                    <text x="50%" y="300" class="name-font" font-size="72" fill="#625fc3" text-anchor="middle">{{Team Name}}</text> {/* Increased size, moved up */}
-                    <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For winning the {{Pod Name}} KPI Competition</text> {/* Increased size, moved up */}
-                    <text x="50%" y="480" class="body-font" font-size="20" fill="#555" text-anchor="middle">Team Members: {{Members}}</text> {/* Increased size, moved down slightly for team name */}
-                    <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text> {/* Adjusted y, larger size */}
-                    <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text> {/* Adjusted y, larger size */}
-                    <text x="100" y="110" font-family="Arial, sans-serif" font-size="72" text-anchor="middle" fill="#625fc3">🏆</text> {/* Larger emoji */}
+                    <circle cx="${sealLeftX}" cy="${sealY}" r="${sealRadius}" fill="#625fc3"/> {/* Left Seal */}
+                     <text x="${sealLeftX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
+                    <circle cx="${sealRightX}" cy="${sealY}" r="${sealRadius}" fill="#625fc3"/> {/* Right Seal */}
+                    <text x="${sealRightX}" y="${sealY}" class="title-font" font-size="${rankTextFontSize}" fill="#fff" text-anchor="middle" dominant-baseline="central">1st</text> {/* Rank Text */}
+                    <text x="50%" y="120" class="title-font" font-size="48" fill="#333" text-anchor="middle">Winning Team Award</text>
+                    <text x="50%" y="190" class="body-font" font-size="28" fill="#555" text-anchor="middle">Presented to</text>
+                    <text x="50%" y="300" class="name-font" font-size="72" fill="#625fc3" text-anchor="middle">{{Team Name}}</text>
+                    <text x="50%" y="380" class="body-font" font-size="28" fill="#555" text-anchor="middle">For winning the {{Pod Name}} KPI Competition</text>
+                    <text x="50%" y="480" class="body-font" font-size="20" fill="#555" text-anchor="middle">Team Members: {{Members}}</text>
+                    <text x="25%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Date}}</text>
+                    <text x="75%" y="${SVG_HEIGHT - 120}" class="signature-font" fill="#555" text-anchor="middle">{{Team Manager Name}}</text>
                  </svg>`;
 
 
@@ -580,5 +597,3 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
-
-    
