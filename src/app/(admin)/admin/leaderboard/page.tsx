@@ -240,7 +240,7 @@ export default function AdminLeaderboardPage() {
     }, [competitions, pods, selectedCompetitionId]);
 
 
-  // 5. Calculate Leaderboard Scores (useMemo) - Updated Ranking Logic (1st, 2nd, 2nd, 4th...)
+  // 5. Calculate Leaderboard Scores (useMemo) - Updated Ranking Logic (Dense Ranking: 1, 2, 2, 3...)
     const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
         // Filter agents based on selectedPodId if necessary
         const relevantAgents = selectedPodId
@@ -271,21 +271,16 @@ export default function AdminLeaderboardPage() {
             }))
             .sort((a, b) => b.totalPoints - a.totalPoints);
 
-        // Assign ranks considering ties (1st, 2nd, 2nd, 4th...)
+        // Assign ranks using dense ranking (1, 2, 2, 3...)
         let agentRank = 0;
         let previousAgentScore = -Infinity;
-        let itemsAtSameRank = 0;
         const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index) => {
             if (entry.totalPoints < previousAgentScore) {
-                 agentRank = index + 1; // Update rank based on position
-                 itemsAtSameRank = 1; // Reset counter for this new rank
+                 agentRank++; // Increment rank only when score decreases
             } else if (index === 0) {
                  agentRank = 1; // First item is always rank 1
-                 itemsAtSameRank = 1;
-            } else {
-                 // Score is the same as previous, keep the same rank
-                 itemsAtSameRank++;
             }
+            // Score is same or first item, use current rank
             previousAgentScore = entry.totalPoints; // Update score for next comparison
             return { ...entry, rank: agentRank };
         });
@@ -320,21 +315,16 @@ export default function AdminLeaderboardPage() {
             })
            .sort((a, b) => b.totalPoints - a.totalPoints);
 
-        // Assign ranks considering ties (1st, 2nd, 2nd, 4th...)
+        // Assign ranks using dense ranking (1, 2, 2, 3...)
         let teamRank = 0;
         let previousTeamScore = -Infinity;
-        let teamsAtSameRank = 0;
         const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index) => {
              if (entry.totalPoints < previousTeamScore) {
-                 teamRank = index + 1; // Update rank based on position
-                 teamsAtSameRank = 1; // Reset counter for this new rank
+                 teamRank++; // Increment rank only when score decreases
              } else if (index === 0) {
                  teamRank = 1; // First item is always rank 1
-                 teamsAtSameRank = 1;
-             } else {
-                 // Score is the same as previous, keep the same rank
-                 teamsAtSameRank++;
              }
+             // Score is same or first item, use current rank
              previousTeamScore = entry.totalPoints; // Update score for next comparison
              return { ...entry, rank: teamRank };
          });
@@ -564,4 +554,3 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
-

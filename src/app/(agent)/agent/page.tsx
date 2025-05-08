@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, Medal, Trophy, AlertCircle, Activity, ListChecks, CheckSquare, UserRound, Users } from 'lucide-react';
+import { Target, Medal, Trophy, AlertCircle, CheckSquare, ListChecks } from 'lucide-react'; // Removed unused icons
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
@@ -13,7 +13,7 @@ import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, getDay } from 'date-fns';
+import { format, startOfDay, endOfDay, getDay } from 'date-fns'; // Removed unused date-fns imports
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
@@ -62,7 +62,7 @@ interface PodTargetSummary {
   progress?: number; // Optional progress percentage
 }
 
-// State Interface for Achievement Inputs (for today)
+// State Interface for Achievement Inputs (today's values)
 interface AgentAchievementInputState {
   [ruleId: string]: {
     value: number;
@@ -144,6 +144,13 @@ export default function AgentDashboardPage() {
        setIsLoadingUser(true);
        console.log("[AgentDashboard] Setting up auth listener...");
 
+       // Ensure previous auth listener is cleaned up if effect runs again
+       if (listenerRefs.current.auth) {
+            console.log("[AgentDashboard] Cleaning up previous auth listener.");
+            listenerRefs.current.auth();
+            listenerRefs.current.auth = undefined;
+       }
+
        listenerRefs.current.auth = auth.onAuthStateChanged(async (user) => {
            // Always clean up previous user doc listener when auth state changes
            if (listenerRefs.current.userDoc) {
@@ -180,7 +187,8 @@ export default function AgentDashboardPage() {
                        setCurrentUser(null);
                        setAgentPodId(null);
                    }
-                   setIsLoadingUser(false); // Mark user loading as finished here
+                   // Only set user loading false here, data loading handled separately
+                   setIsLoadingUser(false);
                }, (err) => {
                    console.error("[AgentDashboard] Error listening to user document:", err);
                    setError("Failed to load your profile information.");
@@ -259,8 +267,8 @@ export default function AgentDashboardPage() {
         // Ensure previous agents listener is cleaned up
         if (listenerRefs.current.agents) listenerRefs.current.agents();
 
-        listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => {
-            if (!isMounted) return;
+         listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => {
+             if (!isMounted) return;
              const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
 
              // Compare IDs before setting state to prevent unnecessary re-renders
@@ -274,12 +282,12 @@ export default function AgentDashboardPage() {
                  console.log("[AgentDashboard] Pod agents listener: No change in agent IDs.");
                  return currentAgents; // No change, return current state
              });
-        }, (err) => {
-            if (isMounted) {
-                console.error("[AgentDashboard] Error listening to pod agents:", err);
-                setError("Failed to load pod member data.");
-            }
-        });
+         }, (err) => {
+             if (isMounted) {
+                 console.error("[AgentDashboard] Error listening to pod agents:", err);
+                 setError("Failed to load pod member data.");
+             }
+         });
 
         // --- Setup Competition Listener ---
         console.log("[AgentDashboard] Data Effect: Setting up competition listener for pod:", agentPodId);
@@ -385,6 +393,10 @@ export default function AgentDashboardPage() {
                         const targetsDocId = `${activeCompId}_${agentPodId}`;
                         console.log("[AgentDashboard] Data Effect: Setting up new targets listener for doc:", targetsDocId);
                         const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
+
+                         // Ensure previous targets listener is cleaned up
+                         if (listenerRefs.current.targets) listenerRefs.current.targets();
+
                         listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => {
                              if (!isMounted) return;
                              const targetData = docSnap.exists() ? docSnap.data() as DailyTargetData : null;
@@ -403,6 +415,10 @@ export default function AgentDashboardPage() {
                             where('date', '==', dateTimestamp),
                             where('competitionId', '==', activeCompId)
                         );
+
+                         // Ensure previous daily achievements listener is cleaned up
+                         if (listenerRefs.current.dailyAchievements) listenerRefs.current.dailyAchievements();
+
                          listenerRefs.current.dailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
                              if (!isMounted) return;
                              console.log(`[AgentDashboard] Daily achievements listener updated, found ${snapshot.docs.length} logs for today.`);
@@ -417,7 +433,8 @@ export default function AgentDashboardPage() {
                                  };
                              });
                              setAchievementInputs(initialInputs);
-                             setIsLoadingData(false); // Set loading false after initial inputs are set
+                             // Set loading false after *all* initial data for the competition is loaded
+                             setIsLoadingData(false);
                          }, (err) => {
                              if (isMounted) {
                                  console.error("[AgentDashboard] Error listening to daily achievements:", err);
@@ -566,19 +583,17 @@ export default function AgentDashboardPage() {
            }))
            .sort((a, b) => b.totalPoints - a.totalPoints); // Sort by points
 
-          // Assign ranks considering ties
+          // Assign ranks using dense ranking (1, 2, 2, 3...)
           let currentAgentRank = 0;
           let previousAgentScore = -Infinity;
-          let tiedAgentCount = 0;
           const finalAgentLeaderboard: LeaderboardEntry[] = agentLeaderboardData.map((entry, index) => {
               if (entry.totalPoints < previousAgentScore) {
-                  currentAgentRank += tiedAgentCount;
-                  tiedAgentCount = 1;
-              } else {
-                  if (index === 0) currentAgentRank = 1;
-                  tiedAgentCount++;
+                  currentAgentRank++; // Increment rank only when score decreases
+              } else if (index === 0) {
+                   currentAgentRank = 1; // First item is always rank 1
               }
-              previousAgentScore = entry.totalPoints;
+              // Score is same or first item, use current rank
+              previousAgentScore = entry.totalPoints; // Update score for next comparison
               return { ...entry, rank: currentAgentRank };
           });
 
@@ -604,19 +619,17 @@ export default function AgentDashboardPage() {
            }))
            .sort((a, b) => b.totalPoints - a.totalPoints); // Sort by points
 
-          // Assign ranks considering ties
+          // Assign ranks using dense ranking (1, 2, 2, 3...)
           let currentTeamRank = 0;
           let previousTeamScore = -Infinity;
-          let tiedTeamCount = 0;
           const finalTeamLeaderboard: LeaderboardEntry[] = teamLeaderboardData.map((entry, index) => {
               if (entry.totalPoints < previousTeamScore) {
-                  currentTeamRank += tiedTeamCount;
-                  tiedTeamCount = 1;
-              } else {
-                  if (index === 0) currentTeamRank = 1;
-                  tiedTeamCount++;
+                  currentTeamRank++; // Increment rank only when score decreases
+              } else if (index === 0) {
+                   currentTeamRank = 1; // First item is always rank 1
               }
-              previousTeamScore = entry.totalPoints;
+              // Score is same or first item, use current rank
+              previousTeamScore = entry.totalPoints; // Update score for next comparison
               return { ...entry, rank: currentTeamRank };
           });
 
@@ -733,19 +746,19 @@ export default function AgentDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {error && error !== "No active competition found for your pod today." && (
-         <Alert variant="destructive" className="mb-6">
-           <AlertCircle className="h-4 w-4" />
-           <UIDescription>{error}</UIDescription>
-         </Alert>
-      )}
+       {/* Error Alert */}
+        {error && !error.startsWith("No active competition") && ( // Hide "no competition" error if showing that message elsewhere
+            <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <UIDescription>{error}</UIDescription>
+            </Alert>
+        )}
 
         {/* Log Achievements Section */}
         <Card className="frosted-glass">
              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                  <div>
                       <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today's Achievements</CardTitle>
-                      {/* Removed date display */}
                  </div>
                   {/* Display Daily Score */}
                   <div className="text-right">
@@ -902,5 +915,3 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
-
-    
