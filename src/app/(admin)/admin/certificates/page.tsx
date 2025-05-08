@@ -283,7 +283,8 @@ export default function CertificateGenerationPage() {
 
                 generated.push({
                     svgContent: replacePlaceholders(svgTemplate, templateData),
-                    filename: `${pod.name}_Agent_${rank}.svg`, // Removed competition name
+                    // Change filename extension to .jpg
+                    filename: `${pod.name}_Agent_${rank}.jpg`,
                     title: `${agent.name} - ${rank}${rankSuffix} Place`
                 });
             }
@@ -310,7 +311,8 @@ export default function CertificateGenerationPage() {
                 };
                 generated.push({
                     svgContent: replacePlaceholders(svgTemplateTeam, teamTemplateData),
-                    filename: `${pod.name}_WinningTeam_${winningTeam.name}.svg`, // Removed competition name
+                    // Change filename extension to .jpg
+                    filename: `${pod.name}_WinningTeam_${winningTeam.name}.jpg`,
                     title: `Winning Team - ${winningTeam.name}`
                 });
             }
@@ -330,17 +332,50 @@ export default function CertificateGenerationPage() {
         }
     };
 
-    // --- Helper to Download SVG ---
-    const downloadSvg = (svgContent: string, filename: string) => {
-        const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+    // --- Helper to Download SVG as JPG ---
+    const downloadSvgAsJpg = (svgContent: string, filename: string) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+             toast({ variant: "destructive", title: "Error", description: "Could not create canvas context." });
+            return;
+        }
+
+        const img = new Image();
+
+        // Convert SVG string to base64 data URL
+        const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            // Set canvas dimensions based on SVG size (assuming 800x600 from templates)
+            canvas.width = 800;
+            canvas.height = 600;
+
+            // Draw the SVG image onto the canvas
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to JPG data URL (adjust quality 0.0-1.0)
+            const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.9); // 0.9 is high quality
+
+            // Trigger download
+            const a = document.createElement('a');
+            a.href = jpgDataUrl;
+            a.download = filename; // Filename already ends with .jpg
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Revoke the object URL to free up memory
+            URL.revokeObjectURL(url);
+        };
+
+        img.onerror = () => {
+            toast({ variant: "destructive", title: "Error", description: "Could not load SVG image for conversion." });
+             URL.revokeObjectURL(url);
+        };
+
+        img.src = url;
     };
 
 
@@ -443,11 +478,11 @@ export default function CertificateGenerationPage() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => downloadSvg(cert.svgContent, cert.filename)}
+                                                onClick={() => downloadSvgAsJpg(cert.svgContent, cert.filename)} // Use new download function
                                                 className="w-full"
                                             >
                                                 <Download className="mr-2 h-4 w-4" />
-                                                Download SVG
+                                                Download JPG {/* Changed button text */}
                                             </Button>
                                         </CardContent>
                                     </Card>
