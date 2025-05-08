@@ -244,8 +244,8 @@ export default function CertificateGenerationPage() {
             // --- Replace Placeholders ---
             const generated: CertificateData[] = [];
             const endDateObj = competition.endDate instanceof Timestamp ? competition.endDate.toDate() : competition.endDate;
-            // Use the 'PPP' format (e.g., May 6th, 2025)
-            const dateStr = format(endDateObj, 'PPP');
+            // Use the 'd MMMM yyyy' format (e.g., 6 May 2025)
+            const dateStr = format(endDateObj, 'd MMMM yyyy');
 
              const replacePlaceholders = (template: string, data: Record<string, string>): string => {
                  let result = template;
