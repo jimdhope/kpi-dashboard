@@ -244,7 +244,8 @@ export default function CertificateGenerationPage() {
             // --- Replace Placeholders ---
             const generated: CertificateData[] = [];
             const endDateObj = competition.endDate instanceof Timestamp ? competition.endDate.toDate() : competition.endDate;
-            const dateStr = format(endDateObj, 'PPP'); // Format end date nicely
+            // Use the 'PPP' format (e.g., May 6th, 2025)
+            const dateStr = format(endDateObj, 'PPP');
 
              const replacePlaceholders = (template: string, data: Record<string, string>): string => {
                  let result = template;
@@ -264,7 +265,7 @@ export default function CertificateGenerationPage() {
                     'Agent Name': agent.name,
                     'Pod Name': pod.name,
                     'Pod Manager Name': podManager?.name || 'N/A', // Use fetched name or N/A
-                    'Date': dateStr,
+                    'Date': dateStr, // Use formatted date
                 };
                  let svgTemplate = '';
                  if (rank === 1) svgTemplate = svgTemplateFirst;
@@ -295,7 +296,7 @@ export default function CertificateGenerationPage() {
                     'Team Name': winningTeam.name,
                     'Pod Name': pod.name,
                     'Pod Manager Name': podManager?.name || 'N/A', // Use fetched name or N/A
-                    'Date': dateStr,
+                    'Date': dateStr, // Use formatted date
                     'Members': membersStr || 'N/A',
                 };
                 generated.push({
@@ -451,5 +452,3 @@ export default function CertificateGenerationPage() {
     );
 }
 
-
-    
