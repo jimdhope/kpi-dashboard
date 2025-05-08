@@ -11,10 +11,11 @@ import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
-import { collection, query, where, getDocs, Timestamp, doc, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 // Placeholder for certificate data structure
 interface CertificateData {
@@ -23,7 +24,7 @@ interface CertificateData {
     title: string;
 }
 
-// Placeholder for team structure within Competition
+// Team structure within Competition
 interface Team {
   id: string;
   name: string;
@@ -98,37 +99,51 @@ export default function CertificateGenerationPage() {
         try {
             const competition = competitions.find(c => c.id === selectedCompetitionId);
             const pod = pods.find(p => p.id === selectedPodId);
-            const podManager = pod ? (await getDoc(doc(db, 'users', pod.podManagerId))).data() as AppUser : null;
 
-            if (!competition || !pod || !podManager) {
-                throw new Error("Could not load competition, pod, or pod manager details.");
+            if (!competition || !pod || !pod.podManagerId) {
+                 throw new Error("Could not load competition or pod details, or pod manager ID is missing.");
             }
 
+            // Fetch Pod Manager
+             const podManagerSnap = await getDoc(doc(db, 'users', pod.podManagerId));
+             if (!podManagerSnap.exists()) {
+                 throw new Error(`Pod manager with ID ${pod.podManagerId} not found.`);
+             }
+             const podManager = podManagerSnap.data() as AppUser;
+
+
             // Fetch Users in the Pod
-            const usersQuery = query(collection(db, 'users'), where('podId', '==', selectedPodId));
+            const usersQuery = query(collection(db, 'users'), where('podId', '==', selectedPodId), where('roles', 'array-contains', 'agent'));
             const usersSnapshot = await getDocs(usersQuery);
-            const podUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-            const podAgentUsers = podUsers.filter(u => u.roles?.includes('agent'));
+            const podAgentUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
 
             // Fetch Teams for the Competition
             const compDocSnap = await getDoc(doc(db, 'competitions', selectedCompetitionId));
-            const compData = compDocSnap.exists() ? compDocSnap.data() as Competition & { teams?: Team[] } : null;
-            const competitionTeams = compData?.teams?.filter(team =>
-                podAgentUsers.some(agent => team.agentIds.includes(agent.id!)) // Filter teams relevant to this pod's agents
-            ) || [];
+             if (!compDocSnap.exists()) {
+                 throw new Error(`Competition with ID ${selectedCompetitionId} not found.`);
+             }
+            const compData = compDocSnap.data() as Competition & { teams?: Team[] };
+             // Ensure teams have IDs, filter teams relevant to this pod's agents
+            const competitionTeams = (compData.teams || [])
+                 .map((team, index) => ({ ...team, id: team.id || `team-${index}` }))
+                 .filter(team =>
+                     team.agentIds?.some(agentId => podAgentUsers.some(agent => agent.id === agentId))
+                 );
 
             // Fetch Achievement Logs for the Competition Period and Pod
             const logsQuery = query(
                 collection(db, 'dailyAchievements'),
                 where('competitionId', '==', selectedCompetitionId),
                 where('podId', '==', selectedPodId),
-                where('date', '>=', competition.startDate),
-                where('date', '<=', competition.endDate)
+                // Ensure dates are Timestamps for querying
+                where('date', '>=', competition.startDate instanceof Timestamp ? competition.startDate : Timestamp.fromDate(competition.startDate)),
+                where('date', '<=', competition.endDate instanceof Timestamp ? competition.endDate : Timestamp.fromDate(competition.endDate))
             );
             const logsSnapshot = await getDocs(logsQuery);
             const logs = logsSnapshot.docs.map(doc => doc.data() as DailyAchievementLog);
 
-            // Calculate Agent Scores
+            // --- Calculate Scores ---
+            // Agent Scores
             const agentScores: { [agentId: string]: number } = {};
             podAgentUsers.forEach(agent => { agentScores[agent.id!] = 0; });
             logs.forEach(log => {
@@ -140,11 +155,11 @@ export default function CertificateGenerationPage() {
                 .map(agent => ({ ...agent, score: agentScores[agent.id!] || 0 }))
                 .sort((a, b) => b.score - a.score);
 
-            // Calculate Team Scores
+            // Team Scores
             const teamScores: { [teamId: string]: number } = {};
             competitionTeams.forEach(team => { teamScores[team.id] = 0; });
             logs.forEach(log => {
-                const agentTeam = competitionTeams.find(team => team.agentIds.includes(log.agentId));
+                const agentTeam = competitionTeams.find(team => team.agentIds?.includes(log.agentId));
                 if (agentTeam) {
                     teamScores[agentTeam.id] += log.points;
                 }
@@ -154,65 +169,146 @@ export default function CertificateGenerationPage() {
                 .sort((a, b) => b.score - a.score);
 
 
-            // --- Placeholder SVG Generation ---
-            // Replace this with actual SVG fetching and replacement later
-            const generated: CertificateData[] = [];
-            const dateStr = format(competition.endDate.toDate(), 'PPP'); // Format end date nicely
+            // --- SVG Templates (Embedded as Strings - Replace with your actual SVGs) ---
+            const svgTemplateFirst = `
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
+                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#9f8f5e" stroke-width="15"/>
+                  <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
+                  <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text>
+                  <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
+                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#9f8f5e" text-anchor="middle" font-weight="bold">1st Place</text>
+                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
+                  <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                  <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
+                  <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
+                  <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
+                  <text x="550" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
+                  {/* Gold Medal graphic placeholder */}
+                  <circle cx="100" cy="100" r="40" fill="#FFD700"/>
+                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">1</text>
+                </svg>`;
+             const svgTemplateSecond = `
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
+                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#a0a0a0" stroke-width="15"/>
+                  <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
+                  <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text>
+                  <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
+                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#a0a0a0" text-anchor="middle" font-weight="bold">2nd Place</text>
+                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
+                  <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                  <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
+                  <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
+                  <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
+                  <text x="550" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
+                   {/* Silver Medal graphic placeholder */}
+                  <circle cx="100" cy="100" r="40" fill="#C0C0C0"/>
+                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">2</text>
+                </svg>`;
+            const svgTemplateThird = `
+                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #f0f0f0;">
+                  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#cd7f32" stroke-width="15"/>
+                  <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Certificate of Achievement</text>
+                  <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">This certificate is awarded to</text>
+                  <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Agent Name}</text>
+                  <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For achieving</text>
+                  <text x="400" y="380" font-family="Arial, sans-serif" font-size="40" fill="#cd7f32" text-anchor="middle" font-weight="bold">3rd Place</text>
+                  <text x="400" y="440" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">in the {Competition Name} competition</text>
+                  <text x="400" y="470" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                  <line x1="150" y1="530" x2="350" y2="530" stroke="#555" stroke-width="1"/>
+                  <line x1="450" y1="530" x2="650" y2="530" stroke="#555" stroke-width="1"/>
+                  <text x="250" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
+                  <text x="550" y="550" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
+                   {/* Bronze Medal graphic placeholder */}
+                  <circle cx="100" cy="100" r="40" fill="#CD7F32"/>
+                  <text x="100" y="105" font-family="Arial" font-size="30" fill="white" text-anchor="middle" font-weight="bold">3</text>
+                 </svg>`;
+            const svgTemplateTeam = `
+                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" style="background-color: #e0f2f7;">
+                    <rect x="20" y="20" width="760" height="560" fill="none" stroke="#008080" stroke-width="15"/>
+                    <text x="400" y="100" font-family="Arial, sans-serif" font-size="40" fill="#333" text-anchor="middle" font-weight="bold">Winning Team Award</text>
+                    <text x="400" y="160" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">Presented to</text>
+                    <text x="400" y="250" font-family="'Brush Script MT', cursive" font-size="50" fill="#008080" text-anchor="middle" font-weight="bold">{Team Name}</text>
+                    <text x="400" y="320" font-family="Arial, sans-serif" font-size="24" fill="#555" text-anchor="middle">For winning the {Competition Name} competition</text>
+                    <text x="400" y="350" font-family="Arial, sans-serif" font-size="20" fill="#555" text-anchor="middle">within {Pod Name}</text>
+                    <text x="400" y="420" font-family="Arial, sans-serif" font-size="16" fill="#555" text-anchor="middle">Team Members: {Members}</text>
+                    <line x1="150" y1="500" x2="350" y2="500" stroke="#555" stroke-width="1"/>
+                    <line x1="450" y1="500" x2="650" y2="500" stroke="#555" stroke-width="1"/>
+                    <text x="250" y="520" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Date: {Date}</text>
+                    <text x="550" y="520" font-family="Arial, sans-serif" font-size="14" fill="#555" text-anchor="middle">Signed: {Pod Manager Name}</text>
+                    {/* Trophy graphic placeholder */}
+                    <text x="100" y="110" font-family="Arial" font-size="60" text-anchor="middle">🏆</text>
+                 </svg>`;
 
-            // Top 3 Agents
+            // --- Replace Placeholders ---
+            const generated: CertificateData[] = [];
+            const endDateObj = competition.endDate instanceof Timestamp ? competition.endDate.toDate() : competition.endDate;
+            const dateStr = format(endDateObj, 'PPP'); // Format end date nicely
+
+             const replacePlaceholders = (template: string, data: Record<string, string>): string => {
+                 let result = template;
+                 for (const key in data) {
+                     result = result.replace(new RegExp(`{${key}}`, 'g'), data[key]);
+                 }
+                 return result;
+             };
+
+            // Generate for Top 3 Agents
             for (let i = 0; i < Math.min(3, rankedAgents.length); i++) {
                 const agent = rankedAgents[i];
                 const rank = i + 1;
                 const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : 'rd';
                 const templateData = {
-                    '{Agent Name}': agent.name,
-                    '{Pod Name}': pod.name,
-                    '{Pod Manager Name}': podManager.name,
-                    '{Competition Name}': competition.name,
-                    '{Date}': dateStr,
-                    '{Rank}': `${rank}${rankSuffix} Place`
+                    'Agent Name': agent.name,
+                    'Pod Name': pod.name,
+                    'Pod Manager Name': podManager.name,
+                    'Competition Name': competition.name,
+                    'Date': dateStr,
+                     // Add rank if needed in template, e.g., '{Rank}': `${rank}${rankSuffix} Place`
                 };
-                 // Fetch or define your SVG template string here based on rank (1st, 2nd, 3rd)
-                 const svgTemplate = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${rank === 1 ? 'gold' : rank === 2 ? 'silver' : '#cd7f32'}"/>
-                 <text x="20" y="40" font-family="Arial" font-size="20" fill="black">CERTIFICATE OF ACHIEVEMENT</text>
-                 <text x="20" y="70" font-family="Arial" font-size="16" fill="black">Awarded to: ${templateData['{Agent Name}']}</text>
-                 <text x="20" y="90" font-family="Arial" font-size="14" fill="black">For achieving ${templateData['{Rank}']}</text>
-                  <text x="20" y="110" font-family="Arial" font-size="14" fill="black">in ${templateData['{Competition Name}']} (${templateData['{Pod Name}']})</text>
-                 <text x="20" y="140" font-family="Arial" font-size="12" fill="black">Date: ${templateData['{Date}']}</text>
-                 <text x="20" y="160" font-family="Arial" font-size="12" fill="black">Signed: ${templateData['{Pod Manager Name}']}</text>
-                 </svg>`; // Example placeholder SVG
+                 let svgTemplate = '';
+                 if (rank === 1) svgTemplate = svgTemplateFirst;
+                 else if (rank === 2) svgTemplate = svgTemplateSecond;
+                 else if (rank === 3) svgTemplate = svgTemplateThird;
 
                 generated.push({
-                    svgContent: svgTemplate, // Replace placeholders later
+                    svgContent: replacePlaceholders(svgTemplate, templateData),
                     filename: `${competition.name}_${pod.name}_Agent_${rank}.svg`,
                     title: `${agent.name} - ${rank}${rankSuffix} Place`
                 });
             }
 
-            // Winning Team
+            // Generate for Winning Team
             if (rankedTeams.length > 0) {
                 const winningTeam = rankedTeams[0];
-                const teamTemplateData = {
-                    '{Team Name}': winningTeam.name,
-                    '{Pod Name}': pod.name,
-                    '{Pod Manager Name}': podManager.name,
-                    '{Competition Name}': competition.name,
-                    '{Date}': dateStr,
-                };
-                 // Fetch or define your SVG template string here for the winning team
-                 const teamSvgTemplate = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="lightblue"/>
-                    <text x="20" y="40" font-family="Arial" font-size="20" fill="black">WINNING TEAM CERTIFICATE</text>
-                    <text x="20" y="70" font-family="Arial" font-size="16" fill="black">Awarded to: ${teamTemplateData['{Team Name}']}</text>
-                     <text x="20" y="90" font-family="Arial" font-size="14" fill="black">For winning ${teamTemplateData['{Competition Name}']} (${teamTemplateData['{Pod Name}']})</text>
-                    <text x="20" y="120" font-family="Arial" font-size="12" fill="black">Date: ${teamTemplateData['{Date}']}</text>
-                    <text x="20" y="140" font-family="Arial" font-size="12" fill="black">Signed: ${teamTemplateData['{Pod Manager Name}']}</text>
-                 </svg>`; // Example placeholder SVG
+                 // Format members list
+                 const memberNames = (winningTeam.agentIds || [])
+                    .map(id => podAgentUsers.find(u => u.id === id)?.name)
+                    .filter((name): name is string => !!name);
+                 let membersStr = memberNames.join(', ');
+                 if (memberNames.length > 1) {
+                     const lastCommaIndex = membersStr.lastIndexOf(',');
+                     membersStr = membersStr.substring(0, lastCommaIndex) + ' & ' + membersStr.substring(lastCommaIndex + 1).trim();
+                 }
 
+                const teamTemplateData = {
+                    'Team Name': winningTeam.name,
+                    'Pod Name': pod.name,
+                    'Pod Manager Name': podManager.name,
+                    'Competition Name': competition.name,
+                    'Date': dateStr,
+                    'Members': membersStr || 'N/A',
+                };
                 generated.push({
-                    svgContent: teamSvgTemplate, // Replace placeholders later
+                    svgContent: replacePlaceholders(svgTemplateTeam, teamTemplateData),
                     filename: `${competition.name}_${pod.name}_WinningTeam_${winningTeam.name}.svg`,
                     title: `Winning Team - ${winningTeam.name}`
                 });
+            }
+
+            if (generated.length === 0) {
+                toast({ variant: "default", title: "No Data", description: "No top performers or winning team found for this selection." });
             }
 
             setGeneratedCertificates(generated);
@@ -261,6 +357,7 @@ export default function CertificateGenerationPage() {
                                     <SelectValue placeholder={isLoadingCompetitions ? "Loading..." : "Select Competition"} />
                                 </SelectTrigger>
                                 <SelectContent>
+                                     {competitions.length === 0 && !isLoadingCompetitions && <SelectItem value="-" disabled>No competitions found</SelectItem>}
                                     {competitions.map(comp => (
                                         <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
                                     ))}
@@ -275,12 +372,18 @@ export default function CertificateGenerationPage() {
                                 disabled={isLoadingPods || isLoadingData || !selectedCompetitionId || availablePods.length === 0}
                             >
                                 <SelectTrigger id="pod-select">
-                                    <SelectValue placeholder={!selectedCompetitionId ? "Select Comp..." : (isLoadingPods ? "Loading..." : "Select Pod")} />
+                                    <SelectValue placeholder={!selectedCompetitionId ? "Select Comp..." : (isLoadingPods ? "Loading..." : (availablePods.length === 0 ? "No pods in comp" : "Select Pod"))} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {availablePods.map(pod => (
-                                        <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                                    ))}
+                                     {!selectedCompetitionId ? (
+                                         <SelectItem value="-" disabled>Select competition first</SelectItem>
+                                     ) : availablePods.length === 0 ? (
+                                         <SelectItem value="-" disabled>No pods in competition</SelectItem>
+                                     ) : (
+                                         availablePods.map(pod => (
+                                             <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                                         ))
+                                     )}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -296,27 +399,37 @@ export default function CertificateGenerationPage() {
                         </div>
                     </div>
 
-                    {error && (
-                        <div className="text-destructive flex items-center gap-2">
+                     {error && !isLoadingData && ( // Show error only when not loading
+                        <div className="text-destructive flex items-center gap-2 mt-4">
                             <AlertCircle className="h-4 w-4" />
                             {error}
                         </div>
                     )}
 
+                     {isLoadingData && ( // Show skeleton loader
+                        <div className="mt-6 space-y-4">
+                            <Skeleton className="h-8 w-1/3" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <Skeleton className="h-[300px] w-full" />
+                                <Skeleton className="h-[300px] w-full" />
+                            </div>
+                        </div>
+                    )}
+
                     {/* Generated Certificates Display */}
-                    {generatedCertificates.length > 0 && (
+                    {!isLoadingData && generatedCertificates.length > 0 && (
                         <div className="mt-6 space-y-4">
                             <h3 className="text-lg font-semibold">Generated Certificates</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {generatedCertificates.map((cert, index) => (
-                                    <Card key={index} className="overflow-hidden">
+                                    <Card key={index} className="overflow-hidden shadow-md">
                                         <CardHeader className="p-3 bg-muted/50">
                                             <CardTitle className="text-sm">{cert.title}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4 flex flex-col items-center gap-4">
                                             {/* Render SVG directly */}
                                             <div
-                                                className="border rounded-md overflow-hidden w-full aspect-[2/1]" // Maintain aspect ratio
+                                                className="border rounded-md overflow-hidden w-full aspect-[4/3]" // Adjust aspect ratio if needed
                                                 dangerouslySetInnerHTML={{ __html: cert.svgContent }}
                                             />
                                             <Button
@@ -339,3 +452,4 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
+```
