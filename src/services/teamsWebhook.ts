@@ -44,7 +44,7 @@ const generateAgentScoresTable = (agentScores: AgentScoreForTeams[]): string => 
 const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[]): string => {
   if (podTargetSummary.length === 0) return "No pod targets set for today.";
   return podTargetSummary
-    .map(summary => `${summary.ruleEmoji} ${summary.ruleName} ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
+    .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`) // Added extra space
     .join(' | ');
 };
 
@@ -70,8 +70,8 @@ export const sendTeamsUpdate = async (
         // Calculate the actual values
         const title = `Daily Scores - ${podName} (${format(date, 'PPP')})`;
         const kpiKey = generateKpiKey(rules);
-        const kpiTable = generateAgentScoresTable(agentScoresForTeams); // Pass agentScoresForTeams
-        const kpiTargets = generatePodTargetsSummary(podTargetSummaryForTeams); // Pass podTargetSummaryForTeams
+        const kpiTable = generateAgentScoresTable(agentScoresForTeams);
+        const kpiTargets = generatePodTargetsSummary(podTargetSummaryForTeams);
 
         // Construct the payload with actual values embedded
         const webhookPayload = {
@@ -79,35 +79,35 @@ export const sendTeamsUpdate = async (
             "attachments": [
                 {
                     "contentType": "application/vnd.microsoft.card.adaptive",
-                    "contentUrl": null, // Required even if null
+                    "contentUrl": null, 
                     "content": {
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
-                        "version": "1.6", // Specify version
+                        "version": "1.4", // Changed version to 1.4
                         "body": [
                             {
                                 "type": "TextBlock",
                                 "size": "Medium",
                                 "weight": "Bolder",
-                                "text": title
+                                "text": title // Use direct variable for title
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiKey,
+                                "text": kpiKey, // Use direct variable for kpiKey
+                                "wrap": true,
+                                "separator": true, 
+                                "spacing": "Medium"
+                            },
+                            {
+                                "type": "TextBlock",
+                                "text": kpiTable, // Use direct variable for kpiTable
                                 "wrap": true,
                                 "separator": true,
                                 "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTable,
-                                "wrap": true,
-                                "separator": true,
-                                "spacing": "Medium"
-                            },
-                            {
-                                "type": "TextBlock",
-                                "text": kpiTargets,
+                                "text": kpiTargets, // Use direct variable for kpiTargets
                                 "wrap": true,
                                 "spacing": "Medium"
                             }
@@ -120,7 +120,7 @@ export const sendTeamsUpdate = async (
 
         currentStep = "Sending Webhook Request";
         // Log the final payload before sending
-        console.log("[sendTeamsUpdate] Webhook Payload being sent to Daily Scores Page:", JSON.stringify(webhookPayload, null, 2));
+        console.log("[sendTeamsUpdate] Webhook Payload being sent:", JSON.stringify(webhookPayload, null, 2));
 
 
         const response = await fetch(webhookUrl, {
