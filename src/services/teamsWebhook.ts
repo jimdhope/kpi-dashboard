@@ -68,10 +68,10 @@ export const sendTeamsUpdate = async (
 
         currentStep = "Formatting Data";
         // Calculate the actual values
-        const title = `Daily Scores - ${podName} (${format(date, 'PPP')})`;
-        const kpiKey = generateKpiKey(rules);
-        const kpiTable = generateAgentScoresTable(agentScoresForTeams);
-        const kpiTargets = generatePodTargetsSummary(podTargetSummaryForTeams);
+        const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`; // This is used by console log below, but not in card
+        const kpiKeyText = generateKpiKey(rules);
+        const kpiTableText = generateAgentScoresTable(agentScoresForTeams);
+        const kpiTargetsText = generatePodTargetsSummary(podTargetSummaryForTeams);
 
         // Construct the payload with actual values embedded
         const webhookPayload = {
@@ -79,37 +79,32 @@ export const sendTeamsUpdate = async (
             "attachments": [
                 {
                     "contentType": "application/vnd.microsoft.card.adaptive",
-                    "contentUrl": null, 
+                    "contentUrl": null,
                     "content": {
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
-                        "version": "1.4", // Changed version to 1.4
+                        "version": "1.4",
                         "body": [
+                            // Title TextBlock removed
                             {
                                 "type": "TextBlock",
-                                "size": "Medium",
-                                "weight": "Bolder",
-                                "text": title // Use direct variable for title
+                                "text": kpiKeyText,
+                                "wrap": true,
+                                // "separator": false, // Explicitly false or remove to avoid line break after key
+                                "spacing": "Medium" // Retain spacing
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiKey, // Use direct variable for kpiKey
+                                "text": kpiTableText,
                                 "wrap": true,
-                                "separator": true, 
+                                "separator": true, // This creates a line break before targets
                                 "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTable, // Use direct variable for kpiTable
+                                "text": kpiTargetsText,
                                 "wrap": true,
-                                "separator": true,
-                                "spacing": "Medium"
-                            },
-                            {
-                                "type": "TextBlock",
-                                "text": kpiTargets, // Use direct variable for kpiTargets
-                                "wrap": true,
-                                "spacing": "Medium"
+                                "spacing": "Medium" // Keep spacing
                             }
                         ]
                     }
