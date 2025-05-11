@@ -22,8 +22,10 @@ export interface PodTargetSummaryForTeams {
 // Helper function to generate the KPI key string
 const generateKpiKey = (rules: RuleFormData[]): string => {
   return rules
-    .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name} (${rule.points} pts)`)
-    .join('  \n'); // Use newline for better formatting in Teams
+    // Remove points from the display
+    .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name}`)
+    // Join with two spaces for single-line display in Teams
+    .join('  ');
 };
 
 // Helper function to generate the agent scores table (Markdown for Teams)
@@ -52,8 +54,8 @@ export const sendTeamsUpdate = async (
     webhookUrl: string,
     date: Date,
     rules: RuleFormData[],
-    agentScores: AgentScoreForTeams[],
-    podTargetSummary: PodTargetSummaryForTeams[]
+    agentScoresForTeams: AgentScoreForTeams[],
+    podTargetSummaryForTeams: PodTargetSummaryForTeams[]
 ) => {
     console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}, Webhook URL Provided: ${!!webhookUrl}`);
     let currentStep = "Initial Checks";
@@ -68,8 +70,8 @@ export const sendTeamsUpdate = async (
         // Calculate the actual values
         const title = `Daily Scores - ${podName} (${format(date, 'PPP')})`;
         const kpiKey = generateKpiKey(rules);
-        const kpiTable = generateAgentScoresTable(agentScores);
-        const kpiTargets = generatePodTargetsSummary(podTargetSummary);
+        const kpiTable = generateAgentScoresTable(agentScoresForTeams); // Pass agentScoresForTeams
+        const kpiTargets = generatePodTargetsSummary(podTargetSummaryForTeams); // Pass podTargetSummaryForTeams
 
         // Construct the payload with actual values embedded
         const webhookPayload = {
@@ -87,27 +89,27 @@ export const sendTeamsUpdate = async (
                                 "type": "TextBlock",
                                 "size": "Medium",
                                 "weight": "Bolder",
-                                "text": title // Embed the actual title string
+                                "text": title
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiKey, // Embed the actual kpiKey string
+                                "text": kpiKey,
                                 "wrap": true,
                                 "separator": true,
-                                "spacing": "Medium" // Add spacing
+                                "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTable, // Embed the actual kpiTable string
+                                "text": kpiTable,
                                 "wrap": true,
                                 "separator": true,
-                                "spacing": "Medium" // Add spacing
+                                "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTargets, // Embed the actual kpiTargets string
+                                "text": kpiTargets,
                                 "wrap": true,
-                                "spacing": "Medium" // Add spacing
+                                "spacing": "Medium"
                             }
                         ]
                     }
@@ -118,7 +120,8 @@ export const sendTeamsUpdate = async (
 
         currentStep = "Sending Webhook Request";
         // Log the final payload before sending
-        console.log("[sendTeamsUpdate] Webhook Payload being sent:", JSON.stringify(webhookPayload, null, 2));
+        console.log("[sendTeamsUpdate] Webhook Payload being sent to Daily Scores Page:", JSON.stringify(webhookPayload, null, 2));
+
 
         const response = await fetch(webhookUrl, {
             method: 'POST',
