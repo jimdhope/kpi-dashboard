@@ -23,7 +23,7 @@ export interface PodTargetSummaryForTeams {
 const generateKpiKey = (rules: RuleFormData[]): string => {
   return rules
     // Remove points from the display
-    .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name}`)
+    .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`) // Removed space here
     // Join with two spaces for single-line display in Teams
     .join('  ');
 };
@@ -68,7 +68,7 @@ export const sendTeamsUpdate = async (
 
         currentStep = "Formatting Data";
         // Calculate the actual values
-        const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`; // This is used by console log below, but not in card
+        const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`;
         const kpiKeyText = generateKpiKey(rules);
         const kpiTableText = generateAgentScoresTable(agentScoresForTeams);
         const kpiTargetsText = generatePodTargetsSummary(podTargetSummaryForTeams);
@@ -83,28 +83,28 @@ export const sendTeamsUpdate = async (
                     "content": {
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
-                        "version": "1.4",
+                        "version": "1.4", // Changed version to 1.4
                         "body": [
                             // Title TextBlock removed
                             {
                                 "type": "TextBlock",
                                 "text": kpiKeyText,
                                 "wrap": true,
-                                // "separator": false, // Explicitly false or remove to avoid line break after key
-                                "spacing": "Medium" // Retain spacing
+                                "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
                                 "text": kpiTableText,
                                 "wrap": true,
-                                "separator": true, // This creates a line break before targets
+                                "separator": true, // This creates a line break before targets (if kpiTable has content)
                                 "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
                                 "text": kpiTargetsText,
                                 "wrap": true,
-                                "spacing": "Medium" // Keep spacing
+                                "separator": true, // Added separator before targets
+                                "spacing": "Medium"
                             }
                         ]
                     }
