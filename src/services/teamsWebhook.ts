@@ -23,7 +23,7 @@ export interface PodTargetSummaryForTeams {
 const generateKpiKey = (rules: RuleFormData[]): string => {
   return rules
     // Remove points from the display
-    .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`) // Removed space here
+    .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`)
     // Join with two spaces for single-line display in Teams
     .join('  ');
 };
@@ -31,20 +31,22 @@ const generateKpiKey = (rules: RuleFormData[]): string => {
 // Helper function to generate the agent scores table (Markdown for Teams)
 const generateAgentScoresTable = (agentScores: AgentScoreForTeams[]): string => {
   if (agentScores.length === 0) return "No agent scores recorded for today.";
-  // Use Markdown bullet points for better readability in Teams Adaptive Cards
-  let list = "";
+
+  let tableMarkdown = "| Agent | Achievements | Total Score |\n";
+  tableMarkdown += "|---|---|---|\n"; // Markdown table header separator
+
   agentScores.forEach(score => {
     const achievementsDisplay = score.emojiString && score.emojiString.trim() !== '' ? score.emojiString : '-';
-    list += `- **${score.agentFirstName}:** ${achievementsDisplay} (${score.totalPoints} pts)\n`;
+    tableMarkdown += `| ${score.agentFirstName} | ${achievementsDisplay} | ${score.totalPoints} pts |\n`;
   });
-  return list.trim(); // Trim trailing newline
+  return tableMarkdown.trim(); // Trim trailing newline
 };
 
 // Helper function to generate the pod targets summary string
 const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[]): string => {
   if (podTargetSummary.length === 0) return "No pod targets set for today.";
   return podTargetSummary
-    .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`) // Added extra space
+    .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
     .join(' | ');
 };
 
@@ -68,7 +70,7 @@ export const sendTeamsUpdate = async (
 
         currentStep = "Formatting Data";
         // Calculate the actual values
-        const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`;
+        // const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`; // Title removed as per previous request
         const kpiKeyText = generateKpiKey(rules);
         const kpiTableText = generateAgentScoresTable(agentScoresForTeams);
         const kpiTargetsText = generatePodTargetsSummary(podTargetSummaryForTeams);
@@ -83,27 +85,28 @@ export const sendTeamsUpdate = async (
                     "content": {
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
-                        "version": "1.4", // Changed version to 1.4
+                        "version": "1.4", // Kept at 1.4 as per previous request
                         "body": [
-                            // Title TextBlock removed
+                            // Title TextBlock removed as per previous request
                             {
                                 "type": "TextBlock",
-                                "text": kpiKeyText,
+                                "text": kpiKeyText, // Directly use the generated kpiKeyText
                                 "wrap": true,
+                                "spacing": "Medium"
+                                // separator removed as per previous request (no title above)
+                            },
+                            {
+                                "type": "TextBlock",
+                                "text": kpiTableText, // Directly use the generated kpiTableText
+                                "wrap": true,
+                                "separator": true, 
                                 "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTableText,
+                                "text": kpiTargetsText, // Directly use the generated kpiTargetsText
                                 "wrap": true,
-                                "separator": true, // This creates a line break before targets (if kpiTable has content)
-                                "spacing": "Medium"
-                            },
-                            {
-                                "type": "TextBlock",
-                                "text": kpiTargetsText,
-                                "wrap": true,
-                                "separator": true, // Added separator before targets
+                                "separator": true, // Kept separator as per previous request (line break before targets)
                                 "spacing": "Medium"
                             }
                         ]
