@@ -16,5 +16,19 @@
       "port": 4000
     },
     "singleProjectMode": true
+  },
+  "hosting": {
+    "source": ".", 
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "apphosting": {
+      "cpu": 1,
+      "memoryMiB": 256,
+      "maxInstances": 5
+    }
   }
 }
+
