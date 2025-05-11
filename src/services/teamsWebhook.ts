@@ -32,12 +32,13 @@ const generateKpiKey = (rules: RuleFormData[]): string => {
 const generateAgentScoresTable = (agentScores: AgentScoreForTeams[]): string => {
   if (agentScores.length === 0) return "No agent scores recorded for today.";
 
-  let tableMarkdown = "| Agent | Achievements | Total Score |\n";
-  tableMarkdown += "|---|---|---|\n"; // Markdown table header separator
+  // Use \r\n for newlines for better compatibility with Teams Markdown
+  let tableMarkdown = "| Agent | Achievements | Total Score |\r\n";
+  tableMarkdown += "|---|---|---|\r\n"; // Markdown table header separator
 
   agentScores.forEach(score => {
     const achievementsDisplay = score.emojiString && score.emojiString.trim() !== '' ? score.emojiString : '-';
-    tableMarkdown += `| ${score.agentFirstName} | ${achievementsDisplay} | ${score.totalPoints} pts |\n`;
+    tableMarkdown += `| ${score.agentFirstName} | ${achievementsDisplay} | ${score.totalPoints} pts |\r\n`;
   });
   return tableMarkdown.trim(); // Trim trailing newline
 };
@@ -70,7 +71,7 @@ export const sendTeamsUpdate = async (
 
         currentStep = "Formatting Data";
         // Calculate the actual values
-        // const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`; // Title removed as per previous request
+        const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`;
         const kpiKeyText = generateKpiKey(rules);
         const kpiTableText = generateAgentScoresTable(agentScoresForTeams);
         const kpiTargetsText = generatePodTargetsSummary(podTargetSummaryForTeams);
@@ -87,26 +88,26 @@ export const sendTeamsUpdate = async (
                         "type": "AdaptiveCard",
                         "version": "1.4", // Kept at 1.4 as per previous request
                         "body": [
-                            // Title TextBlock removed as per previous request
+                            // Title TextBlock removed
                             {
                                 "type": "TextBlock",
-                                "text": kpiKeyText, // Directly use the generated kpiKeyText
+                                "text": kpiKeyText,
                                 "wrap": true,
                                 "spacing": "Medium"
-                                // separator removed as per previous request (no title above)
+                                // separator removed
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTableText, // Directly use the generated kpiTableText
+                                "text": kpiTableText,
                                 "wrap": true,
-                                "separator": true, 
+                                "separator": true,
                                 "spacing": "Medium"
                             },
                             {
                                 "type": "TextBlock",
-                                "text": kpiTargetsText, // Directly use the generated kpiTargetsText
+                                "text": kpiTargetsText,
                                 "wrap": true,
-                                "separator": true, // Kept separator as per previous request (line break before targets)
+                                "separator": true, // Kept separator (line break before targets)
                                 "spacing": "Medium"
                             }
                         ]
