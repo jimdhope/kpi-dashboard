@@ -403,7 +403,7 @@ export default function CertificateGenerationPage() {
                  if (svgTemplate) { // Only generate if a template exists for the rank
                     generated.push({
                         svgContent: replacePlaceholders(svgTemplate, templateData),
-                        filename: `${pod.name}_Agent_Rank_${rank}.jpg`, // Adjust filename for clarity
+                        filename: `${pod.name}_Agent_Rank_${rank}.svg`, // Adjust filename for clarity, save as SVG
                         title: `${agentNames} - ${rank}${rankSuffix} Place`
                     });
                  }
@@ -432,7 +432,7 @@ export default function CertificateGenerationPage() {
                 };
                 generated.push({
                     svgContent: replacePlaceholders(svgTemplateTeam, teamTemplateData),
-                    filename: `${pod.name}_WinningTeam${winningTeams.length > 1 ? 's' : ''}.jpg`,
+                    filename: `${pod.name}_WinningTeam${winningTeams.length > 1 ? 's' : ''}.svg`, // Save as SVG
                     title: `Winning Team(s) - ${winningTeamNames}`
                 });
             }
@@ -452,43 +452,22 @@ export default function CertificateGenerationPage() {
         }
     };
 
-    // Client-side download function using the API route
-    const downloadCertificateAsJpg = async (svgContent: string, filename: string) => {
-        console.log("[Download] Starting JPG generation for:", filename);
+    // Client-side download function for SVGs
+    const downloadCertificateAsSvg = (svgContent: string, filename: string) => {
+        console.log("[Download] Starting SVG download for:", filename);
         try {
-            const response = await fetch('/api/generate-certificate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ svgContent }),
-            });
-
-            if (!response.ok) {
-                 let errorDetails = `Server responded with status ${response.status}: ${response.statusText}`;
-                 try {
-                     const errorData = await response.json();
-                     errorDetails = errorData.error || errorDetails;
-                 } catch (e) {
-                     // Failed to parse JSON, use status text
-                 }
-                 console.error("[Download] Server Error:", errorDetails);
-                 throw new Error(errorDetails);
-             }
-
-            const blob = await response.blob();
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = filename; // Filename should end with .jpg
+            a.download = filename; // Filename should end with .svg
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
             console.log("[Download] Download triggered for:", filename);
-
         } catch (error: any) {
-            console.error("[Download] Error in downloadCertificateAsJpg:", error);
+            console.error("[Download] Error in downloadCertificateAsSvg:", error);
             toast({ variant: "destructive", title: "Download Failed", description: error.message || "Could not download certificate." });
         }
     };
@@ -600,11 +579,11 @@ export default function CertificateGenerationPage() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => downloadCertificateAsJpg(cert.svgContent, cert.filename)} // Use new download function
+                                                onClick={() => downloadCertificateAsSvg(cert.svgContent, cert.filename)} // Use new download function
                                                 className="w-full mt-auto" // Push button to bottom
                                             >
                                                 <Download className="mr-2 h-4 w-4" />
-                                                Download JPG {/* Changed button text */}
+                                                Download SVG {/* Changed button text */}
                                             </Button>
                                         </CardContent>
                                     </Card>
@@ -617,3 +596,4 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
+
