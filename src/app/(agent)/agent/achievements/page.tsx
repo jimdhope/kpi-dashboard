@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -15,6 +16,7 @@ import {
   serverTimestamp,
   onSnapshot, // Added for user listener
   Unsubscribe, // Added for user listener
+  deleteDoc, // Added deleteDoc
   limit, // Import limit
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -25,7 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertCircle, CheckSquare } from 'lucide-react'; // Added CheckSquare
 import { format, startOfDay } from 'date-fns';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -33,6 +35,7 @@ import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AchievementCard } from '@/components/achievement-card'; // Import AchievementCard
 
 // Interface for the data stored in Firestore
 interface DailyAchievementLog {
@@ -52,30 +55,30 @@ interface DailyAchievementLog {
 // Interface for managing state within the component (simplified for single agent)
 interface AgentAchievementInputState {
   [ruleId: string]: {
-    value: string; // Use string for input control
+    value: number; // Use number directly for input value
     existingLogId?: string; // To know if we update or add
   };
 }
 
 export default function AgentLogAchievementsPage() {
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date())); // Default to today
+  // selectedDate is removed as logging is always for "today"
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
   const [competitionRules, setCompetitionRules] = useState<RuleFormData[]>([]);
   const [achievementInputs, setAchievementInputs] = useState<AgentAchievementInputState>({});
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingCompetition, setIsLoadingCompetition] = useState(false);
-  const [isLoadingAchievements, setIsLoadingAchievements] = useState(false);
-  const [isSaving, setIsSaving<{ [key: string]: boolean }>({}); // Track saving per rule
+  // isLoadingAchievements is effectively merged into isLoadingCompetition now
+  const [isSaving, setIsSaving] = useState<{[key: string]: boolean}>({}); // Corrected type
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null); // Store active competition ID
+  const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
 
   // 1. Get current user and their pod ID
   useEffect(() => {
     setIsLoadingUser(true);
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
-      let unsubscribeUserDoc: Unsubscribe = () => {}; // Initialize for cleanup
+      let unsubscribeUserDoc: Unsubscribe = () => {};
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
         try {
@@ -83,17 +86,17 @@ export default function AgentLogAchievementsPage() {
             if (docSnap.exists()) {
               const userData = { id: docSnap.id, ...docSnap.data() } as AppUser;
               setCurrentUser(userData);
-              setAgentPodId(userData.podId || null); // Set podId from user data
+              setAgentPodId(userData.podId || null);
               if (!userData.podId) {
                   setError("You are not currently assigned to a pod. Cannot log achievements.");
               }
-               setError(null); // Clear previous errors
+               setError(null);
             } else {
                setError("Could not find your user profile.");
                setCurrentUser(null);
                setAgentPodId(null);
             }
-            setIsLoadingUser(false); // Mark as loaded regardless of profile existence
+            setIsLoadingUser(false);
           }, (err) => {
              console.error("Error listening to user document:", err);
              setError("Failed to load your profile information.");
@@ -101,7 +104,6 @@ export default function AgentLogAchievementsPage() {
              setAgentPodId(null);
              setIsLoadingUser(false);
           });
-           // Return the user doc listener cleanup function
            return unsubscribeUserDoc;
         } catch (err) {
             console.error("Error setting up user listener:", err);
@@ -116,81 +118,76 @@ export default function AgentLogAchievementsPage() {
          setAgentPodId(null);
          setIsLoadingUser(false);
       }
-       // Ensure inner unsubscribe is returned
        return unsubscribeUserDoc;
     });
-    return () => unsubscribeAuth(); // Cleanup auth listener
+    return () => unsubscribeAuth();
   }, []);
 
 
-  // 2. Fetch Competition Rules and Existing Achievements based on Pod ID and Date
+  // 2. Fetch Competition Rules and Existing Achievements based on Pod ID and Date (always for today)
   useEffect(() => {
-    if (!agentPodId || !currentUser?.id) {
+    if (!agentPodId || !currentUser?.id || isLoadingUser) {
         setCompetitionRules([]);
         setAchievementInputs({});
         setActiveCompetitionId(null);
-        // Don't show error here if still loading user or user has no pod
-        if (!isLoadingUser &amp;&amp; agentPodId === null) {
-             // Error already set in user fetch effect
+        if (!isLoadingUser && agentPodId === null) {
+            // Error already set
         }
         return;
     }
 
     const fetchCompetitionAndAchievements = async () => {
       setIsLoadingCompetition(true);
-      setIsLoadingAchievements(true);
-      setError(null); // Clear previous errors
+      // setIsLoadingAchievements(true); // Merged
+      setError(null);
       setCompetitionRules([]);
       setAchievementInputs({});
       setActiveCompetitionId(null);
+      const todayStart = startOfDay(new Date()); // Always use today's date
 
       try {
-        // Find the Competition active on the *selected date* for the agent's pod
         const competitionsRef = collection(db, 'competitions');
-        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+        const dateTimestamp = Timestamp.fromDate(todayStart);
         const competitionQuery = query(
           competitionsRef,
-          where('podIds', 'array-contains', agentPodId), // Check if agent's pod is included
-          where('startDate', '&lt;=', dateTimestamp),
-          where('endDate', '&gt;=', dateTimestamp),
-          limit(1) // Assume only one competition per pod per day
+          where('podIds', 'array-contains', agentPodId),
+          where('startDate', '<=', dateTimestamp),
+          orderBy('startDate', 'desc') // Get most recent starting one first
         );
         const competitionSnapshot = await getDocs(competitionQuery);
-        let activeCompetition: (Competition &amp; { id: string }) | null = null;
+        let activeCompetition: (Competition & { id: string }) | null = null;
 
-        if (!competitionSnapshot.empty) {
-            const docSnap = competitionSnapshot.docs[0];
-             activeCompetition = { id: docSnap.id, ...docSnap.data() } as Competition &amp; { id: string };
-             console.log(`Agent: Found competition "${activeCompetition.name}" active on ${selectedDate.toLocaleDateString()}`);
-             setActiveCompetitionId(activeCompetition.id); // Store the active ID
-        } else {
-             setActiveCompetitionId(null); // No active competition for this date
+        for (const docSnap of competitionSnapshot.docs) {
+            const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
+            if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= todayStart) {
+                activeCompetition = comp;
+                break; // Found the current active one
+            }
         }
+        console.log(`Agent: Active competition on ${todayStart.toLocaleDateString()}:`, activeCompetition?.name);
+        setActiveCompetitionId(activeCompetition?.id || null);
 
         if (activeCompetition) {
-          // Filter out bonus rules for agents
           const filteredRules = (activeCompetition.rules || []).filter(rule => rule.name.toLowerCase() !== 'bonus');
           setCompetitionRules(filteredRules);
 
-          // Fetch Existing Achievements for this agent, pod, and date
           const achievementsRef = collection(db, 'dailyAchievements');
           const achievementsQuery = query(
             achievementsRef,
-            where('agentId', '==', currentUser.id), // Filter by current agent ID
+            where('agentId', '==', currentUser.id),
             where('podId', '==', agentPodId),
             where('date', '==', dateTimestamp),
-            where('competitionId', '==', activeCompetition.id) // Ensure it's for the correct competition
+            where('competitionId', '==', activeCompetition.id)
           );
           const achievementsSnapshot = await getDocs(achievementsQuery);
-          const existingAchievements = achievementsSnapshot.docs.map(doc => ({ id: doc.id, ...docSnap.data() } as DailyAchievementLog));
+          const existingAchievements = achievementsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as DailyAchievementLog));
 
-          // Initialize Input State based on fetched rules and existing logs
           const initialInputs: AgentAchievementInputState = {};
-          filteredRules.forEach(rule => { // Use filtered rules
-            if (!rule.id) return; // Skip rule if ID is missing
+          filteredRules.forEach(rule => {
+            if (!rule.id) return;
             const existingLog = existingAchievements.find(log => log.ruleId === rule.id);
             initialInputs[rule.id] = {
-              value: existingLog ? String(existingLog.value) : '',
+              value: existingLog ? existingLog.value : 0, // Default to 0 if no log
               existingLogId: existingLog?.id,
             };
           });
@@ -198,7 +195,7 @@ export default function AgentLogAchievementsPage() {
 
         } else {
           setCompetitionRules([]);
-          toast({ variant: "default", title: "No Competition Found", description: `No competition found for your pod active on ${selectedDate.toLocaleDateString()}.` });
+          toast({ variant: "default", title: "No Active Competition", description: `No competition found for your pod active today.` });
         }
 
       } catch (err) {
@@ -210,97 +207,97 @@ export default function AgentLogAchievementsPage() {
         setActiveCompetitionId(null);
       } finally {
         setIsLoadingCompetition(false);
-        setIsLoadingAchievements(false);
+        // setIsLoadingAchievements(false); // Merged
       }
     };
 
     fetchCompetitionAndAchievements();
-  }, [agentPodId, selectedDate, currentUser?.id, isLoadingUser, toast]); // Re-run when podId, date, or user changes
+  }, [agentPodId, currentUser?.id, isLoadingUser, toast]);
 
-  // 3. Handle Input Change and Auto-Save (Debounced)
-  const handleInputChange = (ruleId: string, value: string) => {
+
+  const handleValueChange = useCallback((ruleId: string, change: number) => {
+    const currentValue = achievementInputs[ruleId]?.value ?? 0;
+    const newValue = Math.max(0, currentValue + change); // Ensure value doesn't go below 0
+
     setAchievementInputs(prev => ({
       ...prev,
-      [ruleId]: {
-        ...prev[ruleId], // Preserve existingLogId
-        value: value,
-      },
+      [ruleId]: { ...prev[ruleId], value: newValue },
     }));
-     // Trigger save automatically on change after a short delay (debounced)
-     debouncedSave(ruleId, value);
-  };
+    debouncedSave(ruleId, newValue);
+  }, [achievementInputs, competitionRules, agentPodId, currentUser?.id, activeCompetitionId]); // Add all dependencies for debouncedSave
+
 
   const debounce = (func: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | null = null;
     return (...args: any[]) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        func.apply(null, args);
-      }, delay);
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(null, args), delay);
     };
   };
 
-  const handleSaveAchievement = async (ruleId: string, valueStr: string | undefined) => {
-    if (!agentPodId || !currentUser?.id || !activeCompetitionId) { // Check activeCompetitionId state
+  const handleSaveAchievement = async (ruleId: string, value: number) => {
+    if (!agentPodId || !currentUser?.id || !activeCompetitionId) {
       console.error("Pod, user, or active competition information missing for auto-save.");
       return;
     }
 
     const rule = competitionRules.find(r => r.id === ruleId);
-    const agentInput = achievementInputs[ruleId];
+    const agentInput = achievementInputs[ruleId]; // This might be slightly stale due to closure, but `value` is current
 
-    if (!rule || agentInput === undefined) {
+    if (!rule) {
       console.error("Rule or input data not found for auto-save.");
       return;
     }
 
-    const value = parseInt(valueStr || '0', 10);
-    if (isNaN(value) || value &lt; 0) {
-       console.warn("Invalid input value for auto-save:", valueStr);
-       // Maybe indicate invalid input subtly in the UI?
-      return;
-    }
-
+    // Value is already validated as non-negative number by handleValueChange
     setIsSaving(prev => ({ ...prev, [ruleId]: true }));
 
     try {
       const points = rule.points * value;
-      const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate)); // Use the selected date
+      const dateTimestamp = Timestamp.fromDate(startOfDay(new Date())); // Always log for "today"
 
-      const logEntry: Omit&lt;DailyAchievementLog, 'id'&gt; = {
+      const logEntry: Omit<DailyAchievementLog, 'id'> = {
         agentId: currentUser.id,
         podId: agentPodId,
-        competitionId: activeCompetitionId, // Use the stored active competition ID
+        competitionId: activeCompetitionId,
         ruleId: rule.id!,
         ruleName: rule.name,
         date: dateTimestamp,
         value: value,
         points: points,
         loggedAt: serverTimestamp(),
-        loggedBy: currentUser.uid, // Agent logs their own
+        loggedBy: currentUser.uid,
       };
 
       const achievementsRef = collection(db, 'dailyAchievements');
-      let docRef;
+      const existingLogId = achievementInputs[ruleId]?.existingLogId; // Get potentially stale ID
 
-      if (agentInput.existingLogId) {
-        docRef = doc(achievementsRef, agentInput.existingLogId);
-        await setDoc(docRef, logEntry, { merge: true });
-         // console.log(`Achievement updated for ${rule.name}`);
-      } else if (value > 0) {
-         const addedDoc = await addDoc(achievementsRef, logEntry);
-          // Update state with the new ID immediately for subsequent saves
+      if (existingLogId) {
+        const docRef = doc(achievementsRef, existingLogId);
+        if (value > 0) {
+          await setDoc(docRef, logEntry, { merge: true });
+        } else {
+          await deleteDoc(docRef); // Delete if value is 0
+          // Update state immediately to remove existingLogId
           setAchievementInputs(prev => {
               const newState = { ...prev };
               if (newState[ruleId]) {
-                  newState[ruleId].existingLogId = addedDoc.id;
+                  newState[ruleId] = { ...newState[ruleId], existingLogId: undefined };
               }
               return newState;
           });
-         // console.log(`Achievement logged for ${rule.name}`);
-      } else {
-          // Value is 0, no existing log, do nothing silently
-          // console.log(`Log skipped for ${rule.name} (value 0)`);
+        }
+      } else if (value > 0) { // Only create if value > 0 and no existing log
+         const addedDoc = await addDoc(achievementsRef, logEntry);
+          setAchievementInputs(prev => {
+              const newState = { ...prev };
+              if (!newState[ruleId]) { // Should not happen if initialized correctly
+                   newState[ruleId] = { value: value, existingLogId: addedDoc.id };
+              } else {
+                   newState[ruleId].existingLogId = addedDoc.id;
+              }
+              return newState;
+          });
       }
 
     } catch (err) {
@@ -312,114 +309,61 @@ export default function AgentLogAchievementsPage() {
   };
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     // Dependencies ensure debounce is recreated if essential context changes
-    [agentPodId, currentUser?.id, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId] // Added activeCompetitionId
+    [agentPodId, currentUser?.id, competitionRules, achievementInputs, activeCompetitionId, toast] // Dependencies updated
   );
 
-  const isLoading = isLoadingUser || isLoadingCompetition || isLoadingAchievements;
-  const canLog = !isLoading &amp;&amp; currentUser &amp;&amp; agentPodId &amp;&amp; competitionRules.length > 0 &amp;&amp; activeCompetitionId; // Check activeCompetitionId
+  const isLoading = isLoadingUser || isLoadingCompetition;
+  const canLog = !isLoading && currentUser && agentPodId && competitionRules.length > 0 && activeCompetitionId;
 
   return (
-    &lt;div className="space-y-6"&gt;
-      &lt;Card&gt;
-        &lt;CardHeader&gt;
-          &lt;CardTitle&gt;Log Your Achievements&lt;/CardTitle&gt;
-          &lt;CardDescription&gt;Select the date and enter your achieved values for the active competition rules.&lt;/CardDescription&gt;
-        &lt;/CardHeader&gt;
-        &lt;CardContent&gt;
-          {/* Date Select */}
-          &lt;div className="mb-6"&gt;
-            &lt;Label htmlFor="date-select"&gt;Date&lt;/Label&gt;
-            &lt;Popover&gt;
-              &lt;PopoverTrigger asChild&gt;
-                &lt;Button
-                  id="date-select"
-                  variant={"outline"}
-                  className={cn(
-                    "w-full sm:w-[240px] justify-start text-left font-normal mt-2", // Make button wider on small screens
-                    !selectedDate &amp;&amp; "text-muted-foreground"
-                  )}
-                  disabled={isLoading} // Disable while loading initial data
-                &gt;
-                  &lt;CalendarIcon className="mr-2 h-4 w-4" /&gt;
-                  {selectedDate ? format(selectedDate, "PPP") : &lt;span&gt;Pick a date&lt;/span&gt;}
-                &lt;/Button&gt;
-              &lt;/PopoverTrigger&gt;
-              &lt;PopoverContent className="w-auto p-0 z-50"&gt; {/* Added z-50 */}
-                &lt;Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) =&gt; date &amp;&amp; setSelectedDate(startOfDay(date))}
-                  initialFocus
-                /&gt;
-              &lt;/PopoverContent&gt;
-            &lt;/Popover&gt;
-          &lt;/div&gt;
-
-          {error &amp;&amp; &lt;p className="text-destructive mb-4"&gt;{error}&lt;/p&gt;}
-
-          {/* Achievements Table */}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+                 <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today&apos;s Achievements</CardTitle>
+                 {/* Removed CardDescription with date */}
+            </div>
+            {/* Display Daily Score - calculation needed in parent AgentDashboard or here */}
+            {/* <div className="text-right">
+                 {isLoading ? (
+                    <Skeleton className="h-6 w-16 rounded mt-1"/>
+                 ) : (
+                    <p className="text-2xl font-bold text-primary">{dailyTotalPointsFromParentOrCalc.toLocaleString()} pts</p>
+                 )}
+            </div> */}
+        </CardHeader>
+        <CardContent>
+          {error && <p className="text-destructive mb-4">{error}</p>}
           {isLoading ? (
-            // Loading Skeletons
-            &lt;div className="space-y-4"&gt;
-              &lt;Skeleton className="h-10 w-full" /&gt; {/* Header skeleton */}
-              &lt;Skeleton className="h-12 w-full" /&gt; {/* Row skeleton */}
-              &lt;Skeleton className="h-12 w-full" /&gt;
-            &lt;/div&gt;
-          ) : !canLog &amp;&amp; !error &amp;&amp; !isLoadingUser &amp;&amp; !agentPodId ? (
-                // Specific message if not assigned to a pod
-                &lt;p className="text-muted-foreground text-center py-6"&gt;You are not assigned to a pod. Please contact your manager.&lt;/p&gt;
-          ) : !canLog &amp;&amp; !error ? (
-             &lt;p className="text-muted-foreground text-center py-6"&gt;
-                {activeCompetitionId === null ? `No competition found for your pod active on ${selectedDate.toLocaleDateString()}.` : "No competition rules found for logging."}
-             &lt;/p&gt;
-          ) : (
-            &lt;Table&gt;
-              &lt;TableHeader&gt;
-                &lt;TableRow&gt;{/* Remove whitespace here */}
-                  &lt;TableHead&gt;Rule&lt;/TableHead&gt;
-                  &lt;TableHead className="w-[120px]"&gt;Value&lt;/TableHead&gt; {/* Set fixed width for value input */}
-                  &lt;TableHead className="w-[100px] text-right"&gt;Status&lt;/TableHead&gt;
-                &lt;/TableRow&gt;
-              &lt;/TableHeader&gt;
-              &lt;TableBody&gt;
-                {competitionRules.map((rule) =&gt; (
-                   // Ensure rule.id is valid before rendering row
-                  rule.id ? (
-                    &lt;TableRow key={rule.id}&gt;
-                      &lt;TableCell className="font-medium"&gt;
-                        {/* Use emoji if it exists and is not empty, otherwise use fallback */}
-                        {(rule.emoji &amp;&amp; rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} &lt;span className="text-xs text-muted-foreground"&gt;({rule.points} pts)&lt;/span&gt;
-                      &lt;/TableCell&gt;
-                      &lt;TableCell&gt;
-                        &lt;div className="relative"&gt;
-                          &lt;Input
-                            type="number"
-                            min="0"
-                            placeholder="Value"
-                            value={achievementInputs[rule.id]?.value ?? ''}
-                            onChange={(e) =&gt; handleInputChange(rule.id!, e.target.value)}
-                            className="h-8 pr-6" // Add padding for loader
-                            disabled={isSaving[rule.id]} // Disable individual input when saving
-                            aria-label={`Achievement value for ${rule.name}`}
-                          /&gt;
-                          {isSaving[rule.id] &amp;&amp; (
-                            &lt;Loader2 className="absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" /&gt;
-                          )}
-                        &lt;/div&gt;
-                      &lt;/TableCell&gt;
-                      &lt;TableCell className="text-right"&gt;
-                          {/* Optional: Show save status if needed, otherwise leave empty */}
-                          {/* {isSaving[rule.id] &amp;&amp; &lt;Loader2 className="h-4 w-4 animate-spin inline-block text-muted-foreground"/&gt;} */}
-                      &lt;/TableCell&gt;
-                    &lt;/TableRow&gt;
-                  ) : null // Skip rendering row if rule.id is invalid
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                    <Skeleton key={`log-skeleton-${index}`} className="h-[130px] w-full" />
                 ))}
-              &lt;/TableBody&gt;
-            &lt;/Table&gt;
+            </div>
+          ) : !canLog && !error && !isLoadingUser && !agentPodId ? (
+                <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
+          ) : !canLog && !error ? (
+             <p className="text-muted-foreground text-center py-6">
+                {activeCompetitionId === null ? `No competition found for your pod active today.` : "No competition rules found for logging."}
+             </p>
+          ) : (
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {competitionRules.map((rule) => (
+                    rule.id ? (
+                        <AchievementCard
+                            key={rule.id}
+                            rule={rule}
+                            currentValue={achievementInputs[rule.id]?.value ?? 0}
+                            isSaving={isSaving[rule.id] || false}
+                            onIncrement={() => handleValueChange(rule.id!, 1)}
+                            onDecrement={() => handleValueChange(rule.id!, -1)}
+                        />
+                    ) : null
+                ))}
+            </div>
           )}
-        &lt;/CardContent&gt;
-      &lt;/Card&gt;
-    &lt;/div&gt;
+        </CardContent>
+      </Card>
+    </div>
   );
 }
