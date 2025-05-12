@@ -101,7 +101,7 @@ export default function AdminDailyScoresPage() {
       setDailyLogs([]);
       setDailyTargets(null);
       setActiveCompetitionId(null);
-      setIsLoadingData(false); // Ensure loading stops if no pod selected
+      setIsLoadingData(false); 
       return;
     }
 
@@ -130,8 +130,12 @@ export default function AdminDailyScoresPage() {
 
          if (fetchedAgents.length === 0) {
             toast({ variant: "default", title: "No Agents", description: "No agents found in this pod." });
-            setIsLoadingData(false); // Stop loading if no agents
-            setActiveCompetitionId(null); // Reset competition if no agents
+            // No active competition if no agents, so clear related state and stop loading
+            setRules([]);
+            setActiveCompetitionId(null);
+            setDailyLogs([]);
+            setDailyTargets(null);
+            setIsLoadingData(false); 
             return;
          }
 
@@ -158,11 +162,13 @@ export default function AdminDailyScoresPage() {
           console.log(`[DailyScoresPage] Active competition found: ${foundCompetition.id}`);
           setRules(foundCompetition.rules || []);
           setActiveCompetitionId(foundCompetition.id);
+          // setIsLoadingData will be handled by the next useEffect if a competition is found
         } else {
           console.log("[DailyScoresPage] No active competition found.");
           setRules([]);
           setActiveCompetitionId(null);
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date." });
+          setIsLoadingData(false); // Stop loading if no competition
         }
 
       } catch (err) {
@@ -172,49 +178,47 @@ export default function AdminDailyScoresPage() {
         setAgents([]);
         setRules([]);
         setActiveCompetitionId(null);
-      } finally {
-         // Loading data is handled by the dependent useEffect now
+        setIsLoadingData(false); // Stop loading on error
       }
     };
 
     fetchAgentsAndCompetition();
 
-   }, [selectedPodId, selectedDate, toast]); // Removed setIsLoadingData from here
+   }, [selectedPodId, selectedDate, toast]);
 
    useEffect(() => {
-        if (!activeCompetitionId || !selectedPodId || !agents.length) {
+        if (!activeCompetitionId || !selectedPodId || agents.length === 0) { // Guard against running if no agents
              setDailyLogs([]);
              setDailyTargets(null);
-             setIsLoadingData(false);
+             setIsLoadingData(false); // Stop loading if prerequisites aren't met
              return () => {};
          }
 
-         console.log(`[DailyScoresPage] Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}`);
+         console.log(`[DailyScoresPage] Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}, Date: ${selectedDate.toISOString()}`);
          setIsLoadingData(true);
 
          let unsubscribeLogs: Unsubscribe = () => {};
          let unsubscribeTargets: Unsubscribe = () => {};
 
+         const dateForQuery = Timestamp.fromDate(startOfDay(selectedDate));
          const achievementsRef = collection(db, 'dailyAchievements');
          const logsQuery = query(
              achievementsRef,
              where('podId', '==', selectedPodId),
-             where('competitionId', '==', activeCompetitionId)
+             where('competitionId', '==', activeCompetitionId),
+             where('date', '==', dateForQuery) // Filter by date directly in the query
          );
+
           unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-              console.log(`[DailyScoresPage] Received ${snapshot.docs.length} raw achievement logs from listener.`);
-              const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-               const fetchedLogs = snapshot.docs
-                  .map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog))
-                   .filter(log => log.date && log.date.toDate && log.date.toDate().getTime() === dateTimestamp.toDate().getTime());
-              console.log(`[DailyScoresPage] Filtered to ${fetchedLogs.length} logs for selected date.`);
-              setDailyLogs(fetchedLogs);
+              console.log(`[DailyScoresPage] Received ${snapshot.docs.length} achievement logs from listener for selected date.`);
+              const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+              setDailyLogs(fetchedLogs); // No more client-side filtering needed for date
               setError(null);
           }, (err) => {
               console.error("[DailyScoresPage] Error listening to achievements:", err);
               setError("Failed to load real-time achievement data.");
               setDailyLogs([]);
-              // setIsLoadingData(false); // Keep loading true to avoid flicker, next block sets it false
+              setIsLoadingData(false);
           });
 
          const targetsDocId = `${activeCompetitionId}_${selectedPodId}`;
@@ -227,21 +231,21 @@ export default function AdminDailyScoresPage() {
                   console.log("[DailyScoresPage] No daily targets document found for:", targetsDocId);
                   setDailyTargets(null);
               }
-             setIsLoadingData(false); // Data loaded after targets (or lack thereof)
+             setIsLoadingData(false); 
          }, (err) => {
               console.error("[DailyScoresPage] Error listening to daily targets:", err);
               setError("Failed to load daily target data.");
               setDailyTargets(null);
-              setIsLoadingData(false); // Ensure loading stops on error
+              setIsLoadingData(false); 
          });
 
          return () => {
-             console.log("[DailyScoresPage] Unsubscribing from daily logs and targets listeners");
+             console.log("[DailyScoresPage] Unsubscribing from daily logs and targets listeners for date:", selectedDate.toISOString());
              unsubscribeLogs();
              unsubscribeTargets();
          };
 
-   }, [activeCompetitionId, selectedPodId, selectedDate, agents.length]);
+   }, [activeCompetitionId, selectedPodId, selectedDate, agents, toast]); // Added agents and toast to dependency
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
      console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
@@ -324,7 +328,7 @@ export default function AdminDailyScoresPage() {
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
      const finalRuleKeyString = rules
-        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name}`) // Removed points
+        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name}`)
         .join('  ');
 
      const finalPodTargetSummaryString = finalPodTargetSummary
@@ -378,7 +382,7 @@ export default function AdminDailyScoresPage() {
     const payload = {
         podName: podName,
         date: selectedDate,
-        rules: rules,
+        rules: rules, // This is the full rules array for the competition
         agentScores: agentScoresForTeams,
         podTargets: podTargetSummaryForTeams
     };
@@ -386,7 +390,7 @@ export default function AdminDailyScoresPage() {
 
 
     setIsSendingToTeams(true);
-    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, date: ${selectedDate}, podName: ${podName}`);
+    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for podName: ${podName}, webhookUrl: ${webhookUrl}, date: ${selectedDate}`);
     try {
       await sendTeamsUpdate(
         podName,
@@ -397,7 +401,7 @@ export default function AdminDailyScoresPage() {
         podTargetSummaryForTeams
       );
       toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
-      console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ID: ${selectedPodId}`);
+      console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ${podName}`);
     } catch (err: any) {
       console.error("[DailyScoresPage] Error sending to Teams:", err);
       toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
@@ -407,9 +411,9 @@ export default function AdminDailyScoresPage() {
   };
 
 
-  const isLoading = isLoadingPods || isLoadingData;
-  const canDisplay = !isLoading && selectedPodId && rules.length > 0 && agents.length > 0;
-  const canSendToTeams = !isLoading && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl;
+  const isLoadingDisplay = isLoadingPods || isLoadingData;
+  const canDisplayTable = !isLoadingDisplay && selectedPodId && rules.length > 0 && agents.length > 0;
+  const canSendToTeams = !isLoadingDisplay && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (agentScores.length > 0 || podTargetSummary.length > 0);
 
   return (
     <div className="space-y-6">
@@ -474,7 +478,7 @@ export default function AdminDailyScoresPage() {
             <Button
                 onClick={handleSendToTeams}
                 disabled={!canSendToTeams}
-                title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : "Send summary to Teams"}
+                title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (agentScores.length === 0 && podTargetSummary.length === 0) ? "No data to send" : "Send summary to Teams"}
             >
                 {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                 {isSendingToTeams ? "Sending..." : "Send to Teams"}
@@ -483,7 +487,7 @@ export default function AdminDailyScoresPage() {
         <CardContent>
           {error && <p className="text-destructive mb-4">{error}</p>}
 
-           {isLoading && (
+           {isLoadingDisplay && (
              <div className="space-y-4">
                <Skeleton className="h-6 w-full mb-4" />
                <Skeleton className="h-10 w-full" />
@@ -494,13 +498,13 @@ export default function AdminDailyScoresPage() {
              </div>
            )}
 
-          {!isLoading && rules.length > 0 && (
+          {!isLoadingDisplay && rules.length > 0 && (
             <div className="mb-4 p-3 border rounded-md bg-muted/50">
               <p className="text-sm whitespace-pre-wrap break-words">{ruleKeyString}</p>
             </div>
           )}
 
-          {canDisplay && (
+          {canDisplayTable && (
             <>
                 <Table>
                     <TableHeader>
@@ -532,12 +536,12 @@ export default function AdminDailyScoresPage() {
                     </TableBody>
                 </Table>
 
-                 {!isLoading && podTargetSummary.length > 0 && (
+                 {!isLoadingDisplay && podTargetSummary.length > 0 && (
                      <div className="mt-6 p-4 border-t">
                           <p className="text-sm whitespace-pre-wrap break-words">{podTargetSummaryString}</p>
                     </div>
                 )}
-                  {!isLoading && rules.length > 0 && podTargetSummary.length === 0 && (
+                  {!isLoadingDisplay && rules.length > 0 && podTargetSummary.length === 0 && (
                        <div className="mt-6 p-4 border-t">
                             <p className="text-sm text-muted-foreground">No pod targets set for this specific day.</p>
                       </div>
@@ -545,16 +549,16 @@ export default function AdminDailyScoresPage() {
              </>
           )}
 
-           {!isLoading && !selectedPodId && (
+           {!isLoadingDisplay && !selectedPodId && (
                <p className="text-center text-muted-foreground mt-6">Please select a pod to view scores.</p>
             )}
-            {!isLoading && selectedPodId && agents.length === 0 && !error && (
+            {!isLoadingDisplay && selectedPodId && agents.length === 0 && !error && (
                 <p className="text-center text-muted-foreground mt-6">No agents found in the selected pod.</p>
             )}
-            {!isLoading && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
+            {!isLoadingDisplay && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
                  <p className="text-center text-muted-foreground mt-6">No active competition found for this pod and date.</p>
             )}
-             {!isLoading && canDisplay && agentScores.every(score => score.totalPoints === 0) && dailyLogs.length === 0 && (
+             {!isLoadingDisplay && canDisplayTable && agentScores.length === 0 && dailyLogs.length === 0 && (
                  <p className="text-center text-muted-foreground mt-6">No achievements logged for this pod on this date.</p>
             )}
         </CardContent>

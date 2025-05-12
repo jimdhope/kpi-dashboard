@@ -1,3 +1,4 @@
+
 {
   "indexes": [
     {
@@ -35,7 +36,26 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "dailyAchievements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "podId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "competitionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
 }
+
