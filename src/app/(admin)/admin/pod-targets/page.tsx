@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, AlertCircle, Target } from 'lucide-react';
+import { Loader2, Save, AlertCircle, Target, Filter } from 'lucide-react'; // Added Filter icon
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -213,14 +213,13 @@ export default function AdminPodTargetsPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="frosted-glass">
         <CardHeader>
-          <CardTitle>Manage Pod Daily Targets</CardTitle>
-          <CardDescription>Set daily achievement targets for each rule within a selected competition and pod.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Selection Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Competition Select */}
             <div className="grid gap-2">
               <Label htmlFor="competition-select">Competition</Label>
@@ -269,7 +268,15 @@ export default function AdminPodTargetsPage() {
               </Select>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
+      <Card className="frosted-glass">
+        <CardHeader>
+          <CardTitle>Manage Pod Daily Targets</CardTitle>
+          <CardDescription>Set daily achievement targets for each rule within the selected competition and pod.</CardDescription>
+        </CardHeader>
+        <CardContent>
           {error && <p className="text-destructive text-center mb-4">{error}</p>}
 
           {/* Targets Table */}
@@ -337,4 +344,3 @@ export default function AdminPodTargetsPage() {
     </div>
   );
 }
-
