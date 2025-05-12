@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -170,25 +169,21 @@ export default function AdminLogAchievementsPage() {
         const competitionQuery = query(
             competitionsRef,
             where('podIds', 'array-contains', selectedPodId),
-            // No longer filtering by start/end date, admin can log to any past/present competition
-            orderBy('startDate', 'desc') // Still order to pick the latest relevant one if multiple apply
+            orderBy('startDate', 'desc') 
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let competitionForLogging: (Competition & { id: string }) | null = null;
 
-        // Find the *most recently started* competition that INCLUDES the selectedDate OR *any* competition if none explicitly include it
-        // This allows logging to past competitions.
         if (competitionSnapshot.docs.length > 0) {
             for (const docSnap of competitionSnapshot.docs) {
                  const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
                  const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
                  const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
                  if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
-                     competitionForLogging = comp; // Prefer competition that brackets selected date
+                     competitionForLogging = comp; 
                      break;
                  }
             }
-            // If no competition brackets the selected date, pick the most recent one (first in sorted list)
             if (!competitionForLogging && competitionSnapshot.docs.length > 0) {
                  competitionForLogging = { id: competitionSnapshot.docs[0].id, ...competitionSnapshot.docs[0].data() } as Competition & { id: string };
                  toast({ variant: "default", title: "Logging to Past/Future Competition", description: `No competition active for ${selectedDate.toLocaleDateString()}. Logging against "${competitionForLogging.name}". Ensure this is correct.` });
@@ -275,8 +270,8 @@ export default function AdminLogAchievementsPage() {
     const rule = competitionRules.find(r => r.id === ruleId);
     const agentInput = achievementInputs[agentId]?.[ruleId];
 
-    if (!rule || agentInput === undefined) {
-       console.error("Rule or input data not found for auto-save.", rule, agentInput);
+    if (!rule || agentInput === undefined) { // agentInput could be undefined if agent has no previous entries for any rule
+       console.error("Rule or input data not found for auto-save. Rule:", rule, "AgentInput:", agentInput);
       return;
     }
 
@@ -321,6 +316,7 @@ export default function AdminLogAchievementsPage() {
                  const newState = { ...prev };
                   if (newState[agentId]?.[ruleId]) {
                      newState[agentId][ruleId].existingLogId = undefined;
+                     newState[agentId][ruleId].value = ''; // Reset value in UI
                  }
                  return newState;
              });
@@ -339,13 +335,10 @@ export default function AdminLogAchievementsPage() {
          changeOccurred = true;
          setAchievementInputs(prev => {
              const newState = { ...prev };
-              if (newState[agentId] && newState[agentId][ruleId]) {
-                 newState[agentId][ruleId].existingLogId = addedDoc.id;
-             } else if (newState[agentId]) {
-                 newState[agentId][ruleId] = { value: String(value), existingLogId: addedDoc.id };
-             } else {
-                  newState[agentId] = { [ruleId]: { value: String(value), existingLogId: addedDoc.id } };
-             }
+              if (!newState[agentId]) newState[agentId] = {}; // Ensure agent key exists
+              if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: '', existingLogId: undefined }; // Ensure rule key exists
+              newState[agentId][ruleId].existingLogId = addedDoc.id;
+              // Value is already set by handleInputChange, no need to set here again if debouncing handleInputChange
              return newState;
          });
           console.log(`Achievement logged for ${rule.name} with value ${value}`);
@@ -475,13 +468,13 @@ export default function AdminLogAchievementsPage() {
                                         type="number"
                                         min="0"
                                         placeholder="Value"
-                                        value={achievementInputs[agent.id!]?.[rule.id]?.value ?? ''}
+                                        value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? ''}
                                         onChange={(e) => handleInputChange(agent.id!, rule.id!, e.target.value)}
                                         className="h-8 w-full pr-6"
-                                        disabled={isSaving[`${agent.id}-${rule.id}`]}
+                                        disabled={isSaving[`${agent.id!}-${rule.id!}`]}
                                         aria-label={`Achievement value for ${agent.name} - ${rule.name}`}
                                     />
-                                    {isSaving[`${agent.id}-${rule.id}`] && (
+                                    {isSaving[`${agent.id!}-${rule.id!}`] && (
                                          <Loader2 className="absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
                                      )}
                                 </div>
@@ -499,4 +492,3 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
-

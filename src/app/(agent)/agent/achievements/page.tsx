@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -14,10 +13,10 @@ import {
   addDoc,
   orderBy,
   serverTimestamp,
-  onSnapshot, // Added for user listener
-  Unsubscribe, // Added for user listener
-  deleteDoc, // Added deleteDoc
-  limit, // Import limit
+  onSnapshot, 
+  Unsubscribe, 
+  deleteDoc, 
+  limit, 
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -27,7 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, CheckSquare } from 'lucide-react'; // Added CheckSquare
+import { CalendarIcon, Loader2, AlertCircle, CheckSquare } from 'lucide-react'; 
 import { format, startOfDay } from 'date-fns';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -35,7 +34,7 @@ import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { AchievementCard } from '@/components/achievement-card'; // Import AchievementCard
+import { AchievementCard } from '@/components/achievement-card'; 
 
 // Interface for the data stored in Firestore
 interface DailyAchievementLog {
@@ -55,24 +54,22 @@ interface DailyAchievementLog {
 // Interface for managing state within the component (simplified for single agent)
 interface AgentAchievementInputState {
   [ruleId: string]: {
-    value: number; // Use number directly for input value
+    value: string; // Use string for input value to allow empty field
     existingLogId?: string; // To know if we update or add
   };
 }
 
 export default function AgentLogAchievementsPage() {
-  // selectedDate is removed as logging is always for "today"
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
   const [competitionRules, setCompetitionRules] = useState<RuleFormData[]>([]);
   const [achievementInputs, setAchievementInputs] = useState<AgentAchievementInputState>({});
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingCompetition, setIsLoadingCompetition] = useState(false);
-  // isLoadingAchievements is effectively merged into isLoadingCompetition now
-  const [isSaving, setIsSaving] = useState<{[key: string]: boolean}>({}); // Corrected type
+  const [isSaving, setIsSaving] = useState<{[key: string]: boolean}>({}); 
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
+  const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null); 
 
   // 1. Get current user and their pod ID
   useEffect(() => {
@@ -131,19 +128,17 @@ export default function AgentLogAchievementsPage() {
         setAchievementInputs({});
         setActiveCompetitionId(null);
         if (!isLoadingUser && agentPodId === null) {
-            // Error already set
         }
         return;
     }
 
     const fetchCompetitionAndAchievements = async () => {
       setIsLoadingCompetition(true);
-      // setIsLoadingAchievements(true); // Merged
       setError(null);
       setCompetitionRules([]);
       setAchievementInputs({});
       setActiveCompetitionId(null);
-      const todayStart = startOfDay(new Date()); // Always use today's date
+      const todayStart = startOfDay(new Date()); 
 
       try {
         const competitionsRef = collection(db, 'competitions');
@@ -152,7 +147,7 @@ export default function AgentLogAchievementsPage() {
           competitionsRef,
           where('podIds', 'array-contains', agentPodId),
           where('startDate', '<=', dateTimestamp),
-          orderBy('startDate', 'desc') // Get most recent starting one first
+          orderBy('startDate', 'desc') 
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let activeCompetition: (Competition & { id: string }) | null = null;
@@ -161,7 +156,7 @@ export default function AgentLogAchievementsPage() {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
             if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= todayStart) {
                 activeCompetition = comp;
-                break; // Found the current active one
+                break; 
             }
         }
         console.log(`Agent: Active competition on ${todayStart.toLocaleDateString()}:`, activeCompetition?.name);
@@ -187,7 +182,7 @@ export default function AgentLogAchievementsPage() {
             if (!rule.id) return;
             const existingLog = existingAchievements.find(log => log.ruleId === rule.id);
             initialInputs[rule.id] = {
-              value: existingLog ? existingLog.value : 0, // Default to 0 if no log
+              value: existingLog ? String(existingLog.value) : '0', // Ensure string value for input, default to '0'
               existingLogId: existingLog?.id,
             };
           });
@@ -207,7 +202,6 @@ export default function AgentLogAchievementsPage() {
         setActiveCompetitionId(null);
       } finally {
         setIsLoadingCompetition(false);
-        // setIsLoadingAchievements(false); // Merged
       }
     };
 
@@ -216,15 +210,16 @@ export default function AgentLogAchievementsPage() {
 
 
   const handleValueChange = useCallback((ruleId: string, change: number) => {
-    const currentValue = achievementInputs[ruleId]?.value ?? 0;
-    const newValue = Math.max(0, currentValue + change); // Ensure value doesn't go below 0
+    const currentValueStr = achievementInputs[ruleId]?.value ?? '0';
+    const currentValue = parseInt(currentValueStr, 10) || 0; // Ensure it's a number, default to 0
+    const newValue = Math.max(0, currentValue + change); 
 
     setAchievementInputs(prev => ({
       ...prev,
-      [ruleId]: { ...prev[ruleId], value: newValue },
+      [ruleId]: { ...prev[ruleId], value: String(newValue) }, // Store as string for input
     }));
     debouncedSave(ruleId, newValue);
-  }, [achievementInputs, competitionRules, agentPodId, currentUser?.id, activeCompetitionId]); // Add all dependencies for debouncedSave
+  }, [achievementInputs, debouncedSave]); 
 
 
   const debounce = (func: Function, delay: number) => {
@@ -242,19 +237,16 @@ export default function AgentLogAchievementsPage() {
     }
 
     const rule = competitionRules.find(r => r.id === ruleId);
-    const agentInput = achievementInputs[ruleId]; // This might be slightly stale due to closure, but `value` is current
-
+    
     if (!rule) {
       console.error("Rule or input data not found for auto-save.");
       return;
     }
-
-    // Value is already validated as non-negative number by handleValueChange
     setIsSaving(prev => ({ ...prev, [ruleId]: true }));
 
     try {
       const points = rule.points * value;
-      const dateTimestamp = Timestamp.fromDate(startOfDay(new Date())); // Always log for "today"
+      const dateTimestamp = Timestamp.fromDate(startOfDay(new Date())); 
 
       const logEntry: Omit<DailyAchievementLog, 'id'> = {
         agentId: currentUser.id,
@@ -266,33 +258,32 @@ export default function AgentLogAchievementsPage() {
         value: value,
         points: points,
         loggedAt: serverTimestamp(),
-        loggedBy: currentUser.uid,
+        loggedBy: currentUser.uid, 
       };
 
       const achievementsRef = collection(db, 'dailyAchievements');
-      const existingLogId = achievementInputs[ruleId]?.existingLogId; // Get potentially stale ID
+      const existingLogId = achievementInputs[ruleId]?.existingLogId; 
 
       if (existingLogId) {
         const docRef = doc(achievementsRef, existingLogId);
         if (value > 0) {
           await setDoc(docRef, logEntry, { merge: true });
         } else {
-          await deleteDoc(docRef); // Delete if value is 0
-          // Update state immediately to remove existingLogId
+          await deleteDoc(docRef); 
           setAchievementInputs(prev => {
               const newState = { ...prev };
               if (newState[ruleId]) {
-                  newState[ruleId] = { ...newState[ruleId], existingLogId: undefined };
+                  newState[ruleId] = { ...newState[ruleId], existingLogId: undefined, value: '0' }; // Reset value to '0'
               }
               return newState;
           });
         }
-      } else if (value > 0) { // Only create if value > 0 and no existing log
+      } else if (value > 0) { 
          const addedDoc = await addDoc(achievementsRef, logEntry);
           setAchievementInputs(prev => {
               const newState = { ...prev };
-              if (!newState[ruleId]) { // Should not happen if initialized correctly
-                   newState[ruleId] = { value: value, existingLogId: addedDoc.id };
+              if (!newState[ruleId]) { 
+                   newState[ruleId] = { value: String(value), existingLogId: addedDoc.id };
               } else {
                    newState[ruleId].existingLogId = addedDoc.id;
               }
@@ -309,7 +300,7 @@ export default function AgentLogAchievementsPage() {
   };
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-    [agentPodId, currentUser?.id, competitionRules, achievementInputs, activeCompetitionId, toast] // Dependencies updated
+    [agentPodId, currentUser?.id, competitionRules, achievementInputs, activeCompetitionId, toast] 
   );
 
   const isLoading = isLoadingUser || isLoadingCompetition;
@@ -321,16 +312,16 @@ export default function AgentLogAchievementsPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
                  <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today&apos;s Achievements</CardTitle>
-                 {/* Removed CardDescription with date */}
             </div>
-            {/* Display Daily Score - calculation needed in parent AgentDashboard or here */}
-            {/* <div className="text-right">
-                 {isLoading ? (
-                    <Skeleton className="h-6 w-16 rounded mt-1"/>
-                 ) : (
-                    <p className="text-2xl font-bold text-primary">{dailyTotalPointsFromParentOrCalc.toLocaleString()} pts</p>
-                 )}
-            </div> */}
+            {agentDailyAchievements && (
+                 <div className="text-right">
+                      {isLoading ? (
+                          <Skeleton className="h-6 w-16 rounded mt-1"/>
+                      ) : (
+                          <p className="text-2xl font-bold text-primary">{agentDailyAchievements.totalPoints.toLocaleString()} pts</p>
+                      )}
+                  </div>
+            )}
         </CardHeader>
         <CardContent>
           {error && <p className="text-destructive mb-4">{error}</p>}
@@ -353,8 +344,8 @@ export default function AgentLogAchievementsPage() {
                         <AchievementCard
                             key={rule.id}
                             rule={rule}
-                            currentValue={achievementInputs[rule.id]?.value ?? 0}
-                            isSaving={isSaving[rule.id] || false}
+                            currentValue={parseInt(achievementInputs[rule.id!]?.value ?? '0', 10)}
+                            isSaving={isSaving[rule.id!] || false}
                             onIncrement={() => handleValueChange(rule.id!, 1)}
                             onDecrement={() => handleValueChange(rule.id!, -1)}
                         />
@@ -367,3 +358,7 @@ export default function AgentLogAchievementsPage() {
     </div>
   );
 }
+// Placeholder for agentDailyAchievements, assuming it's calculated elsewhere or passed as prop
+// This is just to satisfy the type checker in the example.
+// In a real scenario, this data would come from your state management or props.
+const agentDailyAchievements: { totalPoints: number } | null = null; 
