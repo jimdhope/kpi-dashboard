@@ -1,0 +1,46 @@
+# Settings for Cloud Run
+runConfig:
+  # Max instances must be set to 10 or fewer to set the requested memory and CPU.
+  # This addresses the error: "Max instances must be set to 10 or fewer to set the requested memory and CPU."
+  maxInstances: 10
+  # Default concurrency for Cloud Run (requests per instance)
+  concurrency: 80
+  # Default CPU (can be adjusted based on needs, 1 is a common default)
+  # If set to less than 1, concurrency must typically be 1.
+  cpu: 1
+  # Default memory in MiB for Cloud Run
+  memoryMiB: 512
+  # Default minInstances (number of containers to always keep alive)
+  minInstances: 0
+
+# Optional: Environment variables can be added here
+# See documentation: https://firebase.google.com/docs/hosting/frameworks/apphosting-configure#configure-environment-variables
+# Example:
+# env:
+#   - variable: NEXT_PUBLIC_MY_ENV_VAR
+#     value: "my_value"
+#     availability: # Can be BUILD, RUNTIME, or both (default)
+#       - BUILD
+#       - RUNTIME
+#   - variable: MY_SECRET_API_KEY
+#     secret: mySecretNameInSecretManager # Secret stored in Google Cloud Secret Manager
+
+# Optional: Build and run command overrides
+# See documentation: https://firebase.google.com/docs/hosting/frameworks/apphosting-configure#override-build-and-run-scripts
+# scripts:
+#   buildCommand: npm run build # or your custom build command
+#   runCommand: npm run start   # or your custom start command
+
+# Optional: Output file configuration (rarely needed for standard Next.js apps)
+# See documentation: https://firebase.google.com/docs/hosting/frameworks/apphosting-configure#configure-build-output
+# outputFiles:
+#   serverApp:
+#     include:
+#       - .next
+#       - public
+#       - package.json
+#       - node_modules # Typically handled by the buildpack
+#       # Add other necessary files/directories
+#     exclude:
+#       - .git
+#       - .vscode
