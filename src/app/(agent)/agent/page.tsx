@@ -5,7 +5,7 @@ import { Leaderboard } from '@/components/leaderboard';
 import { Target, Medal, Trophy, AlertCircle, CheckSquare, ListChecks } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert"; // Corrected import
+import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
 import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, setDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
@@ -43,8 +43,13 @@ interface Team {
 }
 
 interface CompetitionWithRules extends Competition {
-    teams?: Team[]; // Changed from any[]
+    teams?: Team[];
     id: string;
+}
+
+interface AgentDailyAchievements {
+    totalPoints: number;
+    achievements: { ruleId: string; ruleName: string; ruleEmoji: string; value: number, points: number }[];
 }
 
 interface AgentCompetitionAchievements {
@@ -52,10 +57,6 @@ interface AgentCompetitionAchievements {
   achievements: { ruleId: string; ruleName: string; ruleEmoji: string; value: number, points: number }[];
 }
 
-interface AgentDailyAchievements {
-    totalPoints: number;
-    achievements: { ruleId: string; ruleName: string; ruleEmoji: string; value: number, points: number }[];
-}
 
 interface PodTargetSummary {
   ruleId: string;
@@ -68,7 +69,7 @@ interface PodTargetSummary {
 
 interface AgentAchievementInputState {
   [ruleId: string]: {
-    value: number;
+    value: number; // Changed to number for direct use
     existingLogId?: string;
   };
 }
@@ -102,15 +103,19 @@ const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank:
     const scoreRankMap = new Map<number, number>();
     let rankCounter = 1;
     for (const item of sortedItems) {
-        const score = typeof item.score === 'number' ? item.score : 0;
+        const score = typeof item.score === 'number' && !isNaN(item.score) ? item.score : 0;
         if (!scoreRankMap.has(score)) {
             scoreRankMap.set(score, rankCounter++);
         }
     }
-    return sortedItems.map(item => ({
-        ...item,
-        rank: scoreRankMap.get(typeof item.score === 'number' ? item.score : 0)!,
-    }));
+    return sortedItems.map(item => {
+        const score = typeof item.score === 'number' && !isNaN(item.score) ? item.score : 0;
+        const rank = scoreRankMap.get(score)!;
+        return {
+            ...item,
+            rank: rank
+        };
+    });
 };
 
 
@@ -149,7 +154,7 @@ export default function AgentDashboardPage() {
             listenerRefs.current[key] = undefined;
         }
     });
-    if (!specificListeners) { // Full cleanup
+    if (!specificListeners) {
         listenerRefs.current = {};
     }
   }, []);
@@ -213,7 +218,7 @@ export default function AgentDashboardPage() {
              setActiveCompetition(null); setRules([]); setTeams([]); setPodAgents([]);
              setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
         }
-        return;
+        return () => { isMounted = false; cleanupListeners(['agents', 'competition', 'userLogs', 'podLogs', 'targets', 'dailyAchievements']); };
     }
 
     setIsLoadingData(true);
@@ -226,9 +231,9 @@ export default function AgentDashboardPage() {
         if (!isMounted) return;
         const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
         setPodAgents(currentAgents => {
-            const currentIds = currentAgents.map(a => a.id).sort().join(',');
-            const fetchedIds = fetchedAgents.map(a => a.id).sort().join(',');
-            if (currentIds !== fetchedIds) {
+            const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
+            const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
+            if (currentAgentIds !== fetchedAgentIds) {
                 console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
                 return fetchedAgents;
             }
@@ -243,10 +248,13 @@ export default function AgentDashboardPage() {
     listenerRefs.current.competition = onSnapshot(competitionQuery, (competitionSnapshot) => {
         if (!isMounted) return;
         let foundActiveCompetition: CompetitionWithRules | null = null;
+        console.log(`[AgentDashboard] Data Effect: Competition listener triggered. Found ${competitionSnapshot.docs.length} potential competitions.`);
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules;
             if (comp.endDate && comp.endDate instanceof Timestamp && endOfDay(comp.endDate.toDate()) >= todayStart) {
-                foundActiveCompetition = comp; break;
+                foundActiveCompetition = comp;
+                console.log(`[AgentDashboard] Data Effect: Found active competition: ${comp.id} - ${comp.name}`);
+                break;
             }
         }
 
@@ -274,17 +282,36 @@ export default function AgentDashboardPage() {
                     }
 
                     const userLogsQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('competitionId', '==', activeCompId), where('date', '>=', compStartDate));
-                    listenerRefs.current.userLogs = onSnapshot(userLogsQuery, (snapshot) => { if (!isMounted) return; setDailyLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog)));}, (e) => { if (isMounted) console.error("[AgentDashboard] Error listening to user logs:", e);});
+                    console.log(`[AgentDashboard] Data Effect: Setting up new user logs listener for competition: ${activeCompId}`);
+                    listenerRefs.current.userLogs = onSnapshot(userLogsQuery, (snapshot) => {
+                        if (!isMounted) return;
+                        const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
+                        console.log(`[AgentDashboard] Data Effect: User logs listener updated, found ${logs.length} total logs for user in competition.`);
+                        setDailyLogs(logs);
+                    }, (e) => { if (isMounted) console.error("[AgentDashboard] Error listening to user logs:", e);});
 
                     const podLogsQuery = query(achievementsRef, where('podId', '==', agentPodId), where('competitionId', '==', activeCompId), where('date', '>=', compStartDate));
-                    listenerRefs.current.podLogs = onSnapshot(podLogsQuery, (snapshot) => { if (!isMounted) return; setPodLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog)));}, (e) => { if (isMounted) console.error("[AgentDashboard] Error listening to pod logs:", e);});
+                    console.log(`[AgentDashboard] Data Effect: Setting up new pod logs listener for competition: ${activeCompId}`);
+                    listenerRefs.current.podLogs = onSnapshot(podLogsQuery, (snapshot) => {
+                        if (!isMounted) return;
+                        const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
+                        console.log(`[AgentDashboard] Data Effect: Pod logs listener updated, found ${logs.length} total logs for pod in competition.`);
+                        setPodLogs(logs);
+                    }, (e) => { if (isMounted) console.error("[AgentDashboard] Error listening to pod logs:", e);});
 
                     const targetsDocId = `${activeCompId}_${agentPodId}`;
                     const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
-                    listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => { if (!isMounted) return; setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);}, (e) => { if (isMounted) console.error("[AgentDashboard] Error listening to daily targets:", e);});
+                    console.log(`[AgentDashboard] Data Effect: Setting up new targets listener for doc: ${targetsDocId}`);
+                    listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => {
+                        if (!isMounted) return;
+                        const data = docSnap.exists() ? docSnap.data() as DailyTargetData : null;
+                        console.log(`[AgentDashboard] Data Effect: Targets listener updated, target doc exists: ${docSnap.exists()} - Data:`, data);
+                        setDailyTargets(data);
+                    }, (e) => { if (isMounted) console.error("[AgentDashboard] Error listening to daily targets:", e);});
 
                     const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
                     const dailyQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompId));
+                    console.log(`[AgentDashboard] Data Effect: Setting up daily achievements listener for competition: ${activeCompId}, date: ${dateTimestamp.toDate().toISOString()}`);
                     listenerRefs.current.dailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
                         if (!isMounted) return;
                         const existingAchievements = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
@@ -295,7 +322,8 @@ export default function AgentDashboardPage() {
                             initialInputs[rule.id] = { value: existingLog ? existingLog.value : 0, existingLogId: existingLog?.id };
                         });
                         setAchievementInputs(initialInputs);
-                        setIsLoadingData(false);
+                        console.log(`[AgentDashboard] Data Effect: Daily achievements listener updated. Initial inputs set.`, initialInputs);
+                        setIsLoadingData(false); // Final loading state update
                     }, (e) => { if (isMounted) { console.error("[AgentDashboard] Error listening to daily achievements:", e); setIsLoadingData(false); }});
                 } else {
                      setError(prevError => prevError?.startsWith("You are not") ? prevError : "No active competition found for your pod today.");
@@ -303,17 +331,22 @@ export default function AgentDashboardPage() {
                 }
                 return foundActiveCompetition;
             }
-            if (isLoadingData) setIsLoadingData(false); // Ensure loading stops if competition didn't change but was already loading
+            // If competition didn't change but was already loading, ensure it stops.
+            if (isLoadingData && currentActiveComp === foundActiveCompetition) setIsLoadingData(false);
             return currentActiveComp;
         });
     }, (err) => { if (isMounted) { console.error("[AgentDashboard] Error listening to competitions:", err);setError("Failed to load competition data."); setIsLoadingData(false);}});
 
-    return () => { isMounted = false; cleanupListeners(['agents', 'competition', 'userLogs', 'podLogs', 'targets', 'dailyAchievements']); };
+    return () => {
+        isMounted = false;
+        console.log("[AgentDashboard] Data Effect: Cleaning up ALL listeners on unmount or dependency change.");
+        cleanupListeners(['agents', 'competition', 'userLogs', 'podLogs', 'targets', 'dailyAchievements']);
+    };
   }, [agentPodId, currentUser?.id, isLoadingUser, cleanupListeners, toast]);
 
 
   const { agentDailyAchievements, agentCompetitionAchievements, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
-    console.log(`[AgentDashboard] Memo triggered: Calculating data. isLoadingUser: ${isLoadingUser}, isLoadingData: ${isLoadingData}, currentUser: ${!!currentUser}, agentPodId: ${agentPodId}, activeCompetition: ${!!activeCompetition}`);
+    console.log(`[AgentDashboard] Memo triggered: Calculating data. Daily Logs: ${Array.isArray(dailyLogs) ? dailyLogs.length : 'N/A'}, Pod Logs: ${Array.isArray(podLogs) ? podLogs.length : 'N/A'}, Agents: ${Array.isArray(podAgents) ? podAgents.length : 'N/A'}, Teams: ${Array.isArray(teams) ? teams.length : 'N/A'}, Rules: ${Array.isArray(rules) ? rules.length : 'N/A'}`);
     if (isLoadingUser || isLoadingData || !currentUser || !agentPodId || !activeCompetition) {
         console.log("[AgentDashboard] Memo: Skipping calculation, data not ready or prerequisites missing.");
         return {
@@ -332,9 +365,10 @@ export default function AgentDashboardPage() {
 
     const displayRules = Array.isArray(rules) ? rules : [];
 
+    // Agent Daily Achievements Calculation
     let dailyTotalPoints = 0;
     const dailyAchievementsMap = new Map<string, AgentDailyAchievements['achievements'][0]>();
-    if (currentUser && displayRules.length > 0) {
+    if (currentUser && Array.isArray(displayRules) && displayRules.length > 0) {
         todayUserLogs.forEach(log => {
             const rule = displayRules.find(r => r.id === log.ruleId);
             if (rule && rule.id) {
@@ -353,9 +387,10 @@ export default function AgentDashboardPage() {
     console.log("[AgentDashboard] Memo: Calculated final agent daily achievements:", finalAgentDailyAchievements);
 
 
+    // Agent Competition Achievements Calculation
     let competitionTotalPoints = 0;
     const competitionAchievementsMap = new Map<string, AgentCompetitionAchievements['achievements'][0]>();
-     if (currentUser && displayRules.length > 0 && Array.isArray(dailyLogs)) {
+     if (currentUser && Array.isArray(displayRules) && displayRules.length > 0 && Array.isArray(dailyLogs)) {
         dailyLogs.forEach(log => {
             const rule = displayRules.find(r => r.id === log.ruleId);
             if (rule && rule.id) {
@@ -373,6 +408,7 @@ export default function AgentDashboardPage() {
     const finalAgentCompetitionAchievements: AgentCompetitionAchievements = { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievementsList };
     console.log("[AgentDashboard] Memo: Calculated final agent competition achievements:", finalAgentCompetitionAchievements);
 
+    // Pod Target Summary Calculation
     const dayOfWeek = daysOfWeek[getDay(new Date())];
     const podRuleTotalsToday: Record<string, number> = {};
     if(Array.isArray(displayRules)) {
@@ -401,6 +437,7 @@ export default function AgentDashboardPage() {
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName)) : [];
     console.log("[AgentDashboard] Memo: Calculated pod target summary for today:", finalPodTargetSummary);
 
+    // Agent Leaderboard Calculation
     const agentScoresMap: Record<string, number> = {};
     if(Array.isArray(podAgents)){
         podAgents.forEach(agent => { if (agent && agent.id) agentScoresMap[agent.id] = 0; });
@@ -416,9 +453,10 @@ export default function AgentDashboardPage() {
     const agentLeaderboardDataPreSort = Array.isArray(podAgents) ? podAgents
         .map(agent => {
             if (!agent || !agent.id) return null;
+            const score = agentScoresMap[agent.id] || 0;
             return ({
                 id: agent.id, name: agent.name || 'Unknown Agent',
-                totalPoints: agentScoresMap[agent.id] || 0, score: agentScoresMap[agent.id] || 0,
+                totalPoints: score, score: score,
                 avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor,
                 isCurrentUser: agent.id === currentUser?.id
             });
@@ -426,6 +464,7 @@ export default function AgentDashboardPage() {
     const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardDataPreSort);
     console.log(`[AgentDashboard] Memo: Calculated agent leaderboard (${finalAgentLeaderboard.length} entries)`);
 
+    // Team Leaderboard Calculation
     const teamScoresMap: Record<string, number> = {};
     if(Array.isArray(teams)){
         teams.forEach(team => { if (team && team.id) teamScoresMap[team.id] = 0; });
@@ -443,9 +482,10 @@ export default function AgentDashboardPage() {
     const teamLeaderboardDataPreSort = Array.isArray(teams) ? teams
         .map(team => {
              if (!team || !team.id) return null;
+             const score = teamScoresMap[team.id] || 0;
             return ({
                 id: team.id, name: team.name || 'Unknown Team',
-                totalPoints: teamScoresMap[team.id] || 0, score: teamScoresMap[team.id] || 0,
+                totalPoints: score, score: score,
                 isCurrentUserTeam: Array.isArray(team.agentIds) && team.agentIds.includes(currentUser?.id || '')
             });
         }).filter((item): item is LeaderboardEntry => item !== null) : [];
@@ -507,7 +547,7 @@ export default function AgentDashboardPage() {
     } finally {
       setIsSaving(prev => ({ ...prev, [ruleId]: false }));
     }
-  }, [agentPodId, currentUser, activeCompetition?.id, rules, achievementInputs, toast, setAchievementInputs, setIsSaving]); // Added missing dependencies
+  }, [agentPodId, currentUser, activeCompetition?.id, rules, achievementInputs, toast]);
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), [handleSaveAchievement, debounce]);
 
@@ -519,7 +559,7 @@ export default function AgentDashboardPage() {
       [ruleId]: { ...(prev[ruleId] || { value: 0, existingLogId: undefined }), value: newValue },
     }));
     debouncedSave(ruleId, newValue);
-  }, [achievementInputs, debouncedSave, setAchievementInputs]);
+  }, [achievementInputs, debouncedSave]);
 
   const isLoading = isLoadingUser || isLoadingData;
   const canLog = !isLoading && currentUser && agentPodId && Array.isArray(rules) && rules.length > 0 && activeCompetition;
@@ -577,7 +617,7 @@ export default function AgentDashboardPage() {
               </CardHeader>
               <CardContent className="flex-grow">
                   {isLoading ? <div className="space-y-2"><Skeleton className="h-4 w-full rounded mb-1" /><Skeleton className="h-4 w-5/6 rounded mb-1" /><Skeleton className="h-4 w-3/4 rounded" /></div>
-                   : agentCompetitionAchievements && agentCompetitionAchievements.achievements.length > 0 ? (
+                   : agentCompetitionAchievements && Array.isArray(agentCompetitionAchievements.achievements) && agentCompetitionAchievements.achievements.length > 0 ? (
                       <div className="space-y-1 text-sm">
                           {agentCompetitionAchievements.achievements.map(ach => (
                               <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap">
@@ -616,11 +656,11 @@ export default function AgentDashboardPage() {
            : (<>
                   {Array.isArray(teamLeaderboard) && teamLeaderboard.length > 0 ? <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} description="Current Competition Ranking" />
                   : !error && !isLoading && activeCompetition && Array.isArray(teams) && teams.length > 0 ? <Card className="h-[400px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No team data available yet.</CardContent></Card>
-                  : !error && !isLoading && activeCompetition && (!Array.isArray(teams) || teams.length === 0) ? <Card className="h-[400px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No teams defined.</CardContent></Card>
+                  : !error && !isLoading && activeCompetition && (!Array.isArray(teams) || teams.length === 0) ? <Card className="h-[400px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No teams defined for this competition.</CardContent></Card>
                   : null}
                    {Array.isArray(agentLeaderboard) && agentLeaderboard.length > 0 ? <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} description="Current Competition Ranking" />
                    : !error && !isLoading && activeCompetition && Array.isArray(podAgents) && podAgents.length > 0 ? <Card className="h-[400px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No agent data available yet.</CardContent></Card>
-                   : !error && !isLoading && activeCompetition && (!Array.isArray(podAgents) || podAgents.length === 0) ? <Card className="h-[400px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No agents in pod.</CardContent></Card>
+                   : !error && !isLoading && activeCompetition && (!Array.isArray(podAgents) || podAgents.length === 0) ? <Card className="h-[400px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No agents in pod to display.</CardContent></Card>
                   : null}
                   {error === "No active competition found for your pod today." && !isLoading && <Card className="md:col-span-2 h-[100px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No competition currently active.</CardContent></Card>}
                </>)
