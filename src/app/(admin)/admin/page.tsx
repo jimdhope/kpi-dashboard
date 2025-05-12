@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -7,33 +6,32 @@ import { db, auth } from '@/lib/firebase';
 import { Leaderboard } from '@/components/leaderboard';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, ShieldCheck, Megaphone, Trophy, BarChart3, AlertCircle, CalendarIcon } from 'lucide-react'; // Added icons
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'; // Added Popover
-import { Calendar } from '@/components/ui/calendar'; // Added Calendar
-import { Button } from '@/components/ui/button'; // Added Button
-import { Label } from '@/components/ui/label'; // Added Label
-import { Form } from '@/components/ui/form'; // Added Form import
-import { useForm } from 'react-hook-form'; // Import useForm
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns'; // Import addDays
-import { cn } from '@/lib/utils'; // For conditional classes
+import { Users, ShieldCheck, Megaphone, Trophy, BarChart3, AlertCircle, CalendarIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Form } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns';
+import { cn } from '@/lib/utils';
 import type { AppUser } from '@/services/user';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
-// Explicitly import DailyAchievementLog type from its definition file
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse type
+import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 
-// Leaderboard Entry Interface (can be reused or adapted)
+// Leaderboard Entry Interface
 interface LeaderboardEntry {
   id: string;
   name: string;
-  score: number; // Changed from totalPoints to score to match Leaderboard component prop
+  score: number;
   rank?: number;
   avatarUrl?: string;
   avatarInitials?: string;
   avatarBgColor?: string;
-  // Add other relevant fields if needed, e.g., podName for individual leaderboard
+  isCurrentUser?: boolean; // To highlight the current user/pod
 }
 
 // Achievement Summary Interface
@@ -51,24 +49,17 @@ type Timeframe = 'daily' | 'weekly' | 'monthly' | 'allTime';
 export default function AdminDashboardPage() {
   // --- State Variables ---
   const [error, setError] = useState<string | null>(null);
-
-  const [timeframe, setTimeframe] = useState<Timeframe>('weekly'); // Default timeframe
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(startOfDay(new Date())); // Default to today
-  // State for fetched data
+  const [timeframe, setTimeframe] = useState<Timeframe>('weekly');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(startOfDay(new Date()));
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [allPods, setAllPods] = useState<Pod[]>([]);
-  const [allCompetitions, setAllCompetitions] = useState<Competition[]>([]); // No longer used for stats, keep for rules?
   const [achievementLogs, setAchievementLogs] = useState<DailyAchievementLog[]>([]);
-  const [allRules, setAllRules] = useState<RuleFormData[]>([]); // Store all rules for summary
+  const [allRules, setAllRules] = useState<RuleFormData[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const [isLoadingData, setIsLoadingData] = useState(true); // Loading state for leaderboards/summary
+   const form = useForm();
 
-  // Initialize react-hook-form - needed for Form context (can be simplified if Form not used)
-   const form = useForm(); // Minimal form setup
-
-  // --- Data Fetching ---
-
-  // Fetch base data (Users, Pods, Rules, Competitions - needed for rules/context)
+  // Fetch base data (Users, Pods, Rules)
   useEffect(() => {
     setIsLoadingData(true);
     const unsubscribes: Unsubscribe[] = [];
@@ -77,39 +68,40 @@ export default function AdminDashboardPage() {
     const fetchBaseData = async () => {
         setError(null);
         try {
-            // Fetch Pods
             const podsQuery = query(collection(db, 'pods'), orderBy('name'));
             unsubscribes.push(onSnapshot(podsQuery, (snapshot) => {
                 if (!isMounted) return;
                 setAllPods(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pod)));
             }, err => { if (isMounted) console.error("Error fetching pods:", err); }));
 
-            // Fetch Users
             const usersQuery = query(collection(db, 'users'), orderBy('name'));
             unsubscribes.push(onSnapshot(usersQuery, (snapshot) => {
                 if (!isMounted) return;
                 setAllUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
             }, err => { if (isMounted) console.error("Error fetching users:", err); }));
 
-            // Fetch Competitions (Still needed for rule context potentially)
-            const compQuery = query(collection(db, 'competitions'), orderBy('startDate', 'desc'));
-            unsubscribes.push(onSnapshot(compQuery, (snapshot) => {
-                if (!isMounted) return;
-                setAllCompetitions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition)));
-            }, err => { if (isMounted) console.error("Error fetching competitions:", err); }));
+             const rulesPromises = [
+                getDocs(collection(db, 'campaignRules')),
+                getDocs(collection(db, 'competitions')) // Competitions also store rules
+            ];
+            const [campaignRulesSnapshots, competitionDocsSnapshots] = await Promise.all(rulesPromises);
+            const rules: RuleFormData[] = [];
+            campaignRulesSnapshots.forEach(doc => {
+                 rules.push(...(doc.data().rules || []).map((r: any) => ({...r, id: r.id || `rule-${Math.random().toString(36).substr(2, 9)}` })));
+            });
+            competitionDocsSnapshots.forEach(doc => {
+                rules.push(...(doc.data().rules || []).map((r: any) => ({...r, id: r.id || `rule-${Math.random().toString(36).substr(2, 9)}` })));
+            });
+            // Deduplicate rules by ID, or by name if ID is missing (though ID should be preferred)
+            const uniqueRulesMap = new Map<string, RuleFormData>();
+            rules.forEach(rule => {
+                const key = rule.id || rule.name; // Prefer ID, fallback to name
+                if (!uniqueRulesMap.has(key)) {
+                    uniqueRulesMap.set(key, rule);
+                }
+            });
+            setAllRules(Array.from(uniqueRulesMap.values()));
 
-             // Fetch all rules (needed for summary)
-             const rulesSnapshots = await getDocs(collection(db, 'campaignRules'));
-             const rules: RuleFormData[] = [];
-             rulesSnapshots.forEach(doc => {
-                 rules.push(...(doc.data().rules || []));
-             });
-             const competitionRulesSnapshots = await getDocs(collection(db, 'competitions'));
-             competitionRulesSnapshots.forEach(doc => {
-                  rules.push(...(doc.data().rules || []));
-             });
-             const uniqueRules = Array.from(new Map(rules.map(rule => [rule.id || rule.name, rule])).values());
-             setAllRules(uniqueRules);
 
         } catch (err) {
              if (isMounted) {
@@ -117,7 +109,6 @@ export default function AdminDashboardPage() {
                 setError("Failed to load necessary dashboard data.");
              }
         }
-        // Note: setIsLoadingData(false) is handled in the achievementLogs useEffect
     };
 
     fetchBaseData();
@@ -129,17 +120,15 @@ export default function AdminDashboardPage() {
   }, []);
 
 
-  // Fetch Achievement Logs based on Timeframe
+  // Fetch Achievement Logs based on Timeframe and selectedDate
   useEffect(() => {
-      setIsLoadingData(true); // Start loading when timeframe or date changes
+      setIsLoadingData(true);
       setError(null);
 
       let startDate: Date | null = null;
       let endDate: Date | null = null;
-      // Use today's date if no specific date selected for daily, weekly, monthly
-       const referenceDate = selectedDate || startOfDay(new Date());
-
-       console.log(`Timeframe: ${timeframe}, Reference Date: ${referenceDate.toISOString()}`);
+      const referenceDate = selectedDate || startOfDay(new Date());
+      console.log(`Timeframe: ${timeframe}, Reference Date: ${referenceDate.toISOString()}`);
 
       switch (timeframe) {
           case 'daily':
@@ -147,12 +136,10 @@ export default function AdminDashboardPage() {
               endDate = endOfDay(referenceDate);
               break;
           case 'weekly':
-              // Calculate 7 days starting FROM the referenceDate
-              startDate = startOfDay(referenceDate);
-              endDate = endOfDay(addDays(referenceDate, 6)); // Add 6 days to get a 7-day period
+              startDate = startOfDay(referenceDate); // Start of the week containing selected date
+              endDate = endOfDay(addDays(referenceDate, 6)); // End of the week containing selected date
               break;
           case 'monthly':
-              // Use start/end of the month containing the referenceDate
               startDate = startOfMonth(referenceDate);
               endDate = endOfMonth(referenceDate);
               break;
@@ -177,9 +164,8 @@ export default function AdminDashboardPage() {
            console.warn("Invalid date range or timeframe combination.");
            setAchievementLogs([]);
            setIsLoadingData(false);
-           return () => {}; // No listener to unsubscribe from
+           return () => {};
       }
-
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
           const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
@@ -190,23 +176,20 @@ export default function AdminDashboardPage() {
       }, (err) => {
           console.error("Error fetching achievement logs:", err);
           setError("Failed to load achievement data for the selected timeframe.");
-          setAchievementLogs([]); // Clear logs on error
+          setAchievementLogs([]);
           setIsLoadingData(false);
       });
 
-      return () => unsubscribe(); // Cleanup log listener
+      return () => unsubscribe();
 
-  }, [timeframe, selectedDate]); // Dependencies: re-run when timeframe or selectedDate changes
+  }, [timeframe, selectedDate]);
 
 
-  // --- Data Calculation (useMemo) ---
    const { podLeaderboard, individualLeaderboard, achievementSummary } = useMemo(() => {
-       // Return empty arrays if still loading base data (users, pods, rules)
        if (isLoadingData || allUsers.length === 0 || allPods.length === 0 || allRules.length === 0) {
             return { podLeaderboard: [], individualLeaderboard: [], achievementSummary: [] };
         }
 
-        // --- Individual Scores ---
         const agentScores: Record<string, number> = {};
          allUsers.forEach(user => {
              if(user.id) agentScores[user.id] = 0;
@@ -231,7 +214,7 @@ export default function AdminDashboardPage() {
              .sort((a, b) => b.score - a.score)
              .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
-        // --- Pod Scores ---
+
         const podScores: Record<string, { name: string; score: number; id: string }> = {};
         allPods.forEach(pod => {
              podScores[pod.id] = { id: pod.id, name: pod.name, score: 0 };
@@ -256,7 +239,7 @@ export default function AdminDashboardPage() {
                 };
             });
 
-        // --- Achievement Summary ---
+
         const summary: Record<string, Omit<AchievementSummaryEntry, 'ruleName' | 'emoji'>> = {};
          const ruleDetailsMap = new Map(allRules.map(rule => [rule.id || rule.name, { name: rule.name, emoji: rule.emoji || '❓' }]));
 
@@ -289,26 +272,23 @@ export default function AdminDashboardPage() {
    }, [achievementLogs, allUsers, allPods, allRules, isLoadingData]);
 
 
-   const isLoading = isLoadingData; // Use isLoadingData which covers logs and base data dependencies
-   const displayDate = selectedDate || startOfDay(new Date()); // Use selected date or today for display
+   const isLoading = isLoadingData;
+   const displayDate = selectedDate || startOfDay(new Date());
 
 
   return (
-    <Form {...form}> {/* Add Form provider */}
+    <Form {...form}>
       {error && (
          <div className="mb-4 text-center text-destructive bg-destructive/10 p-3 rounded-md flex items-center justify-center gap-2">
            <AlertCircle className="h-4 w-4" /> {error}
           </div>
        )}
 
-      {/* Filters Section */}
-      <Card className="mb-6">
+      <Card className="mb-6 frosted-glass">
           <CardHeader>
-             <CardTitle>Filters</CardTitle> {/* Changed Title */}
-             {/* Removed CardDescription */}
+             <CardTitle>Filters</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4 items-end">
-             {/* Timeframe Select */}
              <div className="grid gap-1.5">
                  <Label htmlFor="timeframe-select">Select Period</Label>
                  <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
@@ -323,7 +303,6 @@ export default function AdminDashboardPage() {
                      </SelectContent>
                  </Select>
              </div>
-              {/* Start Date Picker */}
               <div className="grid gap-1.5">
                  <Label htmlFor="date-select">Start Date</Label>
                  <Popover>
@@ -332,7 +311,7 @@ export default function AdminDashboardPage() {
                              id="date-select"
                              variant={"outline"}
                              className={cn("w-[240px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                             disabled={isLoading || timeframe === 'allTime'} // Disable for 'allTime'
+                             disabled={isLoading || timeframe === 'allTime'}
                          >
                              <CalendarIcon className="mr-2 h-4 w-4" />
                              {displayDate ? format(displayDate, "PPP") : <span>Pick a date</span>}
@@ -348,31 +327,29 @@ export default function AdminDashboardPage() {
                          />
                      </PopoverContent>
                  </Popover>
-                 {/* Removed FormDescription */}
               </div>
           </CardContent>
       </Card>
 
-      {/* Achievement Summary Cards */}
         <div className="mb-6">
             <h2 className="text-2xl font-semibold tracking-tight mb-4">Achievement Summary</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {isLoading ? (
                     <>
-                        <Skeleton className="h-[120px] w-full" />
-                        <Skeleton className="h-[120px] w-full" />
-                        <Skeleton className="h-[120px] w-full" />
-                        <Skeleton className="h-[120px] w-full" />
+                        <Skeleton className="h-[120px] w-full frosted-glass" />
+                        <Skeleton className="h-[120px] w-full frosted-glass" />
+                        <Skeleton className="h-[120px] w-full frosted-glass" />
+                        <Skeleton className="h-[120px] w-full frosted-glass" />
                     </>
                 ) : achievementSummary.length === 0 ? (
-                <Card className="sm:col-span-full h-[120px] flex items-center justify-center">
+                <Card className="sm:col-span-full h-[120px] flex items-center justify-center frosted-glass">
                     <CardContent className="text-center text-muted-foreground">
                         <p>No achievements logged in this period.</p>
                     </CardContent>
                 </Card>
                 ) : (
                     achievementSummary.map((summary, index) => (
-                        <Card key={index} className="shadow-sm">
+                        <Card key={index} className="shadow-sm frosted-glass">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium truncate" title={summary.ruleName}>
                                     {summary.ruleName}
@@ -391,15 +368,12 @@ export default function AdminDashboardPage() {
             </div>
         </div>
 
-       {/* Leaderboards Section */}
        <div className="grid gap-6 md:grid-cols-2">
-
-           {/* Pod Leaderboard */}
            <div >
               {isLoading ? (
-                  <Skeleton className="h-[400px] w-full" />
+                  <Skeleton className="h-[400px] w-full frosted-glass" />
               ) : podLeaderboard.length === 0 ? (
-                 <Card className="h-[400px] flex items-center justify-center">
+                 <Card className="h-[400px] flex items-center justify-center frosted-glass">
                      <CardContent className="text-center text-muted-foreground">
                          <p>No pod data available for this period.</p>
                      </CardContent>
@@ -409,12 +383,11 @@ export default function AdminDashboardPage() {
               )}
            </div>
 
-           {/* Individual Leaderboard */}
            <div >
               {isLoading ? (
-                  <Skeleton className="h-[400px] w-full" />
+                  <Skeleton className="h-[400px] w-full frosted-glass" />
               ) : individualLeaderboard.length === 0 ? (
-                  <Card className="h-[400px] flex items-center justify-center">
+                  <Card className="h-[400px] flex items-center justify-center frosted-glass">
                      <CardContent className="text-center text-muted-foreground">
                          <p>No individual agent data available for this period.</p>
                      </CardContent>
@@ -423,7 +396,6 @@ export default function AdminDashboardPage() {
                 <Leaderboard title="Agent Leaderboard" entries={individualLeaderboard} description={`Top agents by ${timeframe} points`} />
               )}
            </div>
-
        </div>
     </Form>
   );
