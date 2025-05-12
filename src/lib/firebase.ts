@@ -15,8 +15,7 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  // Ensure NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID is set, or handle its absence
-  // Use empty string as fallback if undefined or null
+  // Use empty string as fallback if undefined or null, ensuring it's always a string
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || ""
 };
 
@@ -25,8 +24,6 @@ if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.proj
   console.error(
     "Firebase configuration error: Make sure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set in your environment variables (.env file)."
   );
-   // You might want to throw an error here or handle it appropriately
-   // throw new Error("Firebase configuration is incomplete.");
 }
 
 
@@ -43,32 +40,26 @@ if (!getApps().length) {
 // Initialize services
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app); // Initialize Storage
-let analytics: any = null; // Initialize analytics as null
+const storage = getStorage(app);
+let analytics: any = null;
 
-// Flag to ensure emulators are connected only once if needed
 let emulatorsConnected = false;
 
-// Connect to emulators only in development environment (client-side check)
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && !emulatorsConnected) {
-  // Check if running on localhost or a typical dev domain
   if (window.location.hostname === 'localhost' || window.location.hostname.includes('local')) {
       console.log("Connecting to Firebase Emulators (Detected Dev Environment)...");
       try {
-        // Make sure ports match your emulator setup
         connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
         connectFirestoreEmulator(db, 'localhost', 8080);
         connectStorageEmulator(storage, 'localhost', 9199);
         console.log("Successfully connected to Firebase Emulators.");
-        emulatorsConnected = true; // Set flag
+        emulatorsConnected = true;
       } catch (error) {
          console.error("Error connecting to Firebase Emulators:", error);
-         // Fallback to production services might happen automatically if emulators aren't reachable
       }
   } else {
        console.log("Development environment detected, but not localhost. Using Production Firebase Services.");
   }
-
 } else if (typeof window !== 'undefined') {
    console.log("Using Production Firebase Services.");
 }
@@ -77,17 +68,16 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && !
 // Initialize Analytics (conditionally, only in browser and if supported/configured)
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
-    // Check if measurementId is defined and not an empty string before initializing
     const measurementId = firebaseConfig.measurementId;
-    if (supported && measurementId && measurementId.trim() !== '') {
+    if (supported && measurementId && measurementId.trim() !== '' && measurementId !== "YOUR_MEASUREMENT_ID_HERE") {
       try {
         analytics = getAnalytics(app);
         console.log("Firebase Analytics initialized with Measurement ID:", measurementId);
       } catch (error) {
          console.error("Error initializing Firebase Analytics:", error);
       }
-    } else if (!measurementId || measurementId.trim() === '') {
-        console.warn("Firebase Analytics not initialized: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID is missing or empty in environment variables.");
+    } else if (!measurementId || measurementId.trim() === '' || measurementId === "YOUR_MEASUREMENT_ID_HERE") {
+        console.warn("Firebase Analytics not initialized: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID is missing, empty, or a placeholder in environment variables.");
     } else if (!supported) {
        console.log("Firebase Analytics not supported in this browser environment.");
     }
@@ -97,4 +87,4 @@ if (typeof window !== 'undefined') {
 }
 
 
-export { app, auth, db, storage, analytics, deleteField }; // Export storage and deleteField
+export { app, auth, db, storage, analytics, deleteField };

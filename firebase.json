@@ -18,17 +18,21 @@
     "singleProjectMode": true
   },
   "hosting": {
-    "source": ".", 
+    "site": "kpi-quest",
+    "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
-    "apphosting": {
+    "apphostingDeployMetadata": {
+      "versionName": "v1",
+      "serviceAccountEmail": "your-service-account@your-project.iam.gserviceaccount.com"
+    },
+    "spec": {
+      "maxInstances": 10,
       "cpu": 1,
-      "memoryMiB": 256,
-      "maxInstances": 5
+      "memory": "512Mi"
     }
   }
 }
-
