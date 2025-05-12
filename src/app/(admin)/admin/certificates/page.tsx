@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -6,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, AlertCircle } from 'lucide-react';
+import { Loader2, Download, AlertCircle, Filter } from 'lucide-react'; // Added Filter
 // Import necessary types
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
@@ -475,9 +474,10 @@ export default function CertificateGenerationPage() {
 
     return (
         <div className="space-y-6">
-            <Card>
+             {/* Filters Card */}
+            <Card className="frosted-glass">
                 <CardHeader>
-                    <CardTitle>Generate Certificates</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Generate Certificates</CardTitle>
                     <CardDescription>Select a competition and pod to generate certificates for top performers.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -542,58 +542,55 @@ export default function CertificateGenerationPage() {
                             {error}
                         </div>
                     )}
-
-                     {isLoadingData && ( // Show skeleton loader
-                        <div className="mt-6 space-y-4">
-                            <Skeleton className="h-8 w-1/3" />
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <Skeleton className="h-[300px] w-full frosted-glass" />
-                                <Skeleton className="h-[300px] w-full frosted-glass" />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Generated Certificates Display */}
-                    {!isLoadingData && generatedCertificates.length > 0 && (
-                        <div className="mt-6 space-y-4">
-                            <h3 className="text-lg font-semibold">Generated Certificates</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {generatedCertificates.map((cert, index) => (
-                                    <Card key={index} className="overflow-hidden shadow-md frosted-glass">
-                                        <CardHeader className="p-3 bg-muted/50">
-                                            <CardTitle className="text-sm">{cert.title}</CardTitle>
-                                        </CardHeader>
-                                        {/* Adjusted CardContent and container div for height limit */}
-                                        <CardContent className="p-4 flex flex-col items-center gap-4 max-h-[400px]"> {/* Limit card content height */}
-                                            {/* Container for the SVG preview with max height and flex centering */}
-                                            <div
-                                                className="certificate-svg-container border rounded-md overflow-hidden w-full max-h-[300px] flex items-center justify-center" // Added max-h and flex centering
-                                            >
-                                                {/* Render SVG wrapper with scaling styles */}
-                                                <div
-                                                    className="w-full h-full flex items-center justify-center" // Inner div also uses flex to center content
-                                                    style={{ aspectRatio: `${SVG_WIDTH} / ${SVG_HEIGHT}` }} // Maintain aspect ratio
-                                                    dangerouslySetInnerHTML={{ __html: cert.svgContent }}
-                                                />
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => downloadCertificateAsSvg(cert.svgContent, cert.filename)} // Use new download function
-                                                className="w-full mt-auto" // Push button to bottom
-                                            >
-                                                <Download className="mr-2 h-4 w-4" />
-                                                Download SVG {/* Changed button text */}
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
+
+
+             {isLoadingData && ( // Show skeleton loader for certificate results
+                <div className="mt-6 space-y-4">
+                    <Skeleton className="h-8 w-1/3" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <Skeleton className="h-[300px] w-full frosted-glass" />
+                        <Skeleton className="h-[300px] w-full frosted-glass" />
+                    </div>
+                </div>
+            )}
+
+            {/* Generated Certificates Display - Moved outside the filters card */}
+            {!isLoadingData && generatedCertificates.length > 0 && (
+                <div className="mt-6 space-y-4">
+                    <h3 className="text-xl font-semibold">Generated Certificates</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {generatedCertificates.map((cert, index) => (
+                            <Card key={index} className="overflow-hidden shadow-lg frosted-glass"> {/* Applied frosted-glass */}
+                                <CardHeader className="p-3 bg-muted/50">
+                                    <CardTitle className="text-base">{cert.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 flex flex-col items-center gap-4 max-h-[400px]">
+                                    <div
+                                        className="certificate-svg-container border rounded-md overflow-hidden w-full max-h-[300px] flex items-center justify-center bg-white" // Added bg-white for better SVG preview
+                                    >
+                                        <div
+                                            className="w-full h-full flex items-center justify-center"
+                                            style={{ aspectRatio: `${SVG_WIDTH} / ${SVG_HEIGHT}` }}
+                                            dangerouslySetInnerHTML={{ __html: cert.svgContent }}
+                                        />
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => downloadCertificateAsSvg(cert.svgContent, cert.filename)}
+                                        className="w-full mt-auto"
+                                    >
+                                        <Download className="mr-2 h-4 w-4" />
+                                        Download SVG
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-
