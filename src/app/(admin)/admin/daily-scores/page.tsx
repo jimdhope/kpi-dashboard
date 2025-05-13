@@ -1,4 +1,3 @@
-
 // src/app/(admin)/admin/daily-scores/page.tsx
 'use client';
 
@@ -107,7 +106,7 @@ export default function AdminDailyScoresPage() {
 
     setIsLoadingData(true);
     setError(null);
-    setAgents([]);
+    setAgents([]); // Reset agents when pod changes
     setRules([]);
     setDailyLogs([]);
     setDailyTargets(null);
@@ -130,7 +129,6 @@ export default function AdminDailyScoresPage() {
 
          if (fetchedAgents.length === 0) {
             toast({ variant: "default", title: "No Agents", description: "No agents found in this pod." });
-            // No active competition if no agents, so clear related state and stop loading
             setRules([]);
             setActiveCompetitionId(null);
             setDailyLogs([]);
@@ -152,7 +150,7 @@ export default function AdminDailyScoresPage() {
 
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules;
-             if (comp.endDate && comp.endDate instanceof Timestamp && comp.endDate.toDate() >= dateTimestamp) {
+             if (comp.endDate && comp.endDate instanceof Timestamp && endOfDay(comp.endDate.toDate()) >= startOfDay(selectedDate)) {
                 foundCompetition = comp;
                 break;
             }
@@ -162,13 +160,13 @@ export default function AdminDailyScoresPage() {
           console.log(`[DailyScoresPage] Active competition found: ${foundCompetition.id}`);
           setRules(foundCompetition.rules || []);
           setActiveCompetitionId(foundCompetition.id);
-          // setIsLoadingData will be handled by the next useEffect if a competition is found
+          // setIsLoadingData will be false after listeners in the next useEffect complete
         } else {
           console.log("[DailyScoresPage] No active competition found.");
           setRules([]);
           setActiveCompetitionId(null);
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date." });
-          setIsLoadingData(false); // Stop loading if no competition
+          setIsLoadingData(false); 
         }
 
       } catch (err) {
@@ -178,7 +176,7 @@ export default function AdminDailyScoresPage() {
         setAgents([]);
         setRules([]);
         setActiveCompetitionId(null);
-        setIsLoadingData(false); // Stop loading on error
+        setIsLoadingData(false); 
       }
     };
 
@@ -187,11 +185,16 @@ export default function AdminDailyScoresPage() {
    }, [selectedPodId, selectedDate, toast]);
 
    useEffect(() => {
-        if (!activeCompetitionId || !selectedPodId || agents.length === 0) { // Guard against running if no agents
-             setDailyLogs([]);
-             setDailyTargets(null);
-             setIsLoadingData(false); // Stop loading if prerequisites aren't met
-             return () => {};
+        // Conditions for not setting up listeners
+        if (!activeCompetitionId || !selectedPodId || agents.length === 0) {
+             setDailyLogs([]); // Clear logs if no active comp or agents
+             setDailyTargets(null); // Clear targets
+             if (!isLoadingData && (!activeCompetitionId || agents.length === 0)) {
+                 // If we are not already loading and there's no competition or no agents,
+                 // ensure loading is false.
+                 setIsLoadingData(false);
+             }
+             return () => {}; // Return empty cleanup
          }
 
          console.log(`[DailyScoresPage] Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}, Date: ${selectedDate.toISOString()}`);
@@ -206,14 +209,15 @@ export default function AdminDailyScoresPage() {
              achievementsRef,
              where('podId', '==', selectedPodId),
              where('competitionId', '==', activeCompetitionId),
-             where('date', '==', dateForQuery) // Filter by date directly in the query
+             where('date', '==', dateForQuery) 
          );
 
           unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
               console.log(`[DailyScoresPage] Received ${snapshot.docs.length} achievement logs from listener for selected date.`);
               const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-              setDailyLogs(fetchedLogs); // No more client-side filtering needed for date
+              setDailyLogs(fetchedLogs);
               setError(null);
+              // setIsLoadingData will be set to false after targets listener responds or if targets listener isn't needed
           }, (err) => {
               console.error("[DailyScoresPage] Error listening to achievements:", err);
               setError("Failed to load real-time achievement data.");
@@ -244,8 +248,9 @@ export default function AdminDailyScoresPage() {
              unsubscribeLogs();
              unsubscribeTargets();
          };
-
-   }, [activeCompetitionId, selectedPodId, selectedDate, agents, toast]); // Added agents and toast to dependency
+    // Key dependencies: if these change, listeners need to be re-established.
+    // `agents` array itself is included because if it becomes empty, we should stop listening or clear data.
+   }, [activeCompetitionId, selectedPodId, selectedDate, agents]); 
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
      console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
@@ -270,7 +275,7 @@ export default function AdminDailyScoresPage() {
 
     agents.forEach(agent => {
        if (!agent.id) return;
-        if (!scores[agent.id]) {
+        if (!scores[agent.id]) { // Ensure agent exists in scores map even if they have 0 points
             scores[agent.id] = { totalPoints: 0, emojiString: '' };
         }
 
@@ -288,7 +293,11 @@ export default function AdminDailyScoresPage() {
                 }
             }
        });
-       scores[agent.id].emojiString = emojis;
+       // This check is important: only assign emojiString if agent.id exists in scores.
+       // It should, due to initialization above, but defensive check is good.
+       if(scores[agent.id]){ 
+           scores[agent.id].emojiString = emojis;
+       }
     });
 
     const finalAgentScores: AgentScore[] = agents
@@ -380,19 +389,19 @@ export default function AdminDailyScoresPage() {
     }));
 
     const payload = {
-        podName: podName,
-        date: selectedDate,
-        rules: rules, // This is the full rules array for the competition
-        agentScores: agentScoresForTeams,
-        podTargets: podTargetSummaryForTeams
+        title: `Daily Scores - ${podName} (${format(selectedDate, 'PPP')})`,
+        kpiKey: rules.map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`).join('  '),
+        kpiTable: agentScoresForTeams,
+        kpiTargets: podTargetSummaryForTeams.map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`).join(' | ')
     };
     console.log("[DailyScoresPage] Data being sent to Teams (Payload):", JSON.stringify(payload, null, 2));
 
 
     setIsSendingToTeams(true);
-    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for podName: ${podName}, webhookUrl: ${webhookUrl}, date: ${selectedDate}`);
+    console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, podName: ${podName}, date: ${selectedDate}`);
     try {
       await sendTeamsUpdate(
+        selectedPodId, 
         podName,
         webhookUrl,
         selectedDate,
@@ -401,7 +410,7 @@ export default function AdminDailyScoresPage() {
         podTargetSummaryForTeams
       );
       toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
-      console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ${podName}`);
+      console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ID: ${selectedPodId}`);
     } catch (err: any) {
       console.error("[DailyScoresPage] Error sending to Teams:", err);
       toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });

@@ -244,41 +244,19 @@ export default function AdminLeaderboardPage() {
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         if (items.length === 0) return [];
 
-        const rankedItems: (T & { rank: number })[] = [];
-        let currentRank = 1;
-        let previousScore = items[0].score;
-
-        for (let i = 0; i < items.length; i++) {
-            const currentItem = items[i];
-            // Increment rank number only if score decreases
-            if (i > 0 && currentItem.score < previousScore) {
-                 // Rank is the number of unique scores seen so far + 1
-                 // Or simply, the rank of the previous distinct score + 1
-                 currentRank = rankedItems[i-1].rank + 1; // Increment from previous distinct rank
-            } else if (i === 0) {
-                currentRank = 1; // First item is always rank 1
-            } else if (currentItem.score === previousScore) {
-                 currentRank = rankedItems[i-1].rank; // Same rank as previous if score is tied
-            }
-
-            rankedItems.push({ ...currentItem, rank: currentRank });
-            previousScore = currentItem.score;
-        }
-
-        // Recalculate rank based on the first occurrence of each score for true dense ranking
+         const sortedItems = [...items].sort((a, b) => b.score - a.score);
          const scoreRankMap = new Map<number, number>();
          let rankCounter = 1;
-         for (const item of items) { // Iterate through sorted items
+
+         for (const item of sortedItems) {
              if (!scoreRankMap.has(item.score)) {
                  scoreRankMap.set(item.score, rankCounter++);
              }
          }
-
-         return items.map(item => ({
+         return sortedItems.map(item => ({
              ...item,
              rank: scoreRankMap.get(item.score)!
          }));
-
     };
 
     // 5. Calculate Leaderboard Scores (useMemo)
@@ -293,6 +271,10 @@ export default function AdminLeaderboardPage() {
         const agentScores: Record<string, number> = {};
         // Initialize scores for ALL relevant agents, even if they have 0 points
         relevantAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
+
+        // Aggregate points from allLogs.
+        // Ensure allLogs contains ONLY logs relevant to the selected competition and pod filter (if any).
+        // This should be handled by the onSnapshot query itself.
         allLogs.forEach(log => {
             const points = typeof log.points === 'number' ? log.points : 0;
             if (agentScores.hasOwnProperty(log.agentId)) {
@@ -305,23 +287,22 @@ export default function AdminLeaderboardPage() {
                 id: agent.id!,
                 name: agent.name,
                 totalPoints: agentScores[agent.id!] || 0,
-                score: agentScores[agent.id!] || 0, // Keep score for compatibility if Leaderboard component uses it
+                score: agentScores[agent.id!] || 0, 
                 avatarUrl: agent.avatarUrl,
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
                 isCurrentUser: agent.id === auth.currentUser?.uid,
             }))
-            .sort((a, b) => b.totalPoints - a.totalPoints); // Sort descending by points
+            .sort((a, b) => b.totalPoints - a.totalPoints); 
 
 
-        // --- Dense Ranking Logic for Agents ---
         const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardData);
 
 
         // Team calculations
         const teamScores: Record<string, number> = {};
-        // Initialize scores for ALL teams, even if they have 0 points
         teams.forEach(team => { teamScores[team.id] = 0; });
+
         allLogs.forEach(log => {
             const points = typeof log.points === 'number' ? log.points : 0;
             const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
@@ -341,19 +322,18 @@ export default function AdminLeaderboardPage() {
                     id: team.id,
                     name: team.name,
                     totalPoints: teamScores[team.id] || 0,
-                    score: teamScores[team.id] || 0, // Keep score for compatibility
+                    score: teamScores[team.id] || 0, 
                     agentFirstNames: agentFirstNames,
                     isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''),
                 };
             })
-           .sort((a, b) => b.totalPoints - a.totalPoints); // Sort descending by points
+           .sort((a, b) => b.totalPoints - a.totalPoints); 
 
-        // --- Dense Ranking Logic for Teams ---
         const finalTeamLeaderboard = assignDenseRanks(teamLeaderboardData);
 
 
         return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-    }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid]); // Added participatingPods dependency
+    }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid]);
 
 
   const isLoading = isLoadingBase || isLoadingData;
