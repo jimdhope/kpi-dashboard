@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { EditorState, LexicalEditor } from 'lexical';
@@ -9,7 +8,8 @@ import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
-import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
+// OnChangePlugin is not used directly if HtmlPlugin handles onChange logic
+// import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'; 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
@@ -34,21 +34,22 @@ const editorConfig = {
   nodes: editorNodes,
 };
 
+// Plugin to set the initial HTML content and handle updates
 function HtmlPlugin({
   initialHtml,
-  setHtml,
-  editable,
+  onHtmlChange, // Renamed from setHtml for clarity, this will be field.onChange from RHF
+  isEditorEditable, // Renamed from editable for clarity within this plugin's scope
 }: {
   initialHtml?: string;
-  setHtml: (html: string) => void;
-  editable?: boolean;
+  onHtmlChange: (html: string) => void;
+  isEditorEditable: boolean;
 }) {
   const [editor] = useLexicalComposerContext();
-  const [isFirstRender, setIsFirstRender] = useState(true);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
+  // Effect to load initial HTML when the editor is ready and initialHtml is provided
   useEffect(() => {
-    if (isFirstRender && initialHtml && editable) {
-      setIsFirstRender(false);
+    if (editor && initialHtml && !hasInitialized) {
       editor.update(() => {
         const parser = new DOMParser();
         const dom = parser.parseFromString(initialHtml, 'text/html');
@@ -65,41 +66,47 @@ function HtmlPlugin({
             }
         });
       });
+      setHasInitialized(true); // Mark as initialized
     }
-  }, [editor, initialHtml, isFirstRender, editable]);
+  }, [editor, initialHtml, hasInitialized]);
 
-  const handleOnChange = useCallback(
-    (editorState: EditorState) => {
-      if (editable) {
-        editorState.read(() => {
-          const htmlString = $generateHtmlFromNodes(editor, null);
-          setHtml(htmlString);
-        });
-      }
-    },
-    [editor, setHtml, editable]
-  );
+  // Effect to listen for changes and call onHtmlChange if the editor is editable
+  useEffect(() => {
+    if (!isEditorEditable || !editor) return; // Don't listen if not editable or editor not ready
 
-  return <OnChangePlugin onChange={handleOnChange} />;
+    const removeUpdateListener = editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        const htmlString = $generateHtmlFromNodes(editor, null);
+        onHtmlChange(htmlString); // Call the passed onChange (e.g., RHF's field.onChange)
+      });
+    });
+
+    return () => {
+      removeUpdateListener();
+    };
+  }, [editor, onHtmlChange, isEditorEditable]);
+
+  return null;
+}
+
+// Component to manage the editable state of the editor instance
+function EditorEditableStatePlugin({ editable }: { editable: boolean }) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    editor.setEditable(editable);
+  }, [editor, editable]);
+  return null; // This plugin doesn't render anything
 }
 
 
 export function KpiQuestLexicalEditor({ initialHtml, onChange, editable = true }: LexicalEditorProps) {
-  const [htmlString, setHtmlString] = useState(initialHtml || '<p><br></p>'); // Default to an empty paragraph
-
-  useEffect(() => {
-    onChange(htmlString);
-  }, [htmlString, onChange]);
-
-  // Handler to update htmlString when Lexical content changes
-  const handleLexicalChange = (newHtml: string) => {
-    setHtmlString(newHtml);
-  };
+  // react-hook-form (via the `onChange` prop which is `field.onChange`) is the source of truth for the HTML content.
+  // No need for an internal `htmlString` state in this component for the content itself.
 
   return (
-    <LexicalComposer initialConfig={{ ...editorConfig, editable }}>
+    <LexicalComposer initialConfig={{ ...editorConfig, editable /* Pass the editable prop for initial state */ }}>
       <div className="lexical-editor-container border rounded-md">
-        {editable && <LexicalToolbar />}
+        {editable && <LexicalToolbar />} {/* Toolbar only shown if editable */}
         <ScrollArea className="h-64 w-full relative"> {/* Set a fixed height for scrollability */}
           <RichTextPlugin
             contentEditable={
@@ -114,9 +121,14 @@ export function KpiQuestLexicalEditor({ initialHtml, onChange, editable = true }
           />
         </ScrollArea>
         <HistoryPlugin />
-        <HtmlPlugin initialHtml={initialHtml} setHtml={handleLexicalChange} editable={editable} />
+        {/* Pass the main `onChange` (from react-hook-form) to HtmlPlugin */}
+        <HtmlPlugin
+          initialHtml={initialHtml}
+          onHtmlChange={onChange} // This is likely field.onChange from RHF
+          isEditorEditable={editable}
+        />
+        <EditorEditableStatePlugin editable={editable} /> {/* Manages editor.setEditable */}
       </div>
     </LexicalComposer>
   );
 }
-
