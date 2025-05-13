@@ -127,7 +127,7 @@ export default function MessageOfTheDayAdminPage() {
       <Card className="frosted-glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary" /> Manage Message of the Day</CardTitle>
-          <CardDescription>Create or update the message that will be displayed on agent dashboards. Basic HTML formatting is supported for the content.</CardDescription>
+          <CardDescription>Create or update the message that will be displayed on agent dashboards.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -201,14 +201,16 @@ export default function MessageOfTheDayAdminPage() {
                       <FormLabel>Message Content</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Enter the message of the day here. You can use basic HTML for formatting like <b>bold</b> or <i>italic</i>. For more advanced formatting, consider using a dedicated rich text editor."
+                          placeholder="Enter the message of the day here."
                           {...field}
                           rows={8}
                           className="resize-y"
                           disabled={form.formState.isSubmitting || !form.getValues('isEnabled')}
                         />
                       </FormControl>
-                      <FormDescription>This message will be shown to all agents.</FormDescription>
+                      <FormDescription>
+                        This message will be shown to all agents. You can use basic HTML for formatting like &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;u&gt;underline&lt;/u&gt;, and &lt;br&gt; for line breaks.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

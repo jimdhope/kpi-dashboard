@@ -7,11 +7,10 @@ import { Info, PartyPopper } from 'lucide-react'; // Example icons
 interface MessageOfTheDayDisplayProps {
   emoji: string | null;
   content: string | null;
-  isEnabled?: boolean; // Make isEnabled optional for backward compatibility if not always passed
   isLoading?: boolean;
 }
 
-export function MessageOfTheDayDisplay({ emoji, content, isEnabled = true, isLoading }: MessageOfTheDayDisplayProps) {
+export function MessageOfTheDayDisplay({ emoji, content, isLoading }: MessageOfTheDayDisplayProps) {
   if (isLoading) {
     return (
       <Card className="w-full p-4 frosted-glass">
@@ -28,8 +27,8 @@ export function MessageOfTheDayDisplay({ emoji, content, isEnabled = true, isLoa
     );
   }
 
-  // Only render if enabled and content is present
-  if (!isEnabled || !content) {
+  // Only render if content is present (isEnabled logic handled by parent not passing content)
+  if (!content) {
     return null;
   }
 
@@ -45,6 +44,7 @@ export function MessageOfTheDayDisplay({ emoji, content, isEnabled = true, isLoa
             displayEmoji
           )}
         </div>
+        {/* Use dangerouslySetInnerHTML to render HTML content */}
         <div className="flex-1 message-content break-words" dangerouslySetInnerHTML={{ __html: content }} />
       </div>
     </Card>
