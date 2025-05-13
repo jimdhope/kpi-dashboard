@@ -7,12 +7,18 @@ import {
   $getSelection,
   $isRangeSelection,
   TextFormatType,
+  COMMAND_PRIORITY_CRITICAL, // Added import
+  UNDO_COMMAND,
+  REDO_COMMAND,
+  CAN_UNDO_COMMAND,
+  CAN_REDO_COMMAND,
 } from 'lexical';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Bold, Italic, Underline, Undo, Redo } from 'lucide-react';
-import { LowPriority } from 'react-dom/src/Scheduler';
-import {UNDO_COMMAND, REDO_COMMAND, CAN_UNDO_COMMAND, CAN_REDO_COMMAND} from 'lexical';
+// Removed LowPriority import as it was unused and potentially incorrect
+// import { LowPriority } from 'react-dom/src/Scheduler'; // This was incorrect
+
 
 export function LexicalToolbar() {
   const [editor] = useLexicalComposerContext();
@@ -51,7 +57,7 @@ export function LexicalToolbar() {
           setCanUndo(payload);
           return false;
         },
-        COMMAND_PRIORITY_CRITICAL, // Use COMMAND_PRIORITY_CRITICAL
+        COMMAND_PRIORITY_CRITICAL,
       );
 
       unregisterCanRedo = editor.registerCommand(
@@ -60,7 +66,7 @@ export function LexicalToolbar() {
           setCanRedo(payload);
           return false;
         },
-        COMMAND_PRIORITY_CRITICAL, // Use COMMAND_PRIORITY_CRITICAL
+        COMMAND_PRIORITY_CRITICAL,
       );
     }
     return () => {
