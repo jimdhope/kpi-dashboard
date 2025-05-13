@@ -1,16 +1,17 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card'; // Use Card for consistent styling
-import { AlertTriangle, Info, PartyPopper } from 'lucide-react'; // Example icons
+import { Card, CardContent } from '@/components/ui/card';
+import { Info, PartyPopper } from 'lucide-react'; // Example icons
 
 interface MessageOfTheDayDisplayProps {
   emoji: string | null;
   content: string | null;
+  isEnabled?: boolean; // Make isEnabled optional for backward compatibility if not always passed
   isLoading?: boolean;
 }
 
-export function MessageOfTheDayDisplay({ emoji, content, isLoading }: MessageOfTheDayDisplayProps) {
+export function MessageOfTheDayDisplay({ emoji, content, isEnabled = true, isLoading }: MessageOfTheDayDisplayProps) {
   if (isLoading) {
     return (
       <Card className="w-full p-4 frosted-glass">
@@ -27,8 +28,9 @@ export function MessageOfTheDayDisplay({ emoji, content, isLoading }: MessageOfT
     );
   }
 
-  if (!content) {
-    return null; // Don't render anything if there's no message content
+  // Only render if enabled and content is present
+  if (!isEnabled || !content) {
+    return null;
   }
 
   const displayEmoji = emoji || <PartyPopper className="h-10 w-10 text-primary" />; // Default emoji

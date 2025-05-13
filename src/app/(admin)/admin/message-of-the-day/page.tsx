@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Loader2, Save, MessageCircle, Smile } from 'lucide-react'; // Added Smile icon
+import { Loader2, Save, MessageCircle, Smile } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,19 +19,22 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch"; // Import Switch component
 
 // Define the structure of the message in Firestore
 interface MessageOfTheDayData {
   emoji: string;
   content: string;
+  isEnabled: boolean; // Added isEnabled field
   updatedAt: Timestamp;
   updatedBy: string;
 }
 
 // Zod schema for form validation
 const messageFormSchema = z.object({
-  emoji: z.string().min(1, { message: "Emoji is required." }).max(10, { message: "Emoji should be short." }), // Increased max length slightly for some complex emojis
+  emoji: z.string().min(1, { message: "Emoji is required." }).max(10, { message: "Emoji should be short." }),
   content: z.string().min(10, { message: "Message content must be at least 10 characters." }).max(1000, { message: "Message content must be 1000 characters or less." }),
+  isEnabled: z.boolean(), // Added isEnabled to schema
 });
 
 type MessageFormData = z.infer<typeof messageFormSchema>;
@@ -52,6 +54,7 @@ export default function MessageOfTheDayAdminPage() {
     defaultValues: {
       emoji: '🎉',
       content: '',
+      isEnabled: true, // Default to enabled
     },
   });
 
@@ -72,9 +75,10 @@ export default function MessageOfTheDayAdminPage() {
         form.reset({
           emoji: data.emoji || '🎉',
           content: data.content || '',
+          isEnabled: data.isEnabled === undefined ? true : data.isEnabled, // Handle undefined case, default to true
         });
       } else {
-        form.reset({ emoji: '🎉', content: '' });
+        form.reset({ emoji: '🎉', content: '', isEnabled: true });
       }
     } catch (error) {
       console.error("Error fetching message of the day:", error);
@@ -128,6 +132,8 @@ export default function MessageOfTheDayAdminPage() {
         <CardContent>
           {isLoading ? (
             <div className="space-y-4">
+              <Skeleton className="h-6 w-20" /> {/* For isEnabled label */}
+              <Skeleton className="h-10 w-12" /> {/* For Switch */}
               <Skeleton className="h-10 w-1/4" />
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-10 w-24" />
@@ -135,6 +141,29 @@ export default function MessageOfTheDayAdminPage() {
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="isEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-card/50">
+                      <div className="space-y-0.5">
+                        <FormLabel>Enable Message</FormLabel>
+                        <FormDescription>
+                          Turn this on to display the message on agent dashboards.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={form.formState.isSubmitting}
+                          aria-label="Enable or disable the message of the day"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="emoji"
@@ -146,7 +175,7 @@ export default function MessageOfTheDayAdminPage() {
                           <Button
                             variant="outline"
                             className="w-auto text-2xl p-2 h-auto text-center"
-                            disabled={form.formState.isSubmitting}
+                            disabled={form.formState.isSubmitting || !form.getValues('isEnabled')}
                           >
                             {currentEmoji || <Smile className="h-6 w-6 text-muted-foreground" />}
                           </Button>
@@ -156,9 +185,6 @@ export default function MessageOfTheDayAdminPage() {
                             onEmojiClick={onEmojiClick}
                             autoFocusSearch={false}
                             emojiStyle={EmojiStyle.NATIVE}
-                            // Optional: height and width for the picker
-                            // height={400}
-                            // width={350}
                           />
                         </PopoverContent>
                       </Popover>
@@ -179,6 +205,7 @@ export default function MessageOfTheDayAdminPage() {
                           {...field}
                           rows={8}
                           className="resize-y"
+                          disabled={form.formState.isSubmitting || !form.getValues('isEnabled')}
                         />
                       </FormControl>
                       <FormDescription>This message will be shown to all agents.</FormDescription>
