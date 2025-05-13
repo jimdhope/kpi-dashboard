@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, Medal, Trophy, AlertCircle, CheckSquare, ListChecks } from 'lucide-react';
+import { Target, Medal, Trophy, AlertCircle, CheckSquare, ListChecks, MessageSquare } from 'lucide-react'; // Added MessageSquare
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { AchievementCard } from '@/components/achievement-card';
 import { Progress } from '@/components/ui/progress';
+import { MessageOfTheDayDisplay } from '@/components/message-of-the-day-display'; // Import Message of the Day display
 
 // Interfaces
 interface LeaderboardEntry {
@@ -69,14 +70,22 @@ interface PodTargetSummary {
 
 interface AgentAchievementInputState {
   [ruleId: string]: {
-    value: number; // Changed to number for direct use
+    value: number;
     existingLogId?: string;
   };
 }
 
+// Message of the Day structure
+interface MessageOfTheDayDB {
+  emoji: string;
+  content: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
-// Helper functions for rank styling
 const getMedalColor = (rank: number) => {
     switch (rank) {
         case 1: return 'text-yellow-400';
@@ -94,7 +103,6 @@ const getRankHighlightStyle = (rank: number): React.CSSProperties => {
     }
 };
 
-// Dense Ranking Logic
 const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
     if (!Array.isArray(items) || items.length === 0) {
         return [];
@@ -137,6 +145,9 @@ export default function AgentDashboardPage() {
 
   const [achievementInputs, setAchievementInputs] = useState<AgentAchievementInputState>({});
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
+
+  const [messageOfTheDay, setMessageOfTheDay] = useState<MessageOfTheDayDB | null>(null);
+  const [isLoadingMessage, setIsLoadingMessage] = useState(true);
 
   const listenerRefs = React.useRef<{ [key: string]: Unsubscribe | undefined }>({});
 
@@ -206,6 +217,27 @@ export default function AgentDashboardPage() {
     };
   }, [cleanupListeners]);
 
+  // Fetch Message of the Day
+  useEffect(() => {
+    setIsLoadingMessage(true);
+    const messageDocRef = doc(db, "messageOfTheDay", "currentMessage");
+    const unsubscribeMessage = onSnapshot(messageDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setMessageOfTheDay(docSnap.data() as MessageOfTheDayDB);
+      } else {
+        setMessageOfTheDay(null); // No message set
+      }
+      setIsLoadingMessage(false);
+    }, (error) => {
+      console.error("Error fetching message of the day:", error);
+      toast({ variant: "destructive", title: "Message Error", description: "Could not load message of the day." });
+      setIsLoadingMessage(false);
+    });
+
+    return () => unsubscribeMessage();
+  }, [toast]);
+
+
   useEffect(() => {
     let isMounted = true;
     console.log(`[AgentDashboard] Data Effect triggered: isLoadingUser=${isLoadingUser}, agentPodId=${agentPodId}, currentUser=${!!currentUser?.id}`);
@@ -231,9 +263,7 @@ export default function AgentDashboardPage() {
         if (!isMounted) return;
         const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
         setPodAgents(currentAgents => {
-            const currentAgentIds = currentAgents.map(a => a.id).sort().join(',');
-            const fetchedAgentIds = fetchedAgents.map(a => a.id).sort().join(',');
-            if (currentAgentIds !== fetchedAgentIds) {
+            if (JSON.stringify(currentAgents.map(a=>a.id).sort()) !== JSON.stringify(fetchedAgents.map(a=>a.id).sort())) {
                 console.log("[AgentDashboard] Pod agents listener updated, found:", fetchedAgents.length);
                 return fetchedAgents;
             }
@@ -323,7 +353,7 @@ export default function AgentDashboardPage() {
                         });
                         setAchievementInputs(initialInputs);
                         console.log(`[AgentDashboard] Data Effect: Daily achievements listener updated. Initial inputs set.`, initialInputs);
-                        setIsLoadingData(false); // Final loading state update
+                        setIsLoadingData(false);
                     }, (e) => { if (isMounted) { console.error("[AgentDashboard] Error listening to daily achievements:", e); setIsLoadingData(false); }});
                 } else {
                      setError(prevError => prevError?.startsWith("You are not") ? prevError : "No active competition found for your pod today.");
@@ -331,7 +361,6 @@ export default function AgentDashboardPage() {
                 }
                 return foundActiveCompetition;
             }
-            // If competition didn't change but was already loading, ensure it stops.
             if (isLoadingData && currentActiveComp === foundActiveCompetition) setIsLoadingData(false);
             return currentActiveComp;
         });
@@ -365,7 +394,6 @@ export default function AgentDashboardPage() {
 
     const displayRules = Array.isArray(rules) ? rules : [];
 
-    // Agent Daily Achievements Calculation
     let dailyTotalPoints = 0;
     const dailyAchievementsMap = new Map<string, AgentDailyAchievements['achievements'][0]>();
     if (currentUser && Array.isArray(displayRules) && displayRules.length > 0) {
@@ -387,7 +415,6 @@ export default function AgentDashboardPage() {
     console.log("[AgentDashboard] Memo: Calculated final agent daily achievements:", finalAgentDailyAchievements);
 
 
-    // Agent Competition Achievements Calculation
     let competitionTotalPoints = 0;
     const competitionAchievementsMap = new Map<string, AgentCompetitionAchievements['achievements'][0]>();
      if (currentUser && Array.isArray(displayRules) && displayRules.length > 0 && Array.isArray(dailyLogs)) {
@@ -408,7 +435,6 @@ export default function AgentDashboardPage() {
     const finalAgentCompetitionAchievements: AgentCompetitionAchievements = { totalPoints: competitionTotalPoints, achievements: finalAgentCompetitionAchievementsList };
     console.log("[AgentDashboard] Memo: Calculated final agent competition achievements:", finalAgentCompetitionAchievements);
 
-    // Pod Target Summary Calculation
     const dayOfWeek = daysOfWeek[getDay(new Date())];
     const podRuleTotalsToday: Record<string, number> = {};
     if(Array.isArray(displayRules)) {
@@ -437,7 +463,6 @@ export default function AgentDashboardPage() {
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName)) : [];
     console.log("[AgentDashboard] Memo: Calculated pod target summary for today:", finalPodTargetSummary);
 
-    // Agent Leaderboard Calculation
     const agentScoresMap: Record<string, number> = {};
     if(Array.isArray(podAgents)){
         podAgents.forEach(agent => { if (agent && agent.id) agentScoresMap[agent.id] = 0; });
@@ -464,7 +489,6 @@ export default function AgentDashboardPage() {
     const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardDataPreSort);
     console.log(`[AgentDashboard] Memo: Calculated agent leaderboard (${finalAgentLeaderboard.length} entries)`);
 
-    // Team Leaderboard Calculation
     const teamScoresMap: Record<string, number> = {};
     if(Array.isArray(teams)){
         teams.forEach(team => { if (team && team.id) teamScoresMap[team.id] = 0; });
@@ -561,7 +585,7 @@ export default function AgentDashboardPage() {
     debouncedSave(ruleId, newValue);
   }, [achievementInputs, debouncedSave]);
 
-  const isLoading = isLoadingUser || isLoadingData;
+  const isLoading = isLoadingUser || isLoadingData || isLoadingMessage;
   const canLog = !isLoading && currentUser && agentPodId && Array.isArray(rules) && rules.length > 0 && activeCompetition;
 
   return (
@@ -572,6 +596,12 @@ export default function AgentDashboardPage() {
             <UIDescription>{error}</UIDescription>
             </Alert>
         )}
+
+        <MessageOfTheDayDisplay
+          emoji={messageOfTheDay?.emoji || null}
+          content={messageOfTheDay?.content || null}
+          isLoading={isLoadingMessage}
+        />
 
         <Card className="frosted-glass">
              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -18,7 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText } from 'lucide-react'; // Added FileText
+import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare } from 'lucide-react'; // Added MessageSquare
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -29,15 +29,15 @@ import { generateInitials } from '@/lib/utils';
 import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { RoleSwitcher } from './role-switcher'; // Use updated path
+import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
 import { AnimatedSvgBackground } from './animated-svg-background';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  roles?: UserRole[]; // Make optional if ProfileLayout always provides it
-  currentLayout?: 'admin' | 'agent' | null; // Make optional
-  onLayoutChange?: (newLayout: 'admin' | 'agent') => void; // Make optional
+  roles?: UserRole[];
+  currentLayout?: 'admin' | 'agent' | null;
+  onLayoutChange?: (newLayout: 'admin' | 'agent') => void;
 }
 
 export function DashboardLayout({ children, roles = [], currentLayout = null, onLayoutChange }: DashboardLayoutProps) {
@@ -46,9 +46,7 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const auth = getAuth(app);
 
-  // Log received props for debugging
   useEffect(() => {
-    // Use console.log for client-side components
     console.log("[DashboardLayout] Received props:", { roles, currentLayout });
   }, [roles, currentLayout]);
 
@@ -99,12 +97,9 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Fixed Background Container */}
       <div className="fixed-background-container">
         <AnimatedSvgBackground />
       </div>
-
-      {/* Container for Sidebar and Main Area (Header + Content) */}
       <div className="flex relative z-10 min-h-screen w-full">
         <Sidebar>
           <SidebarHeader className="p-4">
@@ -183,7 +178,7 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                       <SidebarMenuItem>
                         <Link href="/admin/certificates" passHref>
                         <SidebarMenuButton tooltip="Generate Certificates" isActive={currentPath === '/admin/certificates'}>
-                            <FileText /> {/* Changed icon */}
+                            <Award />
                             <span>Certificates</span>
                         </SidebarMenuButton>
                         </Link>
@@ -214,6 +209,14 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                         <UsersRound />
                         <span>Users</span>
                       </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <Link href="/admin/message-of-the-day" passHref>
+                    <SidebarMenuButton tooltip="Message of the Day" isActive={currentPath === '/admin/message-of-the-day'}>
+                      <MessageSquare />
+                      <span>Message of the Day</span>
+                    </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
               </SidebarGroup>
@@ -268,7 +271,6 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
           </SidebarFooter>
         </Sidebar>
 
-        {/* Main Area: Header + Scrollable Content */}
         <div className="flex-1 flex flex-col min-h-screen">
           <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6 w-full">
             <div className="flex items-center gap-2">
@@ -276,10 +278,9 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
               <h2 className="text-lg font-semibold hidden md:block">Admin Dashboard</h2>
             </div>
             <div className="flex items-center gap-4">
-              {/* Pass roles and layout info to RoleSwitcher */}
-              {onLayoutChange && roles && currentLayout && ( // Check if props are valid before rendering
+              {onLayoutChange && Array.isArray(roles) && roles.length > 0 && currentLayout && (
                 <RoleSwitcher
-                    availableRoles={roles} // Pass received roles
+                    availableRoles={roles}
                     currentLayout={currentLayout}
                     onLayoutChange={onLayoutChange}
                 />
@@ -288,7 +289,6 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
               <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
             </div>
           </header>
-          {/* Scrollable Main Content */}
           <main className="flex-1 p-4 md:p-6 overflow-y-auto">
             {children}
           </main>

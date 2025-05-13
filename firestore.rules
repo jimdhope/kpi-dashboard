@@ -1,77 +1,81 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow users to read/write their own user document
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow admins/managers to read all user data (for selectors etc.)
-      allow read: if request.auth != null && (
-                    request.auth.token.admin == true ||
-                    request.auth.token.podManager == true ||
-                    request.auth.token.teamLeader == true // Assuming roles are stored in custom claims
-                 );
-       // Alternatively, check roles stored in Firestore (less secure/efficient)
-       // allow read: if request.auth != null && (
-       //              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin', 'podManager', 'teamLeader'])
-       //             );
+    // Allow read/write access to all documents for authenticated users
+    // This is a very permissive rule, refine it based on your app's needs.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
 
-     // Allow authenticated users to read campaigns (needed for forms/context)
-     match /campaigns/{campaignId} {
+    // Specific rules for 'users' collection
+    match /users/{userId} {
+      // Allow users to read their own document
+      allow read: if request.auth.uid == userId;
+      // Allow users to create their own document (on signup)
+      allow create: if request.auth.uid == userId;
+      // Allow users to update their own document (e.g., profile changes)
+      // Consider restricting which fields can be updated by the user themselves.
+      allow update: if request.auth.uid == userId;
+      // Generally, users should not be able to delete their own Auth record directly from client.
+      // Deletion of Firestore user doc might be handled by an admin or a Cloud Function.
+      allow delete: if false; // Or restrict to admin roles
+    }
+
+    // Specific rules for 'campaigns' collection
+    match /campaigns/{campaignId} {
+      // Allow authenticated users to read campaigns
+      allow read: if request.auth != null;
+      // Allow users with 'admin' role (custom claim) to create, update, delete campaigns
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin']);
+    }
+    
+    // Specific rules for 'campaignRules' collection
+    match /campaignRules/{campaignId} {
         allow read: if request.auth != null;
-        // Allow write only for specific roles (e.g., admin) - CHECK YOUR ROLES IMPLEMENTATION
-        allow write: if request.auth != null; // Simplified for now, refine based on roles
-     }
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin']);
+    }
 
-      // Allow authenticated users to read campaign rules (needed for forms/context)
-     match /campaignRules/{campaignId} {
+    // Specific rules for 'pods' collection
+    match /pods/{podId} {
         allow read: if request.auth != null;
-        // Allow write only for specific roles (e.g., admin) - CHECK YOUR ROLES IMPLEMENTATION
-        allow write: if request.auth != null; // Simplified for now, refine based on roles
-     }
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin', 'podManager']);
+    }
 
-
-     // Allow authenticated users to read pods (needed for forms/context/assignment)
-     match /pods/{podId} {
+    // Specific rules for 'competitions' collection
+    match /competitions/{competitionId} {
         allow read: if request.auth != null;
-        // Allow write only for specific roles (e.g., admin) - CHECK YOUR ROLES IMPLEMENTATION
-        allow write: if request.auth != null; // Simplified for now, refine based on roles
-     }
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin', 'podManager']);
+    }
+    
+    // Specific rules for 'dailyAchievements' collection
+    match /dailyAchievements/{achievementId} {
+        allow read: if request.auth != null;
+        // Allow creation if user is authenticated and the agentId in the document matches their UID,
+        // OR if the user is an admin/podManager/teamLeader.
+        allow create: if request.auth != null && 
+                       (request.resource.data.agentId == request.auth.uid || 
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin', 'podManager', 'teamLeader']));
+        // Allow update/delete only by admin/podManager/teamLeader or the agent who created it (for their own logs)
+        allow update, delete: if request.auth != null &&
+                               (resource.data.agentId == request.auth.uid ||
+                                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin', 'podManager', 'teamLeader']));
+    }
 
-      // Allow authenticated users to read competitions (needed for forms/context/selection)
-     match /competitions/{competitionId} {
-        allow read: if request.auth != null; // Allow any authenticated user to read competitions
-        // Allow write only for specific roles (e.g., admin) - CHECK YOUR ROLES IMPLEMENTATION
-        allow write: if request.auth != null; // Simplified for now, refine based on roles
-     }
-
-      // Daily Achievements: Allow agents to log their own, admins/managers/leaders to log for their pod/team?
-     match /dailyAchievements/{logId} {
-        // Agents can create logs for themselves
-        allow create: if request.auth != null && request.resource.data.agentId == request.auth.uid;
-        // Allow reading based on roles or specific pod/team membership - refine this rule
-        allow read: if request.auth != null; // Simplistic for now
-        // Allow updating/deleting based on roles or ownership
-        allow update, delete: if request.auth != null && (
-                                  request.auth.uid == resource.data.agentId || // Allow self-update/delete
-                                  true // Placeholder for admin/manager roles check
-                               );
-        // Allow Admins/Managers/TLs to create logs (for backdating, etc.)
-        allow create: if request.auth != null; // Simplified for now, refine based on roles
-     }
-
-     // Daily Pod Targets: Allow Admins/Managers/Leaders to read/write
+    // Specific rules for 'dailyPodTargets' collection
      match /dailyPodTargets/{targetId} {
-        allow read, write: if request.auth != null; // Simplified for now, refine based on roles
-     }
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin', 'podManager', 'teamLeader']);
+    }
 
+    // Rules for 'messageOfTheDay' collection
+    match /messageOfTheDay/{messageId} {
+      // Allow all authenticated users to read the message
+      allow read: if request.auth != null;
+      // Allow only users with 'admin' role to write/update/delete the message
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin']);
+    }
 
-    // Default deny for any other path - remove this if using the rule below
-    // match /{document=**} {
-    //   allow read, write: if false;
-    // }
   }
 }
