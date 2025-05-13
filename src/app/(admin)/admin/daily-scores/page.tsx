@@ -23,7 +23,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { CalendarIcon, Loader2, AlertCircle, Send, Filter } from 'lucide-react'; // Added Filter
-import { format, startOfDay, getDay } from 'date-fns';
+import { format, startOfDay, getDay, endOfDay } from 'date-fns'; // Added endOfDay
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -337,7 +337,7 @@ export default function AdminDailyScoresPage() {
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
      const finalRuleKeyString = rules
-        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} = ${rule.name}`)
+        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`)
         .join('  ');
 
      const finalPodTargetSummaryString = finalPodTargetSummary
@@ -401,8 +401,7 @@ export default function AdminDailyScoresPage() {
     console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, podName: ${podName}, date: ${selectedDate}`);
     try {
       await sendTeamsUpdate(
-        selectedPodId, 
-        podName,
+        podName, // pass podName directly now
         webhookUrl,
         selectedDate,
         rules,
