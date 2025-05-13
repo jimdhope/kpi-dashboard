@@ -2,7 +2,7 @@
 'use client';
 
 import type { EditorState, LexicalEditor } from 'lexical';
-import { $getRoot, $getSelection, $isRangeSelection, COMMAND_PRIORITY_CRITICAL, SELECTION_CHANGE_COMMAND, FORMAT_TEXT_COMMAND, $isElementNode, ElementNode } from 'lexical';
+import { $getRoot, $getSelection, $isRangeSelection, COMMAND_PRIORITY_CRITICAL, SELECTION_CHANGE_COMMAND, FORMAT_TEXT_COMMAND, $isElementNode, ElementNode, $createParagraphNode } from 'lexical';
 import { useEffect, useState, useCallback } from 'react';
 
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
@@ -119,3 +119,4 @@ export function KpiQuestLexicalEditor({ initialHtml, onChange, editable = true }
     </LexicalComposer>
   );
 }
+
