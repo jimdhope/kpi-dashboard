@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,6 +15,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton component
 
 // Define the structure of the message in Firestore
 interface MessageOfTheDayData {
@@ -168,3 +170,4 @@ export default function MessageOfTheDayAdminPage() {
     </div>
   );
 }
+
