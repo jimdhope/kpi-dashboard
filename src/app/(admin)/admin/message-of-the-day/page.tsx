@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-// import { Textarea } from '@/components/ui/textarea'; // Textarea removed
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -94,7 +93,7 @@ export default function MessageOfTheDayAdminPage() {
     fetchMessage();
   }, [fetchMessage]);
 
-  const onSubmit = async (data: MessageFormData) => {
+  const handleActualSave = async (data: MessageFormData) => {
     if (!currentUserUid) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save." });
       return;
@@ -142,7 +141,7 @@ export default function MessageOfTheDayAdminPage() {
             </div>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="isEnabled"
@@ -216,7 +215,11 @@ export default function MessageOfTheDayAdminPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={isSaving || !form.getValues('isEnabled')}>
+                <Button
+                  type="button"
+                  onClick={form.handleSubmit(handleActualSave)}
+                  disabled={isSaving || !form.getValues('isEnabled')}
+                >
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Save className="mr-2 h-4 w-4" />
                   {isSaving ? 'Saving...' : 'Save Message'}
