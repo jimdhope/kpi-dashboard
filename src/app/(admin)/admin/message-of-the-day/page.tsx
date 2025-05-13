@@ -4,36 +4,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea'; // Use Textarea
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Loader2, Save, MessageCircle } from 'lucide-react';
+import { Loader2, Save, MessageCircle, Smile } from 'lucide-react'; // Added Smile icon
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton component
+import { Skeleton } from '@/components/ui/skeleton';
+import EmojiPicker, { type EmojiClickData, EmojiStyle } from 'emoji-picker-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Define the structure of the message in Firestore
 interface MessageOfTheDayData {
   emoji: string;
-  content: string; // Store as plain text or basic HTML if Textarea is used
+  content: string;
   updatedAt: Timestamp;
-  updatedBy: string; // UID of the admin who updated
+  updatedBy: string;
 }
 
 // Zod schema for form validation
 const messageFormSchema = z.object({
-  emoji: z.string().min(1, { message: "Emoji is required." }).max(5, { message: "Emoji should be short." }), // Basic validation
+  emoji: z.string().min(1, { message: "Emoji is required." }).max(10, { message: "Emoji should be short." }), // Increased max length slightly for some complex emojis
   content: z.string().min(10, { message: "Message content must be at least 10 characters." }).max(1000, { message: "Message content must be 1000 characters or less." }),
 });
 
 type MessageFormData = z.infer<typeof messageFormSchema>;
 
-const MESSAGE_DOC_ID = "currentMessage"; // Fixed document ID for the message
+const MESSAGE_DOC_ID = "currentMessage";
 const MESSAGE_COLLECTION = "messageOfTheDay";
 
 export default function MessageOfTheDayAdminPage() {
@@ -41,6 +45,7 @@ export default function MessageOfTheDayAdminPage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
   const form = useForm<MessageFormData>({
     resolver: zodResolver(messageFormSchema),
@@ -69,7 +74,6 @@ export default function MessageOfTheDayAdminPage() {
           content: data.content || '',
         });
       } else {
-        // No message set yet, use defaults
         form.reset({ emoji: '🎉', content: '' });
       }
     } catch (error) {
@@ -107,12 +111,19 @@ export default function MessageOfTheDayAdminPage() {
     }
   };
 
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    form.setValue('emoji', emojiData.emoji);
+    setIsEmojiPickerOpen(false); // Close picker after selection
+  };
+
+  const currentEmoji = form.watch('emoji');
+
   return (
     <div className="space-y-6">
       <Card className="frosted-glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary" /> Manage Message of the Day</CardTitle>
-          <CardDescription>Create or update the message that will be displayed on agent dashboards.</CardDescription>
+          <CardDescription>Create or update the message that will be displayed on agent dashboards. Basic HTML formatting is supported for the content.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -130,10 +141,28 @@ export default function MessageOfTheDayAdminPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Emoji/Icon</FormLabel>
-                      <FormControl>
-                        <Input placeholder="🎉" {...field} className="w-20 text-2xl p-2 h-auto text-center" maxLength={5} />
-                      </FormControl>
-                      <FormDescription>Enter a single emoji or short icon text.</FormDescription>
+                      <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-auto text-2xl p-2 h-auto text-center"
+                            disabled={form.formState.isSubmitting}
+                          >
+                            {currentEmoji || <Smile className="h-6 w-6 text-muted-foreground" />}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 border-0 shadow-lg">
+                          <EmojiPicker
+                            onEmojiClick={onEmojiClick}
+                            autoFocusSearch={false}
+                            emojiStyle={EmojiStyle.NATIVE}
+                            // Optional: height and width for the picker
+                            // height={400}
+                            // width={350}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>Click to select an emoji.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -146,7 +175,7 @@ export default function MessageOfTheDayAdminPage() {
                       <FormLabel>Message Content</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Enter the message of the day here. You can use basic HTML for formatting like <b>bold</b> or <i>italic</i>."
+                          placeholder="Enter the message of the day here. You can use basic HTML for formatting like <b>bold</b> or <i>italic</i>. For more advanced formatting, consider using a dedicated rich text editor."
                           {...field}
                           rows={8}
                           className="resize-y"
@@ -170,4 +199,3 @@ export default function MessageOfTheDayAdminPage() {
     </div>
   );
 }
-
