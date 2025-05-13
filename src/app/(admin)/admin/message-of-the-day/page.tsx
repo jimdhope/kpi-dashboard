@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+// import { Textarea } from '@/components/ui/textarea'; // Textarea removed
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -19,13 +20,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch"; // Import Switch component
+import { Switch } from "@/components/ui/switch";
+import { KpiQuestLexicalEditor } from '@/components/LexicalEditor'; // Import Lexical Editor
 
 // Define the structure of the message in Firestore
 interface MessageOfTheDayData {
   emoji: string;
-  content: string;
-  isEnabled: boolean; // Added isEnabled field
+  content: string; // Will store HTML content
+  isEnabled: boolean;
   updatedAt: Timestamp;
   updatedBy: string;
 }
@@ -33,8 +35,8 @@ interface MessageOfTheDayData {
 // Zod schema for form validation
 const messageFormSchema = z.object({
   emoji: z.string().min(1, { message: "Emoji is required." }).max(10, { message: "Emoji should be short." }),
-  content: z.string().min(10, { message: "Message content must be at least 10 characters." }).max(1000, { message: "Message content must be 1000 characters or less." }),
-  isEnabled: z.boolean(), // Added isEnabled to schema
+  content: z.string().min(1, { message: "Message content is required." }), // Validate HTML string
+  isEnabled: z.boolean(),
 });
 
 type MessageFormData = z.infer<typeof messageFormSchema>;
@@ -53,8 +55,8 @@ export default function MessageOfTheDayAdminPage() {
     resolver: zodResolver(messageFormSchema),
     defaultValues: {
       emoji: '🎉',
-      content: '',
-      isEnabled: true, // Default to enabled
+      content: '<p><br></p>', // Default to an empty paragraph HTML
+      isEnabled: true,
     },
   });
 
@@ -74,11 +76,11 @@ export default function MessageOfTheDayAdminPage() {
         const data = docSnap.data() as MessageOfTheDayData;
         form.reset({
           emoji: data.emoji || '🎉',
-          content: data.content || '',
-          isEnabled: data.isEnabled === undefined ? true : data.isEnabled, // Handle undefined case, default to true
+          content: data.content || '<p><br></p>',
+          isEnabled: data.isEnabled === undefined ? true : data.isEnabled,
         });
       } else {
-        form.reset({ emoji: '🎉', content: '', isEnabled: true });
+        form.reset({ emoji: '🎉', content: '<p><br></p>', isEnabled: true });
       }
     } catch (error) {
       console.error("Error fetching message of the day:", error);
@@ -117,7 +119,7 @@ export default function MessageOfTheDayAdminPage() {
 
   const onEmojiClick = (emojiData: EmojiClickData) => {
     form.setValue('emoji', emojiData.emoji);
-    setIsEmojiPickerOpen(false); // Close picker after selection
+    setIsEmojiPickerOpen(false);
   };
 
   const currentEmoji = form.watch('emoji');
@@ -132,10 +134,10 @@ export default function MessageOfTheDayAdminPage() {
         <CardContent>
           {isLoading ? (
             <div className="space-y-4">
-              <Skeleton className="h-6 w-20" /> {/* For isEnabled label */}
-              <Skeleton className="h-10 w-12" /> {/* For Switch */}
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-10 w-12" />
               <Skeleton className="h-10 w-1/4" />
-              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-40 w-full" /> {/* Increased height for editor */}
               <Skeleton className="h-10 w-24" />
             </div>
           ) : (
@@ -180,7 +182,7 @@ export default function MessageOfTheDayAdminPage() {
                             {currentEmoji || <Smile className="h-6 w-6 text-muted-foreground" />}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 border-0 shadow-lg">
+                        <PopoverContent className="w-auto p-0 border-0 shadow-lg z-50">
                           <EmojiPicker
                             onEmojiClick={onEmojiClick}
                             autoFocusSearch={false}
@@ -200,22 +202,21 @@ export default function MessageOfTheDayAdminPage() {
                     <FormItem>
                       <FormLabel>Message Content</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Enter the message of the day here."
-                          {...field}
-                          rows={8}
-                          className="resize-y"
-                          disabled={form.formState.isSubmitting || !form.getValues('isEnabled')}
+                        {/* Replace Textarea with LexicalEditor */}
+                        <KpiQuestLexicalEditor
+                          initialHtml={field.value}
+                          onChange={(html) => field.onChange(html)}
+                          editable={!form.formState.isSubmitting && form.getValues('isEnabled')}
                         />
                       </FormControl>
                       <FormDescription>
-                        This message will be shown to all agents. You can use basic HTML for formatting like &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;u&gt;underline&lt;/u&gt;, and &lt;br&gt; for line breaks.
+                        This message will be shown to all agents. Use the toolbar for formatting.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={isSaving}>
+                <Button type="submit" disabled={isSaving || !form.getValues('isEnabled')}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Save className="mr-2 h-4 w-4" />
                   {isSaving ? 'Saving...' : 'Save Message'}
