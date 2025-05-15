@@ -213,37 +213,15 @@ export default function CertificateGenerationPage() {
             const rankedTeams = assignDenseRanks(teamScores);
 
 
-             // --- SVG Templates (Use Google Font & Metallic Gradients) ---
-             // Font Imports for SVG - embedding using <style>
+             // --- SVG Templates (Use Web Safe Fonts & Metallic Gradients) ---
              const svgDefs = `
                  <defs>
                     <style type="text/css">
-                        @font-face {
-                          font-family: 'Inter';
-                          font-style: normal;
-                          font-weight: 400;
-                          src: url(data:font/woff2;base64,PLACEHOLDER_INTER_REGULAR_WOFF2_BASE64_DATA_HERE) format('woff2');
-                          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-                        }
-                        @font-face {
-                          font-family: 'Inter';
-                          font-style: normal;
-                          font-weight: 700;
-                          src: url(data:font/woff2;base64,PLACEHOLDER_INTER_BOLD_WOFF2_BASE64_DATA_HERE) format('woff2');
-                          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-                        }
-                        @font-face {
-                          font-family: 'Dancing Script';
-                          font-style: normal;
-                          font-weight: 700;
-                          src: url(data:font/woff2;base64,PLACEHOLDER_DANCING_SCRIPT_BOLD_WOFF2_BASE64_DATA_HERE) format('woff2');
-                          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-                        }
-                        /* Font families */
-                        .body-font { font-family: 'Inter', Arial, Helvetica, sans-serif; }
-                        .title-font { font-family: 'Inter', Arial, Helvetica, sans-serif; font-weight: 700; }
-                        .name-font { font-family: 'Dancing Script', 'Brush Script MT', cursive; font-weight: 700; }
-                        .signature-font { font-family: 'Dancing Script', 'Brush Script MT', cursive; font-size: 64px; font-weight: 700; }
+                        /* Font families - Using web-safe stacks */
+                        .body-font { font-family: Arial, Helvetica, sans-serif; }
+                        .title-font { font-family: Arial, Helvetica, sans-serif; font-weight: bold; }
+                        .name-font { font-family: 'Brush Script MT', cursive; font-weight: bold; }
+                        .signature-font { font-family: 'Brush Script MT', cursive; font-size: 64px; font-weight: bold; }
                     </style>
                     {/* Metallic Gradients */}
                     <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -397,12 +375,8 @@ export default function CertificateGenerationPage() {
                         .replace(/"/g, '&quot;')
                         .replace(/'/g, '&apos;');
                     
-                    // Create a RegExp to find all occurrences of the placeholder.
-                    // Escape the curly braces and any special characters in the key itself if necessary.
-                    // For simple keys like "Agent Name", direct construction is usually fine,
-                    // but escaping the key for RegExp is safer.
                     const escapedKeyForRegex = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`\\{\\{${escapedKeyForRegex}\\}\\}`, 'g'); // Use 'g' for global replacement
+                    const regex = new RegExp(`\\{\\{${escapedKeyForRegex}\\}\\}`, 'g');
                     
                     result = result.replace(regex, escapedValue);
                  }
