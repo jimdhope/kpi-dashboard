@@ -274,7 +274,7 @@ export default function CertificateGenerationPage() {
              const sealLeftX = 120; // X position for left seal
              const sealRightX = SVG_WIDTH - 120; // X position for right seal
              const rankTextFontSize = 32;
-             const rosettePathData = "M 0 -60 L 13 -50 L 30 -52 L 26 -35 L 52 -30 L 35 -26 L 50 -13 L 30 0 L 50 13 L 35 26 L 52 30 L 26 35 L 30 52 L 13 50 L 0 60 L -13 50 L -30 52 L -26 35 L -52 30 L -35 26 L -50 13 L -30 0 L -50 -13 L -35 -26 L -52 -30 L -26 -35 L -30 -52 L -13 -50 Z";
+             const rosettePathData = "M 0 -60 L 13 -50 L 30 -52 L 26 -35 L 52 -30 L 35 -26 L 50 -13 L 30 0 L 50 13 L 35 26 L 52 30 L 26 35 L 30 52 L 13 50 L 0 60 L -13 50 L -30 52 L -26 35 L -52 -30 L -35 -26 L -50 -13 L -30 0 L -50 -13 L -35 -26 L -52 -30 L -26 -35 L -30 -52 L -13 -50 Z";
 
              // Updated Templates applying gradients
              const svgTemplateFirst = `
@@ -386,16 +386,25 @@ export default function CertificateGenerationPage() {
              const replacePlaceholders = (template: string, data: Record<string, string>): string => {
                  let result = template;
                  for (const key in data) {
-                    // Added fallback for potentially missing values
-                    const value = data[key] || 'N/A';
-                    // XML-escape the data before replacing
+                    const placeholder = `{{${key}}}`; // Correctly construct placeholder string
+                    const value = String(data[key] || 'N/A'); // Ensure value is string
+
+                    // XML-escape the value
                     const escapedValue = value
                         .replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
                         .replace(/>/g, '&gt;')
                         .replace(/"/g, '&quot;')
                         .replace(/'/g, '&apos;');
-                    result = result.replace(new RegExp(`{{${key}}}`, 'gi'), escapedValue);
+                    
+                    // Create a RegExp to find all occurrences of the placeholder.
+                    // Escape the curly braces and any special characters in the key itself if necessary.
+                    // For simple keys like "Agent Name", direct construction is usually fine,
+                    // but escaping the key for RegExp is safer.
+                    const escapedKeyForRegex = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`\\{\\{${escapedKeyForRegex}\\}\\}`, 'g'); // Use 'g' for global replacement
+                    
+                    result = result.replace(regex, escapedValue);
                  }
                  return result;
              };
