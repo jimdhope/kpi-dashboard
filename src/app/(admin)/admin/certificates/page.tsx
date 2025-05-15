@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -217,7 +218,7 @@ export default function CertificateGenerationPage() {
              const svgDefs = `
                  <defs>
                     <style type="text/css">
-                         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;family=Dancing+Script:wght@700&amp;display=swap');
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;family=Dancing+Script:wght@700&amp;display=swap');
                         /* Font families */
                         .body-font { font-family: 'Inter', Arial, Helvetica, sans-serif; }
                         .title-font { font-family: 'Inter', Arial, Helvetica, sans-serif; font-weight: 700; }
@@ -366,7 +367,15 @@ export default function CertificateGenerationPage() {
                  let result = template;
                  for (const key in data) {
                     // Added fallback for potentially missing values
-                    result = result.replace(new RegExp(`{{${key}}}`, 'gi'), data[key] || 'N/A');
+                    const value = data[key] || 'N/A';
+                    // XML-escape the data before replacing
+                    const escapedValue = value
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&apos;');
+                    result = result.replace(new RegExp(`{{${key}}}`, 'gi'), escapedValue);
                  }
                  return result;
              };
