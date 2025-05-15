@@ -218,7 +218,27 @@ export default function CertificateGenerationPage() {
              const svgDefs = `
                  <defs>
                     <style type="text/css">
-                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;family=Dancing+Script:wght@700&amp;display=swap');
+                        @font-face {
+                          font-family: 'Inter';
+                          font-style: normal;
+                          font-weight: 400;
+                          src: url(data:font/woff2;base64,PLACEHOLDER_INTER_REGULAR_WOFF2_BASE64_DATA_HERE) format('woff2');
+                          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+                        }
+                        @font-face {
+                          font-family: 'Inter';
+                          font-style: normal;
+                          font-weight: 700;
+                          src: url(data:font/woff2;base64,PLACEHOLDER_INTER_BOLD_WOFF2_BASE64_DATA_HERE) format('woff2');
+                          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+                        }
+                        @font-face {
+                          font-family: 'Dancing Script';
+                          font-style: normal;
+                          font-weight: 700;
+                          src: url(data:font/woff2;base64,PLACEHOLDER_DANCING_SCRIPT_BOLD_WOFF2_BASE64_DATA_HERE) format('woff2');
+                          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+                        }
                         /* Font families */
                         .body-font { font-family: 'Inter', Arial, Helvetica, sans-serif; }
                         .title-font { font-family: 'Inter', Arial, Helvetica, sans-serif; font-weight: 700; }
@@ -603,3 +623,4 @@ export default function CertificateGenerationPage() {
         </div>
     );
 }
+
