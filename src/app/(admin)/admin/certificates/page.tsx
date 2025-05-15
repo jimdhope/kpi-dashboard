@@ -220,8 +220,8 @@ export default function CertificateGenerationPage() {
                         /* Font families - Using web-safe stacks */
                         .body-font { font-family: Arial, Helvetica, sans-serif; }
                         .title-font { font-family: Arial, Helvetica, sans-serif; font-weight: bold; }
-                        .name-font { font-family: 'Brush Script MT', cursive; font-weight: bold; }
-                        .signature-font { font-family: 'Brush Script MT', cursive; font-size: 64px; font-weight: bold; }
+                        .name-font { font-family: 'Brush Script MT', 'Segoe Script', 'Apple Chancery', cursive; font-size: 72px; font-weight: normal; }
+                        .signature-font { font-family: 'Brush Script MT', 'Segoe Script', 'Apple Chancery', cursive; font-size: 48px; font-weight: normal; }
                     </style>
                     {/* Metallic Gradients */}
                     <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -374,10 +374,10 @@ export default function CertificateGenerationPage() {
                         .replace(/>/g, '&gt;')
                         .replace(/"/g, '&quot;')
                         .replace(/'/g, '&apos;');
-                    
+
                     const escapedKeyForRegex = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     const regex = new RegExp(`\\{\\{${escapedKeyForRegex}\\}\\}`, 'g');
-                    
+
                     result = result.replace(regex, escapedValue);
                  }
                  return result;
