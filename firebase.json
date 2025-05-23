@@ -28,11 +28,6 @@
     "apphostingDeployMetadata": {
       "versionName": "v1",
       "serviceAccountEmail": "your-service-account@your-project.iam.gserviceaccount.com"
-    },
-    "spec": {
-      "maxInstances": 10,
-      "cpu": 1,
-      "memory": "512Mi"
     }
   }
 }

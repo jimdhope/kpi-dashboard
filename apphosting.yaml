@@ -1,7 +1,7 @@
+
 # Settings for Cloud Run
 runConfig:
   # Max instances must be set to 10 or fewer to set the requested memory and CPU.
-  # This addresses the error: "Max instances must be set to 10 or fewer to set the requested memory and CPU."
   maxInstances: 10
   # Default concurrency for Cloud Run (requests per instance)
   concurrency: 80
