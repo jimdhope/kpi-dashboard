@@ -36,6 +36,9 @@ interface Team {
 const SVG_WIDTH = 1123;
 const SVG_HEIGHT = 794;
 
+const CERTIFICATES_COMPETITION_KEY = 'certificatesPage_selectedCompetitionId';
+const CERTIFICATES_POD_KEY = 'certificatesPage_selectedPodId';
+
 
 export default function CertificateGenerationPage() {
     const [competitions, setCompetitions] = React.useState<Competition[]>([]);
@@ -48,6 +51,21 @@ export default function CertificateGenerationPage() {
     const [generatedCertificates, setGeneratedCertificates] = React.useState<CertificateData[]>([]);
     const [error, setError] = React.useState<string | null>(null);
     const { toast } = useToast();
+
+    // Load saved filters from localStorage on mount
+    React.useEffect(() => {
+        const savedCompetitionId = localStorage.getItem(CERTIFICATES_COMPETITION_KEY);
+        if (savedCompetitionId) {
+            setSelectedCompetitionId(savedCompetitionId);
+        }
+        const savedPodId = localStorage.getItem(CERTIFICATES_POD_KEY);
+        // Only set saved pod if its competition matches the currently selected/loaded one
+        // This check will be more effective once competitions are loaded
+        if (savedPodId) {
+            setSelectedPodId(savedPodId);
+        }
+    }, []);
+
 
     // --- Fetch Competitions ---
     React.useEffect(() => {
@@ -90,6 +108,22 @@ export default function CertificateGenerationPage() {
         if (!competition || !competition.podIds) return [];
         return pods.filter(pod => competition.podIds.includes(pod.id));
     }, [competitions, pods, selectedCompetitionId]);
+
+    // Update localStorage when filters change
+    const handleCompetitionChange = (value: string) => {
+        setSelectedCompetitionId(value);
+        localStorage.setItem(CERTIFICATES_COMPETITION_KEY, value);
+        setSelectedPodId(''); // Reset pod when competition changes
+        localStorage.removeItem(CERTIFICATES_POD_KEY);
+        setGeneratedCertificates([]);
+    };
+
+    const handlePodChange = (value: string) => {
+        setSelectedPodId(value);
+        localStorage.setItem(CERTIFICATES_POD_KEY, value);
+        setGeneratedCertificates([]);
+    };
+
 
     // --- Helper to format names with '&' ---
     const formatNames = (names: string[]): string => {
@@ -499,7 +533,7 @@ export default function CertificateGenerationPage() {
                             <Label htmlFor="competition-select">Competition</Label>
                             <Select
                                 value={selectedCompetitionId}
-                                onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); setGeneratedCertificates([]); }}
+                                onValueChange={handleCompetitionChange}
                                 disabled={isLoadingCompetitions || isLoadingData}
                             >
                                 <SelectTrigger id="competition-select">
@@ -517,7 +551,7 @@ export default function CertificateGenerationPage() {
                             <Label htmlFor="pod-select">Pod</Label>
                             <Select
                                 value={selectedPodId}
-                                onValueChange={(value) => { setSelectedPodId(value); setGeneratedCertificates([]); }}
+                                onValueChange={handlePodChange}
                                 disabled={isLoadingPods || isLoadingData || !selectedCompetitionId || availablePods.length === 0}
                             >
                                 <SelectTrigger id="pod-select">

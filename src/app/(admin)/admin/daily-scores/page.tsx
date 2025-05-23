@@ -1,3 +1,4 @@
+
 // src/app/(admin)/admin/daily-scores/page.tsx
 'use client';
 
@@ -59,6 +60,7 @@ interface CompetitionWithRules extends Competition {
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+const DAILY_SCORES_POD_KEY = 'dailyScoresPage_selectedPodId';
 
 export default function AdminDailyScoresPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -74,6 +76,15 @@ export default function AdminDailyScoresPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
+
+  // Load saved filters from localStorage on mount
+  React.useEffect(() => {
+    const savedPodId = localStorage.getItem(DAILY_SCORES_POD_KEY);
+    if (savedPodId) {
+        setSelectedPodId(savedPodId);
+    }
+    // selectedDate defaults to today, not persisted
+  }, []);
 
   useEffect(() => {
     setIsLoadingPods(true);
@@ -433,7 +444,14 @@ export default function AdminDailyScoresPage() {
           <div className="flex flex-wrap gap-4 mb-6 items-end">
             <div className="grid gap-2">
               <Label htmlFor="pod-select">Pod</Label>
-              <Select onValueChange={setSelectedPodId} value={selectedPodId} disabled={isLoadingPods || isLoadingData}>
+              <Select
+                onValueChange={(value) => {
+                    setSelectedPodId(value);
+                    localStorage.setItem(DAILY_SCORES_POD_KEY, value);
+                }}
+                value={selectedPodId}
+                disabled={isLoadingPods || isLoadingData}
+              >
                 <SelectTrigger id="pod-select" className="w-[200px]">
                   <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
                 </SelectTrigger>

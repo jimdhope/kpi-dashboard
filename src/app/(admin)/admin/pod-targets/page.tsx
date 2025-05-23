@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -38,6 +39,9 @@ export interface DailyTargetData {
 
 const daysOfWeek = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]; // Consistent order
 
+const POD_TARGETS_COMPETITION_KEY = 'podTargetsPage_selectedCompetitionId';
+const POD_TARGETS_POD_KEY = 'podTargetsPage_selectedPodId';
+
 export default function AdminPodTargetsPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [pods, setPods] = useState<Pod[]>([]);
@@ -50,6 +54,20 @@ export default function AdminPodTargetsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Load saved filters from localStorage on mount
+  React.useEffect(() => {
+    const savedCompetitionId = localStorage.getItem(POD_TARGETS_COMPETITION_KEY);
+    if (savedCompetitionId) {
+        setSelectedCompetitionId(savedCompetitionId);
+    }
+    const savedPodId = localStorage.getItem(POD_TARGETS_POD_KEY);
+    // This will be re-evaluated when competitions/pods load
+    if (savedPodId) {
+        setSelectedPodId(savedPodId);
+    }
+  }, []);
+
 
   // 1. Fetch Competitions and Pods
   useEffect(() => {
@@ -224,7 +242,12 @@ export default function AdminPodTargetsPage() {
             <div className="grid gap-2">
               <Label htmlFor="competition-select">Competition</Label>
               <Select
-                  onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); }} // Reset pod on comp change
+                  onValueChange={(value) => {
+                      setSelectedCompetitionId(value);
+                      localStorage.setItem(POD_TARGETS_COMPETITION_KEY, value);
+                      setSelectedPodId(''); // Reset pod on comp change
+                      localStorage.removeItem(POD_TARGETS_POD_KEY);
+                  }}
                   value={selectedCompetitionId}
                   disabled={isLoading || isSaving}
               >
@@ -247,7 +270,10 @@ export default function AdminPodTargetsPage() {
             <div className="grid gap-2">
               <Label htmlFor="pod-select">Pod</Label>
               <Select
-                  onValueChange={setSelectedPodId}
+                  onValueChange={(value) => {
+                      setSelectedPodId(value);
+                      localStorage.setItem(POD_TARGETS_POD_KEY, value);
+                  }}
                   value={selectedPodId}
                   disabled={isLoading || isSaving || !selectedCompetitionId || availablePods.length === 0}
               >
@@ -344,3 +370,4 @@ export default function AdminPodTargetsPage() {
     </div>
   );
 }
+

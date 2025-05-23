@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -78,6 +79,7 @@ const debounce = (func: Function, delay: number) => {
     };
 };
 
+const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
 
 export default function AdminLogAchievementsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -100,6 +102,15 @@ export default function AdminLogAchievementsPage() {
   const [isSendingToTeams, setIsSendingToTeams] = useState(false);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
+
+  // Load saved filters from localStorage on mount
+  React.useEffect(() => {
+    const savedPodId = localStorage.getItem(LOG_ACHIEVEMENTS_POD_KEY);
+    if (savedPodId) {
+        setSelectedPodId(savedPodId);
+    }
+    // selectedDate defaults to today, not persisted
+  }, []);
 
 
   useEffect(() => {
@@ -486,7 +497,14 @@ export default function AdminLogAchievementsPage() {
           <div className="flex flex-wrap gap-4 items-end">
             <div className="grid gap-2">
               <Label htmlFor="pod-select">Pod</Label>
-              <Select onValueChange={setSelectedPodId} value={selectedPodId} disabled={isLoadingPods}>
+              <Select
+                onValueChange={(value) => {
+                    setSelectedPodId(value);
+                    localStorage.setItem(LOG_ACHIEVEMENTS_POD_KEY, value);
+                }}
+                value={selectedPodId}
+                disabled={isLoadingPods}
+              >
                 <SelectTrigger id="pod-select" className="w-[200px]">
                   <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
                 </SelectTrigger>
@@ -604,3 +622,4 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
+

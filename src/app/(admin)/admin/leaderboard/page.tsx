@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -99,6 +100,9 @@ const usersCollectionRef = collection(db, 'users');
 const competitionsCollectionRef = collection(db, 'competitions');
 const dailyAchievementsCollectionRef = collection(db, 'dailyAchievements');
 
+const LEADERBOARD_COMPETITION_KEY = 'leaderboardPage_selectedCompetitionId';
+const LEADERBOARD_POD_KEY = 'leaderboardPage_selectedPodId';
+
 export default function AdminLeaderboardPage() {
   // State changes: removed timeframe/date, added selectedCompetitionId
   const [pods, setPods] = useState<Pod[]>([]);
@@ -112,6 +116,19 @@ export default function AdminLeaderboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(false); // Loading logs, teams
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Load saved filters from localStorage on mount
+  React.useEffect(() => {
+    const savedCompetitionId = localStorage.getItem(LEADERBOARD_COMPETITION_KEY);
+    if (savedCompetitionId) {
+        setSelectedCompetitionId(savedCompetitionId);
+    }
+    const savedPodId = localStorage.getItem(LEADERBOARD_POD_KEY);
+    // This will be re-evaluated when competitions/pods load to ensure pod belongs to competition
+    if (savedPodId) {
+        setSelectedPodId(savedPodId);
+    }
+  }, []);
 
   // 1. Fetch Base Data (Pods, Users, Competitions) - Use onSnapshot for potential updates
   useEffect(() => {
@@ -355,7 +372,12 @@ export default function AdminLeaderboardPage() {
               <div className="grid gap-2">
                 <Label htmlFor="competition-select">Competition</Label>
                 <Select
-                  onValueChange={(value) => { setSelectedCompetitionId(value); setSelectedPodId(''); }}
+                  onValueChange={(value) => {
+                      setSelectedCompetitionId(value);
+                      localStorage.setItem(LEADERBOARD_COMPETITION_KEY, value);
+                      setSelectedPodId(''); // Reset pod when competition changes
+                      localStorage.removeItem(LEADERBOARD_POD_KEY);
+                  }}
                   value={selectedCompetitionId}
                   disabled={isLoadingBase}
                 >
@@ -375,7 +397,15 @@ export default function AdminLeaderboardPage() {
               <div className="grid gap-2">
                 <Label htmlFor="pod-filter-select">Filter by Pod (Optional)</Label>
                 <Select
-                  onValueChange={(value) => setSelectedPodId(value === 'all' ? '' : value)}
+                  onValueChange={(value) => {
+                      const newPodId = value === 'all' ? '' : value;
+                      setSelectedPodId(newPodId);
+                      if (newPodId) {
+                        localStorage.setItem(LEADERBOARD_POD_KEY, newPodId);
+                      } else {
+                        localStorage.removeItem(LEADERBOARD_POD_KEY);
+                      }
+                  }}
                   value={selectedPodId || 'all'}
                   disabled={isLoading || !selectedCompetitionId || participatingPods.length === 0}
                 >

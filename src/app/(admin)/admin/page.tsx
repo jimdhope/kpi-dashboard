@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -12,9 +13,9 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Form } from '@/components/ui/form';
+import { Form } from '@/components/ui/form'; // Ensure Form is imported if useForm is used with it
 import { useForm } from 'react-hook-form';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfMonth, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { AppUser } from '@/services/user';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
@@ -45,6 +46,9 @@ interface AchievementSummaryEntry {
 // Timeframe options
 type Timeframe = 'daily' | 'weekly' | 'monthly' | 'allTime';
 
+const ADMIN_DASHBOARD_TIMEFRAME_KEY = 'adminDashboard_timeframe';
+const ADMIN_DASHBOARD_SELECTED_DATE_KEY = 'adminDashboard_selectedDate';
+
 
 export default function AdminDashboardPage() {
   // --- State Variables ---
@@ -57,7 +61,23 @@ export default function AdminDashboardPage() {
   const [allRules, setAllRules] = useState<RuleFormData[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-   const form = useForm();
+   const form = useForm(); // Initialize useForm
+
+    // Load saved filters from localStorage on mount
+    React.useEffect(() => {
+        const savedTimeframe = localStorage.getItem(ADMIN_DASHBOARD_TIMEFRAME_KEY) as Timeframe | null;
+        if (savedTimeframe) {
+            setTimeframe(savedTimeframe);
+        }
+        const savedDateString = localStorage.getItem(ADMIN_DASHBOARD_SELECTED_DATE_KEY);
+        if (savedDateString) {
+            const date = new Date(savedDateString);
+            if (!isNaN(date.getTime())) {
+                setSelectedDate(startOfDay(date));
+            }
+        }
+    }, []);
+
 
   // Fetch base data (Users, Pods, Rules)
   useEffect(() => {
@@ -136,8 +156,8 @@ export default function AdminDashboardPage() {
               endDate = endOfDay(referenceDate);
               break;
           case 'weekly':
-              startDate = startOfDay(referenceDate); // Start of the week containing selected date
-              endDate = endOfDay(addDays(referenceDate, 6)); // End of the week containing selected date
+              startDate = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Assuming week starts on Monday
+              endDate = endOfDay(addDays(startDate, 6));
               break;
           case 'monthly':
               startDate = startOfMonth(referenceDate);
@@ -291,7 +311,14 @@ export default function AdminDashboardPage() {
           <CardContent className="flex flex-wrap gap-4 items-end">
              <div className="grid gap-1.5">
                  <Label htmlFor="timeframe-select">Select Period</Label>
-                 <Select onValueChange={(value) => setTimeframe(value as Timeframe)} value={timeframe} disabled={isLoading}>
+                 <Select
+                    onValueChange={(value) => {
+                        setTimeframe(value as Timeframe);
+                        localStorage.setItem(ADMIN_DASHBOARD_TIMEFRAME_KEY, value);
+                    }}
+                    value={timeframe}
+                    disabled={isLoading}
+                 >
                      <SelectTrigger id="timeframe-select" className="w-[180px]">
                          <SelectValue placeholder="Select Timeframe" />
                      </SelectTrigger>
@@ -321,7 +348,15 @@ export default function AdminDashboardPage() {
                          <Calendar
                              mode="single"
                              selected={selectedDate}
-                             onSelect={(date) => setSelectedDate(date ? startOfDay(date) : undefined)}
+                             onSelect={(date) => {
+                                 const newDate = date ? startOfDay(date) : undefined;
+                                 setSelectedDate(newDate);
+                                 if (newDate) {
+                                     localStorage.setItem(ADMIN_DASHBOARD_SELECTED_DATE_KEY, newDate.toISOString());
+                                 } else {
+                                     localStorage.removeItem(ADMIN_DASHBOARD_SELECTED_DATE_KEY);
+                                 }
+                             }}
                              initialFocus
                              disabled={timeframe === 'allTime'}
                          />
@@ -400,3 +435,4 @@ export default function AdminDashboardPage() {
     </Form>
   );
 }
+

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -44,6 +45,9 @@ export interface Team {
 
 const UNASSIGNED_CONTAINER_ID = 'unassigned-agents';
 
+const TEAMS_COMPETITION_KEY = 'teamsPage_selectedCompetitionId';
+const TEAMS_POD_KEY = 'teamsPage_selectedPodId';
+
 export default function AdminTeamsPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [pods, setPods] = useState<Pod[]>([]);
@@ -63,6 +67,20 @@ export default function AdminTeamsPage() {
   const competitionsCollectionRef = collection(db, 'competitions');
   const podsCollectionRef = collection(db, 'pods');
   const usersCollectionRef = collection(db, 'users');
+
+  // Load saved filters from localStorage on mount
+  React.useEffect(() => {
+    const savedCompetitionId = localStorage.getItem(TEAMS_COMPETITION_KEY);
+    if (savedCompetitionId) {
+        setSelectedCompetitionId(savedCompetitionId);
+    }
+    const savedPodId = localStorage.getItem(TEAMS_POD_KEY);
+    // This will be re-evaluated when competitions/pods load
+    if (savedPodId) {
+        setSelectedPodId(savedPodId);
+    }
+  }, []);
+
 
   useEffect(() => {
     setIsLoading(true);
@@ -207,7 +225,9 @@ export default function AdminTeamsPage() {
 
   const handleCompetitionChange = (id: string) => {
     setSelectedCompetitionId(id);
+    localStorage.setItem(TEAMS_COMPETITION_KEY, id);
     setSelectedPodId('');
+    localStorage.removeItem(TEAMS_POD_KEY);
     setTeams([]);
     setUnassignedAgents([]);
     setIsLoadingTeams(true);
@@ -215,6 +235,7 @@ export default function AdminTeamsPage() {
 
   const handlePodChange = (id: string) => {
     setSelectedPodId(id);
+    localStorage.setItem(TEAMS_POD_KEY, id);
     setIsLoadingTeams(true);
   };
 
@@ -496,3 +517,4 @@ export default function AdminTeamsPage() {
         </Dialog>
     );
 }
+
