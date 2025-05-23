@@ -33,7 +33,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
-import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
 import { Switch } from "@/components/ui/switch"; // Import Switch
 import {
@@ -81,7 +80,7 @@ export default function AdminDailyScoresPage() {
   const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [isLoadingPods, setIsLoadingPods] = useState(true);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false); // Combined loading for agents, competition, logs, targets
   const [isSendingToTeams, setIsSendingToTeams] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -134,25 +133,23 @@ export default function AdminDailyScoresPage() {
      return () => unsubscribe();
   }, [toast]);
 
+  // Effect to fetch agents and active competition
   useEffect(() => {
     if (!selectedPodId) {
       setAgents([]);
       setRules([]);
-      setDailyLogs([]);
-      setDailyTargets(null);
+      setDailyLogs([]); // Reset logs when pod changes
+      setDailyTargets(null); // Reset targets when pod changes
       setActiveCompetitionId(null);
-      setIsLoadingData(false);
+      setIsLoadingData(false); // Not loading if no pod
       return;
     }
 
-    setIsLoadingData(true);
+    setIsLoadingData(true); // Start loading for agents/competition
     setError(null);
     setAgents([]);
     setRules([]);
-    setDailyLogs([]);
-    setDailyTargets(null);
-    setActiveCompetitionId(null);
-
+    setActiveCompetitionId(null); // Reset active competition
 
     const fetchAgentsAndCompetition = async () => {
       console.log(`[DailyScoresPage] Fetching agents for Pod: ${selectedPodId}`);
@@ -172,10 +169,7 @@ export default function AdminDailyScoresPage() {
             toast({ variant: "default", title: "No Agents", description: "No agents found in this pod." });
             setRules([]);
             setActiveCompetitionId(null);
-            setDailyLogs([]);
-            setDailyTargets(null);
-            setIsLoadingData(false);
-            return;
+            // Don't set isLoadingData to false here, let the logs/targets effect handle it or if no competition found below
          }
 
         const competitionsRef = collection(db, 'competitions');
@@ -201,12 +195,13 @@ export default function AdminDailyScoresPage() {
           console.log(`[DailyScoresPage] Active competition found: ${foundCompetition.id}`);
           setRules(foundCompetition.rules || []);
           setActiveCompetitionId(foundCompetition.id);
+          // setIsLoadingData(false); // Data for agents/competition loaded, logs/targets will have their own loading
         } else {
           console.log("[DailyScoresPage] No active competition found.");
           setRules([]);
           setActiveCompetitionId(null);
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date." });
-          setIsLoadingData(false);
+          setIsLoadingData(false); // No competition, so stop loading data for this scope
         }
 
       } catch (err) {
@@ -216,7 +211,7 @@ export default function AdminDailyScoresPage() {
         setAgents([]);
         setRules([]);
         setActiveCompetitionId(null);
-        setIsLoadingData(false);
+        setIsLoadingData(false); // Error, stop loading
       }
     };
 
@@ -224,18 +219,17 @@ export default function AdminDailyScoresPage() {
 
    }, [selectedPodId, selectedDate, toast]);
 
+   // Effect to fetch daily logs and targets (depends on activeCompetitionId)
    useEffect(() => {
-        if (!activeCompetitionId || !selectedPodId || agents.length === 0) {
+        if (!activeCompetitionId || !selectedPodId) { // Check if activeCompetitionId and selectedPodId are available
              setDailyLogs([]);
              setDailyTargets(null);
-             if (!isLoadingData && (!activeCompetitionId || agents.length === 0)) {
-                 setIsLoadingData(false);
-             }
+             setIsLoadingData(false); // If no active competition or pod, not loading this data
              return () => {};
          }
 
          console.log(`[DailyScoresPage] Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}, Date: ${selectedDate.toISOString()}`);
-         setIsLoadingData(true);
+         setIsLoadingData(true); // Start loading logs/targets specifically
 
          let unsubscribeLogs: Unsubscribe = () => {};
          let unsubscribeTargets: Unsubscribe = () => {};
@@ -254,11 +248,12 @@ export default function AdminDailyScoresPage() {
               const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
               setDailyLogs(fetchedLogs);
               setError(null);
+              // Don't set isLoadingData false here, wait for targets or error
           }, (err) => {
               console.error("[DailyScoresPage] Error listening to achievements:", err);
               setError("Failed to load real-time achievement data.");
               setDailyLogs([]);
-              setIsLoadingData(false);
+              setIsLoadingData(false); // Error, stop loading
           });
 
          const targetsDocId = `${activeCompetitionId}_${selectedPodId}`;
@@ -271,12 +266,12 @@ export default function AdminDailyScoresPage() {
                   console.log("[DailyScoresPage] No daily targets document found for:", targetsDocId);
                   setDailyTargets(null);
               }
-             setIsLoadingData(false);
+             setIsLoadingData(false); // Both listeners have had a chance or one errored
          }, (err) => {
               console.error("[DailyScoresPage] Error listening to daily targets:", err);
               setError("Failed to load daily target data.");
               setDailyTargets(null);
-              setIsLoadingData(false);
+              setIsLoadingData(false); // Error, stop loading
          });
 
          return () => {
@@ -284,7 +279,9 @@ export default function AdminDailyScoresPage() {
              unsubscribeLogs();
              unsubscribeTargets();
          };
-   }, [activeCompetitionId, selectedPodId, selectedDate, agents, isLoadingData]); // Removed agents from here and added isLoadingData
+   // Dependencies for this effect: activeCompetitionId, selectedPodId, selectedDate
+   }, [activeCompetitionId, selectedPodId, selectedDate, toast]);
+
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
      console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
@@ -633,3 +630,4 @@ export default function AdminDailyScoresPage() {
     </TooltipProvider>
   );
 }
+
