@@ -263,18 +263,16 @@ export default function AdminLeaderboardPage() {
         if (items.length === 0) return [];
 
          const sortedItems = [...items].sort((a, b) => b.score - a.score);
-         const scoreRankMap = new Map<number, number>();
-         let rankCounter = 1;
-
-         for (const item of sortedItems) {
-             if (!scoreRankMap.has(item.score)) {
-                 scoreRankMap.set(item.score, rankCounter++);
+         let currentRank = 0;
+         let lastScore = Infinity;
+         const rankedItems = sortedItems.map((item) => {
+             if (item.score < lastScore) {
+                 currentRank++;
              }
-         }
-         return sortedItems.map(item => ({
-             ...item,
-             rank: scoreRankMap.get(item.score)!
-         }));
+             lastScore = item.score;
+             return { ...item, rank: currentRank };
+         });
+         return rankedItems;
     };
 
     // 5. Calculate Leaderboard Scores (useMemo)
@@ -448,7 +446,7 @@ export default function AdminLeaderboardPage() {
                     <CardTitle className="text-lg font-semibold">Agent Leaderboard</CardTitle>
                     <Users className="h-5 w-5 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="overflow-y-auto max-h-[calc(100vh-380px)]">
+                <CardContent>
                     {agentLeaderboard.length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
