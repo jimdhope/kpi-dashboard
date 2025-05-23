@@ -4,7 +4,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Settings, Home, Users, Trophy, BarChart, CheckSquare, ClipboardList, Target, Megaphone, ShieldCheck, UsersRound, Award, PlusCircle, Edit, ListChecks, UserPlus, Shuffle, MessageSquare, Filter, CalendarIcon } from 'lucide-react';
+import { Settings, Home, Users, Trophy, BarChart, CheckSquare, ClipboardList, Target, Megaphone, ShieldCheck, UsersRound, Award, PlusCircle, Edit, ListChecks, UserPlus, Shuffle, MessageSquare, Filter, CalendarIcon, User } from 'lucide-react'; // Added User icon
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -241,4 +241,6 @@ export default function AdminGuidePage() {
     </div>
   );
 }
+    
+
     
