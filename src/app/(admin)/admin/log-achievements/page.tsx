@@ -87,7 +87,7 @@ const debounce = (func: Function, delay: number) => {
 };
 
 const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
-const AUTO_SEND_TEAMS_KEY_PREFIX = 'logAchievementsPage_autoSendTeams_';
+const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_'; // Consistent prefix
 
 
 export default function AdminLogAchievementsPage() {
@@ -117,7 +117,7 @@ export default function AdminLogAchievementsPage() {
     if (savedPodId) {
         setSelectedPodId(savedPodId);
         // Load auto-send setting for this pod
-        const savedAutoSend = localStorage.getItem(`${AUTO_SEND_TEAMS_KEY_PREFIX}${savedPodId}`);
+        const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${savedPodId}`);
         setAutoSendToTeams(savedAutoSend === 'true');
     }
   }, []);
@@ -125,14 +125,18 @@ export default function AdminLogAchievementsPage() {
   const handleSelectedPodChange = (podId: string) => {
     setSelectedPodId(podId);
     localStorage.setItem(LOG_ACHIEVEMENTS_POD_KEY, podId);
-    const savedAutoSend = localStorage.getItem(`${AUTO_SEND_TEAMS_KEY_PREFIX}${podId}`);
+    const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${podId}`);
     setAutoSendToTeams(savedAutoSend === 'true');
   };
 
   const handleAutoSendToggle = (checked: boolean) => {
     setAutoSendToTeams(checked);
     if (selectedPodId) {
-        localStorage.setItem(`${AUTO_SEND_TEAMS_KEY_PREFIX}${selectedPodId}`, String(checked));
+        localStorage.setItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${selectedPodId}`, String(checked));
+         toast({
+            title: "Auto-send Preference Updated",
+            description: `Automatic Teams updates for this pod are now ${checked ? 'enabled' : 'disabled'}.`,
+        });
     }
   };
 
@@ -235,6 +239,8 @@ export default function AdminLogAchievementsPage() {
             }
         }
         if (!competitionForLogging && competitionSnapshot.docs.length > 0) {
+            // If no active competition for today, try to find the most recent one for this pod
+            // Or the closest future one. For simplicity, let's stick to the most recent one overall.
             competitionForLogging = { id: competitionSnapshot.docs[0].id, ...competitionSnapshot.docs[0].data() } as Competition & { id: string };
             toast({ variant: "default", title: "Logging to Past/Future Competition", description: `No competition active for ${selectedDate.toLocaleDateString()}. Logging against "${competitionForLogging.name}". Ensure this is correct.` });
         }
@@ -251,31 +257,32 @@ export default function AdminLogAchievementsPage() {
                 where('date', '==', dateTimestamp),
                 where('competitionId', '==', competitionForLogging.id)
             );
-            const initialAchievementsSnapshot = await getDocs(initialAchievementsQuery);
-            const initialLogsForForm = initialAchievementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-
-            const initialInputs: AchievementInputState = {};
-            fetchedAgents.forEach(agent => {
-                if (!agent.id) return;
-                initialInputs[agent.id] = {};
-                (competitionForLogging?.rules || []).forEach(rule => {
-                    if (!rule.id) return;
-                    const existingLog = initialLogsForForm.find(log => log.agentId === agent.id && log.ruleId === rule.id);
-                    initialInputs[agent.id!][rule.id] = {
-                        value: existingLog ? String(existingLog.value) : '',
-                        existingLogId: existingLog?.id,
-                    };
-                });
-            });
-            setAchievementInputs(initialInputs);
-            setIsLoadingInitialAchievements(false);
-
+            // Listen for real-time updates to logs
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-                setCurrentDailyLogsForPod(logs);
+                setCurrentDailyLogsForPod(logs); // Update the state with live logs
+
+                // Initialize/update form inputs based on these live logs
+                const initialInputs: AchievementInputState = {};
+                fetchedAgents.forEach(agent => {
+                    if (!agent.id) return;
+                    initialInputs[agent.id] = {};
+                    (competitionForLogging?.rules || []).forEach(rule => {
+                        if (!rule.id) return;
+                        const existingLog = logs.find(log => log.agentId === agent.id && log.ruleId === rule.id);
+                        initialInputs[agent.id!][rule.id] = {
+                            value: existingLog ? String(existingLog.value) : '',
+                            existingLogId: existingLog?.id,
+                        };
+                    });
+                });
+                setAchievementInputs(initialInputs);
+                setIsLoadingInitialAchievements(false); // Mark as loaded once form is populated
+
             }, (err) => {
                 console.error("Error listening to daily logs:", err);
                 setError("Failed to load real-time achievement data.");
+                setIsLoadingInitialAchievements(false);
             });
 
             const targetsDocId = `${competitionForLogging.id}_${selectedPodId}`;
@@ -304,7 +311,10 @@ export default function AdminLogAchievementsPage() {
         toast({ variant: "destructive", title: "Error", description: "Could not load agent or competition data." });
         setAgents([]); setCompetitionRules([]); setAchievementInputs({}); setActiveCompetitionId(null);
       } finally {
-        setIsLoadingAgents(false); setIsLoadingRules(false); setIsLoadingInitialAchievements(false);
+        // Ensure loading states are false if not already set by specific branches
+        if (isLoadingAgents) setIsLoadingAgents(false);
+        if (isLoadingRules) setIsLoadingRules(false);
+        if (isLoadingInitialAchievements) setIsLoadingInitialAchievements(false);
       }
     };
 
@@ -327,9 +337,11 @@ export default function AdminLogAchievementsPage() {
         },
       },
     }));
-     debouncedSave(agentId, ruleId, value);
+     // Trigger save automatically on change after a short delay (debounced)
+     debouncedSave(agentId, ruleId, value); // Pass the raw string value
   };
 
+  // Debounced save function
     const handleSaveAchievement = async (agentId: string, ruleId: string, valueStr: string | undefined) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
       console.error("Pod, user, or active competition information missing for auto-save.");
@@ -337,17 +349,22 @@ export default function AdminLogAchievementsPage() {
     }
 
     const rule = competitionRules.find(r => r.id === ruleId);
-    const agentInput = achievementInputs[agentId]?.[ruleId];
+    const agentInput = achievementInputs[agentId]?.[ruleId]; // Get current input state
 
     if (!rule || agentInput === undefined) {
-       console.error("Rule or input data not found for auto-save. Rule:", rule, "AgentInput:", agentInput);
+      // This might happen if rule.id is undefined or agentId is not in achievementInputs
+       console.error("Rule or input data not found for auto-save. Rule:", rule, "AgentInput for agentId", agentId, "ruleId", ruleId, ":", agentInput);
       return;
     }
 
+    // Parse valueStr to number, default to 0 if empty or invalid
     const value = parseInt(valueStr || '0', 10);
 
      if (isNaN(value) || value < 0) {
+       // This path should ideally not be hit if input type="number" min="0" is used,
+       // but good to have a safeguard.
        console.warn("Invalid input value for auto-save:", valueStr);
+       // Optionally, reset UI to '0' or last valid state, or show a toast
        return;
      }
 
@@ -358,58 +375,70 @@ export default function AdminLogAchievementsPage() {
        const points = rule.points * value;
        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
 
+       // Construct the log entry
        const logEntry: Omit<DailyAchievementLog, 'id'> = {
          agentId: agentId,
          podId: selectedPodId,
          competitionId: activeCompetitionId,
-         ruleId: rule.id!,
+         ruleId: rule.id!, // rule.id should be valid if rule object exists
          ruleName: rule.name,
          date: dateTimestamp,
-         value: value,
+         value: value, // Save the numeric value
          points: points,
-         loggedAt: serverTimestamp() as Timestamp,
+         loggedAt: serverTimestamp() as Timestamp, // Firestore will set this
          loggedBy: currentUserUid,
        };
 
        const achievementsRef = collection(db, 'dailyAchievements');
        let docRef;
 
+       // Determine if it's an update or new entry
        if (agentInput.existingLogId) {
          docRef = doc(achievementsRef, agentInput.existingLogId);
          if (value === 0) {
+             // If value is 0 and there was an existing log, delete it
              await deleteDoc(docRef);
              console.log(`Achievement deleted for ${rule.name} (value set to 0)`);
+             // Update state to remove existingLogId immediately
              setAchievementInputs(prev => {
                  const newState = { ...prev };
-                  if (newState[agentId]?.[ruleId]) {
+                 // Ensure the nested structure exists before trying to modify it
+                 if (newState[agentId] && newState[agentId][ruleId]) {
                      newState[agentId][ruleId].existingLogId = undefined;
-                     newState[agentId][ruleId].value = '';
+                     // Keep value as '0' or '' in UI for consistency if user typed it
+                     // newState[agentId][ruleId].value = ''; // Or '0'
                  }
                  return newState;
              });
          } else {
+            // Update existing log
             await setDoc(docRef, logEntry, { merge: true });
-            console.log(`Achievement updated for ${rule.name} to ${value}`);
+            // console.log(`Achievement updated for ${rule.name} to ${value}`);
          }
-       } else if (value > 0) {
+       } else if (value > 0) { // Only create a new log if value > 0
+         // Add new log
          const addedDoc = await addDoc(achievementsRef, logEntry);
+         // Update state with the new ID immediately for subsequent saves/deletes
          setAchievementInputs(prev => {
              const newState = { ...prev };
-              if (!newState[agentId]) newState[agentId] = {};
-              if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: '', existingLogId: undefined };
-              newState[agentId][ruleId].existingLogId = addedDoc.id;
+             // Ensure the nested structure for the agent and rule exists
+             if (!newState[agentId]) newState[agentId] = {};
+             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: String(value), existingLogId: undefined };
+             newState[agentId][ruleId].existingLogId = addedDoc.id;
              return newState;
          });
-          console.log(`Achievement logged for ${rule.name} with value ${value}`);
+         // console.log(`Achievement logged for ${rule.name} with value ${value}`);
        } else if (value === 0 && agentInput.existingLogId) {
+           // This case might be redundant if the first `if (agentInput.existingLogId)` handles deletion
+           // But kept for explicit handling if somehow value is 0 and existingLogId is present
+           // from a previous state but not caught by the first condition.
            docRef = doc(achievementsRef, agentInput.existingLogId);
            await deleteDoc(docRef);
            console.log(`Achievement deleted for ${rule.name} (value changed to 0 from existing)`);
            setAchievementInputs(prev => {
                const newState = { ...prev };
-               if (newState[agentId]?.[ruleId]) {
+               if (newState[agentId] && newState[agentId][ruleId]) {
                    newState[agentId][ruleId].existingLogId = undefined;
-                   newState[agentId][ruleId].value = '';
                }
                return newState;
            });
@@ -440,11 +469,13 @@ export default function AdminLogAchievementsPage() {
 
     setIsSendingToTeams(true);
 
+    // Use currentDailyLogsForPod which is updated by the listener
     const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
         let totalPoints = 0;
         let emojiString = "";
         const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
 
+        // Sort rules for consistent emoji order in the string
         const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
         sortedRules.forEach(rule => {
             if (!rule.id) return;
@@ -458,12 +489,13 @@ export default function AdminLogAchievementsPage() {
             }
         });
         return {
-            agentFirstName: agent.name.split(' ')[0] || agent.name,
+            agentFirstName: agent.name.split(' ')[0] || agent.name, // Get first name
             totalPoints,
-            emojiString: emojiString || '-',
+            emojiString: emojiString || '-', // Show a dash if no emojis
         };
-    }).sort((a,b) => a.agentFirstName.localeCompare(b.agentFirstName));
+    }).sort((a,b) => a.agentFirstName.localeCompare(b.agentFirstName)); // Sort by first name for the table
 
+    // Calculate pod target summary using currentDailyLogsForPod
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
         if (!rule.id) return null;
@@ -471,6 +503,7 @@ export default function AdminLogAchievementsPage() {
             .filter(log => log.ruleId === rule.id)
             .reduce((sum, log) => sum + log.value, 0);
         const target = dailyTargets?.[rule.id]?.[dayOfWeek];
+        // Only include in summary if a target is set for the day
         if (target === undefined || target === null) return null;
 
         return {
@@ -479,15 +512,15 @@ export default function AdminLogAchievementsPage() {
             achieved,
             target,
         };
-    }).filter((item): item is PodTargetSummaryForTeams => item !== null)
-      .sort((a,b) => a.ruleName.localeCompare(b.ruleName));
+    }).filter((item): item is PodTargetSummaryForTeams => item !== null) // Filter out nulls (rules without targets for the day)
+      .sort((a,b) => a.ruleName.localeCompare(b.ruleName)); // Sort by rule name
 
     try {
         await sendTeamsUpdate(
             currentPod.name,
             currentPod.teamsWebhookUrl,
             selectedDate,
-            competitionRules,
+            competitionRules, // Pass all rules for the key
             agentScoresForTeams,
             podTargetSummaryForTeams
         );
@@ -501,17 +534,20 @@ export default function AdminLogAchievementsPage() {
   };
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
+     // Recreate debounce if these key dependencies change
      [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId, autoSendToTeams] // Added autoSendToTeams to dependencies
   );
 
   // Debounced version of handleSendToTeams for auto-sending
   const debouncedAutoSendToTeams = useMemo(() => debounce(handleSendToTeams, 3000), // 3-second debounce
+    // Ensure all data sources for the Teams message are in dependencies
     [selectedPodId, activeCompetitionId, pods, agents, currentDailyLogsForPod, competitionRules, dailyTargets, toast, selectedDate]
   );
 
 
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
   const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0 && activeCompetitionId;
+  // Enable "Send to Teams" if not loading, a pod is selected, webhook URL exists, and there's some data (either logs or targets)
   const canSendToTeams = !isLoading && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
 
 
@@ -608,15 +644,23 @@ export default function AdminLogAchievementsPage() {
             <CardTitle>Log Daily Achievements</CardTitle>
             <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
+            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]"> {/* Max height for scrollability */}
             {error && <p className="text-destructive mb-4">{error}</p>}
             {!selectedPodId ? (
                 <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
             ) : isLoading ? (
+                // Loading Skeletons
                 <div className="space-y-4">
-                    <Skeleton className="h-10 w-full" />
+                    <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
+                        <TableRow>
+                            <TableHead className="w-[200px]">Agent</TableHead>
+                            {/* Placeholder for rule headers */}
+                            <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                            <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                        </TableRow>
+                    </TableHeader>
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex gap-4 items-center border p-4 rounded">
+                        <div key={i} className="flex gap-4 items-center border p-4 rounded"> {/* Simplified skeleton row */}
                         <Skeleton className="h-6 w-32" />
                             <div className="flex-1 grid grid-cols-3 gap-4">
                             <Skeleton className="h-8 w-full" />
@@ -627,16 +671,18 @@ export default function AdminLogAchievementsPage() {
                     ))}
                 </div>
             ) : !canLog && !error ? (
+                // Message when conditions to log are not met (no agents, no competition, etc.)
                 <p className="text-muted-foreground text-center py-6">
                     {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition found associated with ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
                 </p>
                 ) : (
                 <Table>
-                <TableHeader className="sticky top-0 z-10 bg-background">
+                <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
                     <TableRow>
                     <TableHead className="w-[200px]">Agent</TableHead>
                     {competitionRules.map(rule => (
                         <TableHead key={rule.id}>
+                        {/* Use emoji if it exists and is not empty, otherwise use fallback */}
                         {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
                         </TableHead>
                     ))}
@@ -644,10 +690,12 @@ export default function AdminLogAchievementsPage() {
                 </TableHeader>
                 <TableBody>
                     {agents.map((agent) => (
+                    // Ensure agent.id is valid before rendering row
                     agent.id ? (
                         <TableRow key={agent.id}>
                             <TableCell className="font-medium">{agent.name}</TableCell>
                             {competitionRules.map(rule => (
+                            // Ensure rule.id is valid before rendering cell
                             rule.id ? (
                                 <TableCell key={rule.id}>
                                     <div className="relative w-24">
@@ -657,8 +705,8 @@ export default function AdminLogAchievementsPage() {
                                             placeholder="Value"
                                             value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? ''}
                                             onChange={(e) => handleInputChange(agent.id!, rule.id!, e.target.value)}
-                                            className="h-8 w-full pr-6"
-                                            disabled={isSaving[`${agent.id!}-${rule.id!}`]}
+                                            className="h-8 w-full pr-6" // Add padding for loader
+                                            disabled={isSaving[`${agent.id!}-${rule.id!}`]} // Disable individual input when saving
                                             aria-label={`Achievement value for ${agent.name} - ${rule.name}`}
                                         />
                                         {isSaving[`${agent.id!}-${rule.id!}`] && (
@@ -666,10 +714,10 @@ export default function AdminLogAchievementsPage() {
                                         )}
                                     </div>
                                 </TableCell>
-                            ) : null
+                            ) : null // Skip rendering cell if rule.id is invalid
                             ))}
                         </TableRow>
-                    ) : null
+                    ) : null // Skip rendering row if agent.id is invalid
                     ))}
                 </TableBody>
                 </Table>
@@ -680,3 +728,4 @@ export default function AdminLogAchievementsPage() {
     </TooltipProvider>
   );
 }
+

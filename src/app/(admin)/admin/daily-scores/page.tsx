@@ -68,7 +68,7 @@ interface CompetitionWithRules extends Competition {
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const DAILY_SCORES_POD_KEY = 'dailyScoresPage_selectedPodId';
-const AUTO_SEND_DAILY_SCORES_KEY_PREFIX = 'dailyScoresPage_autoSendTeams_'; // Consistent prefix
+const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_'; // Consistent prefix
 
 
 export default function AdminDailyScoresPage() {
@@ -91,7 +91,7 @@ export default function AdminDailyScoresPage() {
     const savedPodId = localStorage.getItem(DAILY_SCORES_POD_KEY);
     if (savedPodId) {
         setSelectedPodId(savedPodId);
-        const savedAutoSend = localStorage.getItem(`${AUTO_SEND_DAILY_SCORES_KEY_PREFIX}${savedPodId}`);
+        const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${savedPodId}`);
         setAutoSendEnabledForPod(savedAutoSend === 'true');
     }
   }, []);
@@ -99,14 +99,14 @@ export default function AdminDailyScoresPage() {
   const handleSelectedPodChange = (podId: string) => {
     setSelectedPodId(podId);
     localStorage.setItem(DAILY_SCORES_POD_KEY, podId);
-    const savedAutoSend = localStorage.getItem(`${AUTO_SEND_DAILY_SCORES_KEY_PREFIX}${podId}`);
+    const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${podId}`);
     setAutoSendEnabledForPod(savedAutoSend === 'true');
   };
 
   const handleAutoSendToggle = (checked: boolean) => {
     setAutoSendEnabledForPod(checked);
     if (selectedPodId) {
-        localStorage.setItem(`${AUTO_SEND_DAILY_SCORES_KEY_PREFIX}${selectedPodId}`, String(checked));
+        localStorage.setItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${selectedPodId}`, String(checked));
         toast({
             title: "Auto-send Preference Updated",
             description: `Automatic Teams updates for this pod are now ${checked ? 'enabled' : 'disabled'}. Actual auto-sending is triggered from the 'Log Achievements' page.`,
@@ -280,7 +280,7 @@ export default function AdminDailyScoresPage() {
              unsubscribeTargets();
          };
    // Dependencies for this effect: activeCompetitionId, selectedPodId, selectedDate
-   }, [activeCompetitionId, selectedPodId, selectedDate, toast]);
+   }, [activeCompetitionId, selectedPodId, selectedDate, toast]); // Removed agents from dependencies as it's not directly used for querying logs/targets
 
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
@@ -347,6 +347,7 @@ export default function AdminDailyScoresPage() {
             if (!rule.id) return null;
             const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
             if (targetValue === undefined || targetValue === null) {
+                 // No target set for this rule on this day, don't include in summary
                  return null;
             }
 
@@ -362,7 +363,7 @@ export default function AdminDailyScoresPage() {
                 progress: progress,
             };
         })
-        .filter((item): item is PodTargetSummary => item !== null)
+        .filter((item): item is PodTargetSummary => item !== null) // Filter out rules without targets for the day
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
      const finalRuleKeyString = rules
@@ -547,15 +548,24 @@ export default function AdminDailyScoresPage() {
                     {isSendingToTeams ? "Sending..." : "Send to Teams"}
                 </Button>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
+            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]"> {/* Max height for scrollability */}
             {error && <p className="text-destructive mb-4">{error}</p>}
 
             {isLoadingDisplay && (
                 <div className="space-y-4">
-                <Skeleton className="h-6 w-full mb-4" />
-                <Skeleton className="h-10 w-full" />
+                <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
+                    <TableRow>
+                    <TableHead className="w-[150px]"><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead><Skeleton className="h-4 w-3/4" /></TableHead>
+                    <TableHead className="w-[100px] text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                    </TableRow>
+                </TableHeader>
                 {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-6 w-12" /></TableCell>
+                    </TableRow>
                 ))}
                     <Skeleton className="h-8 w-full mt-4" />
                 </div>
@@ -570,7 +580,7 @@ export default function AdminDailyScoresPage() {
             {canDisplayTable && (
                 <>
                     <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-background">
+                        <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
                             <TableRow>
                             <TableHead className="w-[150px]">Agent</TableHead>
                             <TableHead>Achievements</TableHead>
@@ -583,6 +593,7 @@ export default function AdminDailyScoresPage() {
                                 <TableCell className="font-medium">{score.agentFirstName}</TableCell>
                                 <TableCell>
                                     <div className="flex flex-wrap gap-1">
+                                        {/* Ensure emojiString is treated as an array of characters for mapping */}
                                         {Array.from(score.emojiString).map((emoji, index) => (
                                             <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
                                                 {emoji}
@@ -630,4 +641,5 @@ export default function AdminDailyScoresPage() {
     </TooltipProvider>
   );
 }
+
 
