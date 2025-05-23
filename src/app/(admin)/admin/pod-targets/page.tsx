@@ -320,7 +320,7 @@ export default function AdminPodTargetsPage() {
               <div className="space-y-4">
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
+                      <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
                           <TableHead className="min-w-[200px]">Rule</TableHead>
                           {daysOfWeek.map(day => (

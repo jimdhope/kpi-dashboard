@@ -416,7 +416,7 @@ export default function AdminDashboardPage() {
                   ) : podLeaderboard.length === 0 ? (
                       <p className="text-muted-foreground text-center py-4">No pod data available for this period.</p>
                   ) : (
-                      <Leaderboard entries={podLeaderboard} />
+                      <Leaderboard entries={podLeaderboard} isStickyHeader={true} />
                   )}
               </CardContent>
             </Card>
@@ -432,7 +432,7 @@ export default function AdminDashboardPage() {
                   ) : individualLeaderboard.length === 0 ? (
                       <p className="text-muted-foreground text-center py-4">No individual agent data available for this period.</p>
                   ) : (
-                    <Leaderboard entries={individualLeaderboard} />
+                    <Leaderboard entries={individualLeaderboard} isStickyHeader={true} />
                   )}
               </CardContent>
             </Card>

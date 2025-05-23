@@ -475,8 +475,8 @@ export default function AdminPodsPage() {
                     )}
 
                     <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
-                            <TableRow>{/* Remove whitespace here */}
+                        <TableHeader className="sticky top-0 z-10 bg-background">
+                            <TableRow>
                                 <TableHead className="w-[80px]">Logo</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Campaign</TableHead>
@@ -489,7 +489,7 @@ export default function AdminPodsPage() {
                         <TableBody>
                         {isLoadingPods || isLoadingRelatedData ? (
                             Array.from({ length: 3 }).map((_, index) => (
-                            <TableRow key={`loading-${index}`}>{/* Remove whitespace here */}
+                            <TableRow key={`loading-${index}`}>
                                 <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
@@ -506,14 +506,14 @@ export default function AdminPodsPage() {
                             </TableRow>
                             ))
                         ) : filteredPods.length === 0 && !error ? (
-                            <TableRow>{/* Remove whitespace here */}
+                            <TableRow>
                                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                     {searchTerm ? `No pods found matching "${searchTerm}".` : "No pods found. Create one to get started!"}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredPods.map((pod) => (
-                            <TableRow key={pod.id}>{/* Remove whitespace here */}
+                            <TableRow key={pod.id}>
                                 <TableCell>
                                 <Avatar className="h-10 w-10">
                                     <AvatarFallback

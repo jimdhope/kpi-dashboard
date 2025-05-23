@@ -534,7 +534,7 @@ export default function AdminDailyScoresPage() {
           {canDisplayTable && (
             <>
                 <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
+                    <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
                         <TableHead className="w-[150px]">Agent</TableHead>
                         <TableHead>Achievements</TableHead>

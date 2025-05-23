@@ -314,8 +314,8 @@ export default function AdminUsersPage() {
                     <div className="mb-4 text-center text-destructive">{error}</div>
                 )}
                 <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
-                    <TableRow>{/* Remove whitespace here */}
+                    <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableRow>
                         <TableHead className="w-[60px]">Avatar</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
@@ -327,7 +327,7 @@ export default function AdminUsersPage() {
                     {isLoadingUsers ? (
                         // Loading Skeleton Rows
                         Array.from({ length: 4 }).map((_, index) => (
-                        <TableRow key={`loading-${index}`}>{/* Remove whitespace here */}
+                        <TableRow key={`loading-${index}`}>
                             <TableCell>
                             <Skeleton className="h-10 w-10 rounded-full" />
                             </TableCell>
@@ -343,14 +343,14 @@ export default function AdminUsersPage() {
                         </TableRow>
                         ))
                     ) : filteredUsers.length === 0 && !error ? (
-                        <TableRow>{/* Remove whitespace here */}
+                        <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                             {searchTerm ? `No users found matching "${searchTerm}".` : "No users found. Add a user to get started."}
                         </TableCell>
                         </TableRow>
                     ) : (
                         filteredUsers.map((user) => (
-                        <TableRow key={user.id}>{/* Remove whitespace here */}
+                        <TableRow key={user.id}>
                             <TableCell>
                              <Avatar className="h-10 w-10">
                                 {/* Always use Fallback */}
