@@ -238,13 +238,11 @@ export default function AdminLogAchievementsPage() {
             }
         }
         if (!competitionForLogging && competitionSnapshot.docs.length > 0) {
-            // If no active competition for today, try to find the most recent one for this pod
-            // Or the closest future one. For simplicity, let's stick to the most recent one overall.
             const mostRecentValidComp = competitionSnapshot.docs.find(docSnap => {
                 const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
                 const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
                 const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
-                return startDate && endDate; // Check if dates are valid
+                return startDate && endDate; 
             });
             if (mostRecentValidComp) {
                 competitionForLogging = { id: mostRecentValidComp.id, ...mostRecentValidComp.data() } as Competition & { id: string };
@@ -264,12 +262,11 @@ export default function AdminLogAchievementsPage() {
                 where('date', '==', dateTimestamp),
                 where('competitionId', '==', competitionForLogging.id)
             );
-            // Listen for real-time updates to logs
+            
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-                setCurrentDailyLogsForPod(logs); // Update the state with live logs
+                setCurrentDailyLogsForPod(logs); 
 
-                // Initialize/update form inputs based on these live logs
                 const initialInputs: AchievementInputState = {};
                 fetchedAgents.forEach(agent => {
                     if (!agent.id) return;
@@ -284,7 +281,7 @@ export default function AdminLogAchievementsPage() {
                     });
                 });
                 setAchievementInputs(initialInputs);
-                setIsLoadingInitialAchievements(false); // Mark as loaded once form is populated
+                setIsLoadingInitialAchievements(false); 
 
             }, (err) => {
                 console.error("Error listening to daily logs:", err);
@@ -318,7 +315,7 @@ export default function AdminLogAchievementsPage() {
         toast({ variant: "destructive", title: "Error", description: "Could not load agent or competition data." });
         setAgents([]); setCompetitionRules([]); setAchievementInputs({}); setActiveCompetitionId(null);
       } finally {
-        // Ensure loading states are false if not already set by specific branches
+        
         if (isLoadingAgents) setIsLoadingAgents(false);
         if (isLoadingRules) setIsLoadingRules(false);
         if (isLoadingInitialAchievements) setIsLoadingInitialAchievements(false);
@@ -410,7 +407,7 @@ export default function AdminLogAchievementsPage() {
          setAchievementInputs(prev => {
              const newState = { ...prev };
              if (!newState[agentId]) newState[agentId] = {};
-             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: String(value), existingLogId: undefined };
+             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: String(value), existingLogId: addedDoc.id };
              newState[agentId][ruleId].existingLogId = addedDoc.id;
              return newState;
          });
@@ -623,7 +620,7 @@ export default function AdminLogAchievementsPage() {
             {!selectedPodId ? (
                 <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
             ) : isLoading ? (
-                <div className="space-y-4">
+                <Table>
                     <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
                             <TableHead className="w-[200px]">Agent</TableHead>
@@ -631,17 +628,21 @@ export default function AdminLogAchievementsPage() {
                             <TableHead><Skeleton className="h-4 w-20" /></TableHead>
                         </TableRow>
                     </TableHeader>
+                    <TableBody>
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex gap-4 items-center border p-4 rounded">
-                        <Skeleton className="h-6 w-32" />
-                            <div className="flex-1 grid grid-cols-3 gap-4">
-                            <Skeleton className="h-8 w-full" />
-                            <Skeleton className="h-8 w-full" />
-                            <Skeleton className="h-8 w-full" />
-                            </div>
-                        </div>
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-6 w-32" /></TableCell>
+                            <TableCell>
+                                <div className="flex-1 grid grid-cols-3 gap-4">
+                                <Skeleton className="h-8 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                                </div>
+                            </TableCell>
+                        </TableRow>
                     ))}
-                </div>
+                    </TableBody>
+                </Table>
             ) : !canLog && !error ? (
                 <p className="text-muted-foreground text-center py-6">
                     {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition found associated with ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
