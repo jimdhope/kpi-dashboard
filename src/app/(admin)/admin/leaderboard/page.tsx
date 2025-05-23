@@ -458,7 +458,7 @@ export default function AdminLeaderboardPage() {
                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                     <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-card">
+                        <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
                             <TableRow>{/* Remove whitespace here */}
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Agent</TableHead>
@@ -521,7 +521,7 @@ export default function AdminLeaderboardPage() {
                         <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                         <Table>
-                            <TableHeader className="sticky top-0 z-10 bg-card">
+                            <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
                                 <TableRow>{/* Remove whitespace here */}
                                     <TableHead className="w-[50px]">Rank</TableHead>
                                     <TableHead>Team</TableHead>

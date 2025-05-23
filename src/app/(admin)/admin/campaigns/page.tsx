@@ -241,7 +241,7 @@ export default function AdminCampaignsPage() {
                   <div className="mb-4 text-center text-destructive">{error}</div>
                 )}
                 <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-card">
+                  <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
                     <TableRow>
                       <TableHead className="w-[80px]">Logo</TableHead>
                       <TableHead>Name</TableHead>

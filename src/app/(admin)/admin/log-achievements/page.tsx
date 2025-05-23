@@ -365,7 +365,7 @@ export default function AdminLogAchievementsPage() {
                  const newState = { ...prev };
                   if (newState[agentId]?.[ruleId]) {
                      newState[agentId][ruleId].existingLogId = undefined;
-                     newState[agentId][ruleId].value = '';
+                     newState[agentId][ruleId].value = ''; // Reset value to empty string
                  }
                  return newState;
              });
@@ -575,7 +575,7 @@ export default function AdminLogAchievementsPage() {
                </p>
             ) : (
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-card">
+              <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
                 <TableRow>
                   <TableHead className="w-[200px]">Agent</TableHead>
                   {competitionRules.map(rule => (

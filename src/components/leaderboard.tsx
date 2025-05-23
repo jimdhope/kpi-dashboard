@@ -75,7 +75,7 @@ export function Leaderboard({ title, description, entries }: LeaderboardProps) {
       </CardHeader>
       <CardContent>
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
             <TableRow>{/* Remove whitespace here */}
               <TableHead className="w-[50px]">Rank</TableHead>
               <TableHead>Name</TableHead>

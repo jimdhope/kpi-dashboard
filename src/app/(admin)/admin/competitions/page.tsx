@@ -225,8 +225,8 @@ export default function AdminCompetitionsPage() {
                 <div className="mb-4 text-center text-destructive">{error}</div>
               )}
               <Table>
-                <TableHeader className="sticky top-0 z-10 bg-card">
-                  <TableRow>
+                <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
+                  <TableRow>{/* Remove whitespace here */}
                     <TableHead>Name</TableHead>
                     <TableHead>Campaign</TableHead>
                     <TableHead>Pod(s)</TableHead>
@@ -238,7 +238,7 @@ export default function AdminCompetitionsPage() {
                 <TableBody>
                   {isLoading ? (
                     Array.from({ length: 3 }).map((_, index) => (
-                      <TableRow key={`loading-${index}`}>
+                      <TableRow key={`loading-${index}`}>{/* Remove whitespace here */}
                         <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
@@ -253,14 +253,14 @@ export default function AdminCompetitionsPage() {
                       </TableRow>
                     ))
                   ) : competitions.length === 0 && !error ? (
-                    <TableRow>
+                    <TableRow>{/* Remove whitespace here */}
                       <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                         No competitions found. Create one to get started!
                       </TableCell>
                     </TableRow>
                   ) : (
                     competitions.map((comp) => (
-                      <TableRow key={comp.id}>
+                      <TableRow key={comp.id}>{/* Remove whitespace here */}
                         <TableCell className="font-medium">{comp.name}</TableCell>
                         <TableCell className="text-muted-foreground">{comp.campaignName}</TableCell>
                         <TableCell className="text-muted-foreground truncate max-w-xs" title={comp.podNames?.join(', ')}>
