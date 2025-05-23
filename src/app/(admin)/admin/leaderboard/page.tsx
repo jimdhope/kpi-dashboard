@@ -305,13 +305,13 @@ export default function AdminLeaderboardPage() {
                 id: agent.id!,
                 name: agent.name,
                 totalPoints: agentScores[agent.id!] || 0,
-                score: agentScores[agent.id!] || 0, 
+                score: agentScores[agent.id!] || 0,
                 avatarUrl: agent.avatarUrl,
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
                 isCurrentUser: agent.id === auth.currentUser?.uid,
             }))
-            .sort((a, b) => b.totalPoints - a.totalPoints); 
+            .sort((a, b) => b.totalPoints - a.totalPoints);
 
 
         const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardData);
@@ -340,12 +340,12 @@ export default function AdminLeaderboardPage() {
                     id: team.id,
                     name: team.name,
                     totalPoints: teamScores[team.id] || 0,
-                    score: teamScores[team.id] || 0, 
+                    score: teamScores[team.id] || 0,
                     agentFirstNames: agentFirstNames,
                     isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''),
                 };
             })
-           .sort((a, b) => b.totalPoints - a.totalPoints); 
+           .sort((a, b) => b.totalPoints - a.totalPoints);
 
         const finalTeamLeaderboard = assignDenseRanks(teamLeaderboardData);
 
@@ -458,8 +458,8 @@ export default function AdminLeaderboardPage() {
                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                     <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
-                            <TableRow>{/* Remove whitespace here */}
+                        <TableHeader className="sticky top-0 z-10 bg-background">
+                            <TableRow>
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Agent</TableHead>
                                 <TableHead className="text-right">Total Points</TableHead>
@@ -521,8 +521,8 @@ export default function AdminLeaderboardPage() {
                         <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                         <Table>
-                            <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
-                                <TableRow>{/* Remove whitespace here */}
+                            <TableHeader className="sticky top-0 z-10 bg-background">
+                                <TableRow>
                                     <TableHead className="w-[50px]">Rank</TableHead>
                                     <TableHead>Team</TableHead>
                                     <TableHead className="text-right">Total Points</TableHead>
