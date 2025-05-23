@@ -41,6 +41,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 
 
 // Interface for processed agent scores used internally in this component
@@ -280,52 +281,59 @@ export default function AdminDailyScoresPage() {
              unsubscribeTargets();
          };
    // Dependencies for this effect: activeCompetitionId, selectedPodId, selectedDate
-   }, [activeCompetitionId, selectedPodId, selectedDate, toast]); // Removed agents from dependencies as it's not directly used for querying logs/targets
+   }, [activeCompetitionId, selectedPodId, selectedDate, toast]);
 
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
      console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
-    const ruleTotals: Record<string, number> = {};
+    const ruleTotals: Record<string, number> = {}; // ruleId -> total achieved value
+
+    // Initialize rule totals
     rules.forEach(rule => {
         if(rule.id) ruleTotals[rule.id] = 0;
     });
 
+    // Aggregate points and achievements per agent and rule totals
     dailyLogs.forEach(log => {
-       if (!scores[log.agentId]) {
-         scores[log.agentId] = { totalPoints: 0, emojiString: '' };
-       }
-       const pointsToAdd = typeof log.points === 'number' ? log.points : 0;
-       scores[log.agentId].totalPoints += pointsToAdd;
+      // Agent Scores
+      if (!scores[log.agentId]) {
+        scores[log.agentId] = { totalPoints: 0, emojiString: '' };
+      }
+      scores[log.agentId].totalPoints += log.points;
 
+      // Rule Totals for Pod Summary
       if (ruleTotals.hasOwnProperty(log.ruleId)) {
-         const valueToAdd = typeof log.value === 'number' ? log.value : 0;
-         ruleTotals[log.ruleId] += valueToAdd;
+         ruleTotals[log.ruleId] += log.value;
       }
     });
 
+    // Build emoji strings for each agent
     agents.forEach(agent => {
        if (!agent.id) return;
-        if (!scores[agent.id]) {
-            scores[agent.id] = { totalPoints: 0, emojiString: '' };
-        }
-
-       const agentLogs = dailyLogs.filter(log => log.agentId === agent.id);
-       let emojis = '';
+      const agentLogs = dailyLogs.filter(log => log.agentId === agent.id);
+      let emojis = '';
+       // Sort rules for consistent emoji order
        const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
 
        sortedRules.forEach(rule => {
            if (!rule.id) return;
             const logForRule = agentLogs.find(log => log.ruleId === rule.id);
-            if (logForRule && typeof logForRule.value === 'number' && logForRule.value > 0) {
+            if (logForRule && logForRule.value > 0) {
+                // Use emoji if it exists and is not empty, otherwise use fallback
                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+                // Repeat the emoji for the value count
                 for (let i = 0; i < logForRule.value; i++) {
                     emojis += emojiToUse;
                 }
             }
        });
-       if(scores[agent.id]){
-           scores[agent.id].emojiString = emojis;
+
+       if (scores[agent.id]) {
+         scores[agent.id].emojiString = emojis;
+       } else if (agents.find(a => a.id === agent.id)) {
+          // Ensure agent exists in scores map even if they have 0 points/logs for the day
+          scores[agent.id] = { totalPoints: 0, emojiString: '' };
        }
     });
 
@@ -548,27 +556,28 @@ export default function AdminDailyScoresPage() {
                     {isSendingToTeams ? "Sending..." : "Send to Teams"}
                 </Button>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]"> {/* Max height for scrollability */}
+            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
             {error && <p className="text-destructive mb-4">{error}</p>}
 
             {isLoadingDisplay && (
-                <div className="space-y-4">
-                <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
-                    <TableRow>
-                    <TableHead className="w-[150px]"><Skeleton className="h-4 w-20" /></TableHead>
-                    <TableHead><Skeleton className="h-4 w-3/4" /></TableHead>
-                    <TableHead className="w-[100px] text-right"><Skeleton className="h-4 w-16" /></TableHead>
-                    </TableRow>
-                </TableHeader>
-                {Array.from({ length: 3 }).map((_, i) => (
-                    <TableRow key={i}>
-                        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-full" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-6 w-12" /></TableCell>
-                    </TableRow>
-                ))}
-                    <Skeleton className="h-8 w-full mt-4" />
-                </div>
+                 <Table>
+                    <TableHeader className="sticky top-0 z-10 bg-background">
+                        <TableRow>
+                            <TableHead className="w-[150px]"><Skeleton className="h-4 w-20" /></TableHead>
+                            <TableHead><Skeleton className="h-4 w-3/4" /></TableHead>
+                            <TableHead className="w-[100px] text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-6 w-12" /></TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                 </Table>
             )}
 
             {!isLoadingDisplay && rules.length > 0 && (
@@ -580,7 +589,7 @@ export default function AdminDailyScoresPage() {
             {canDisplayTable && (
                 <>
                     <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
+                        <TableHeader className="sticky top-0 z-10 bg-background">
                             <TableRow>
                             <TableHead className="w-[150px]">Agent</TableHead>
                             <TableHead>Achievements</TableHead>
@@ -641,5 +650,3 @@ export default function AdminDailyScoresPage() {
     </TooltipProvider>
   );
 }
-
-
