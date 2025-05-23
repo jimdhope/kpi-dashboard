@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, Trophy, Users, Medal } from 'lucide-react';
+import { Loader2, AlertCircle, Trophy, Users, Medal, Filter } from 'lucide-react'; // Added Filter
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -364,7 +364,7 @@ export default function AdminLeaderboardPage() {
         {/* Filters Card */}
         <Card className="frosted-glass">
           <CardHeader>
-            <CardTitle>Leaderboard Filters</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Leaderboard Filters</CardTitle>
             <CardDescription>Select a competition and optionally filter by pod.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -453,7 +453,7 @@ export default function AdminLeaderboardPage() {
                     <CardTitle className="text-lg font-semibold">Agent Leaderboard</CardTitle>
                     <Users className="h-5 w-5 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="overflow-y-auto max-h-[calc(100vh-280px)]"> {/* Adjust max-h as needed */}
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-380px)]">
                     {agentLeaderboard.length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
@@ -514,7 +514,7 @@ export default function AdminLeaderboardPage() {
                     <CardTitle className="text-lg font-semibold">Team Leaderboard</CardTitle>
                     <Trophy className="h-5 w-5 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="overflow-y-auto max-h-[calc(100vh-280px)]"> {/* Adjust max-h as needed */}
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-380px)]">
                     {teams.length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No teams defined for this competition.</p>
                     ) : teamLeaderboard.length === 0 ? (

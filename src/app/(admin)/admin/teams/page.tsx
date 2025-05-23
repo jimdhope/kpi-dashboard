@@ -379,7 +379,7 @@ export default function AdminTeamsPage() {
                 <CardTitle>Manage Competition Teams</CardTitle>
                 <CardDescription>Create/edit teams and assign agents for the selected competition and pod.</CardDescription>
                 </CardHeader>
-                <CardContent className="overflow-y-auto max-h-[calc(100vh-280px)]"> {/* Adjust max-h as needed */}
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-380px)]">
                 {error && <p className="text-destructive text-center mb-4">{error}</p>}
 
                 {selectedCompetitionId && selectedPodId && !isLoadingTeams && !isLoading && (

@@ -236,7 +236,7 @@ export default function AdminCampaignsPage() {
                   </Button>
                 </DialogTrigger>
               </CardHeader>
-              <CardContent className="overflow-y-auto max-h-[calc(100vh-200px)]"> {/* Adjust max-h as needed */}
+              <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]">
                 {error && !isLoading && (
                   <div className="mb-4 text-center text-destructive">{error}</div>
                 )}

@@ -511,7 +511,7 @@ export default function AdminDailyScoresPage() {
                 {isSendingToTeams ? "Sending..." : "Send to Teams"}
             </Button>
         </CardHeader>
-        <CardContent className="overflow-y-auto max-h-[calc(100vh-250px)]"> {/* Adjust max-h as needed */}
+        <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
           {error && <p className="text-destructive mb-4">{error}</p>}
 
            {isLoadingDisplay && (

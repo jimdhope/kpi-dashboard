@@ -11,7 +11,7 @@ const Card = React.forwardRef<
     className={cn(
       // Apply frosted glass effect: background opacity and backdrop blur
       // Increased opacity from 85 to 90 for slightly less transparency
-      "rounded-lg border border-border/60 bg-card/90 backdrop-blur-sm text-card-foreground shadow-sm",
+      "rounded-lg border border-border/60 bg-card/90 backdrop-blur-sm text-card-foreground shadow-lg", // Added shadow-lg for more depth
       className
     )}
     {...props}
@@ -25,7 +25,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex flex-col space-y-1.5 p-4", className)} // Reduced padding for a tighter look
     {...props}
   />
 ))
@@ -61,7 +61,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-4 pt-0", className)} {...props} /> // Reduced padding for a tighter look
 ))
 CardContent.displayName = "CardContent"
 
@@ -71,10 +71,11 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
+    className={cn("flex items-center p-4 pt-0", className)} // Reduced padding
     {...props}
   />
 ))
 CardFooter.displayName = "CardFooter"
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+

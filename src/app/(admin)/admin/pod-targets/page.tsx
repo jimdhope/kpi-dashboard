@@ -303,7 +303,7 @@ export default function AdminPodTargetsPage() {
           <CardTitle>Manage Pod Daily Targets</CardTitle>
           <CardDescription>Set daily achievement targets for each rule within the selected competition and pod.</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-y-auto max-h-[calc(100vh-250px)]"> {/* Adjust max-h as needed */}
+        <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
           {error && <p className="text-destructive text-center mb-4">{error}</p>}
 
           {/* Targets Table */}

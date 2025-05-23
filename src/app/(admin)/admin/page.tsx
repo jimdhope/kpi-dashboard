@@ -1,13 +1,13 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { collection, getDocs, query, where, Timestamp, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Leaderboard } from '@/components/leaderboard';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, ShieldCheck, Megaphone, Trophy, BarChart3, AlertCircle, CalendarIcon } from 'lucide-react';
+import { Users, ShieldCheck, Megaphone, Trophy, BarChart3, AlertCircle, CalendarIcon, Filter } from 'lucide-react'; // Added Filter
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -307,7 +307,7 @@ export default function AdminDashboardPage() {
 
       <Card className="mb-6 frosted-glass">
           <CardHeader>
-             <CardTitle>Filters</CardTitle>
+             <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4 items-end">
              <div className="grid gap-1.5">
@@ -410,7 +410,7 @@ export default function AdminDashboardPage() {
                   <CardTitle>Pod Leaderboard</CardTitle>
                   <CardDescription>Ranking based on {timeframe} points</CardDescription>
               </CardHeader>
-              <CardContent className="overflow-y-auto max-h-[400px]">
+              <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
                   {isLoading ? (
                       <Skeleton className="h-[300px] w-full" />
                   ) : podLeaderboard.length === 0 ? (
@@ -426,7 +426,7 @@ export default function AdminDashboardPage() {
                   <CardTitle>Agent Leaderboard</CardTitle>
                   <CardDescription>Top agents by {timeframe} points</CardDescription>
               </CardHeader>
-              <CardContent className="overflow-y-auto max-h-[400px]">
+              <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
                   {isLoading ? (
                       <Skeleton className="h-[300px] w-full" />
                   ) : individualLeaderboard.length === 0 ? (

@@ -551,7 +551,7 @@ export default function AdminLogAchievementsPage() {
           <CardTitle>Log Daily Achievements</CardTitle>
           <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-y-auto max-h-[calc(100vh-250px)]"> {/* Adjust max-h as needed */}
+        <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
           {error && <p className="text-destructive mb-4">{error}</p>}
            {!selectedPodId ? (
              <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
@@ -576,7 +576,7 @@ export default function AdminLogAchievementsPage() {
             ) : (
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
-                <TableRow>{/* Remove whitespace here */}
+                <TableRow>
                   <TableHead className="w-[200px]">Agent</TableHead>
                   {competitionRules.map(rule => (
                     <TableHead key={rule.id}>
@@ -588,7 +588,7 @@ export default function AdminLogAchievementsPage() {
               <TableBody>
                 {agents.map((agent) => (
                    agent.id ? (
-                    <TableRow key={agent.id}>{/* Remove whitespace here */}
+                    <TableRow key={agent.id}>
                         <TableCell className="font-medium">{agent.name}</TableCell>
                         {competitionRules.map(rule => (
                           rule.id ? (

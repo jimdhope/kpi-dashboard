@@ -469,7 +469,7 @@ export default function AdminPodsPage() {
                         <p className="text-xs text-muted-foreground mt-1">{addButtonTooltip}</p>
                     )}
                 </CardHeader>
-                <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]"> {/* Adjust max-h as needed */}
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]">
                     {error && !(isLoadingPods || isLoadingRelatedData) && (
                         <div className="mb-4 text-center text-destructive">{error}</div>
                     )}

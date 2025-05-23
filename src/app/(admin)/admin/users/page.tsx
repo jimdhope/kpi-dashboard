@@ -309,7 +309,7 @@ export default function AdminUsersPage() {
                     </DialogTrigger>
                 </div>
                 </CardHeader>
-                <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]"> {/* Adjust max-h as needed */}
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]">
                 {error && !isLoadingUsers && (
                     <div className="mb-4 text-center text-destructive">{error}</div>
                 )}
