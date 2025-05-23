@@ -383,6 +383,18 @@ export default function AdminLogAchievementsPage() {
              return newState;
          });
           console.log(`Achievement logged for ${rule.name} with value ${value}`);
+       } else if (value === 0 && agentInput.existingLogId) { // Explicitly handle deleting if value becomes 0 and log existed
+           docRef = doc(achievementsRef, agentInput.existingLogId);
+           await deleteDoc(docRef);
+           console.log(`Achievement deleted for ${rule.name} (value changed to 0 from existing)`);
+           setAchievementInputs(prev => {
+               const newState = { ...prev };
+               if (newState[agentId]?.[ruleId]) {
+                   newState[agentId][ruleId].existingLogId = undefined;
+                   newState[agentId][ruleId].value = '';
+               }
+               return newState;
+           });
        }
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
@@ -575,7 +587,7 @@ export default function AdminLogAchievementsPage() {
                </p>
             ) : (
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-background"> {/* Changed to bg-background */}
+              <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow>
                   <TableHead className="w-[200px]">Agent</TableHead>
                   {competitionRules.map(rule => (
