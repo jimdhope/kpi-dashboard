@@ -36,6 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 // Interface for daily achievement logs (same as before)
@@ -452,12 +453,12 @@ export default function AdminLeaderboardPage() {
                     <CardTitle className="text-lg font-semibold">Agent Leaderboard</CardTitle>
                     <Users className="h-5 w-5 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-280px)]"> {/* Adjust max-h as needed */}
                     {agentLeaderboard.length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="sticky top-0 z-10 bg-card">
                             <TableRow>{/* Remove whitespace here */}
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Agent</TableHead>
@@ -513,14 +514,14 @@ export default function AdminLeaderboardPage() {
                     <CardTitle className="text-lg font-semibold">Team Leaderboard</CardTitle>
                     <Trophy className="h-5 w-5 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-280px)]"> {/* Adjust max-h as needed */}
                     {teams.length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No teams defined for this competition.</p>
                     ) : teamLeaderboard.length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                         <Table>
-                            <TableHeader>
+                            <TableHeader className="sticky top-0 z-10 bg-card">
                                 <TableRow>{/* Remove whitespace here */}
                                     <TableHead className="w-[50px]">Rank</TableHead>
                                     <TableHead>Team</TableHead>
@@ -580,3 +581,5 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
+
+    

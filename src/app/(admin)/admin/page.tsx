@@ -13,7 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Form } from '@/components/ui/form'; // Ensure Form is imported if useForm is used with it
+import { Form, useFormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'; // Ensure Form is imported if useForm is used with it
 import { useForm } from 'react-hook-form';
 import { format, startOfDay, endOfDay, startOfWeek, endOfMonth, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Leaderboard Entry Interface
 interface LeaderboardEntry {
@@ -404,35 +405,40 @@ export default function AdminDashboardPage() {
         </div>
 
        <div className="grid gap-6 md:grid-cols-2">
-           <div >
-              {isLoading ? (
-                  <Skeleton className="h-[400px] w-full frosted-glass" />
-              ) : podLeaderboard.length === 0 ? (
-                 <Card className="h-[400px] flex items-center justify-center frosted-glass">
-                     <CardContent className="text-center text-muted-foreground">
-                         <p>No pod data available for this period.</p>
-                     </CardContent>
-                 </Card>
-              ) : (
-                  <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} description={`Ranking based on ${timeframe} points`} />
-              )}
-           </div>
+           <Card className="frosted-glass shadow-md">
+              <CardHeader>
+                  <CardTitle>Pod Leaderboard</CardTitle>
+                  <CardDescription>Ranking based on {timeframe} points</CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-y-auto max-h-[400px]">
+                  {isLoading ? (
+                      <Skeleton className="h-[300px] w-full" />
+                  ) : podLeaderboard.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">No pod data available for this period.</p>
+                  ) : (
+                      <Leaderboard entries={podLeaderboard} />
+                  )}
+              </CardContent>
+            </Card>
 
-           <div >
-              {isLoading ? (
-                  <Skeleton className="h-[400px] w-full frosted-glass" />
-              ) : individualLeaderboard.length === 0 ? (
-                  <Card className="h-[400px] flex items-center justify-center frosted-glass">
-                     <CardContent className="text-center text-muted-foreground">
-                         <p>No individual agent data available for this period.</p>
-                     </CardContent>
-                 </Card>
-              ) : (
-                <Leaderboard title="Agent Leaderboard" entries={individualLeaderboard} description={`Top agents by ${timeframe} points`} />
-              )}
-           </div>
+           <Card className="frosted-glass shadow-md">
+              <CardHeader>
+                  <CardTitle>Agent Leaderboard</CardTitle>
+                  <CardDescription>Top agents by {timeframe} points</CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-y-auto max-h-[400px]">
+                  {isLoading ? (
+                      <Skeleton className="h-[300px] w-full" />
+                  ) : individualLeaderboard.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">No individual agent data available for this period.</p>
+                  ) : (
+                    <Leaderboard entries={individualLeaderboard} />
+                  )}
+              </CardContent>
+            </Card>
        </div>
     </Form>
   );
 }
 
+    

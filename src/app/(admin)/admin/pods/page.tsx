@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -48,6 +49,7 @@ import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
 import { createUser, AppUser, updateUserPodAssignment } from '@/services/user';
 import { Input } from '@/components/ui/input';
 import { generateInitials } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Pod type definition - Added teamsWebhookUrl
 export interface Pod {
@@ -467,13 +469,13 @@ export default function AdminPodsPage() {
                         <p className="text-xs text-muted-foreground mt-1">{addButtonTooltip}</p>
                     )}
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]"> {/* Adjust max-h as needed */}
                     {error && !(isLoadingPods || isLoadingRelatedData) && (
                         <div className="mb-4 text-center text-destructive">{error}</div>
                     )}
 
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="sticky top-0 z-10 bg-card">
                             <TableRow>
                                 <TableHead className="w-[80px]">Logo</TableHead>
                                 <TableHead>Name</TableHead>
@@ -632,3 +634,5 @@ export default function AdminPodsPage() {
     </div>
   );
 }
+
+    

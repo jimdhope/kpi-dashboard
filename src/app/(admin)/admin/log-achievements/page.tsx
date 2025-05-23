@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -40,6 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page'; // Import DailyTargetData
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook'; // Import sendTeamsUpdate
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Interface for the data stored in Firestore
 export interface DailyAchievementLog {
@@ -551,7 +551,7 @@ export default function AdminLogAchievementsPage() {
           <CardTitle>Log Daily Achievements</CardTitle>
           <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-y-auto max-h-[calc(100vh-250px)]"> {/* Adjust max-h as needed */}
           {error && <p className="text-destructive mb-4">{error}</p>}
            {!selectedPodId ? (
              <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
@@ -575,7 +575,7 @@ export default function AdminLogAchievementsPage() {
                </p>
             ) : (
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow>{/* Remove whitespace here */}
                   <TableHead className="w-[200px]">Agent</TableHead>
                   {competitionRules.map(rule => (
@@ -623,3 +623,4 @@ export default function AdminLogAchievementsPage() {
   );
 }
 
+    

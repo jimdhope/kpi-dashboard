@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -52,6 +53,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const usersCollectionRef = collection(db, 'users');
@@ -307,12 +309,12 @@ export default function AdminUsersPage() {
                     </DialogTrigger>
                 </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]"> {/* Adjust max-h as needed */}
                 {error && !isLoadingUsers && (
                     <div className="mb-4 text-center text-destructive">{error}</div>
                 )}
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-card">
                     <TableRow>
                         <TableHead className="w-[60px]">Avatar</TableHead>
                         <TableHead>Name</TableHead>
@@ -476,3 +478,5 @@ export default function AdminUsersPage() {
     </TooltipProvider>
   );
 }
+
+    

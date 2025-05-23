@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Interface for processed agent scores used internally in this component
 interface AgentScore {
@@ -510,7 +511,7 @@ export default function AdminDailyScoresPage() {
                 {isSendingToTeams ? "Sending..." : "Send to Teams"}
             </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-y-auto max-h-[calc(100vh-250px)]"> {/* Adjust max-h as needed */}
           {error && <p className="text-destructive mb-4">{error}</p>}
 
            {isLoadingDisplay && (
@@ -533,7 +534,7 @@ export default function AdminDailyScoresPage() {
           {canDisplayTable && (
             <>
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-card">
                         <TableRow>
                         <TableHead className="w-[150px]">Agent</TableHead>
                         <TableHead>Achievements</TableHead>
@@ -593,3 +594,4 @@ export default function AdminDailyScoresPage() {
   );
 }
 
+    

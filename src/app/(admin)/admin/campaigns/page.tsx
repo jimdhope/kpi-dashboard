@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -42,6 +43,7 @@ import { ManageCampaignRulesDialog } from '@/components/manage-campaign-rules-di
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Campaign type definition - Added logoInitials and logoBgColor
 export interface Campaign {
@@ -234,12 +236,12 @@ export default function AdminCampaignsPage() {
                   </Button>
                 </DialogTrigger>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-y-auto max-h-[calc(100vh-200px)]"> {/* Adjust max-h as needed */}
                 {error && !isLoading && (
                   <div className="mb-4 text-center text-destructive">{error}</div>
                 )}
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 z-10 bg-card">
                     <TableRow>
                       <TableHead className="w-[80px]">Logo</TableHead>
                       <TableHead>Name</TableHead>
@@ -389,3 +391,5 @@ export default function AdminCampaignsPage() {
     </div>
   );
 }
+
+    

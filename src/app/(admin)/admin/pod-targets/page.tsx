@@ -28,6 +28,7 @@ import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { format } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Define the structure for daily targets
 export interface DailyTargetData {
@@ -302,7 +303,7 @@ export default function AdminPodTargetsPage() {
           <CardTitle>Manage Pod Daily Targets</CardTitle>
           <CardDescription>Set daily achievement targets for each rule within the selected competition and pod.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-y-auto max-h-[calc(100vh-250px)]"> {/* Adjust max-h as needed */}
           {error && <p className="text-destructive text-center mb-4">{error}</p>}
 
           {/* Targets Table */}
@@ -319,7 +320,7 @@ export default function AdminPodTargetsPage() {
               <div className="space-y-4">
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="sticky top-0 z-10 bg-card">
                         <TableRow>
                           <TableHead className="min-w-[200px]">Rule</TableHead>
                           {daysOfWeek.map(day => (
@@ -371,3 +372,4 @@ export default function AdminPodTargetsPage() {
   );
 }
 
+    

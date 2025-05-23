@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -39,6 +40,7 @@ import { format } from 'date-fns'; // For formatting dates
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
 import type { Pod } from '@/app/(admin)/admin/pods/page'; // Import Pod type
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse rule type
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Competition type definition - kept podIds array
 export interface Competition {
@@ -218,12 +220,12 @@ export default function AdminCompetitionsPage() {
                </Link>
                {isAddDisabled && !isLoading && <p className="text-xs text-muted-foreground">{addButtonTooltip}</p>}
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-y-auto max-h-[calc(100vh-200px)]"> {/* Adjust max-h as needed */}
               {error && !isLoading && (
                 <div className="mb-4 text-center text-destructive">{error}</div>
               )}
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Campaign</TableHead>
@@ -329,3 +331,5 @@ export default function AdminCompetitionsPage() {
     </div>
   );
 }
+
+    
