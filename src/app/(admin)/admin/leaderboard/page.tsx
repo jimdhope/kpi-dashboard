@@ -290,9 +290,6 @@ export default function AdminLeaderboardPage() {
         // Initialize scores for ALL relevant agents, even if they have 0 points
         relevantAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
-        // Aggregate points from allLogs.
-        // Ensure allLogs contains ONLY logs relevant to the selected competition and pod filter (if any).
-        // This should be handled by the onSnapshot query itself.
         allLogs.forEach(log => {
             const points = typeof log.points === 'number' ? log.points : 0;
             if (agentScores.hasOwnProperty(log.agentId)) {
@@ -311,7 +308,8 @@ export default function AdminLeaderboardPage() {
                 avatarBgColor: agent.avatarBgColor,
                 isCurrentUser: agent.id === auth.currentUser?.uid,
             }))
-            .sort((a, b) => b.totalPoints - a.totalPoints);
+             // No sort here, assignDenseRanks will sort
+            // .sort((a, b) => b.totalPoints - a.totalPoints);
 
 
         const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardData);
@@ -345,7 +343,8 @@ export default function AdminLeaderboardPage() {
                     isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''),
                 };
             })
-           .sort((a, b) => b.totalPoints - a.totalPoints);
+           // No sort here, assignDenseRanks will sort
+           // .sort((a, b) => b.totalPoints - a.totalPoints);
 
         const finalTeamLeaderboard = assignDenseRanks(teamLeaderboardData);
 
@@ -521,7 +520,7 @@ export default function AdminLeaderboardPage() {
                         <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                         <Table>
-                            <TableHeader className="sticky top-0 z-10 bg-background">
+                            <TableHeader> {/* Removed sticky header for Team Leaderboard */}
                                 <TableRow>
                                     <TableHead className="w-[50px]">Rank</TableHead>
                                     <TableHead>Team</TableHead>
