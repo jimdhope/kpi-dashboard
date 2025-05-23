@@ -453,7 +453,7 @@ export default function AdminLeaderboardPage() {
                         <p className="text-muted-foreground text-center py-4">No agent data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                     <Table>
-                        <TableHeader> {/* Removed sticky header for Agent Leaderboard */}
+                        <TableHeader>{/* Agent Leaderboard Header - No longer sticky */}
                             <TableRow>
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Agent</TableHead>
@@ -516,7 +516,7 @@ export default function AdminLeaderboardPage() {
                         <p className="text-muted-foreground text-center py-4">No team score data available for this {selectedPodId ? `pod in this competition` : `competition`}.</p>
                     ) : (
                         <Table>
-                            <TableHeader>{/* Removed sticky header for Team Leaderboard */}
+                            <TableHeader>{/* Team Leaderboard Header - No longer sticky */}
                                 <TableRow>
                                     <TableHead className="w-[50px]">Rank</TableHead>
                                     <TableHead>Team</TableHead>
