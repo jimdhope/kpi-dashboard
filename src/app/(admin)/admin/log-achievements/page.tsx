@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Filter, Send } from 'lucide-react'; // Added Send
+import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info } from 'lucide-react'; // Added Send, Info
 import { format, startOfDay, getDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -37,9 +37,16 @@ import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page'; // Import DailyTargetData
-import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook'; // Import sendTeamsUpdate
-import { ScrollArea } from '@/components/ui/scroll-area';
+import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
+import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
+import { Switch } from "@/components/ui/switch"; // Import Switch
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 // Interface for the data stored in Firestore
 export interface DailyAchievementLog {
@@ -80,6 +87,8 @@ const debounce = (func: Function, delay: number) => {
 };
 
 const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
+const AUTO_SEND_TEAMS_KEY_PREFIX = 'logAchievementsPage_autoSendTeams_';
+
 
 export default function AdminLogAchievementsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -91,26 +100,41 @@ export default function AdminLogAchievementsPage() {
   const [isLoadingPods, setIsLoadingPods] = useState(true);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingRules, setIsLoadingRules] = useState(false);
-  const [isLoadingInitialAchievements, setIsLoadingInitialAchievements] = useState(false); // For initial form fill
+  const [isLoadingInitialAchievements, setIsLoadingInitialAchievements] = useState(false);
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
 
-  // State for Teams webhook functionality
   const [isSendingToTeams, setIsSendingToTeams] = useState(false);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
+  const [autoSendToTeams, setAutoSendToTeams] = useState<boolean>(false); // State for auto-send toggle
 
-  // Load saved filters from localStorage on mount
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(LOG_ACHIEVEMENTS_POD_KEY);
     if (savedPodId) {
         setSelectedPodId(savedPodId);
+        // Load auto-send setting for this pod
+        const savedAutoSend = localStorage.getItem(`${AUTO_SEND_TEAMS_KEY_PREFIX}${savedPodId}`);
+        setAutoSendToTeams(savedAutoSend === 'true');
     }
-    // selectedDate defaults to today, not persisted
   }, []);
+
+  const handleSelectedPodChange = (podId: string) => {
+    setSelectedPodId(podId);
+    localStorage.setItem(LOG_ACHIEVEMENTS_POD_KEY, podId);
+    const savedAutoSend = localStorage.getItem(`${AUTO_SEND_TEAMS_KEY_PREFIX}${podId}`);
+    setAutoSendToTeams(savedAutoSend === 'true');
+  };
+
+  const handleAutoSendToggle = (checked: boolean) => {
+    setAutoSendToTeams(checked);
+    if (selectedPodId) {
+        localStorage.setItem(`${AUTO_SEND_TEAMS_KEY_PREFIX}${selectedPodId}`, String(checked));
+    }
+  };
 
 
   useEffect(() => {
@@ -139,7 +163,6 @@ export default function AdminLogAchievementsPage() {
     return () => unsubscribe();
   }, [toast]);
 
-  // Fetch Agents, Competition Rules, Existing Achievements, Daily Targets, and All Pod Logs
   useEffect(() => {
     if (!selectedPodId) {
       setAgents([]);
@@ -160,7 +183,7 @@ export default function AdminLogAchievementsPage() {
     const fetchPodDataAndListen = async () => {
       setIsLoadingAgents(true);
       setIsLoadingRules(true);
-      setIsLoadingInitialAchievements(true); // For form prefill
+      setIsLoadingInitialAchievements(true);
       setError(null);
       setAgents([]);
       setCompetitionRules([]);
@@ -170,7 +193,6 @@ export default function AdminLogAchievementsPage() {
       setCurrentDailyLogsForPod([]);
 
       try {
-        // Fetch Agents
         const usersRef = collection(db, 'users');
         const agentsQuery = query(
             usersRef,
@@ -191,14 +213,13 @@ export default function AdminLogAchievementsPage() {
             return;
         }
 
-        // Find Active or Most Relevant Competition
         const competitionsRef = collection(db, 'competitions');
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
         const competitionQuery = query(
             competitionsRef,
             where('podIds', 'array-contains', selectedPodId),
             orderBy('startDate', 'desc'),
-            limit(20) // Fetch a few recent ones to find the right one
+            limit(20)
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let competitionForLogging: (Competition & { id: string }) | null = null;
@@ -207,6 +228,7 @@ export default function AdminLogAchievementsPage() {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
             const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
             const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
+
             if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
                 competitionForLogging = comp;
                 break;
@@ -216,13 +238,12 @@ export default function AdminLogAchievementsPage() {
             competitionForLogging = { id: competitionSnapshot.docs[0].id, ...competitionSnapshot.docs[0].data() } as Competition & { id: string };
             toast({ variant: "default", title: "Logging to Past/Future Competition", description: `No competition active for ${selectedDate.toLocaleDateString()}. Logging against "${competitionForLogging.name}". Ensure this is correct.` });
         }
-        
+
         if (competitionForLogging) {
             setActiveCompetitionId(competitionForLogging.id);
             setCompetitionRules(competitionForLogging.rules || []);
             setIsLoadingRules(false);
 
-            // Fetch initial achievements for form prefill (one-time getDocs)
             const achievementsRef = collection(db, 'dailyAchievements');
             const initialAchievementsQuery = query(
                 achievementsRef,
@@ -249,7 +270,6 @@ export default function AdminLogAchievementsPage() {
             setAchievementInputs(initialInputs);
             setIsLoadingInitialAchievements(false);
 
-            // Set up onSnapshot listener for currentDailyLogsForPod
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
                 setCurrentDailyLogsForPod(logs);
@@ -257,8 +277,7 @@ export default function AdminLogAchievementsPage() {
                 console.error("Error listening to daily logs:", err);
                 setError("Failed to load real-time achievement data.");
             });
-            
-            // Set up onSnapshot listener for dailyTargets
+
             const targetsDocId = `${competitionForLogging.id}_${selectedPodId}`;
             const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
             unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
@@ -285,7 +304,6 @@ export default function AdminLogAchievementsPage() {
         toast({ variant: "destructive", title: "Error", description: "Could not load agent or competition data." });
         setAgents([]); setCompetitionRules([]); setAchievementInputs({}); setActiveCompetitionId(null);
       } finally {
-        // Ensure all loading states are false if not already set
         setIsLoadingAgents(false); setIsLoadingRules(false); setIsLoadingInitialAchievements(false);
       }
     };
@@ -365,7 +383,7 @@ export default function AdminLogAchievementsPage() {
                  const newState = { ...prev };
                   if (newState[agentId]?.[ruleId]) {
                      newState[agentId][ruleId].existingLogId = undefined;
-                     newState[agentId][ruleId].value = ''; // Reset value to empty string
+                     newState[agentId][ruleId].value = '';
                  }
                  return newState;
              });
@@ -383,7 +401,7 @@ export default function AdminLogAchievementsPage() {
              return newState;
          });
           console.log(`Achievement logged for ${rule.name} with value ${value}`);
-       } else if (value === 0 && agentInput.existingLogId) { // Explicitly handle deleting if value becomes 0 and log existed
+       } else if (value === 0 && agentInput.existingLogId) {
            docRef = doc(achievementsRef, agentInput.existingLogId);
            await deleteDoc(docRef);
            console.log(`Achievement deleted for ${rule.name} (value changed to 0 from existing)`);
@@ -396,6 +414,11 @@ export default function AdminLogAchievementsPage() {
                return newState;
            });
        }
+        // If auto-send is enabled, trigger the debounced send to Teams
+        if (autoSendToTeams) {
+            console.log("[LogAchievementsPage] Auto-send toggle is ON, triggering debounced send to Teams after save.");
+            debouncedAutoSendToTeams();
+        }
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
        toast({ variant: "destructive", title: "Auto-Save Failed", description: `Could not save ${rule.name} for agent.` });
@@ -403,10 +426,6 @@ export default function AdminLogAchievementsPage() {
        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
   };
-
-   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId]
-  );
 
   const handleSendToTeams = async () => {
     if (!selectedPodId || !activeCompetitionId) {
@@ -421,12 +440,11 @@ export default function AdminLogAchievementsPage() {
 
     setIsSendingToTeams(true);
 
-    // Calculate agentScoresForTeams based on currentDailyLogsForPod
     const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
         let totalPoints = 0;
         let emojiString = "";
         const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
-        
+
         const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
         sortedRules.forEach(rule => {
             if (!rule.id) return;
@@ -446,7 +464,6 @@ export default function AdminLogAchievementsPage() {
         };
     }).sort((a,b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
-    // Calculate podTargetSummaryForTeams
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
         if (!rule.id) return null;
@@ -454,7 +471,7 @@ export default function AdminLogAchievementsPage() {
             .filter(log => log.ruleId === rule.id)
             .reduce((sum, log) => sum + log.value, 0);
         const target = dailyTargets?.[rule.id]?.[dayOfWeek];
-        if (target === undefined || target === null) return null; // Only include if target is set
+        if (target === undefined || target === null) return null;
 
         return {
             ruleName: rule.name,
@@ -483,6 +500,15 @@ export default function AdminLogAchievementsPage() {
     }
   };
 
+  const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
+     [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId, autoSendToTeams] // Added autoSendToTeams to dependencies
+  );
+
+  // Debounced version of handleSendToTeams for auto-sending
+  const debouncedAutoSendToTeams = useMemo(() => debounce(handleSendToTeams, 3000), // 3-second debounce
+    [selectedPodId, activeCompetitionId, pods, agents, currentDailyLogsForPod, competitionRules, dailyTargets, toast, selectedDate]
+  );
+
 
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
   const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0 && activeCompetitionId;
@@ -490,149 +516,167 @@ export default function AdminLogAchievementsPage() {
 
 
   return (
-    <div className="space-y-6">
-      <Card className="frosted-glass">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
-          </div>
-          <Button
-            onClick={handleSendToTeams}
-            disabled={!canSendToTeams}
-            title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (currentDailyLogsForPod.length === 0 && (!dailyTargets || Object.keys(dailyTargets).length === 0)) ? "No data to send" : "Send summary to Teams"}
-          >
-            {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            {isSendingToTeams ? "Sending..." : "Send to Teams"}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="grid gap-2">
-              <Label htmlFor="pod-select">Pod</Label>
-              <Select
-                onValueChange={(value) => {
-                    setSelectedPodId(value);
-                    localStorage.setItem(LOG_ACHIEVEMENTS_POD_KEY, value);
-                }}
-                value={selectedPodId}
-                disabled={isLoadingPods}
-              >
-                <SelectTrigger id="pod-select" className="w-[200px]">
-                  <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pods.map(pod => (
-                    <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                  ))}
-                  {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="date-select">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date-select"
-                    variant={"outline"}
-                    className={cn(
-                      "w-[200px] justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="frosted-glass">
-        <CardHeader>
-          <CardTitle>Log Daily Achievements</CardTitle>
-          <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
-        </CardHeader>
-        <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
-          {error && <p className="text-destructive mb-4">{error}</p>}
-           {!selectedPodId ? (
-             <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
-           ) : isLoading ? (
-              <div className="space-y-4">
-                  <Skeleton className="h-10 w-full" />
-                  {Array.from({ length: 3 }).map((_, i) => (
-                     <div key={i} className="flex gap-4 items-center border p-4 rounded">
-                        <Skeleton className="h-6 w-32" />
-                         <div className="flex-1 grid grid-cols-3 gap-4">
-                           <Skeleton className="h-8 w-full" />
-                           <Skeleton className="h-8 w-full" />
-                           <Skeleton className="h-8 w-full" />
-                        </div>
-                     </div>
-                  ))}
-              </div>
-           ) : !canLog && !error ? (
-               <p className="text-muted-foreground text-center py-6">
-                  {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition found associated with ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
-               </p>
-            ) : (
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-background">
-                <TableRow>
-                  <TableHead className="w-[200px]">Agent</TableHead>
-                  {competitionRules.map(rule => (
-                    <TableHead key={rule.id}>
-                       {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {agents.map((agent) => (
-                   agent.id ? (
-                    <TableRow key={agent.id}>
-                        <TableCell className="font-medium">{agent.name}</TableCell>
-                        {competitionRules.map(rule => (
-                          rule.id ? (
-                            <TableCell key={rule.id}>
-                                <div className="relative w-24">
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        placeholder="Value"
-                                        value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? ''}
-                                        onChange={(e) => handleInputChange(agent.id!, rule.id!, e.target.value)}
-                                        className="h-8 w-full pr-6"
-                                        disabled={isSaving[`${agent.id!}-${rule.id!}`]}
-                                        aria-label={`Achievement value for ${agent.name} - ${rule.name}`}
-                                    />
-                                    {isSaving[`${agent.id!}-${rule.id!}`] && (
-                                         <Loader2 className="absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                                     )}
-                                </div>
-                            </TableCell>
-                           ) : null
+    <TooltipProvider>
+        <div className="space-y-6">
+        <Card className="frosted-glass">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="flex flex-wrap gap-4 items-end justify-between">
+                <div className="flex flex-wrap gap-4 items-end">
+                    <div className="grid gap-2">
+                    <Label htmlFor="pod-select">Pod</Label>
+                    <Select
+                        onValueChange={handleSelectedPodChange}
+                        value={selectedPodId}
+                        disabled={isLoadingPods}
+                    >
+                        <SelectTrigger id="pod-select" className="w-[200px]">
+                        <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {pods.map(pod => (
+                            <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
                         ))}
+                        {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-2">
+                    <Label htmlFor="date-select">Date</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date-select"
+                            variant={"outline"}
+                            className={cn(
+                            "w-[200px] justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-50">
+                        <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="auto-send-teams"
+                            checked={autoSendToTeams}
+                            onCheckedChange={handleAutoSendToggle}
+                            disabled={!selectedPodId || isSendingToTeams}
+                        />
+                        <Label htmlFor="auto-send-teams" className="text-sm">
+                            Auto-send to Teams
+                        </Label>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                                <p className="text-xs max-w-xs">If enabled, a summary will be automatically sent to the pod's Teams channel shortly after achievements are updated.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                    <Button
+                        onClick={handleSendToTeams}
+                        disabled={!canSendToTeams}
+                        title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (currentDailyLogsForPod.length === 0 && (!dailyTargets || Object.keys(dailyTargets).length === 0)) ? "No data to send" : "Send summary to Teams"}
+                    >
+                        {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        {isSendingToTeams ? "Sending..." : "Send to Teams"}
+                    </Button>
+                </div>
+            </div>
+            </CardContent>
+        </Card>
+
+        <Card className="frosted-glass">
+            <CardHeader>
+            <CardTitle>Log Daily Achievements</CardTitle>
+            <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
+            {error && <p className="text-destructive mb-4">{error}</p>}
+            {!selectedPodId ? (
+                <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
+            ) : isLoading ? (
+                <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="flex gap-4 items-center border p-4 rounded">
+                        <Skeleton className="h-6 w-32" />
+                            <div className="flex-1 grid grid-cols-3 gap-4">
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : !canLog && !error ? (
+                <p className="text-muted-foreground text-center py-6">
+                    {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition found associated with ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
+                </p>
+                ) : (
+                <Table>
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableRow>
+                    <TableHead className="w-[200px]">Agent</TableHead>
+                    {competitionRules.map(rule => (
+                        <TableHead key={rule.id}>
+                        {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
+                        </TableHead>
+                    ))}
                     </TableRow>
-                   ) : null
-                ))}
-              </TableBody>
-            </Table>
-             )}
-        </CardContent>
-      </Card>
-    </div>
+                </TableHeader>
+                <TableBody>
+                    {agents.map((agent) => (
+                    agent.id ? (
+                        <TableRow key={agent.id}>
+                            <TableCell className="font-medium">{agent.name}</TableCell>
+                            {competitionRules.map(rule => (
+                            rule.id ? (
+                                <TableCell key={rule.id}>
+                                    <div className="relative w-24">
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Value"
+                                            value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? ''}
+                                            onChange={(e) => handleInputChange(agent.id!, rule.id!, e.target.value)}
+                                            className="h-8 w-full pr-6"
+                                            disabled={isSaving[`${agent.id!}-${rule.id!}`]}
+                                            aria-label={`Achievement value for ${agent.name} - ${rule.name}`}
+                                        />
+                                        {isSaving[`${agent.id!}-${rule.id!}`] && (
+                                            <Loader2 className="absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                                        )}
+                                    </div>
+                                </TableCell>
+                            ) : null
+                            ))}
+                        </TableRow>
+                    ) : null
+                    ))}
+                </TableBody>
+                </Table>
+                )}
+            </CardContent>
+        </Card>
+        </div>
+    </TooltipProvider>
   );
 }
-
-    

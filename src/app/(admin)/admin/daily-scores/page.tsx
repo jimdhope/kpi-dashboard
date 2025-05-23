@@ -23,8 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Send, Filter } from 'lucide-react'; // Added Filter
-import { format, startOfDay, getDay, endOfDay } from 'date-fns'; // Added endOfDay
+import { CalendarIcon, Loader2, AlertCircle, Send, Filter, Info } from 'lucide-react'; // Added Info
+import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -35,7 +35,14 @@ import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from "@/components/ui/switch"; // Import Switch
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 // Interface for processed agent scores used internally in this component
 interface AgentScore {
@@ -62,6 +69,8 @@ interface CompetitionWithRules extends Competition {
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const DAILY_SCORES_POD_KEY = 'dailyScoresPage_selectedPodId';
+const AUTO_SEND_DAILY_SCORES_KEY_PREFIX = 'dailyScoresPage_autoSendTeams_'; // Consistent prefix
+
 
 export default function AdminDailyScoresPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -77,15 +86,35 @@ export default function AdminDailyScoresPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
+  const [autoSendEnabledForPod, setAutoSendEnabledForPod] = useState<boolean>(false); // State for auto-send toggle
 
-  // Load saved filters from localStorage on mount
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(DAILY_SCORES_POD_KEY);
     if (savedPodId) {
         setSelectedPodId(savedPodId);
+        const savedAutoSend = localStorage.getItem(`${AUTO_SEND_DAILY_SCORES_KEY_PREFIX}${savedPodId}`);
+        setAutoSendEnabledForPod(savedAutoSend === 'true');
     }
-    // selectedDate defaults to today, not persisted
   }, []);
+
+  const handleSelectedPodChange = (podId: string) => {
+    setSelectedPodId(podId);
+    localStorage.setItem(DAILY_SCORES_POD_KEY, podId);
+    const savedAutoSend = localStorage.getItem(`${AUTO_SEND_DAILY_SCORES_KEY_PREFIX}${podId}`);
+    setAutoSendEnabledForPod(savedAutoSend === 'true');
+  };
+
+  const handleAutoSendToggle = (checked: boolean) => {
+    setAutoSendEnabledForPod(checked);
+    if (selectedPodId) {
+        localStorage.setItem(`${AUTO_SEND_DAILY_SCORES_KEY_PREFIX}${selectedPodId}`, String(checked));
+        toast({
+            title: "Auto-send Preference Updated",
+            description: `Automatic Teams updates for this pod are now ${checked ? 'enabled' : 'disabled'}. Actual auto-sending is triggered from the 'Log Achievements' page.`,
+            duration: 5000,
+        });
+    }
+  };
 
   useEffect(() => {
     setIsLoadingPods(true);
@@ -112,13 +141,13 @@ export default function AdminDailyScoresPage() {
       setDailyLogs([]);
       setDailyTargets(null);
       setActiveCompetitionId(null);
-      setIsLoadingData(false); 
+      setIsLoadingData(false);
       return;
     }
 
     setIsLoadingData(true);
     setError(null);
-    setAgents([]); // Reset agents when pod changes
+    setAgents([]);
     setRules([]);
     setDailyLogs([]);
     setDailyTargets(null);
@@ -145,7 +174,7 @@ export default function AdminDailyScoresPage() {
             setActiveCompetitionId(null);
             setDailyLogs([]);
             setDailyTargets(null);
-            setIsLoadingData(false); 
+            setIsLoadingData(false);
             return;
          }
 
@@ -172,13 +201,12 @@ export default function AdminDailyScoresPage() {
           console.log(`[DailyScoresPage] Active competition found: ${foundCompetition.id}`);
           setRules(foundCompetition.rules || []);
           setActiveCompetitionId(foundCompetition.id);
-          // setIsLoadingData will be false after listeners in the next useEffect complete
         } else {
           console.log("[DailyScoresPage] No active competition found.");
           setRules([]);
           setActiveCompetitionId(null);
           toast({ variant: "default", title: "No Active Competition", description: "No competition found for this pod and date." });
-          setIsLoadingData(false); 
+          setIsLoadingData(false);
         }
 
       } catch (err) {
@@ -188,7 +216,7 @@ export default function AdminDailyScoresPage() {
         setAgents([]);
         setRules([]);
         setActiveCompetitionId(null);
-        setIsLoadingData(false); 
+        setIsLoadingData(false);
       }
     };
 
@@ -197,16 +225,13 @@ export default function AdminDailyScoresPage() {
    }, [selectedPodId, selectedDate, toast]);
 
    useEffect(() => {
-        // Conditions for not setting up listeners
         if (!activeCompetitionId || !selectedPodId || agents.length === 0) {
-             setDailyLogs([]); // Clear logs if no active comp or agents
-             setDailyTargets(null); // Clear targets
+             setDailyLogs([]);
+             setDailyTargets(null);
              if (!isLoadingData && (!activeCompetitionId || agents.length === 0)) {
-                 // If we are not already loading and there's no competition or no agents,
-                 // ensure loading is false.
                  setIsLoadingData(false);
              }
-             return () => {}; // Return empty cleanup
+             return () => {};
          }
 
          console.log(`[DailyScoresPage] Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}, Date: ${selectedDate.toISOString()}`);
@@ -221,7 +246,7 @@ export default function AdminDailyScoresPage() {
              achievementsRef,
              where('podId', '==', selectedPodId),
              where('competitionId', '==', activeCompetitionId),
-             where('date', '==', dateForQuery) 
+             where('date', '==', dateForQuery)
          );
 
           unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
@@ -229,7 +254,6 @@ export default function AdminDailyScoresPage() {
               const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
               setDailyLogs(fetchedLogs);
               setError(null);
-              // setIsLoadingData will be set to false after targets listener responds or if targets listener isn't needed
           }, (err) => {
               console.error("[DailyScoresPage] Error listening to achievements:", err);
               setError("Failed to load real-time achievement data.");
@@ -247,12 +271,12 @@ export default function AdminDailyScoresPage() {
                   console.log("[DailyScoresPage] No daily targets document found for:", targetsDocId);
                   setDailyTargets(null);
               }
-             setIsLoadingData(false); 
+             setIsLoadingData(false);
          }, (err) => {
               console.error("[DailyScoresPage] Error listening to daily targets:", err);
               setError("Failed to load daily target data.");
               setDailyTargets(null);
-              setIsLoadingData(false); 
+              setIsLoadingData(false);
          });
 
          return () => {
@@ -260,9 +284,7 @@ export default function AdminDailyScoresPage() {
              unsubscribeLogs();
              unsubscribeTargets();
          };
-    // Key dependencies: if these change, listeners need to be re-established.
-    // `agents` array itself is included because if it becomes empty, we should stop listening or clear data.
-   }, [activeCompetitionId, selectedPodId, selectedDate, agents]); 
+   }, [activeCompetitionId, selectedPodId, selectedDate, agents, isLoadingData]); // Removed agents from here and added isLoadingData
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
      console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
@@ -287,7 +309,7 @@ export default function AdminDailyScoresPage() {
 
     agents.forEach(agent => {
        if (!agent.id) return;
-        if (!scores[agent.id]) { // Ensure agent exists in scores map even if they have 0 points
+        if (!scores[agent.id]) {
             scores[agent.id] = { totalPoints: 0, emojiString: '' };
         }
 
@@ -305,9 +327,7 @@ export default function AdminDailyScoresPage() {
                 }
             }
        });
-       // This check is important: only assign emojiString if agent.id exists in scores.
-       // It should, due to initialization above, but defensive check is good.
-       if(scores[agent.id]){ 
+       if(scores[agent.id]){
            scores[agent.id].emojiString = emojis;
        }
     });
@@ -413,7 +433,7 @@ export default function AdminDailyScoresPage() {
     console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, podName: ${podName}, date: ${selectedDate}`);
     try {
       await sendTeamsUpdate(
-        podName, // pass podName directly now
+        podName,
         webhookUrl,
         selectedDate,
         rules,
@@ -436,162 +456,180 @@ export default function AdminDailyScoresPage() {
   const canSendToTeams = !isLoadingDisplay && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (agentScores.length > 0 || podTargetSummary.length > 0);
 
   return (
-    <div className="space-y-6">
-      <Card className="frosted-glass">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4 mb-6 items-end">
-            <div className="grid gap-2">
-              <Label htmlFor="pod-select">Pod</Label>
-              <Select
-                onValueChange={(value) => {
-                    setSelectedPodId(value);
-                    localStorage.setItem(DAILY_SCORES_POD_KEY, value);
-                }}
-                value={selectedPodId}
-                disabled={isLoadingPods || isLoadingData}
-              >
-                <SelectTrigger id="pod-select" className="w-[200px]">
-                  <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pods.map(pod => (
-                    <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                  ))}
-                  {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="date-select">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date-select"
-                    variant={"outline"}
-                    className={cn(
-                      "w-[200px] justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                    disabled={isLoadingData}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="frosted-glass">
-        <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-                <CardTitle>Daily Scores</CardTitle>
-                <CardDescription>View daily scores and pod target progress for the selected pod and date.</CardDescription>
-            </div>
-            <Button
-                onClick={handleSendToTeams}
-                disabled={!canSendToTeams}
-                title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (agentScores.length === 0 && podTargetSummary.length === 0) ? "No data to send" : "Send summary to Teams"}
-            >
-                {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {isSendingToTeams ? "Sending..." : "Send to Teams"}
-            </Button>
-        </CardHeader>
-        <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
-          {error && <p className="text-destructive mb-4">{error}</p>}
-
-           {isLoadingDisplay && (
-             <div className="space-y-4">
-               <Skeleton className="h-6 w-full mb-4" />
-               <Skeleton className="h-10 w-full" />
-               {Array.from({ length: 3 }).map((_, i) => (
-                 <Skeleton key={i} className="h-12 w-full" />
-               ))}
-                <Skeleton className="h-8 w-full mt-4" />
-             </div>
-           )}
-
-          {!isLoadingDisplay && rules.length > 0 && (
-            <div className="mb-4 p-3 border rounded-md bg-muted/50">
-              <p className="text-sm whitespace-pre-wrap break-words">{ruleKeyString}</p>
-            </div>
-          )}
-
-          {canDisplayTable && (
-            <>
-                <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background">
-                        <TableRow>
-                        <TableHead className="w-[150px]">Agent</TableHead>
-                        <TableHead>Achievements</TableHead>
-                        <TableHead className="w-[100px] text-right">Total Score</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {agentScores.map((score) => (
-                        <TableRow key={score.agentId}>
-                            <TableCell className="font-medium">{score.agentFirstName}</TableCell>
-                            <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                    {Array.from(score.emojiString).map((emoji, index) => (
-                                        <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
-                                            {emoji}
-                                        </span>
-                                    ))}
-                                    {score.emojiString === '' && <span className="text-sm text-muted-foreground">-</span>}
-                                </div>
-                            </TableCell>
-                            <TableCell className="text-right font-semibold text-primary">
-                                {score.totalPoints}
-                            </TableCell>
-                        </TableRow>
+    <TooltipProvider>
+        <div className="space-y-6">
+        <Card className="frosted-glass">
+            <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="flex flex-wrap gap-4 mb-6 items-end justify-between">
+                <div className="flex flex-wrap gap-4 items-end">
+                    <div className="grid gap-2">
+                    <Label htmlFor="pod-select">Pod</Label>
+                    <Select
+                        onValueChange={handleSelectedPodChange}
+                        value={selectedPodId}
+                        disabled={isLoadingPods || isLoadingData}
+                    >
+                        <SelectTrigger id="pod-select" className="w-[200px]">
+                        <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {pods.map(pod => (
+                            <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
                         ))}
-                    </TableBody>
-                </Table>
-
-                 {!isLoadingDisplay && podTargetSummary.length > 0 && (
-                     <div className="mt-6 p-4 border-t">
-                          <p className="text-sm whitespace-pre-wrap break-words">{podTargetSummaryString}</p>
+                        {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
+                        </SelectContent>
+                    </Select>
                     </div>
-                )}
-                  {!isLoadingDisplay && rules.length > 0 && podTargetSummary.length === 0 && (
-                       <div className="mt-6 p-4 border-t">
-                            <p className="text-sm text-muted-foreground">No pod targets set for this specific day.</p>
-                      </div>
-                  )}
-             </>
-          )}
 
-           {!isLoadingDisplay && !selectedPodId && (
-               <p className="text-center text-muted-foreground mt-6">Please select a pod to view scores.</p>
+                    <div className="grid gap-2">
+                    <Label htmlFor="date-select">Date</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date-select"
+                            variant={"outline"}
+                            className={cn(
+                            "w-[200px] justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                            )}
+                            disabled={isLoadingData}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-50">
+                        <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Switch
+                        id="auto-send-daily-scores"
+                        checked={autoSendEnabledForPod}
+                        onCheckedChange={handleAutoSendToggle}
+                        disabled={!selectedPodId || isSendingToTeams}
+                    />
+                    <Label htmlFor="auto-send-daily-scores" className="text-sm">
+                        Auto-send to Teams
+                    </Label>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                            <p className="text-xs max-w-xs">This setting reflects whether automatic Teams updates are enabled for this pod (managed on the 'Log Achievements' page).</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+            </div>
+            </CardContent>
+        </Card>
+
+        <Card className="frosted-glass">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Daily Scores</CardTitle>
+                    <CardDescription>View daily scores and pod target progress for the selected pod and date.</CardDescription>
+                </div>
+                <Button
+                    onClick={handleSendToTeams}
+                    disabled={!canSendToTeams}
+                    title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (agentScores.length === 0 && podTargetSummary.length === 0) ? "No data to send" : "Send summary to Teams"}
+                >
+                    {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    {isSendingToTeams ? "Sending..." : "Send to Teams"}
+                </Button>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
+            {error && <p className="text-destructive mb-4">{error}</p>}
+
+            {isLoadingDisplay && (
+                <div className="space-y-4">
+                <Skeleton className="h-6 w-full mb-4" />
+                <Skeleton className="h-10 w-full" />
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                ))}
+                    <Skeleton className="h-8 w-full mt-4" />
+                </div>
             )}
-            {!isLoadingDisplay && selectedPodId && agents.length === 0 && !error && (
-                <p className="text-center text-muted-foreground mt-6">No agents found in the selected pod.</p>
+
+            {!isLoadingDisplay && rules.length > 0 && (
+                <div className="mb-4 p-3 border rounded-md bg-muted/50">
+                <p className="text-sm whitespace-pre-wrap break-words">{ruleKeyString}</p>
+                </div>
             )}
-            {!isLoadingDisplay && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
-                 <p className="text-center text-muted-foreground mt-6">No active competition found for this pod and date.</p>
+
+            {canDisplayTable && (
+                <>
+                    <Table>
+                        <TableHeader className="sticky top-0 z-10 bg-background">
+                            <TableRow>
+                            <TableHead className="w-[150px]">Agent</TableHead>
+                            <TableHead>Achievements</TableHead>
+                            <TableHead className="w-[100px] text-right">Total Score</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {agentScores.map((score) => (
+                            <TableRow key={score.agentId}>
+                                <TableCell className="font-medium">{score.agentFirstName}</TableCell>
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        {Array.from(score.emojiString).map((emoji, index) => (
+                                            <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
+                                                {emoji}
+                                            </span>
+                                        ))}
+                                        {score.emojiString === '' && <span className="text-sm text-muted-foreground">-</span>}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold text-primary">
+                                    {score.totalPoints}
+                                </TableCell>
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+
+                    {!isLoadingDisplay && podTargetSummary.length > 0 && (
+                        <div className="mt-6 p-4 border-t">
+                            <p className="text-sm whitespace-pre-wrap break-words">{podTargetSummaryString}</p>
+                        </div>
+                    )}
+                    {!isLoadingDisplay && rules.length > 0 && podTargetSummary.length === 0 && (
+                        <div className="mt-6 p-4 border-t">
+                                <p className="text-sm text-muted-foreground">No pod targets set for this specific day.</p>
+                        </div>
+                    )}
+                </>
             )}
-             {!isLoadingDisplay && canDisplayTable && agentScores.length === 0 && dailyLogs.length === 0 && (
-                 <p className="text-center text-muted-foreground mt-6">No achievements logged for this pod on this date.</p>
-            )}
-        </CardContent>
-      </Card>
-    </div>
+
+            {!isLoadingDisplay && !selectedPodId && (
+                <p className="text-center text-muted-foreground mt-6">Please select a pod to view scores.</p>
+                )}
+                {!isLoadingDisplay && selectedPodId && agents.length === 0 && !error && (
+                    <p className="text-center text-muted-foreground mt-6">No agents found in the selected pod.</p>
+                )}
+                {!isLoadingDisplay && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
+                    <p className="text-center text-muted-foreground mt-6">No active competition found for this pod and date.</p>
+                )}
+                {!isLoadingDisplay && canDisplayTable && agentScores.length === 0 && dailyLogs.length === 0 && (
+                    <p className="text-center text-muted-foreground mt-6">No achievements logged for this pod on this date.</p>
+                )}
+            </CardContent>
+        </Card>
+        </div>
+    </TooltipProvider>
   );
 }
-
-    
