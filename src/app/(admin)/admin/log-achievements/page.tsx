@@ -425,14 +425,12 @@ export default function AdminLogAchievementsPage() {
                return newState;
            });
        }
-        // Removed direct call to debouncedAutoSendToTeams from here
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
        toast({ variant: "destructive", title: "Auto-Save Failed", description: `Could not save ${rule.name} for agent.` });
        justSaved.current = false; // Reset flag on error
     } finally {
        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
-       // Do not reset justSaved.current here if successful, let the useEffect do it after send
     }
   };
 
@@ -449,7 +447,6 @@ export default function AdminLogAchievementsPage() {
 
     setIsSendingToTeams(true);
 
-    // Ensure currentDailyLogsForPod is used for calculations, as this is the most up-to-date list
     const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
         let totalPoints = 0;
         let emojiString = "";
@@ -511,14 +508,15 @@ export default function AdminLogAchievementsPage() {
   };
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId] // Removed autoSendToTeams from here
+     [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId]
   );
 
   const debouncedAutoSendToTeams = useMemo(() => debounce(handleSendToTeams, 3000),
     [selectedPodId, activeCompetitionId, pods, agents, currentDailyLogsForPod, competitionRules, dailyTargets, toast, selectedDate]
   );
 
-  // useEffect to trigger auto-send after data updates and a save action
+  const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
+
   useEffect(() => {
     if (justSaved.current && autoSendToTeams && selectedPodId && activeCompetitionId && !isLoading) {
         console.log("[LogAchievementsPage] Data updated after save, auto-send enabled, triggering debounced send to Teams.");
@@ -528,7 +526,6 @@ export default function AdminLogAchievementsPage() {
   }, [currentDailyLogsForPod, autoSendToTeams, selectedPodId, activeCompetitionId, debouncedAutoSendToTeams, isLoading]);
 
 
-  const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
   const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0 && activeCompetitionId;
   const canSendToTeams = !isLoading && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
 
