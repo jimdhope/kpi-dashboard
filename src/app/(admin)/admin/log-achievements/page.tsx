@@ -88,7 +88,7 @@ const debounce = (func: Function, delay: number) => {
 
 const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
 const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_';
-
+const DEBOUNCE_SEND_DELAY = 60000; // 60 seconds = 1 minute
 
 export default function AdminLogAchievementsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -111,7 +111,9 @@ export default function AdminLogAchievementsPage() {
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
   const [autoSendToTeams, setAutoSendToTeams] = useState<boolean>(false);
-  const justSaved = useRef(false); // Ref to track if a save just occurred
+  
+  const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
+
 
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(LOG_ACHIEVEMENTS_POD_KEY);
@@ -331,28 +333,98 @@ export default function AdminLogAchievementsPage() {
   }, [selectedPodId, selectedDate, toast]);
 
 
-  const handleInputChange = (agentId: string, ruleId: string, value: string) => {
-    setAchievementInputs(prev => ({
-      ...prev,
-      [agentId]: {
-        ...prev[agentId],
-        [ruleId]: {
-          ...prev[agentId]?.[ruleId],
-          value: value,
-        },
-      },
-    }));
-     debouncedSave(agentId, ruleId, value);
-  };
+  const handleSendToTeams = useCallback(async () => {
+    if (!selectedPodId || !activeCompetitionId) {
+        toast({ variant: "destructive", title: "Selection Required", description: "Please select a pod and ensure a competition is active for Teams update." });
+        return;
+    }
+    const currentPod = pods.find(p => p.id === selectedPodId);
+    if (!currentPod || !currentPod.teamsWebhookUrl) {
+        toast({ variant: "destructive", title: "Webhook Missing", description: `No Teams webhook URL configured for pod "${currentPod?.name || selectedPodId}".` });
+        return;
+    }
 
-    const handleSaveAchievement = async (agentId: string, ruleId: string, valueStr: string | undefined) => {
+    setIsSendingToTeams(true);
+
+    const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
+        let totalPoints = 0;
+        let emojiString = "";
+        const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
+
+        const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
+        sortedRules.forEach(rule => {
+            if (!rule.id) return;
+            const logForRule = agentLogs.find(l => l.ruleId === rule.id);
+            if (logForRule) {
+                totalPoints += logForRule.points;
+                const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+                for (let i = 0; i < logForRule.value; i++) {
+                    emojiString += emojiToUse;
+                }
+            }
+        });
+        return {
+            agentFirstName: agent.name.split(' ')[0] || agent.name,
+            totalPoints,
+            emojiString: emojiString || '-',
+        };
+    }).sort((a,b) => a.agentFirstName.localeCompare(b.agentFirstName));
+
+    const dayOfWeek = daysOfWeek[getDay(selectedDate)];
+    const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
+        if (!rule.id) return null;
+        const achieved = currentDailyLogsForPod
+            .filter(log => log.ruleId === rule.id)
+            .reduce((sum, log) => sum + log.value, 0);
+        const target = dailyTargets?.[rule.id]?.[dayOfWeek];
+        if (target === undefined || target === null) return null;
+
+        return {
+            ruleName: rule.name,
+            ruleEmoji: rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓',
+            achieved,
+            target,
+        };
+    }).filter((item): item is PodTargetSummaryForTeams => item !== null)
+      .sort((a,b) => a.ruleName.localeCompare(b.ruleName));
+
+    try {
+        console.log(`[LogAchievementsPage] Debounced send: Sending update for pod ${currentPod.name} at ${new Date().toLocaleTimeString()}`);
+        await sendTeamsUpdate(
+            currentPod.name,
+            currentPod.teamsWebhookUrl,
+            selectedDate,
+            competitionRules,
+            agentScoresForTeams,
+            podTargetSummaryForTeams
+        );
+        toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
+    } catch (err: any) {
+        console.error("Error sending to Teams from LogAchievementsPage (debounced):", err);
+        toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
+    } finally {
+        setIsSendingToTeams(false);
+    }
+  }, [
+      selectedPodId, activeCompetitionId, pods, agents, currentDailyLogsForPod, 
+      competitionRules, dailyTargets, toast, selectedDate, setIsSendingToTeams
+  ]);
+
+  const debouncedSenderRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    debouncedSenderRef.current = debounce(handleSendToTeams, DEBOUNCE_SEND_DELAY);
+  }, [handleSendToTeams]);
+
+
+  const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
       console.error("Pod, user, or active competition information missing for auto-save.");
       return;
     }
 
     const rule = competitionRules.find(r => r.id === ruleId);
-    const agentInput = achievementInputs[agentId]?.[ruleId];
+    const agentInput = achievementInputs[agentId]?.[ruleId]; 
 
     if (!rule || agentInput === undefined) {
        console.error("Rule or input data not found for auto-save. Rule:", rule, "AgentInput for agentId", agentId, "ruleId", ruleId, ":", agentInput);
@@ -365,8 +437,7 @@ export default function AdminLogAchievementsPage() {
        console.warn("Invalid input value for auto-save:", valueStr);
        return;
      }
-
-     justSaved.current = true; // Set flag before Firestore operation
+     
      const savingKey = `${agentId}-${ruleId}`;
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
 
@@ -425,105 +496,39 @@ export default function AdminLogAchievementsPage() {
                return newState;
            });
        }
+        // After successful Firestore operation:
+        if (autoSendToTeams && debouncedSenderRef.current) { 
+            console.log(`[LogAchievementsPage] Achievement saved for ${rule.name}. Triggering debounced Teams send via handleSaveAchievementCallback.`);
+            debouncedSenderRef.current();
+        }
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
        toast({ variant: "destructive", title: "Auto-Save Failed", description: `Could not save ${rule.name} for agent.` });
-       justSaved.current = false; // Reset flag on error
     } finally {
        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
-  };
+  }, [
+    selectedPodId, currentUserUid, activeCompetitionId, competitionRules, achievementInputs, 
+    selectedDate, autoSendToTeams, toast, setAchievementInputs, setIsSaving
+  ]);
 
-  const handleSendToTeams = async () => {
-    if (!selectedPodId || !activeCompetitionId) {
-        toast({ variant: "destructive", title: "Selection Required", description: "Please select a pod and ensure a competition is active." });
-        return;
-    }
-    const currentPod = pods.find(p => p.id === selectedPodId);
-    if (!currentPod || !currentPod.teamsWebhookUrl) {
-        toast({ variant: "destructive", title: "Webhook Missing", description: `No Teams webhook URL configured for pod "${currentPod?.name || selectedPodId}".` });
-        return;
-    }
-
-    setIsSendingToTeams(true);
-
-    const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
-        let totalPoints = 0;
-        let emojiString = "";
-        const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
-
-        const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
-        sortedRules.forEach(rule => {
-            if (!rule.id) return;
-            const logForRule = agentLogs.find(l => l.ruleId === rule.id);
-            if (logForRule) {
-                totalPoints += logForRule.points;
-                const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-                for (let i = 0; i < logForRule.value; i++) {
-                    emojiString += emojiToUse;
-                }
-            }
-        });
-        return {
-            agentFirstName: agent.name.split(' ')[0] || agent.name,
-            totalPoints,
-            emojiString: emojiString || '-',
-        };
-    }).sort((a,b) => a.agentFirstName.localeCompare(b.agentFirstName));
-
-    const dayOfWeek = daysOfWeek[getDay(selectedDate)];
-    const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
-        if (!rule.id) return null;
-        const achieved = currentDailyLogsForPod
-            .filter(log => log.ruleId === rule.id)
-            .reduce((sum, log) => sum + log.value, 0);
-        const target = dailyTargets?.[rule.id]?.[dayOfWeek];
-        if (target === undefined || target === null) return null;
-
-        return {
-            ruleName: rule.name,
-            ruleEmoji: rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓',
-            achieved,
-            target,
-        };
-    }).filter((item): item is PodTargetSummaryForTeams => item !== null)
-      .sort((a,b) => a.ruleName.localeCompare(b.ruleName));
-
-    try {
-        await sendTeamsUpdate(
-            currentPod.name,
-            currentPod.teamsWebhookUrl,
-            selectedDate,
-            competitionRules,
-            agentScoresForTeams,
-            podTargetSummaryForTeams
-        );
-        toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
-    } catch (err: any) {
-        console.error("Error sending to Teams from LogAchievementsPage:", err);
-        toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
-    } finally {
-        setIsSendingToTeams(false);
-    }
-  };
-
-  const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId]
+  const debouncedSave = useMemo(() => debounce(handleSaveAchievementCallback, 1000),
+    [handleSaveAchievementCallback]
   );
 
-  const debouncedAutoSendToTeams = useMemo(() => debounce(handleSendToTeams, 3000),
-    [selectedPodId, activeCompetitionId, pods, agents, currentDailyLogsForPod, competitionRules, dailyTargets, toast, selectedDate]
-  );
-
-  const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
-
-  useEffect(() => {
-    if (justSaved.current && autoSendToTeams && selectedPodId && activeCompetitionId && !isLoading) {
-        console.log("[LogAchievementsPage] Data updated after save, auto-send enabled, triggering debounced send to Teams.");
-        debouncedAutoSendToTeams();
-        justSaved.current = false; // Reset the flag after scheduling the send
-    }
-  }, [currentDailyLogsForPod, autoSendToTeams, selectedPodId, activeCompetitionId, debouncedAutoSendToTeams, isLoading]);
+  const handleInputChange = (agentId: string, ruleId: string, value: string) => {
+    setAchievementInputs(prev => ({
+      ...prev,
+      [agentId]: {
+        ...prev[agentId],
+        [ruleId]: {
+          ...prev[agentId]?.[ruleId],
+          value: value,
+        },
+      },
+    }));
+     debouncedSave(agentId, ruleId, value);
+  };
 
 
   const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0 && activeCompetitionId;
@@ -601,7 +606,7 @@ export default function AdminLogAchievementsPage() {
                                 <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent side="top">
-                                <p className="text-xs max-w-xs">If enabled, a summary will be automatically sent to the pod's Teams channel shortly after achievements are updated.</p>
+                                <p className="text-xs max-w-xs">If enabled, a summary will be automatically sent to the pod's Teams channel (approx. 1 min after last update).</p>
                             </TooltipContent>
                         </Tooltip>
                     </div>
@@ -628,7 +633,7 @@ export default function AdminLogAchievementsPage() {
             {!selectedPodId ? (
                 <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
             ) : isLoading ? (
-                <Table>
+                 <Table>
                     <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
                             <TableHead className="w-[200px]">Agent</TableHead>
