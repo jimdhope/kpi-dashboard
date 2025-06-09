@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   collection,
   query,
@@ -111,6 +111,7 @@ export default function AdminLogAchievementsPage() {
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
   const [autoSendToTeams, setAutoSendToTeams] = useState<boolean>(false);
+  const justSaved = useRef(false); // Ref to track if a save just occurred
 
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(LOG_ACHIEVEMENTS_POD_KEY);
@@ -242,7 +243,7 @@ export default function AdminLogAchievementsPage() {
                 const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
                 const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
                 const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
-                return startDate && endDate; 
+                return startDate && endDate;
             });
             if (mostRecentValidComp) {
                 competitionForLogging = { id: mostRecentValidComp.id, ...mostRecentValidComp.data() } as Competition & { id: string };
@@ -262,10 +263,10 @@ export default function AdminLogAchievementsPage() {
                 where('date', '==', dateTimestamp),
                 where('competitionId', '==', competitionForLogging.id)
             );
-            
+
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-                setCurrentDailyLogsForPod(logs); 
+                setCurrentDailyLogsForPod(logs);
 
                 const initialInputs: AchievementInputState = {};
                 fetchedAgents.forEach(agent => {
@@ -281,7 +282,7 @@ export default function AdminLogAchievementsPage() {
                     });
                 });
                 setAchievementInputs(initialInputs);
-                setIsLoadingInitialAchievements(false); 
+                setIsLoadingInitialAchievements(false);
 
             }, (err) => {
                 console.error("Error listening to daily logs:", err);
@@ -315,7 +316,7 @@ export default function AdminLogAchievementsPage() {
         toast({ variant: "destructive", title: "Error", description: "Could not load agent or competition data." });
         setAgents([]); setCompetitionRules([]); setAchievementInputs({}); setActiveCompetitionId(null);
       } finally {
-        
+
         if (isLoadingAgents) setIsLoadingAgents(false);
         if (isLoadingRules) setIsLoadingRules(false);
         if (isLoadingInitialAchievements) setIsLoadingInitialAchievements(false);
@@ -365,6 +366,7 @@ export default function AdminLogAchievementsPage() {
        return;
      }
 
+     justSaved.current = true; // Set flag before Firestore operation
      const savingKey = `${agentId}-${ruleId}`;
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
 
@@ -423,15 +425,14 @@ export default function AdminLogAchievementsPage() {
                return newState;
            });
        }
-        if (autoSendToTeams) {
-            console.log("[LogAchievementsPage] Auto-send toggle is ON, triggering debounced send to Teams after save.");
-            debouncedAutoSendToTeams();
-        }
+        // Removed direct call to debouncedAutoSendToTeams from here
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
        toast({ variant: "destructive", title: "Auto-Save Failed", description: `Could not save ${rule.name} for agent.` });
+       justSaved.current = false; // Reset flag on error
     } finally {
        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
+       // Do not reset justSaved.current here if successful, let the useEffect do it after send
     }
   };
 
@@ -448,6 +449,7 @@ export default function AdminLogAchievementsPage() {
 
     setIsSendingToTeams(true);
 
+    // Ensure currentDailyLogsForPod is used for calculations, as this is the most up-to-date list
     const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
         let totalPoints = 0;
         let emojiString = "";
@@ -509,12 +511,21 @@ export default function AdminLogAchievementsPage() {
   };
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000),
-     [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId, autoSendToTeams]
+     [selectedPodId, currentUserUid, competitionRules, achievementInputs, selectedDate, toast, activeCompetitionId] // Removed autoSendToTeams from here
   );
 
   const debouncedAutoSendToTeams = useMemo(() => debounce(handleSendToTeams, 3000),
     [selectedPodId, activeCompetitionId, pods, agents, currentDailyLogsForPod, competitionRules, dailyTargets, toast, selectedDate]
   );
+
+  // useEffect to trigger auto-send after data updates and a save action
+  useEffect(() => {
+    if (justSaved.current && autoSendToTeams && selectedPodId && activeCompetitionId && !isLoading) {
+        console.log("[LogAchievementsPage] Data updated after save, auto-send enabled, triggering debounced send to Teams.");
+        debouncedAutoSendToTeams();
+        justSaved.current = false; // Reset the flag after scheduling the send
+    }
+  }, [currentDailyLogsForPod, autoSendToTeams, selectedPodId, activeCompetitionId, debouncedAutoSendToTeams, isLoading]);
 
 
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
