@@ -2,12 +2,29 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, getDocs, query, where, Timestamp, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
 import { Leaderboard } from '@/components/leaderboard';
+import { Target, CheckSquare, ListChecks, MessageSquare } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, ShieldCheck, Megaphone, Trophy, BarChart3, AlertCircle, CalendarIcon, Filter } from 'lucide-react';
+import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert"; // Use AlertDescription as UIDescription
+import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, getDocs } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import type { AppUser } from '@/services/user';
+import type { Pod } from '@/app/(admin)/admin/pods/page';
+import type { Competition } from '@/app/(admin)/admin/competitions/page';
+import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
+import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { generateInitials } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { AchievementCard } from '@/components/achievement-card';
+import { Progress } from '@/components/ui/progress';
+import { MessageOfTheDayDisplay } from '@/components/message-of-the-day-display';
+import { AlertCircle, CalendarIcon, Filter } from 'lucide-react'; // Import AlertCircle
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -15,14 +32,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Form, useFormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
-import { format, startOfDay, endOfDay } from 'date-fns';
-import { cn } from '@/lib/utils';
-import type { AppUser } from '@/services/user';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
-import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 // Leaderboard Entry Interface
 interface LeaderboardEntry {
@@ -107,7 +118,7 @@ export default function AdminDashboardPage() {
                 setAllUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
             }, err => { if (isMounted) console.error("Error fetching users:", err); }));
 
-            const competitionsQuery = query(collection(db, 'competitions'), orderBy('name'));
+            const competitionsQuery = query(collection(db, 'competitions'), orderBy('startDate', 'desc')); // Changed orderBy to startDate desc
             unsubscribes.push(onSnapshot(competitionsQuery, (snapshot) => {
                 if (!isMounted) return;
                 setAllCompetitions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition)));
