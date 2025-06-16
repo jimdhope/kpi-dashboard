@@ -78,6 +78,7 @@ const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
 const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_';
 const DEBOUNCE_SEND_DELAY = 20000; // 20 seconds
+const DEBOUNCE_INPUT_SAVE_DELAY = 1000; // 1 second for saving individual input changes
 
 
 // Custom hook for debouncing a callback
@@ -85,21 +86,40 @@ function useDebouncedCallback<A extends any[]>(
   callback: (...args: A) => void,
   delay: number
 ): (...args: A) => void {
-  const callbackRef = useRef(callback);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref to store the latest callback.
+  // This ensures that the most recent version of the callback (with the latest state) is used.
+  const latestCallback = useRef(callback);
 
+  // Ref to store the timeout ID.
+  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update the latestCallback ref whenever the callback prop itself changes.
+  // This happens if the callback is redefined in the parent component,
+  // for example, due to changes in its own dependencies.
   useEffect(() => {
-    callbackRef.current = callback;
-  }, [callback]); // Update ref if callback changes
+    // console.log('[useDebouncedCallback] Callback updated in ref.');
+    latestCallback.current = callback;
+  }, [callback]);
 
-  return useCallback((...args: A) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-      callbackRef.current(...args);
-    }, delay);
-  }, [delay]);
+  // Return a memoized version of the debounced function.
+  // This debounced function's identity will only change if 'delay' changes.
+  return useCallback(
+    (...args: A) => {
+      // If there's an existing timeout, clear it.
+      if (timeoutIdRef.current) {
+        // console.log('[useDebouncedCallback] Clearing previous timeout:', timeoutIdRef.current);
+        clearTimeout(timeoutIdRef.current);
+      }
+
+      // Set a new timeout.
+      timeoutIdRef.current = setTimeout(() => {
+        // console.log('[useDebouncedCallback] Timeout fired! Executing callback.');
+        latestCallback.current(...args);
+      }, delay);
+      // console.log('[useDebouncedCallback] New timeout set:', timeoutIdRef.current);
+    },
+    [delay] // Only re-create this debounced function if `delay` changes.
+  );
 }
 
 
@@ -126,7 +146,6 @@ export default function AdminLogAchievementsPage() {
   const [autoSendToTeams, setAutoSendToTeams] = useState<boolean>(false);
   
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
-  const justSaved = useRef(false); // Ref to track if a save just happened
 
 
   React.useEffect(() => {
@@ -282,7 +301,7 @@ export default function AdminLogAchievementsPage() {
 
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-                setCurrentDailyLogsForPod(logs);
+                setCurrentDailyLogsForPod(logs); // This triggers the auto-send useEffect
 
                 const initialInputs: AchievementInputState = {};
                 fetchedAgents.forEach(agent => {
@@ -347,63 +366,67 @@ export default function AdminLogAchievementsPage() {
   }, [selectedPodId, selectedDate, toast]);
 
 
-  const sendUpdateToTeamsLogic = async () => {
+  // Memoize the core logic for sending to Teams
+  // This function will be passed to useDebouncedCallback
+  // Its dependencies ensure it captures the latest state when it's (re)created.
+  const sendUpdateToTeamsLogic = useCallback(async () => {
+    // console.log('[LogAchievementsPage] sendUpdateToTeamsLogic preparing to send.');
     if (!selectedPodId || !activeCompetitionId || isLoading) {
-        console.log("[LogAchievementsPage] Send to Teams skipped: Missing pod/competition ID or still loading.");
-        if(!isLoading) { // Only toast if not loading, to avoid premature error messages
-             toast({ variant: "destructive", title: "Cannot Send Update", description: "Required information missing or still loading." });
-        }
-        return;
+      // console.log("[LogAchievementsPage] Send to Teams skipped by sendUpdateToTeamsLogic: Missing pod/competition ID or still loading.");
+      if (!isLoading) {
+        toast({ variant: "destructive", title: "Cannot Send Update", description: "Required information missing or still loading." });
+      }
+      return;
     }
     const currentPod = pods.find(p => p.id === selectedPodId);
     if (!currentPod || !currentPod.teamsWebhookUrl) {
-        toast({ variant: "destructive", title: "Webhook Missing", description: `No Teams webhook URL configured for pod "${currentPod?.name || selectedPodId}".` });
-        return;
+      toast({ variant: "destructive", title: "Webhook Missing", description: `No Teams webhook URL configured for pod "${currentPod?.name || selectedPodId}".` });
+      return;
     }
 
     setIsSendingToTeams(true);
 
     const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
-        let totalPoints = 0;
-        let emojiString = "";
-        const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
+      let totalPoints = 0;
+      let emojiString = "";
+      const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
 
-        const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
-        sortedRules.forEach(rule => {
-            if (!rule.id) return;
-            const logForRule = agentLogs.find(l => l.ruleId === rule.id);
-            if (logForRule) {
-                totalPoints += logForRule.points;
-                const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-                for (let i = 0; i < logForRule.value; i++) {
-                    emojiString += emojiToUse;
-                }
-            }
-        });
-        return {
-            agentFirstName: agent.name.split(' ')[0] || agent.name,
-            totalPoints,
-            emojiString: emojiString || '-',
-        };
-    }).sort((a,b) => a.agentFirstName.localeCompare(b.agentFirstName));
+      const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
+      sortedRules.forEach(rule => {
+        if (!rule.id) return;
+        const logForRule = agentLogs.find(l => l.ruleId === rule.id);
+        if (logForRule) {
+          totalPoints += logForRule.points;
+          const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+          for (let i = 0; i < logForRule.value; i++) {
+            emojiString += emojiToUse;
+          }
+        }
+      });
+      return {
+        agentFirstName: agent.name.split(' ')[0] || agent.name,
+        totalPoints,
+        emojiString: emojiString || '-',
+      };
+    }).sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
-        if (!rule.id) return null;
-        const achieved = currentDailyLogsForPod
-            .filter(log => log.ruleId === rule.id)
-            .reduce((sum, log) => sum + log.value, 0);
-        const target = dailyTargets?.[rule.id]?.[dayOfWeek];
-        if (target === undefined || target === null) return null;
+      if (!rule.id) return null;
+      const achieved = currentDailyLogsForPod
+        .filter(log => log.ruleId === rule.id)
+        .reduce((sum, log) => sum + log.value, 0);
+      const target = dailyTargets?.[rule.id]?.[dayOfWeek];
+      if (target === undefined || target === null) return null;
 
-        return {
-            ruleName: rule.name,
-            ruleEmoji: rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓',
-            achieved,
-            target,
-        };
+      return {
+        ruleName: rule.name,
+        ruleEmoji: rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓',
+        achieved,
+        target,
+      };
     }).filter((item): item is PodTargetSummaryForTeams => item !== null)
-      .sort((a,b) => a.ruleName.localeCompare(b.ruleName));
+      .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
     if (agentScoresForTeams.length === 0 && podTargetSummaryForTeams.length === 0 && !isLoading) {
       toast({ variant: "default", title: "No Data to Send", description: "No achievements or targets to report for Teams." });
@@ -412,35 +435,45 @@ export default function AdminLogAchievementsPage() {
     }
 
     try {
-        console.log(`[LogAchievementsPage] Sending update for pod ${currentPod.name} at ${new Date().toLocaleTimeString()}`);
-        await sendTeamsUpdate(
-            currentPod.name,
-            currentPod.teamsWebhookUrl,
-            selectedDate,
-            competitionRules,
-            agentScoresForTeams,
-            podTargetSummaryForTeams
-        );
-        toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
+      // console.log(`[LogAchievementsPage] Sending update via sendUpdateToTeamsLogic for pod ${currentPod.name} at ${new Date().toLocaleTimeString()}`);
+      await sendTeamsUpdate(
+        currentPod.name,
+        currentPod.teamsWebhookUrl,
+        selectedDate,
+        competitionRules,
+        agentScoresForTeams,
+        podTargetSummaryForTeams
+      );
+      toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
     } catch (err: any) {
-        console.error("Error sending to Teams from LogAchievementsPage:", err);
-        toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
+      console.error("Error sending to Teams from LogAchievementsPage (sendUpdateToTeamsLogic):", err);
+      toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
     } finally {
-        setIsSendingToTeams(false);
+      setIsSendingToTeams(false);
     }
-  };
+  }, [
+    selectedPodId, activeCompetitionId, isLoading, pods, currentDailyLogsForPod, 
+    competitionRules, agents, dailyTargets, selectedDate, toast /* Removed setIsSendingToTeams as it's handled by the function itself */
+  ]);
 
-  const debouncedSendToTeams = useDebouncedCallback(sendUpdateToTeamsLogic, DEBOUNCE_SEND_DELAY);
+  // Create the debounced version of sendUpdateToTeamsLogic
+  const debouncedAutoSendToTeams = useDebouncedCallback(sendUpdateToTeamsLogic, DEBOUNCE_SEND_DELAY);
 
-
-  // Effect to trigger debounced send when currentDailyLogsForPod updates AFTER a save
+  // Effect for auto-sending. This effect calls the debounced function.
   useEffect(() => {
-    if (justSaved.current && autoSendToTeams && !isLoading && activeCompetitionId && selectedPodId) {
-        console.log(`[LogAchievementsPage] Conditions met by currentDailyLogsForPod update. Triggering debounced Teams send at ${new Date().toLocaleTimeString()}`);
-        debouncedSendToTeams();
-        justSaved.current = false; // Reset the flag after scheduling the send
+    // console.log(`[LogAchievementsPage] Auto-send useEffect triggered. autoSendToTeams: ${autoSendToTeams}, isLoading: ${isLoading}, activeCompetitionId: ${activeCompetitionId}, selectedPodId: ${selectedPodId}`);
+    if (autoSendToTeams && !isLoading && activeCompetitionId && selectedPodId && currentDailyLogsForPod.length > 0) {
+      // console.log(`[LogAchievementsPage] Auto-send condition met based on currentDailyLogsForPod update. Triggering debounced Teams send at ${new Date().toLocaleTimeString()}`);
+      debouncedAutoSendToTeams();
     }
-  }, [currentDailyLogsForPod, autoSendToTeams, isLoading, debouncedSendToTeams, activeCompetitionId, selectedPodId]);
+  }, [
+    currentDailyLogsForPod, // Primary trigger: when the relevant data changes
+    autoSendToTeams,
+    isLoading,
+    activeCompetitionId,
+    selectedPodId,
+    debouncedAutoSendToTeams, // Include the debounced function itself if its identity could change, though it's stable here
+  ]);
 
 
   const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
@@ -490,7 +523,7 @@ export default function AdminLogAchievementsPage() {
          docRef = doc(achievementsRef, agentInput.existingLogId);
          if (value === 0) {
              await deleteDoc(docRef);
-             console.log(`Achievement deleted for ${rule.name} (value set to 0)`);
+             // console.log(`Achievement deleted for ${rule.name} (value set to 0)`);
              setAchievementInputs(prev => {
                  const newState = { ...prev };
                  if (newState[agentId] && newState[agentId][ruleId]) {
@@ -507,13 +540,13 @@ export default function AdminLogAchievementsPage() {
              const newState = { ...prev };
              if (!newState[agentId]) newState[agentId] = {};
              if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: String(value), existingLogId: addedDoc.id };
-             newState[agentId][ruleId].existingLogId = addedDoc.id;
+             else { newState[agentId][ruleId].existingLogId = addedDoc.id; }
              return newState;
          });
-       } else if (value === 0 && agentInput.existingLogId) {
+       } else if (value === 0 && agentInput.existingLogId) { // Should be caught by the first if, but defensive
            docRef = doc(achievementsRef, agentInput.existingLogId);
            await deleteDoc(docRef);
-           console.log(`Achievement deleted for ${rule.name} (value changed to 0 from existing)`);
+           // console.log(`Achievement deleted for ${rule.name} (value changed to 0 from existing)`);
            setAchievementInputs(prev => {
                const newState = { ...prev };
                if (newState[agentId] && newState[agentId][ruleId]) {
@@ -522,11 +555,7 @@ export default function AdminLogAchievementsPage() {
                return newState;
            });
        }
-        // After successful Firestore operation:
-        if (autoSendToTeams) { 
-            console.log(`[LogAchievementsPage] Achievement saved for ${rule.name}. Flagging for debounced Teams send.`);
-            justSaved.current = true;
-        }
+       // Firestore save is done. The onSnapshot listener for `currentDailyLogsForPod` will handle triggering the debounced Teams update.
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
        toast({ variant: "destructive", title: "Auto-Save Failed", description: `Could not save ${rule.name} for agent.` });
@@ -535,16 +564,10 @@ export default function AdminLogAchievementsPage() {
     }
   }, [
     selectedPodId, currentUserUid, activeCompetitionId, competitionRules, achievementInputs, 
-    selectedDate, autoSendToTeams, toast // Removed setAchievementInputs, setIsSaving, as they are handled by the main component
+    selectedDate, toast // Removed setAchievementInputs, setIsSaving
   ]);
 
-  // Define debouncedSave using useDebouncedCallback
-  const debouncedSave = useDebouncedCallback(
-    (agentId: string, ruleId: string, value: string | undefined) => {
-        handleSaveAchievementCallback(agentId, ruleId, value);
-    },
-    1000 // Debounce delay for saving individual achievements
-  );
+  const debouncedSave = useDebouncedCallback(handleSaveAchievementCallback, DEBOUNCE_INPUT_SAVE_DELAY);
 
   const handleInputChange = (agentId: string, ruleId: string, value: string) => {
     setAchievementInputs(prev => ({
@@ -552,7 +575,7 @@ export default function AdminLogAchievementsPage() {
       [agentId]: {
         ...prev[agentId],
         [ruleId]: {
-          ...prev[agentId]?.[ruleId],
+          ...(prev[agentId]?.[ruleId] || { value: '', existingLogId: undefined }), // Ensure existingLogId is preserved
           value: value,
         },
       },
