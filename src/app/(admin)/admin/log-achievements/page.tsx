@@ -75,20 +75,33 @@ interface AchievementInputState {
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
-// --- Debounce Helper ---
-const debounce = (func: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout | null = null;
-    return (...args: any[]) => {
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            func.apply(null, args);
-        }, delay);
-    };
-};
-
 const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
 const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_';
 const DEBOUNCE_SEND_DELAY = 20000; // 20 seconds
+
+
+// Custom hook for debouncing a callback
+function useDebouncedCallback<A extends any[]>(
+  callback: (...args: A) => void,
+  delay: number
+): (...args: A) => void {
+  const callbackRef = useRef(callback);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]); // Update ref if callback changes
+
+  return useCallback((...args: A) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      callbackRef.current(...args);
+    }, delay);
+  }, [delay]);
+}
+
 
 export default function AdminLogAchievementsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -113,6 +126,7 @@ export default function AdminLogAchievementsPage() {
   const [autoSendToTeams, setAutoSendToTeams] = useState<boolean>(false);
   
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
+  const justSaved = useRef(false); // Ref to track if a save just happened
 
 
   React.useEffect(() => {
@@ -333,9 +347,12 @@ export default function AdminLogAchievementsPage() {
   }, [selectedPodId, selectedDate, toast]);
 
 
-  const handleSendToTeamsCallback = useCallback(async () => {
-    if (!selectedPodId || !activeCompetitionId) {
-        toast({ variant: "destructive", title: "Selection Required", description: "Please select a pod and ensure a competition is active for Teams update." });
+  const sendUpdateToTeamsLogic = async () => {
+    if (!selectedPodId || !activeCompetitionId || isLoading) {
+        console.log("[LogAchievementsPage] Send to Teams skipped: Missing pod/competition ID or still loading.");
+        if(!isLoading) { // Only toast if not loading, to avoid premature error messages
+             toast({ variant: "destructive", title: "Cannot Send Update", description: "Required information missing or still loading." });
+        }
         return;
     }
     const currentPod = pods.find(p => p.id === selectedPodId);
@@ -388,8 +405,14 @@ export default function AdminLogAchievementsPage() {
     }).filter((item): item is PodTargetSummaryForTeams => item !== null)
       .sort((a,b) => a.ruleName.localeCompare(b.ruleName));
 
+    if (agentScoresForTeams.length === 0 && podTargetSummaryForTeams.length === 0 && !isLoading) {
+      toast({ variant: "default", title: "No Data to Send", description: "No achievements or targets to report for Teams." });
+      setIsSendingToTeams(false);
+      return;
+    }
+
     try {
-        console.log(`[LogAchievementsPage] Debounced send: Sending update for pod ${currentPod.name} at ${new Date().toLocaleTimeString()}`);
+        console.log(`[LogAchievementsPage] Sending update for pod ${currentPod.name} at ${new Date().toLocaleTimeString()}`);
         await sendTeamsUpdate(
             currentPod.name,
             currentPod.teamsWebhookUrl,
@@ -400,33 +423,24 @@ export default function AdminLogAchievementsPage() {
         );
         toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
     } catch (err: any) {
-        console.error("Error sending to Teams from LogAchievementsPage (debounced):", err);
+        console.error("Error sending to Teams from LogAchievementsPage:", err);
         toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
     } finally {
         setIsSendingToTeams(false);
     }
-  }, [
-      selectedPodId, activeCompetitionId, pods, agents, currentDailyLogsForPod, 
-      competitionRules, dailyTargets, toast, selectedDate, setIsSendingToTeams
-  ]);
+  };
 
-  const debouncedAutoSendToTeamsRef = useRef<(() => void) | null>(null);
-  const justSaved = useRef(false); // Ref to track if a save just happened
+  const debouncedSendToTeams = useDebouncedCallback(sendUpdateToTeamsLogic, DEBOUNCE_SEND_DELAY);
 
-  useEffect(() => {
-      debouncedAutoSendToTeamsRef.current = debounce(handleSendToTeamsCallback, DEBOUNCE_SEND_DELAY);
-  }, [handleSendToTeamsCallback]);
-
-  const isLoadingDisplay = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
 
   // Effect to trigger debounced send when currentDailyLogsForPod updates AFTER a save
   useEffect(() => {
-    if (justSaved.current && autoSendToTeams && debouncedAutoSendToTeamsRef.current && !isLoadingDisplay) {
-        console.log(`[LogAchievementsPage] currentDailyLogsForPod updated after save. Triggering debounced Teams send.`);
-        debouncedAutoSendToTeamsRef.current();
+    if (justSaved.current && autoSendToTeams && !isLoading && activeCompetitionId && selectedPodId) {
+        console.log(`[LogAchievementsPage] Conditions met by currentDailyLogsForPod update. Triggering debounced Teams send at ${new Date().toLocaleTimeString()}`);
+        debouncedSendToTeams();
         justSaved.current = false; // Reset the flag after scheduling the send
     }
-  }, [currentDailyLogsForPod, autoSendToTeams, debouncedAutoSendToTeamsRef, isLoadingDisplay]);
+  }, [currentDailyLogsForPod, autoSendToTeams, isLoading, debouncedSendToTeams, activeCompetitionId, selectedPodId]);
 
 
   const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
@@ -511,8 +525,7 @@ export default function AdminLogAchievementsPage() {
         // After successful Firestore operation:
         if (autoSendToTeams) { 
             console.log(`[LogAchievementsPage] Achievement saved for ${rule.name}. Flagging for debounced Teams send.`);
-            justSaved.current = true; // Indicate a save just happened
-            // The useEffect listening to currentDailyLogsForPod will now handle the debounced send
+            justSaved.current = true;
         }
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
@@ -522,11 +535,15 @@ export default function AdminLogAchievementsPage() {
     }
   }, [
     selectedPodId, currentUserUid, activeCompetitionId, competitionRules, achievementInputs, 
-    selectedDate, autoSendToTeams, toast, setAchievementInputs, setIsSaving
+    selectedDate, autoSendToTeams, toast // Removed setAchievementInputs, setIsSaving, as they are handled by the main component
   ]);
 
-  const debouncedSave = useMemo(() => debounce(handleSaveAchievementCallback, 1000),
-    [handleSaveAchievementCallback]
+  // Define debouncedSave using useDebouncedCallback
+  const debouncedSave = useDebouncedCallback(
+    (agentId: string, ruleId: string, value: string | undefined) => {
+        handleSaveAchievementCallback(agentId, ruleId, value);
+    },
+    1000 // Debounce delay for saving individual achievements
   );
 
   const handleInputChange = (agentId: string, ruleId: string, value: string) => {
@@ -545,7 +562,7 @@ export default function AdminLogAchievementsPage() {
 
 
   const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0 && activeCompetitionId;
-  const canSendToTeams = !isLoadingDisplay && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
+  const canSendToTeamsManually = !isLoading && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
 
 
   return (
@@ -624,8 +641,8 @@ export default function AdminLogAchievementsPage() {
                         </Tooltip>
                     </div>
                     <Button
-                        onClick={handleSendToTeamsCallback}
-                        disabled={!canSendToTeams}
+                        onClick={sendUpdateToTeamsLogic} // Direct call for manual send
+                        disabled={!canSendToTeamsManually}
                         title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (currentDailyLogsForPod.length === 0 && (!dailyTargets || Object.keys(dailyTargets).length === 0)) ? "No data to send" : "Send summary to Teams"}
                     >
                         {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
@@ -645,7 +662,7 @@ export default function AdminLogAchievementsPage() {
             {error && <p className="text-destructive mb-4">{error}</p>}
             {!selectedPodId ? (
                 <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
-            ) : isLoadingDisplay ? (
+            ) : isLoading ? (
                  <Table>
                     <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
