@@ -96,13 +96,15 @@ function useDebouncedCallback<A extends any[]>(
 
   return useCallback(
     (...args: A) => {
+      // console.log(`[useDebouncedCallback] Debounce called with args:`, args, `at ${new Date().toLocaleTimeString()}`);
       if (timeoutIdRef.current) {
         // console.log('[useDebouncedCallback] Clearing previous timeout:', timeoutIdRef.current);
         clearTimeout(timeoutIdRef.current);
       }
       timeoutIdRef.current = setTimeout(() => {
-        // console.log('[useDebouncedCallback] Timeout fired! Executing callback.');
+        // console.log(`[useDebouncedCallback] Timeout fired at ${new Date().toLocaleTimeString()}! Executing callback.`);
         latestCallback.current(...args);
+        timeoutIdRef.current = null; // Clear ref after execution
       }, delay);
       // console.log('[useDebouncedCallback] New timeout set:', timeoutIdRef.current);
     },
@@ -353,10 +355,13 @@ export default function AdminLogAchievementsPage() {
     };
   }, [selectedPodId, selectedDate, toast]);
 
-  const sendUpdateToTeamsLogicFn = async () => {
-    console.log(`[LogAchievementsPage] sendUpdateToTeamsLogicFn preparing to send at ${new Date().toLocaleTimeString()}.`);
-    if (!selectedPodId || !activeCompetitionId || isLoading || !currentUserUid) {
-      console.warn("[LogAchievementsPage] Send to Teams skipped by sendUpdateToTeamsLogicFn: Missing data or still loading.", { selectedPodId, activeCompetitionId, isLoading, currentUserUid: !!currentUserUid });
+
+  const sendUpdateToTeamsLogicFn = useCallback(async () => {
+    console.log(`[LogAchievementsPage] Debounced sendUpdateToTeamsLogicFn executing at ${new Date().toLocaleTimeString()}.`);
+    if (!selectedPodId || !activeCompetitionId || isLoading || !currentUserUid || !autoSendToTeams) {
+      console.warn("[LogAchievementsPage] Send to Teams skipped by debounced logic: Conditions not met.", {
+        selectedPodId, activeCompetitionId, isLoading, currentUserUid: !!currentUserUid, autoSendToTeams
+      });
       return;
     }
     
@@ -366,7 +371,7 @@ export default function AdminLogAchievementsPage() {
       return;
     }
 
-    console.log(`[LogAchievementsPage] sendUpdateToTeamsLogicFn: Using currentDailyLogsForPod count: ${currentDailyLogsForPod.length}`);
+    console.log(`[LogAchievementsPage] Debounced send: Using currentDailyLogsForPod count: ${currentDailyLogsForPod.length}`);
     
     setIsSendingToTeams(true);
 
@@ -429,16 +434,26 @@ export default function AdminLogAchievementsPage() {
         podTargetSummaryForTeams
       );
       console.log(`[LogAchievementsPage] Teams update sent successfully for pod ${currentPod.name}.`);
-      // Toast is removed for auto-send to avoid UI noise, can be re-added if desired for manual send.
     } catch (err: any) {
       console.error("[LogAchievementsPage] Error sending to Teams (debounced):", err);
-      // Toast is removed for auto-send
     } finally {
       setIsSendingToTeams(false);
     }
-  };
+  }, [selectedPodId, activeCompetitionId, isLoading, currentUserUid, autoSendToTeams, pods, currentDailyLogsForPod, agents, competitionRules, dailyTargets, selectedDate]);
   
   const debouncedAutoSendToTeams = useDebouncedCallback(sendUpdateToTeamsLogicFn, DEBOUNCE_SEND_DELAY);
+
+  useEffect(() => {
+    if (autoSendToTeams && !isLoading && activeCompetitionId && selectedPodId) {
+        // This check ensures we don't call the debouncer with empty/initial currentDailyLogsForPod
+        // if the listener hasn't populated it yet for the current selections.
+        // The debouncer will be called as soon as currentDailyLogsForPod gets its first meaningful update.
+        if (currentDailyLogsForPod !== undefined) { // Or a more specific check if needed
+             console.log(`[LogAchievementsPage] Data updated (currentDailyLogsForPod). Triggering debounced Teams send at ${new Date().toLocaleTimeString()}.`);
+             debouncedAutoSendToTeams();
+        }
+    }
+  }, [currentDailyLogsForPod, autoSendToTeams, isLoading, activeCompetitionId, selectedPodId, debouncedAutoSendToTeams]);
 
 
   const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
@@ -543,10 +558,7 @@ export default function AdminLogAchievementsPage() {
       },
     }));
      debouncedSave(agentId, ruleId, value);
-     if (autoSendToTeams && !isLoading && activeCompetitionId && selectedPodId) {
-        console.log(`[LogAchievementsPage] Input changed for agent ${agentId}, rule ${ruleId}. Triggering debounced Teams send at ${new Date().toLocaleTimeString()}`);
-        debouncedAutoSendToTeams();
-    }
+     // The useEffect watching currentDailyLogsForPod will handle triggering the debouncedAutoSendToTeams
   };
 
 
@@ -625,7 +637,7 @@ export default function AdminLogAchievementsPage() {
                                 <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent side="top">
-                                <p className="text-xs max-w-xs">If enabled, a summary will be automatically sent to the pod's Teams channel (approx. {DEBOUNCE_SEND_DELAY / 1000}s after last update).</p>
+                                <p className="text-xs max-w-xs">If enabled, a summary will be automatically sent to the pod's Teams channel (approx. {DEBOUNCE_SEND_DELAY / 1000}s after last data update from Firestore).</p>
                             </TooltipContent>
                         </Tooltip>
                     </div>
