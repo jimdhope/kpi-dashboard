@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Send, Filter, Info } from 'lucide-react'; // Added Info
+import { CalendarIcon, Loader2, AlertCircle, Send, Filter } from 'lucide-react'; // Removed Info
 import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -34,13 +34,13 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
-import { Switch } from "@/components/ui/switch"; // Import Switch
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+// import { Switch } from "@/components/ui/switch"; // Removed Switch import
+// import {
+//   Tooltip,
+//   TooltipContent,
+//   TooltipProvider,
+//   TooltipTrigger,
+// } from "@/components/ui/tooltip"; // Removed Tooltip imports
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 
 
@@ -69,7 +69,7 @@ interface CompetitionWithRules extends Competition {
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const DAILY_SCORES_POD_KEY = 'dailyScoresPage_selectedPodId';
-const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_'; // Consistent prefix
+// const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_'; // Removed, as toggle is removed
 
 
 export default function AdminDailyScoresPage() {
@@ -86,35 +86,35 @@ export default function AdminDailyScoresPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
-  const [autoSendEnabledForPod, setAutoSendEnabledForPod] = useState<boolean>(false); // State for auto-send toggle
+  // const [autoSendEnabledForPod, setAutoSendEnabledForPod] = useState<boolean>(false); // Removed state for auto-send toggle
 
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(DAILY_SCORES_POD_KEY);
     if (savedPodId) {
         setSelectedPodId(savedPodId);
-        const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${savedPodId}`);
-        setAutoSendEnabledForPod(savedAutoSend === 'true');
+        // const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${savedPodId}`); // Removed
+        // setAutoSendEnabledForPod(savedAutoSend === 'true'); // Removed
     }
   }, []);
 
   const handleSelectedPodChange = (podId: string) => {
     setSelectedPodId(podId);
     localStorage.setItem(DAILY_SCORES_POD_KEY, podId);
-    const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${podId}`);
-    setAutoSendEnabledForPod(savedAutoSend === 'true');
+    // const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${podId}`); // Removed
+    // setAutoSendEnabledForPod(savedAutoSend === 'true'); // Removed
   };
 
-  const handleAutoSendToggle = (checked: boolean) => {
-    setAutoSendEnabledForPod(checked);
-    if (selectedPodId) {
-        localStorage.setItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${selectedPodId}`, String(checked));
-        toast({
-            title: "Auto-send Preference Updated",
-            description: `Automatic Teams updates for this pod are now ${checked ? 'enabled' : 'disabled'}. Actual auto-sending is triggered from the 'Log Achievements' page.`,
-            duration: 5000,
-        });
-    }
-  };
+  // const handleAutoSendToggle = (checked: boolean) => { // Removed this handler
+  //   setAutoSendEnabledForPod(checked);
+  //   if (selectedPodId) {
+  //       localStorage.setItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${selectedPodId}`, String(checked));
+  //       toast({
+  //           title: "Auto-send Preference Updated",
+  //           description: `Automatic Teams updates for this pod are now ${checked ? 'enabled' : 'disabled'}. Actual auto-sending is triggered from the 'Log Achievements' page.`,
+  //           duration: 5000,
+  //       });
+  //   }
+  // };
 
   useEffect(() => {
     setIsLoadingPods(true);
@@ -462,14 +462,14 @@ export default function AdminDailyScoresPage() {
   const canSendToTeams = !isLoadingDisplay && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (agentScores.length > 0 || podTargetSummary.length > 0);
 
   return (
-    <TooltipProvider>
+    // <TooltipProvider> // TooltipProvider removed
         <div className="space-y-6">
         <Card className="frosted-glass">
             <CardHeader>
             <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
             </CardHeader>
             <CardContent>
-            <div className="flex flex-wrap gap-4 mb-6 items-end justify-between">
+            <div className="flex flex-wrap gap-4 items-end justify-between">
                 <div className="flex flex-wrap gap-4 items-end">
                     <div className="grid gap-2">
                     <Label htmlFor="pod-select">Pod</Label>
@@ -518,25 +518,7 @@ export default function AdminDailyScoresPage() {
                     </Popover>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Switch
-                        id="auto-send-daily-scores"
-                        checked={autoSendEnabledForPod}
-                        onCheckedChange={handleAutoSendToggle}
-                        disabled={!selectedPodId || isSendingToTeams}
-                    />
-                    <Label htmlFor="auto-send-daily-scores" className="text-sm">
-                        Auto-send to Teams
-                    </Label>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                            <p className="text-xs max-w-xs">This setting reflects whether automatic Teams updates are enabled for this pod (managed on the 'Log Achievements' page).</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
+                {/* Removed Auto-send toggle and its surrounding div */}
             </div>
             </CardContent>
         </Card>
@@ -647,6 +629,7 @@ export default function AdminDailyScoresPage() {
             </CardContent>
         </Card>
         </div>
-    </TooltipProvider>
+    // </TooltipProvider> // TooltipProvider removed
   );
 }
+
