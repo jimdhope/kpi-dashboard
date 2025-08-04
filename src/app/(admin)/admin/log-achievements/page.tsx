@@ -22,13 +22,12 @@ import {
 import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX, ListTodo } from 'lucide-react'; // Added ListTodo
+import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX, ListTodo } from 'lucide-react';
 import { format, startOfDay, getDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -40,7 +39,8 @@ import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { DailyTask } from '@/app/(admin)/admin/daily-tasks/page'; // Import DailyTask type
+import type { DailyTask } from '@/app/(admin)/admin/daily-tasks/page';
+import { AchievementCard } from '@/components/achievement-card'; // Import the new card
 
 // Interface for the data stored in Firestore for achievements
 export interface DailyAchievementLog {
@@ -73,7 +73,7 @@ export interface DailyTaskLog {
 interface AchievementInputState {
   [agentId: string]: {
     [ruleId: string]: {
-      value: string;
+      value: number; // Changed to number
       existingLogId?: string;
     };
     isNA?: boolean;
@@ -93,32 +93,15 @@ interface TaskInputState {
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
-const DEBOUNCE_INPUT_SAVE_DELAY = 1000;
 
-function useDebouncedCallback<A extends any[]>(
-  callback: (...args: A) => void,
-  delay: number
-): (...args: A) => void {
-  const latestCallback = useRef(callback);
-  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    latestCallback.current = callback;
-  }, [callback]);
-
-  return useCallback(
-    (...args: A) => {
-      if (timeoutIdRef.current) {
-        clearTimeout(timeoutIdRef.current);
-      }
-      timeoutIdRef.current = setTimeout(() => {
-        latestCallback.current(...args);
-        timeoutIdRef.current = null;
-      }, delay);
-    },
-    [delay]
-  );
-}
+// Debounce utility function
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  return (...args: any[]) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
 
 
 export default function AdminLogAchievementsPage() {
@@ -127,13 +110,13 @@ export default function AdminLogAchievementsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [competitionRules, setCompetitionRules] = useState<RuleFormData[]>([]);
-  const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]); // New state for daily tasks
+  const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]);
   const [achievementInputs, setAchievementInputs] = useState<AchievementInputState>({});
-  const [taskInputs, setTaskInputs] = useState<TaskInputState>({}); // New state for task inputs
+  const [taskInputs, setTaskInputs] = useState<TaskInputState>({});
   const [isLoadingPods, setIsLoadingPods] = useState(true);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingRules, setIsLoadingRules] = useState(false);
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false); // Combined initial data loader
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false);
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -322,7 +305,7 @@ export default function AdminLogAchievementsPage() {
                         if (!rule.id) return;
                         const existingLog = agentLogs.find(log => log.ruleId === rule.id && log.status !== 'absent');
                         initialInputs[agent.id!][rule.id] = {
-                            value: existingLog ? String(existingLog.value) : '',
+                            value: existingLog ? existingLog.value : 0,
                             existingLogId: existingLog?.id,
                         };
                     });
@@ -341,7 +324,7 @@ export default function AdminLogAchievementsPage() {
                     initialTaskInputs[agent.id] = {};
                     dailyTasks.forEach(task => {
                         if (!task.id) return;
-                        const existingLog = agentLogs.find(log => log.taskId === task.id);
+                        const existingLog = logs.find(log => log.agentId === agent.id && log.taskId === task.id);
                         initialTaskInputs[agent.id!][task.id] = {
                             checked: !!existingLog,
                             existingLogId: existingLog?.id,
@@ -391,29 +374,20 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTargets();
       unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate, toast]);
+  }, [selectedPodId, selectedDate]);
 
 
-  const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
+  const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
       console.error("Pod, user, or active competition information missing for auto-save.");
       return;
     }
 
     const rule = competitionRules.find(r => r.id === ruleId);
-    const agentInput = achievementInputs[agentId]?.[ruleId];
-
-    if (!rule || agentInput === undefined) {
-       console.error("Rule or input data not found for auto-save. Rule:", rule, "AgentInput for agentId", agentId, "ruleId", ruleId, ":", agentInput);
+    if (!rule || !rule.id) {
+       console.error("Rule or input data not found for auto-save. Rule:", rule);
       return;
     }
-
-    const value = parseInt(valueStr || '0', 10);
-
-     if (isNaN(value) || value < 0) {
-       console.warn("Invalid input value for auto-save:", valueStr);
-       return;
-     }
 
      const savingKey = `${agentId}-${ruleId}`;
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
@@ -435,10 +409,10 @@ export default function AdminLogAchievementsPage() {
        };
 
        const achievementsRef = collection(db, 'dailyAchievements');
-       let docRef;
+       const existingLogId = achievementInputs[agentId]?.[ruleId]?.existingLogId;
 
-       if (agentInput.existingLogId) {
-         docRef = doc(achievementsRef, agentInput.existingLogId);
+       if (existingLogId) {
+         const docRef = doc(achievementsRef, existingLogId);
          if (value === 0) {
              await deleteDoc(docRef);
              setAchievementInputs(prev => {
@@ -456,12 +430,12 @@ export default function AdminLogAchievementsPage() {
          setAchievementInputs(prev => {
              const newState = { ...prev };
              if (!newState[agentId]) newState[agentId] = {};
-             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: String(value), existingLogId: addedDoc.id };
+             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: value, existingLogId: addedDoc.id };
              else { newState[agentId][ruleId].existingLogId = addedDoc.id; }
              return newState;
          });
-       } else if (value === 0 && agentInput.existingLogId) {
-           docRef = doc(achievementsRef, agentInput.existingLogId);
+       } else if (value === 0 && existingLogId) {
+           const docRef = doc(achievementsRef, existingLogId);
            await deleteDoc(docRef);
            setAchievementInputs(prev => {
                const newState = { ...prev };
@@ -483,21 +457,25 @@ export default function AdminLogAchievementsPage() {
     selectedDate, toast
   ]);
 
-  const debouncedInputSave = useDebouncedCallback(handleSaveAchievementCallback, DEBOUNCE_INPUT_SAVE_DELAY);
+  const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), [handleSaveAchievement]);
 
-  const handleInputChange = (agentId: string, ruleId: string, value: string) => {
+  const handleValueChange = useCallback((agentId: string, ruleId: string, change: number) => {
+    const currentValue = achievementInputs[agentId]?.[ruleId]?.value ?? 0;
+    const newValue = Math.max(0, currentValue + change);
+
     setAchievementInputs(prev => ({
       ...prev,
       [agentId]: {
         ...prev[agentId],
         [ruleId]: {
-          ...(prev[agentId]?.[ruleId] || { value: '', existingLogId: undefined }),
-          value: value,
+          ...(prev[agentId]?.[ruleId] || { value: 0 }),
+          value: newValue,
         },
       },
     }));
-     debouncedInputSave(agentId, ruleId, value);
-  };
+    debouncedSave(agentId, ruleId, newValue);
+  }, [achievementInputs, debouncedSave]);
+
 
   const handleNaChange = async (agentId: string, isChecked: boolean) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
@@ -549,17 +527,17 @@ export default function AdminLogAchievementsPage() {
       return;
     }
 
+    // Optimistically update the UI first
     setTaskInputs(prev => ({
         ...prev,
         [agentId]: {
             ...prev[agentId],
             [taskId]: {
-                ...(prev[agentId]?.[taskId] || { checked: false }),
+                ...(prev[agentId]?.[taskId] || { checked: false, existingLogId: undefined }),
                 checked: isChecked,
             },
         },
     }));
-
 
     const savingKey = `task-${agentId}-${taskId}`;
     setIsSaving(prev => ({ ...prev, [savingKey]: true }));
@@ -581,36 +559,48 @@ export default function AdminLogAchievementsPage() {
                     loggedBy: currentUserUid,
                 };
                 const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
-                setTaskInputs(prev => {
-                    const newInputs = { ...prev };
-                    if (newInputs[agentId]?.[taskId]) {
-                        newInputs[agentId][taskId].existingLogId = addedDoc.id;
-                    }
-                    return newInputs;
-                });
+                // Update the state with the new ID from Firestore
+                setTaskInputs(prev => ({
+                    ...prev,
+                    [agentId]: {
+                        ...prev[agentId],
+                        [taskId]: {
+                            ...prev[agentId]?.[taskId],
+                            existingLogId: addedDoc.id,
+                        },
+                    },
+                }));
             }
         } else {
             if (existingLogId) {
                 await deleteDoc(doc(taskLogsRef, existingLogId));
-                setTaskInputs(prev => {
-                    const newInputs = { ...prev };
-                    if (newInputs[agentId]?.[taskId]) {
-                        newInputs[agentId][taskId].existingLogId = undefined;
-                    }
-                    return newInputs;
-                });
+                // Remove the ID from the state
+                setTaskInputs(prev => ({
+                    ...prev,
+                    [agentId]: {
+                        ...prev[agentId],
+                        [taskId]: {
+                            ...prev[agentId]?.[taskId],
+                            existingLogId: undefined,
+                        },
+                    },
+                }));
             }
         }
     } catch (error) {
          console.error("Error saving task log:", error);
          toast({ variant: 'destructive', title: 'Task Save Failed', description: 'Could not save task change.' });
-          setTaskInputs(prev => {
-            const newInputs = { ...prev };
-            if (newInputs[agentId]?.[taskId]) {
-                newInputs[agentId][taskId].checked = !isChecked;
-            }
-            return newInputs;
-        });
+          // Revert the optimistic UI update on error
+          setTaskInputs(prev => ({
+            ...prev,
+            [agentId]: {
+                ...prev[agentId],
+                [taskId]: {
+                    ...prev[agentId]?.[taskId],
+                    checked: !isChecked,
+                },
+            },
+        }));
     } finally {
         setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
@@ -821,7 +811,7 @@ export default function AdminLogAchievementsPage() {
                     <TableHead className="w-[250px]">Agent</TableHead>
                     {competitionRules.map(rule => (
                         <TableHead key={rule.id}>
-                        {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
+                            <span title={rule.name}>{(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name}</span>
                         </TableHead>
                     ))}
                     </TableRow>
@@ -848,21 +838,14 @@ export default function AdminLogAchievementsPage() {
                             {competitionRules.map(rule => (
                             rule.id ? (
                                 <TableCell key={rule.id}>
-                                    <div className="relative w-24">
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            placeholder="Value"
-                                            value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? ''}
-                                            onChange={(e) => handleInputChange(agent.id!, rule.id!, e.target.value)}
-                                            className="h-8 w-20 pr-6"
-                                            disabled={isSaving[`${agent.id!}-${rule.id!}`] || achievementInputs[agent.id!]?.isNA}
-                                            aria-label={`Achievement value for ${agent.name} - ${rule.name}`}
-                                        />
-                                        {isSaving[`${agent.id!}-${rule.id!}`] && (
-                                            <Loader2 className="absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                                        )}
-                                    </div>
+                                    <AchievementCard
+                                        rule={rule}
+                                        currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
+                                        isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
+                                        onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
+                                        onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
+                                        disabled={achievementInputs[agent.id!]?.isNA}
+                                    />
                                 </TableCell>
                             ) : null
                             ))}
@@ -908,6 +891,7 @@ export default function AdminLogAchievementsPage() {
                                         task.id ? (
                                         <TableCell key={task.id} className="text-center">
                                             <Checkbox
+                                                id={`task-checkbox-${agent.id}-${task.id}`}
                                                 checked={taskInputs[agent.id!]?.[task.id!]?.checked || false}
                                                 onCheckedChange={(checked) => handleTaskChange(agent.id!, task.id!, !!checked)}
                                                 disabled={isSaving[`task-${agent.id!}-${task.id!}`] || achievementInputs[agent.id!]?.isNA}
@@ -928,3 +912,4 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
+

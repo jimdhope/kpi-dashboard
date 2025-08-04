@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -47,7 +48,7 @@ interface DailyAchievementLog {
 // Interface for managing state within the component (simplified for single agent)
 interface AgentAchievementInputState {
   [ruleId: string]: {
-    value: string; // Use string for input value to allow empty field
+    value: number; // Use number for value
     existingLogId?: string;
   };
 }
@@ -177,7 +178,7 @@ export default function AgentLogAchievementsPage() {
             if (!rule.id) return;
             const existingLog = existingAchievements.find(log => log.ruleId === rule.id);
             initialInputs[rule.id] = {
-              value: existingLog ? String(existingLog.value) : '0',
+              value: existingLog ? existingLog.value : 0,
               existingLogId: existingLog?.id,
             };
           });
@@ -226,7 +227,7 @@ export default function AgentLogAchievementsPage() {
         date: dateTimestamp,
         value: value,
         points: points,
-        loggedAt: serverTimestamp(),
+        loggedAt: serverTimestamp() as Timestamp,
         loggedBy: currentUser.uid,
       };
 
@@ -242,7 +243,7 @@ export default function AgentLogAchievementsPage() {
           setAchievementInputs(prev => {
             const newState = { ...prev };
             if (newState[ruleId]) {
-              newState[ruleId] = { ...newState[ruleId], existingLogId: undefined, value: '0' };
+              newState[ruleId] = { ...newState[ruleId], existingLogId: undefined, value: 0 };
             }
             return newState;
           });
@@ -252,7 +253,7 @@ export default function AgentLogAchievementsPage() {
         setAchievementInputs(prev => {
           const newState = { ...prev };
           if (!newState[ruleId]) {
-            newState[ruleId] = { value: String(value), existingLogId: addedDoc.id };
+            newState[ruleId] = { value: value, existingLogId: addedDoc.id };
           } else {
             newState[ruleId].existingLogId = addedDoc.id;
           }
@@ -270,13 +271,12 @@ export default function AgentLogAchievementsPage() {
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), [handleSaveAchievement]);
 
   const handleValueChange = useCallback((ruleId: string, change: number) => {
-    const currentValueStr = achievementInputs[ruleId]?.value ?? '0';
-    const currentValue = parseInt(currentValueStr, 10) || 0;
+    const currentValue = achievementInputs[ruleId]?.value ?? 0;
     const newValue = Math.max(0, currentValue + change);
 
     setAchievementInputs(prev => ({
       ...prev,
-      [ruleId]: { ...(prev[ruleId] || { value: '0', existingLogId: undefined }), value: String(newValue) },
+      [ruleId]: { ...(prev[ruleId] || { value: 0 }), value: newValue },
     }));
     debouncedSave(ruleId, newValue);
   }, [achievementInputs, debouncedSave, setAchievementInputs]);
@@ -288,7 +288,7 @@ export default function AgentLogAchievementsPage() {
     let totalPoints = 0;
     competitionRules.forEach(rule => {
       if (rule.id && achievementInputs[rule.id]) {
-        const value = parseInt(achievementInputs[rule.id].value, 10) || 0;
+        const value = achievementInputs[rule.id].value || 0;
         totalPoints += value * rule.points;
       }
     });
@@ -334,7 +334,7 @@ export default function AgentLogAchievementsPage() {
                   <AchievementCard
                     key={rule.id}
                     rule={rule}
-                    currentValue={parseInt(achievementInputs[rule.id!]?.value ?? '0', 10)}
+                    currentValue={achievementInputs[rule.id!]?.value ?? 0}
                     isSaving={isSaving[rule.id!] || false}
                     onIncrement={() => handleValueChange(rule.id!, 1)}
                     onDecrement={() => handleValueChange(rule.id!, -1)}
