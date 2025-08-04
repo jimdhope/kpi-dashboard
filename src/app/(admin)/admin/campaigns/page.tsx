@@ -18,7 +18,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Remove AvatarImage import
-import { Edit, Trash2, PlusCircle, ListChecks } from 'lucide-react'; // Added ListChecks icon
+import { Edit, Trash2, PlusCircle } from 'lucide-react'; // Removed ListChecks icon
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { CampaignForm, CampaignFormData } from '@/components/campaign-form';
-import { ManageCampaignRulesDialog } from '@/components/manage-campaign-rules-dialog'; // Import the new dialog
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { generateInitials } from '@/lib/utils'; // Import generateInitials
@@ -62,9 +61,7 @@ export default function AdminCampaignsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [isRulesDialogOpen, setIsRulesDialogOpen] = useState(false); // State for Rules Dialog
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-  const [selectedCampaignForRules, setSelectedCampaignForRules] = useState<Campaign | null>(null); // Campaign for Rules Dialog
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
   const { toast } = useToast();
 
@@ -119,11 +116,6 @@ export default function AdminCampaignsPage() {
   const openDeleteAlert = (campaign: Campaign) => {
     setSelectedCampaign(campaign);
     setIsAlertOpen(true);
-  };
-
-  const openRulesDialog = (campaign: Campaign) => {
-    setSelectedCampaignForRules(campaign);
-    setIsRulesDialogOpen(true);
   };
 
   // Handle form submission including logo customization
@@ -217,179 +209,151 @@ export default function AdminCampaignsPage() {
     <div className="space-y-6">
       {/* Dialog for Adding/Editing Campaigns */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        {/* Dialog for Managing Campaign Rules */}
-        <Dialog open={isRulesDialogOpen} onOpenChange={setIsRulesDialogOpen}>
-          {/* Alert Dialog for Deleting Campaigns */}
-           <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        {/* Alert Dialog for Deleting Campaigns */}
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
 
-            {/* Main Card for displaying the list */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Manage Campaigns</CardTitle>
-                  <CardDescription>View, add, edit, delete campaigns, and manage rules.</CardDescription>
-                </div>
-                {/* Add Campaign Button Trigger - MUST be inside a Dialog provider */}
-                <DialogTrigger asChild>
-                  <Button onClick={openAddDialog} disabled={isLoading}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Campaign
-                  </Button>
-                </DialogTrigger>
-              </CardHeader>
-              <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]">
-                {error && !isLoading && (
-                  <div className="mb-4 text-center text-destructive">{error}</div>
-                )}
-                <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow>
-                      <TableHead className="w-[80px]">Logo</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="text-right w-[200px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      // Loading Skeleton Rows
-                      Array.from({ length: 3 }).map((_, index) => (
-                        <TableRow key={`loading-${index}`}>
-                          <TableCell>
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                          </TableCell>
-                          <TableCell>
-                            <Skeleton className="h-4 w-3/4" />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex gap-1 justify-end">
-                              <Skeleton className="h-8 w-8" />
-                              <Skeleton className="h-8 w-8" />
-                              <Skeleton className="h-8 w-8" />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : campaigns.length === 0 && !error ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                          No campaigns found. Create one to get started!
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      campaigns.map((campaign) => (
-                        <TableRow key={campaign.id}>
-                          <TableCell>
-                            <Avatar className="h-10 w-10">
-                               <AvatarFallback
-                                  initials={campaign.logoInitials || generateInitials(campaign.name)}
-                                  backgroundColor={campaign.logoBgColor}
-                               >
-                                  {/* Render default initials only if no custom/generated */}
-                                  {!campaign.logoInitials && generateInitials(campaign.name)}
-                               </AvatarFallback>
-                            </Avatar>
-                          </TableCell>
-                          <TableCell className="font-medium">{campaign.name}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex gap-1 justify-end">
-                              {/* Rules Button - Triggers the Rules Dialog */}
-                              {/* Needs to be wrapped in DialogTrigger for the Rules Dialog */}
-                              <DialogTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openRulesDialog(campaign)}
-                                    aria-label={`Manage rules for ${campaign.name}`}
-                                    title={`Manage rules for ${campaign.name}`}
-                                    disabled={isLoading}
-                                >
-                                   <ListChecks className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              {/* Edit Button - Triggers the Add/Edit Dialog */}
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditDialog(campaign)}
-                                  aria-label={`Edit ${campaign.name}`}
-                                  title={`Edit ${campaign.name}`}
-                                  disabled={isLoading} // Disable while loading
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              {/* Delete Button - Triggers the AlertDialog */}
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                                  onClick={() => openDeleteAlert(campaign)}
-                                  aria-label={`Delete ${campaign.name}`}
-                                  title={`Delete ${campaign.name}`}
-                                  disabled={isLoading} // Disable while loading
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                {/* TODO: Add pagination controls if necessary */}
-              </CardContent>
-            </Card>
-
-             {/* Content for the Delete Confirmation */}
-             <AlertDialogContent>
-                  <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the campaign
-                      <span className="font-semibold"> "{selectedCampaign?.name}"</span>.
-                      Associated pod data and rules might also be affected.
-                  </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setSelectedCampaign(null)}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({ variant: "destructive" })}>
-                      Delete
-                  </AlertDialogAction>
-                  </AlertDialogFooter>
-              </AlertDialogContent>
-           </AlertDialog>
-
-           {/* Content for the Manage Campaign Rules Dialog */}
-           {selectedCampaignForRules && (
-              <ManageCampaignRulesDialog
-                campaign={selectedCampaignForRules}
-                onClose={() => setIsRulesDialogOpen(false)}
-              />
+        {/* Main Card for displaying the list */}
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+                <CardTitle>Manage Campaigns</CardTitle>
+                <CardDescription>View, add, edit, and delete campaigns. Rules are managed per-competition.</CardDescription>
+            </div>
+            {/* Add Campaign Button Trigger - MUST be inside a Dialog provider */}
+            <DialogTrigger asChild>
+                <Button onClick={openAddDialog} disabled={isLoading}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Campaign
+                </Button>
+            </DialogTrigger>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]">
+            {error && !isLoading && (
+                <div className="mb-4 text-center text-destructive">{error}</div>
             )}
-        </Dialog> {/* Close Rules Dialog */}
+            <Table>
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                <TableRow>
+                    <TableHead className="w-[80px]">Logo</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="text-right w-[150px]">Actions</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {isLoading ? (
+                    // Loading Skeleton Rows
+                    Array.from({ length: 3 }).map((_, index) => (
+                    <TableRow key={`loading-${index}`}>
+                        <TableCell>
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                        <Skeleton className="h-4 w-3/4" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
+                        </div>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                ) : campaigns.length === 0 && !error ? (
+                    <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                        No campaigns found. Create one to get started!
+                    </TableCell>
+                    </TableRow>
+                ) : (
+                    campaigns.map((campaign) => (
+                    <TableRow key={campaign.id}>
+                        <TableCell>
+                        <Avatar className="h-10 w-10">
+                            <AvatarFallback
+                                initials={campaign.logoInitials || generateInitials(campaign.name)}
+                                backgroundColor={campaign.logoBgColor}
+                            >
+                                {/* Render default initials only if no custom/generated */}
+                                {!campaign.logoInitials && generateInitials(campaign.name)}
+                            </AvatarFallback>
+                        </Avatar>
+                        </TableCell>
+                        <TableCell className="font-medium">{campaign.name}</TableCell>
+                        <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                            {/* Edit Button - Triggers the Add/Edit Dialog */}
+                            <DialogTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(campaign)}
+                                aria-label={`Edit ${campaign.name}`}
+                                title={`Edit ${campaign.name}`}
+                                disabled={isLoading} // Disable while loading
+                            >
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            </DialogTrigger>
+                            {/* Delete Button - Triggers the AlertDialog */}
+                            <AlertDialogTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                                onClick={() => openDeleteAlert(campaign)}
+                                aria-label={`Delete ${campaign.name}`}
+                                title={`Delete ${campaign.name}`}
+                                disabled={isLoading} // Disable while loading
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                            </AlertDialogTrigger>
+                        </div>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                )}
+                </TableBody>
+            </Table>
+            {/* TODO: Add pagination controls if necessary */}
+            </CardContent>
+        </Card>
 
-         {/* Content for the Add/Edit Campaign Dialog */}
-         <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{dialogMode === 'add' ? 'Add New Campaign' : 'Edit Campaign'}</DialogTitle>
-              <DialogDescription>
-                {dialogMode === 'add' ? 'Enter the details for the new campaign.' : `Make changes to the campaign "${selectedCampaign?.name}".`}
-              </DialogDescription>
-            </DialogHeader>
-            <CampaignForm
-              onSubmit={handleFormSubmit}
-              onCancel={() => setIsFormOpen(false)}
-              initialData={initialData} // Pass initial data including logo fields
-              key={initialData?.id ?? 'add'} // Force re-render on edit
-            />
-          </DialogContent>
+        {/* Content for the Delete Confirmation */}
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the campaign
+                <span className="font-semibold"> "{selectedCampaign?.name}"</span>.
+                Associated pod data and rules might also be affected.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedCampaign(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({ variant: "destructive" })}>
+                Delete
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+
+        {/* Content for the Add/Edit Campaign Dialog */}
+        <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+            <DialogTitle>{dialogMode === 'add' ? 'Add New Campaign' : 'Edit Campaign'}</DialogTitle>
+            <DialogDescription>
+            {dialogMode === 'add' ? 'Enter the details for the new campaign.' : `Make changes to the campaign "${selectedCampaign?.name}".`}
+            </DialogDescription>
+        </DialogHeader>
+        <CampaignForm
+            onSubmit={handleFormSubmit}
+            onCancel={() => setIsFormOpen(false)}
+            initialData={initialData} // Pass initial data including logo fields
+            key={initialData?.id ?? 'add'} // Force re-render on edit
+        />
+        </DialogContent>
+        </AlertDialog>
       </Dialog> {/* Close Add/Edit Dialog */}
 
     </div>
   );
 }
-
-    

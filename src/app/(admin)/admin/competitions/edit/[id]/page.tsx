@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -20,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle } from 'lucide-react';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import { z } from 'zod'; // Import Zod for type inference
 

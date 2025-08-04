@@ -28,7 +28,7 @@ import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -603,4 +603,3 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
-

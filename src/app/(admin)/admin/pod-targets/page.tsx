@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -371,5 +371,3 @@ export default function AdminPodTargetsPage() {
     </div>
   );
 }
-
-    

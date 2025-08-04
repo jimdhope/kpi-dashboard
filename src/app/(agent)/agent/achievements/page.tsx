@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AchievementCard } from '@/components/achievement-card';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 import { startOfDay } from 'date-fns';
 import { CheckSquare } from 'lucide-react';
 

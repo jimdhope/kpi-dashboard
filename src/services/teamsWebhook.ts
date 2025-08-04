@@ -2,7 +2,7 @@
 'use server';
 
 import { format } from 'date-fns';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 
 // Interface for agent scores passed TO this function
 export interface AgentScoreForTeams {
@@ -184,4 +184,3 @@ export const sendTeamsUpdate = async (
         throw new Error(`Error during Teams update (${currentStep}): ${error.message}`);
     }
 };
-

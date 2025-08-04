@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -41,7 +42,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Competition } from '@/app/(admin)/admin/competitions/page'; // Import Competition type
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
 import type { Pod } from '@/app/(admin)/admin/pods/page'; // Import Pod type
-import { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse Rule type definition
+import { RuleFormData } from '@/models/types'; // Reuse Rule type definition
 
 // --- Zod Schema Definition ---
 
@@ -65,6 +66,7 @@ const competitionRuleSchema = z.object({
   name: z.string().min(1, { message: 'Rule name is required.' }),
   emoji: z.string().optional(),
   points: z.coerce.number().int().min(0, { message: 'Points must be >= 0.' }),
+  type: z.enum(['numeric', 'checkbox']), // Added type
 });
 
 // Main competition form schema - REMOVED podTargets
@@ -114,23 +116,6 @@ interface CompetitionFormProps {
   pods: Pod[];
   mode: 'add' | 'edit';
 }
-
-// --- Helper Functions ---
-
-const fetchCampaignRules = async (campaignId: string): Promise<RuleFormData[]> => {
-  if (!campaignId) return [];
-  try {
-    const rulesDocRef = doc(db, 'campaignRules', campaignId);
-    const rulesDocSnap = await getDoc(rulesDocRef);
-    if (rulesDocSnap.exists()) {
-      return (rulesDocSnap.data()?.rules || []) as RuleFormData[];
-    }
-    return [];
-  } catch (error) {
-    console.error("Error fetching campaign rules:", error);
-    return []; // Return empty on error
-  }
-};
 
 
 // --- CompetitionForm Component ---
@@ -198,31 +183,6 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   const watchedRules = form.watch('rules'); // Watch rules
   const watchedEndDate = form.watch('endDate'); // Watch end date
 
-  useEffect(() => {
-    // Load default rules only when campaign changes in 'add' mode
-    if (mode === 'add' && watchedCampaignId) {
-       const loadRules = async () => {
-           setIsLoadingRules(true);
-            try {
-                const defaultRules = await fetchCampaignRules(watchedCampaignId);
-                 const rulesWithKeys = defaultRules.map((rule, index) => ({
-                    ...rule,
-                    id: rule.id || `new-rule-${index}-${Date.now()}` // Ensure unique key
-                 }));
-                 replace(rulesWithKeys);
-            } catch (e) {
-                 toast({ variant: "destructive", title: "Error", description: "Could not load default campaign rules." });
-                 replace([]);
-            } finally {
-                setIsLoadingRules(false);
-            }
-       };
-       loadRules();
-    } else if (mode === 'add' && !watchedCampaignId) {
-        replace([]);
-    }
-  }, [mode, watchedCampaignId, replace, toast, form]);
-
   // Effect to set default end date
    useEffect(() => {
        const currentEndDate = form.getValues('endDate');
@@ -237,7 +197,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
   // --- Event Handlers ---
 
   const handleAddRule = () => {
-    append({ id: `new-rule-${Date.now()}-${Math.random()}`, name: '', emoji: '', points: 0 });
+    append({ id: `new-rule-${Date.now()}-${Math.random()}`, name: '', emoji: '', points: 0, type: 'numeric' });
   };
 
    // Handle manual date input change - Update the form with the raw string
@@ -490,13 +450,13 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                      </Button>
                 </div>
                 <FormDescription>
-                   {mode === 'add' ? 'Default rules loaded from campaign. Modify or add rules specific to this competition.' : 'Modify the rules for this specific competition.'}
+                   {mode === 'add' ? 'Add rules specific to this competition.' : 'Modify the rules for this specific competition.'}
                 </FormDescription>
 
                  {isLoadingRules && (
                      <div className="text-center p-4">
                          <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-muted-foreground" />
-                         <p className="text-sm text-muted-foreground">Loading default rules...</p>
+                         <p className="text-sm text-muted-foreground">Loading...</p>
                      </div>
                  )}
 
@@ -505,10 +465,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                     {!isLoadingRules && fields.length === 0 ? (
                          <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md">
                              <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/>
-                             <p>No rules defined.</p>
-                             {mode === 'add' && !watchedCampaignId && <FormDescription>Select a campaign to load default rules.</FormDescription>}
-                             {mode === 'add' && watchedCampaignId && <FormDescription>Add rules manually or check campaign settings.</FormDescription>}
-                             {mode === 'edit' && <FormDescription>Add rules manually.</FormDescription>}
+                             <p>No rules defined. Click "Add Rule" to start.</p>
                          </div>
                      ) : null }
 
@@ -518,6 +475,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                             <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
                                 <Label className="w-12 text-left">Emoji</Label>
                                 <Label className="flex-1 text-left">Rule Name</Label>
+                                <Label className="w-24 text-left">Type</Label>
                                 <Label className="w-20 text-left">Points</Label>
                                 <div className="w-8" /> {/* Spacer */}
                             </div>
@@ -546,13 +504,23 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                                             </FormItem>
                                         )}
                                     />
+                                    <FormField control={form.control} name={`rules.${index}.type`} render={({ field: ruleField }) => (
+                                        <FormItem className="w-24">
+                                            <FormLabel className="sr-only">Type</FormLabel>
+                                            <Select onValueChange={ruleField.onChange} value={ruleField.value} disabled={isSubmitting}>
+                                                <FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Type" /></SelectTrigger></FormControl>
+                                                <SelectContent><SelectItem value="numeric">Numeric</SelectItem><SelectItem value="checkbox">Checkbox</SelectItem></SelectContent>
+                                            </Select>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )} />
                                     <FormField
                                         control={form.control}
                                         name={`rules.${index}.points`}
                                         render={({ field: ruleField }) => (
                                             <FormItem className="w-20">
                                              <FormLabel className="sr-only">Points</FormLabel>
-                                            <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting} className="h-9" /></FormControl>
+                                            <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting || watchedRules[index]?.type === 'checkbox'} className="h-9" /></FormControl>
                                             <FormMessage className="text-xs" />
                                             </FormItem>
                                         )}

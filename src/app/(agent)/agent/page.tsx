@@ -12,9 +12,8 @@ import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog, DailyTaskLog } from '@/app/(admin)/admin/log-achievements/page'; // Import DailyTaskLog
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
-import type { DailyTask } from '@/app/(admin)/admin/daily-tasks/page'; // Import DailyTask
 import { format, startOfDay, endOfDay, getDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -147,7 +146,6 @@ export default function AgentDashboardPage() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
   const [rules, setRules] = useState<RuleFormData[]>([]);
-  const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]); // New state for daily tasks
   const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
   const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]);
   const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]); // New state for task logs
@@ -223,7 +221,7 @@ export default function AgentDashboardPage() {
             cleanupListeners();
             setActiveCompetition(null); setRules([]); setTeams([]); setPodAgents([]);
             setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
-            setDailyTasks([]); setDailyTaskLogs([]); setTaskInputs({});
+            setDailyTaskLogs([]); setTaskInputs({});
             setIsLoadingData(false);
         }
     });
@@ -252,12 +250,12 @@ export default function AgentDashboardPage() {
   useEffect(() => {
     let isMounted = true;
     if (isLoadingUser || !agentPodId || !currentUser?.id ) {
-        cleanupListeners(['agents', 'competition', 'userLogs', 'podLogs', 'targets', 'dailyAchievements', 'globalTasks', 'userTaskLogs']);
+        cleanupListeners(['agents', 'competition', 'userLogs', 'podLogs', 'targets', 'dailyAchievements', 'userTaskLogs']);
         if (!isLoadingUser) {
              setIsLoadingData(false);
              setActiveCompetition(null); setRules([]); setTeams([]); setPodAgents([]);
              setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
-             setDailyTasks([]); setDailyTaskLogs([]); setTaskInputs({});
+             setDailyTaskLogs([]); setTaskInputs({});
         }
         return () => { isMounted = false; cleanupListeners(); };
     }
@@ -271,13 +269,6 @@ export default function AgentDashboardPage() {
         if (!isMounted) return;
         const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
         setPodAgents(currentAgents => JSON.stringify(currentAgents) !== JSON.stringify(fetchedAgents) ? fetchedAgents : currentAgents);
-    });
-
-    const tasksDocRef = doc(db, 'companyTasks', 'global');
-    cleanupListeners(['globalTasks']);
-    listenerRefs.current.globalTasks = onSnapshot(tasksDocRef, (docSnap) => {
-        if (!isMounted) return;
-        setDailyTasks(docSnap.exists() ? (docSnap.data().tasks || []) : []);
     });
 
     const competitionsRef = collection(db, 'competitions');
@@ -304,11 +295,12 @@ export default function AgentDashboardPage() {
             const newActiveCompId = foundActiveCompetition?.id || null;
             const currentActiveCompId = currentActiveComp?.id || null;
             if (newActiveCompId !== currentActiveCompId) {
-                cleanupListeners(['userLogs', 'podLogs', 'targets', 'dailyAchievements']);
+                cleanupListeners(['userLogs', 'podLogs', 'targets', 'dailyAchievements', 'userTaskLogs']);
                 setRules([]); setTeams([]); setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
+                setDailyTaskLogs([]); setTaskInputs({});
                 if (foundActiveCompetition) {
                     const activeCompId = foundActiveCompetition.id;
-                    setRules((foundActiveCompetition.rules || []).filter(rule => rule.name.toLowerCase() !== 'bonus'));
+                    setRules((foundActiveCompetition.rules || []));
                     setTeams(foundActiveCompetition.teams || []);
                     const achievementsRef = collection(db, 'dailyAchievements');
                     const compStartDate = foundActiveCompetition.startDate;
@@ -322,6 +314,7 @@ export default function AgentDashboardPage() {
                     const targetsDocId = `${activeCompId}_${agentPodId}`;
                     const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
                     listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => { if (isMounted) setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null); });
+
                     const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
                     const dailyQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompId));
                     listenerRefs.current.dailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
@@ -329,7 +322,7 @@ export default function AgentDashboardPage() {
                         const existingAchievements = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
                         const initialInputs: AgentAchievementInputState = {};
                         setRules(currentRules => {
-                            currentRules.forEach(rule => {
+                            currentRules.filter(r => r.type === 'numeric').forEach(rule => {
                                 if (rule.id) {
                                     const existingLog = existingAchievements.find(log => log.ruleId === rule.id);
                                     initialInputs[rule.id] = { value: existingLog ? existingLog.value : 0, existingLogId: existingLog?.id };
@@ -338,6 +331,25 @@ export default function AgentDashboardPage() {
                             return currentRules;
                         });
                         setAchievementInputs(initialInputs);
+                    }, (e) => { if (isMounted) { console.error(e); }});
+
+                    const taskLogsRef = collection(db, 'dailyTaskLogs');
+                    const userTaskLogsQuery = query(taskLogsRef, where('agentId', '==', currentUser.id), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompId));
+                    listenerRefs.current.userTaskLogs = onSnapshot(userTaskLogsQuery, (snapshot) => {
+                        if (!isMounted) return;
+                        const tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyTaskLog));
+                        setDailyTaskLogs(tasks);
+                        const initialTaskInputs: AgentTaskInputState = {};
+                        setRules(currentRules => {
+                            currentRules.filter(r => r.type === 'checkbox').forEach(task => {
+                                if (task.id) {
+                                    const existingLog = tasks.find(log => log.taskId === task.id);
+                                    initialTaskInputs[task.id] = { checked: !!existingLog, existingLogId: existingLog?.id };
+                                }
+                            });
+                            return currentRules;
+                        });
+                        setTaskInputs(initialTaskInputs);
                         setIsLoadingData(false);
                     }, (e) => { if (isMounted) { console.error(e); setIsLoadingData(false); }});
                 } else {
@@ -351,26 +363,6 @@ export default function AgentDashboardPage() {
         });
     }, (err) => {
         if (isMounted) { setError("Failed to load competition data."); setIsLoadingData(false); }
-    });
-
-    const taskLogsRef = collection(db, 'dailyTaskLogs');
-    const userTaskLogsQuery = query(taskLogsRef, where('agentId', '==', currentUser.id), where('date', '>=', startOfDay(new Date())));
-    cleanupListeners(['userTaskLogs']);
-    listenerRefs.current.userTaskLogs = onSnapshot(userTaskLogsQuery, (snapshot) => {
-        if (!isMounted) return;
-        const tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyTaskLog));
-        setDailyTaskLogs(tasks);
-        const initialTaskInputs: AgentTaskInputState = {};
-        setDailyTasks(currentTasks => {
-            currentTasks.forEach(task => {
-                if(task.id){
-                    const existingLog = tasks.find(log => log.taskId === task.id && log.date.toDate().toDateString() === new Date().toDateString());
-                    initialTaskInputs[task.id] = { checked: !!existingLog, existingLogId: existingLog?.id };
-                }
-            });
-            return currentTasks;
-        });
-        setTaskInputs(initialTaskInputs);
     });
 
     return () => {
@@ -396,7 +388,7 @@ export default function AgentDashboardPage() {
 
     let dailyTotalPoints = 0;
     const dailyAchievementsMap = new Map<string, AgentDailyAchievements['achievements'][0]>();
-    const displayRules = rules.filter(rule => rule.name.toLowerCase() !== 'bonus');
+    const displayRules = rules.filter(rule => rule.type === 'numeric');
 
     todayUserLogs.forEach(log => {
         const rule = displayRules.find(r => r.id === log.ruleId);
@@ -526,15 +518,16 @@ export default function AgentDashboardPage() {
   }, [achievementInputs, debouncedSave]);
 
   const handleTaskChange = async (taskId: string, checked: boolean) => {
-    if (!agentPodId || !currentUser?.id || !dailyTasks.find(t => t.id === taskId)) return;
-    const task = dailyTasks.find(t => t.id === taskId)!;
+    if (!agentPodId || !currentUser?.id || !activeCompetition?.id) return;
+    const task = rules.find(t => t.id === taskId)!;
     const savingKey = `task-${taskId}`;
+    setTaskInputs(prev => ({ ...prev, [taskId]: { ...prev[taskId], checked } }));
     setIsSaving(prev => ({ ...prev, [savingKey]: true }));
     const taskLogsRef = collection(db, 'dailyTaskLogs');
     const existingLogId = taskInputs[taskId]?.existingLogId;
     if (checked) {
       if (existingLogId) { setIsSaving(prev => ({...prev, [savingKey]: false })); return; }
-      const newLog: Omit<DailyTaskLog, 'id'> = { agentId: currentUser.id, podId: agentPodId, taskId: task.id!, date: Timestamp.fromDate(startOfDay(new Date())), loggedAt: serverTimestamp() as Timestamp, loggedBy: currentUser.uid };
+      const newLog: Omit<DailyTaskLog, 'id'> = { agentId: currentUser.id, podId: agentPodId, taskId: task.id!, date: Timestamp.fromDate(startOfDay(new Date())), loggedAt: serverTimestamp() as Timestamp, loggedBy: currentUser.uid, competitionId: activeCompetition.id };
       const addedDoc = await addDoc(taskLogsRef, newLog);
       setTaskInputs(prev => ({...prev, [taskId]: {checked: true, existingLogId: addedDoc.id}}));
     } else {
@@ -547,6 +540,8 @@ export default function AgentDashboardPage() {
   };
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingMessage;
+  const numericRules = useMemo(() => rules.filter(r => r.type === 'numeric'), [rules]);
+  const checkboxRules = useMemo(() => rules.filter(r => r.type === 'checkbox'), [rules]);
   const canLog = !isLoading && currentUser && agentPodId && rules.length > 0 && activeCompetition;
 
   return (
@@ -566,9 +561,9 @@ export default function AgentDashboardPage() {
                     <CardContent>
                         {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{Array.from({ length: 3 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[130px] w-full" />))}</div>
                         : !canLog && !error && !isLoadingUser && !agentPodId ? <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
-                        : !canLog && !error && rules.length === 0 ? <p className="text-muted-foreground text-center py-6">No active competition or rules found for your pod today.</p>
+                        : !canLog && !error && numericRules.length === 0 ? <p className="text-muted-foreground text-center py-6">No numerical achievements to log for your pod today.</p>
                         : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {rules.map((rule) => rule.id ? <AchievementCard key={rule.id} rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /> : null)}
+                            {numericRules.map((rule) => rule.id ? <AchievementCard key={rule.id} rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /> : null)}
                         </div>}
                     </CardContent>
                 </Card>
@@ -604,9 +599,9 @@ export default function AgentDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         {isLoading ? <div className="space-y-3"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-5/6" /></div>
-                        : dailyTasks.length > 0 ? (
+                        : checkboxRules.length > 0 ? (
                             <div className="space-y-4">
-                                {dailyTasks.map(task => (
+                                {checkboxRules.map(task => (
                                     task.id ? (
                                     <div key={task.id} className="flex items-center space-x-3">
                                         <Checkbox
@@ -649,4 +644,3 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
-

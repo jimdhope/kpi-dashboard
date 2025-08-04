@@ -39,7 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns'; // For formatting dates
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page'; // Import Campaign type
 import type { Pod } from '@/app/(admin)/admin/pods/page'; // Import Pod type
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog'; // Reuse rule type
+import type { RuleFormData } from '@/models/types'; // Reuse rule type
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Competition type definition - kept podIds array
@@ -331,5 +331,3 @@ export default function AdminCompetitionsPage() {
     </div>
   );
 }
-
-    
