@@ -126,6 +126,7 @@ export default function AdminLogAchievementsPage() {
   const [isManuallySendingTeams, setIsManuallySendingTeams] = useState(false);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
+  const [currentDailyTaskLogsForPod, setCurrentDailyTaskLogsForPod] = useState<DailyTaskLog[]>([]);
 
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialData;
 
@@ -164,7 +165,7 @@ export default function AdminLogAchievementsPage() {
         setIsLoadingPods(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (!selectedPodId) {
@@ -175,6 +176,7 @@ export default function AdminLogAchievementsPage() {
       setActiveCompetitionId(null);
       setDailyTargets(null);
       setCurrentDailyLogsForPod([]);
+      setCurrentDailyTaskLogsForPod([]);
       setIsLoadingAgents(false);
       setIsLoadingRules(false);
       setIsLoadingInitialData(false);
@@ -197,6 +199,7 @@ export default function AdminLogAchievementsPage() {
       setActiveCompetitionId(null);
       setDailyTargets(null);
       setCurrentDailyLogsForPod([]);
+      setCurrentDailyTaskLogsForPod([]);
 
       try {
         const usersRef = collection(db, 'users');
@@ -303,6 +306,7 @@ export default function AdminLogAchievementsPage() {
 
             unsubscribeTaskLogs = onSnapshot(initialTaskLogsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyTaskLog));
+                setCurrentDailyTaskLogsForPod(logs);
                 const initialTaskInputs: TaskInputState = {};
                 fetchedAgents.forEach(agent => {
                     if (!agent.id) return;
@@ -358,7 +362,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTaskLogs();
       unsubscribeTargets();
     };
-  }, [selectedPodId, selectedDate, toast]);
+  }, [selectedPodId, selectedDate]);
 
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
@@ -582,7 +586,7 @@ export default function AdminLogAchievementsPage() {
         return;
     }
 
-    if (currentDailyLogsForPod.length === 0 && (!dailyTargets || Object.keys(dailyTargets).length === 0)) {
+    if (currentDailyLogsForPod.length === 0 && currentDailyTaskLogsForPod.length === 0 && (!dailyTargets || Object.keys(dailyTargets).length === 0)) {
         toast({ variant: "default", title: "No Data", description: "No achievements or targets to send for today." });
         return;
     }
@@ -594,19 +598,21 @@ export default function AdminLogAchievementsPage() {
         let emojiString = "";
         const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
         const isAbsent = agentLogs.some(log => log.status === 'absent');
+        const agentTasks = currentDailyTaskLogsForPod.filter(log => log.agentId === agent.id);
 
         if (isAbsent) {
             return {
                 agentFirstName: agent.name.split(' ')[0] || agent.name,
                 totalPoints: 0,
                 emojiString: "N/A",
-                isAbsent: true
+                isAbsent: true,
+                completedTasks: [],
             };
         }
 
-        const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
-        sortedRules.forEach(rule => {
-            if (!rule.id || rule.type === 'checkbox') return;
+        const sortedNumericRules = competitionRules.filter(r => r.type === 'numeric').sort((a, b) => a.name.localeCompare(b.name));
+        sortedNumericRules.forEach(rule => {
+            if (!rule.id) return;
             const logForRule = agentLogs.find(l => l.ruleId === rule.id);
             if (logForRule) {
                 totalPoints += logForRule.points;
@@ -616,17 +622,27 @@ export default function AdminLogAchievementsPage() {
                 }
             }
         });
+
+        const completedTasks = agentTasks.map(taskLog => {
+            const rule = competitionRules.find(r => r.id === taskLog.taskId);
+            return {
+                ruleName: rule?.name || 'Unknown Task',
+                ruleEmoji: (rule?.emoji && rule.emoji.trim() !== '') ? rule.emoji : '✅',
+            };
+        });
+
         return {
             agentFirstName: agent.name.split(' ')[0] || agent.name,
             totalPoints,
-            emojiString: emojiString || '-',
+            emojiString: emojiString || '',
             isAbsent: false,
+            completedTasks: completedTasks,
         };
     }).sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
-        if (!rule.id || rule.type === 'checkbox') return null;
+        if (!rule.id || rule.type !== 'numeric') return null;
         const achieved = currentDailyLogsForPod
             .filter(log => log.ruleId === rule.id && log.status !== 'absent')
             .reduce((sum, log) => sum + log.value, 0);
@@ -661,7 +677,7 @@ export default function AdminLogAchievementsPage() {
 };
 
   const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0;
-  const canSendToTeamsManually = !isLoading && !isManuallySendingTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
+  const canSendToTeamsManually = !isLoading && !isManuallySendingTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || currentDailyTaskLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
 
   return (
     <div className="space-y-6">

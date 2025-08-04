@@ -3,13 +3,15 @@
 
 import { format } from 'date-fns';
 import type { RuleFormData } from '@/models/types';
+import type { DailyTaskLog } from '@/app/(admin)/admin/log-achievements/page';
 
 // Interface for agent scores passed TO this function
 export interface AgentScoreForTeams {
     agentFirstName: string;
     totalPoints: number;
     emojiString: string;
-    isAbsent?: boolean; // Added optional isAbsent flag
+    isAbsent?: boolean;
+    completedTasks?: { ruleName: string; ruleEmoji: string }[]; // New field for tasks
 }
 
 // Interface for pod target summary passed TO this function
@@ -24,12 +26,13 @@ export interface PodTargetSummaryForTeams {
 // Helper function to generate the KPI key string
 const generateKpiKey = (rules: RuleFormData[]): string => {
   return rules
+    .filter(rule => rule.type === 'numeric') // Only include numeric rules in the key
     .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`)
     .join('  ');
 };
 
-// New helper function to generate Adaptive Card elements for the agent scores table
-const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams[]): any[] => {
+// Updated helper function to generate Adaptive Card elements for the agent scores table
+const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams[], taskRules: RuleFormData[]): any[] => {
     if (agentScores.length === 0) {
         return [{ type: "TextBlock", text: "No agent scores recorded for today.", wrap: true, spacing: "Medium" }];
     }
@@ -59,7 +62,10 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
 
     // Agent Data Rows
     const agentRows = agentScores.map(score => {
-        const achievementsDisplay = score.isAbsent ? "N/A" : (score.emojiString && score.emojiString.trim() !== '' ? score.emojiString : '-');
+        // Combine numeric emojis with task emojis
+        const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
+        const allAchievements = `${score.emojiString || ''}${taskEmojis}`;
+        const achievementsDisplay = score.isAbsent ? "N/A" : (allAchievements.trim() !== '' ? allAchievements : '-');
         const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints} pts`;
 
         return {
@@ -86,7 +92,10 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
         };
     });
 
-    return [headerRow, ...agentRows];
+     const taskKey = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
+     const taskKeyElement = taskKey ? { type: "TextBlock", text: taskKey, wrap: true, spacing: "Small", size: "Small" } : null;
+
+    return [headerRow, ...agentRows, taskKeyElement].filter(Boolean);
 };
 
 
@@ -117,8 +126,9 @@ export const sendTeamsUpdate = async (
         }
 
         currentStep = "Formatting Data";
-        const titleText = `Daily Scores - ${podName} (${format(date, 'PPP')})`; // Not used in card body directly anymore
-        const kpiKeyText = generateKpiKey(rules);
+        const numericRules = rules.filter(r => r.type === 'numeric');
+        const taskRules = rules.filter(r => r.type === 'checkbox');
+        const kpiKeyText = generateKpiKey(numericRules);
         const kpiTargetsText = generatePodTargetsSummary(podTargetSummaryForTeams);
 
         // Construct the Adaptive Card body elements
@@ -130,7 +140,7 @@ export const sendTeamsUpdate = async (
                 "spacing": "Medium"
             },
             // Insert the array of ColumnSet elements for the table
-            ...generateAgentScoresAdaptiveCardElements(agentScoresForTeams),
+            ...generateAgentScoresAdaptiveCardElements(agentScoresForTeams, taskRules),
             {
                 "type": "TextBlock",
                 "text": kpiTargetsText,

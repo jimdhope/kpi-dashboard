@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
-import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
+import type { DailyAchievementLog, DailyTaskLog } from '@/app/(admin)/admin/log-achievements/page';
 
 
 // Interface for processed agent scores used internally in this component
@@ -44,6 +44,7 @@ interface AgentScore {
   totalPoints: number;
   emojiString: string;
   isAbsent: boolean; // Added isAbsent flag
+  completedTasks?: { ruleName: string; ruleEmoji: string }[];
 }
 
 // Interface for pod target summary used internally in this component
@@ -72,6 +73,7 @@ export default function AdminDailyScoresPage() {
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [rules, setRules] = useState<RuleFormData[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
+  const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [isLoadingPods, setIsLoadingPods] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false); // Combined loading for agents, competition, logs, targets
@@ -116,6 +118,7 @@ export default function AdminDailyScoresPage() {
       setAgents([]);
       setRules([]);
       setDailyLogs([]); // Reset logs when pod changes
+      setDailyTaskLogs([]);
       setDailyTargets(null); // Reset targets when pod changes
       setActiveCompetitionId(null);
       setIsLoadingData(false); // Not loading if no pod
@@ -198,6 +201,7 @@ export default function AdminDailyScoresPage() {
    useEffect(() => {
         if (!activeCompetitionId || !selectedPodId) { // Check if activeCompetitionId and selectedPodId are available
              setDailyLogs([]);
+             setDailyTaskLogs([]);
              setDailyTargets(null);
              setIsLoadingData(false); // If no active competition or pod, not loading this data
              return () => {};
@@ -207,6 +211,7 @@ export default function AdminDailyScoresPage() {
          setIsLoadingData(true); // Start loading logs/targets specifically
 
          let unsubscribeLogs: Unsubscribe = () => {};
+         let unsubscribeTaskLogs: Unsubscribe = () => {};
          let unsubscribeTargets: Unsubscribe = () => {};
 
          const dateForQuery = Timestamp.fromDate(startOfDay(selectedDate));
@@ -230,6 +235,24 @@ export default function AdminDailyScoresPage() {
               setIsLoadingData(false); // Error, stop loading
           });
 
+          const taskLogsRef = collection(db, 'dailyTaskLogs');
+          const taskLogsQuery = query(
+            taskLogsRef,
+            where('podId', '==', selectedPodId),
+            where('competitionId', '==', activeCompetitionId),
+            where('date', '==', dateForQuery)
+          );
+
+           unsubscribeTaskLogs = onSnapshot(taskLogsQuery, (snapshot) => {
+              const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyTaskLog));
+              setDailyTaskLogs(fetchedLogs);
+           }, (err) => {
+              console.error("[DailyScoresPage] Error listening to task logs:", err);
+              setError("Failed to load real-time task data.");
+              setDailyTaskLogs([]);
+           });
+
+
          const targetsDocId = `${activeCompetitionId}_${selectedPodId}`;
          const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
          unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
@@ -251,24 +274,25 @@ export default function AdminDailyScoresPage() {
          return () => {
              console.log("[DailyScoresPage] Unsubscribing from daily logs and targets listeners for date:", selectedDate.toISOString());
              unsubscribeLogs();
+             unsubscribeTaskLogs();
              unsubscribeTargets();
          };
    }, [activeCompetitionId, selectedPodId, selectedDate, toast]);
 
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
-     console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
+     console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Tasks: ${dailyTaskLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
     const ruleTotals: Record<string, number> = {};
 
     rules.forEach(rule => {
-        if(rule.id) ruleTotals[rule.id] = 0;
+        if(rule.id && rule.type === 'numeric') ruleTotals[rule.id] = 0;
     });
 
     dailyLogs.forEach(log => {
       if (log.status === 'absent') {
           if (!scores[log.agentId]) {
-              scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: true };
+              scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: true, completedTasks: [] };
           } else {
               scores[log.agentId].isAbsent = true;
           }
@@ -276,7 +300,7 @@ export default function AdminDailyScoresPage() {
       }
 
       if (!scores[log.agentId]) {
-        scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: false };
+        scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: false, completedTasks: [] };
       }
       scores[log.agentId].totalPoints += log.points;
 
@@ -289,9 +313,9 @@ export default function AdminDailyScoresPage() {
        if (!agent.id) return;
        const agentLogs = dailyLogs.filter(log => log.agentId === agent.id && log.status !== 'absent');
        let emojis = '';
-       const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
+       const sortedNumericRules = rules.filter(r => r.type === 'numeric').sort((a, b) => a.name.localeCompare(b.name));
 
-       sortedRules.forEach(rule => {
+       sortedNumericRules.forEach(rule => {
            if (!rule.id) return;
             const logForRule = agentLogs.find(log => log.ruleId === rule.id);
             if (logForRule && logForRule.value > 0) {
@@ -302,28 +326,40 @@ export default function AdminDailyScoresPage() {
             }
        });
 
+       const agentTaskLogs = dailyTaskLogs.filter(log => log.agentId === agent.id);
+       const completedTasks = agentTaskLogs.map(taskLog => {
+           const rule = rules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
+           return {
+               ruleName: rule?.name || 'Unknown Task',
+               ruleEmoji: (rule?.emoji && rule.emoji.trim() !== '') ? rule.emoji : '✅',
+           };
+       });
+
        if (scores[agent.id]) {
          scores[agent.id].emojiString = emojis;
+         scores[agent.id].completedTasks = completedTasks;
        } else if (agents.find(a => a.id === agent.id)) {
-          scores[agent.id] = { totalPoints: 0, emojiString: '', isAbsent: false };
+          scores[agent.id] = { totalPoints: 0, emojiString: '', isAbsent: false, completedTasks: completedTasks };
        }
     });
 
     const finalAgentScores: AgentScore[] = agents
       .map(agent => {
-         const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '', isAbsent: false };
+         const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '', isAbsent: false, completedTasks: [] };
           return {
             agentId: agent.id!,
             agentFirstName: agent.name.split(' ')[0] || agent.name,
             totalPoints: agentScoreData.totalPoints,
             emojiString: agentScoreData.emojiString,
             isAbsent: agentScoreData.isAbsent,
+            completedTasks: agentScoreData.completedTasks,
           };
       })
       .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
     const finalPodTargetSummary: PodTargetSummary[] = rules
+        .filter(rule => rule.type === 'numeric')
         .map(rule => {
             if (!rule.id) return null;
             const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
@@ -344,9 +380,13 @@ export default function AdminDailyScoresPage() {
         .filter((item): item is PodTargetSummary => item !== null)
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
-     const finalRuleKeyString = rules
-        .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`)
-        .join('  ');
+     const numericRules = rules.filter(r => r.type === 'numeric');
+     const taskRules = rules.filter(r => r.type === 'checkbox');
+     let finalRuleKeyString = numericRules.map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`).join('  ');
+     const taskKeyString = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
+     if (taskKeyString) {
+         finalRuleKeyString += (finalRuleKeyString ? ' | ' : '') + taskKeyString;
+     }
 
      const finalPodTargetSummaryString = finalPodTargetSummary
          .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
@@ -358,7 +398,7 @@ export default function AdminDailyScoresPage() {
         ruleKeyString: finalRuleKeyString,
         podTargetSummaryString: finalPodTargetSummaryString,
     };
-  }, [dailyLogs, agents, rules, dailyTargets, selectedDate]);
+  }, [dailyLogs, dailyTaskLogs, agents, rules, dailyTargets, selectedDate]);
 
   const handleSendToTeams = async () => {
     console.log(`[DailyScoresPage] handleSendToTeams clicked for pod ID: ${selectedPodId}`);
@@ -388,6 +428,7 @@ export default function AdminDailyScoresPage() {
         emojiString: as.isAbsent ? "N/A" : as.emojiString,
         totalPoints: as.totalPoints,
         isAbsent: as.isAbsent,
+        completedTasks: as.completedTasks || [],
     }));
 
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = podTargetSummary.map(pts => ({
@@ -396,15 +437,6 @@ export default function AdminDailyScoresPage() {
         achieved: pts.achieved,
         target: pts.target,
     }));
-
-    const payload = {
-        title: `Daily Scores - ${podName} (${format(selectedDate, 'PPP')})`,
-        kpiKey: rules.map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`).join('  '),
-        kpiTable: agentScoresForTeams,
-        kpiTargets: podTargetSummaryForTeams.map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`).join(' | ')
-    };
-    console.log("[DailyScoresPage] Data being sent to Teams (Payload):", JSON.stringify(payload, null, 2));
-
 
     setIsSendingToTeams(true);
     console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, podName: ${podName}, date: ${selectedDate}`);
@@ -557,11 +589,16 @@ export default function AdminDailyScoresPage() {
                                     ) : (
                                         <div className="flex flex-wrap gap-1">
                                             {Array.from(score.emojiString).map((emoji, index) => (
-                                                <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
+                                                <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.type === 'numeric' && r.emoji === emoji)?.name}>
                                                     {emoji}
                                                 </span>
                                             ))}
-                                            {score.emojiString === '' && <span className="text-sm text-muted-foreground">-</span>}
+                                            {(score.completedTasks || []).map((task, index) => (
+                                                <span key={`${score.agentId}-task-${index}`} className="text-lg" title={task.ruleName}>
+                                                    {task.ruleEmoji}
+                                                </span>
+                                            ))}
+                                            {score.emojiString === '' && (score.completedTasks || []).length === 0 && <span className="text-sm text-muted-foreground">-</span>}
                                         </div>
                                     )}
                                 </TableCell>
