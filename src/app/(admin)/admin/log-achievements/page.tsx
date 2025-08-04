@@ -39,7 +39,6 @@ import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { DailyTask } from '@/app/(admin)/admin/daily-tasks/page';
 import { AchievementCard } from '@/components/achievement-card'; // Import the new card
 
 // Interface for the data stored in Firestore for achievements
@@ -110,7 +109,6 @@ export default function AdminLogAchievementsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [competitionRules, setCompetitionRules] = useState<RuleFormData[]>([]);
-  const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]);
   const [achievementInputs, setAchievementInputs] = useState<AchievementInputState>({});
   const [taskInputs, setTaskInputs] = useState<TaskInputState>({});
   const [isLoadingPods, setIsLoadingPods] = useState(true);
@@ -170,7 +168,6 @@ export default function AdminLogAchievementsPage() {
     if (!selectedPodId) {
       setAgents([]);
       setCompetitionRules([]);
-      setDailyTasks([]);
       setAchievementInputs({});
       setTaskInputs({});
       setActiveCompetitionId(null);
@@ -185,7 +182,6 @@ export default function AdminLogAchievementsPage() {
     let unsubscribeLogs: Unsubscribe = () => {};
     let unsubscribeTaskLogs: Unsubscribe = () => {};
     let unsubscribeTargets: Unsubscribe = () => {};
-    let unsubscribeGlobalTasks: Unsubscribe = () => {};
 
     const fetchPodDataAndListen = async () => {
       setIsLoadingAgents(true);
@@ -194,25 +190,11 @@ export default function AdminLogAchievementsPage() {
       setError(null);
       setAgents([]);
       setCompetitionRules([]);
-      setDailyTasks([]);
       setAchievementInputs({});
       setTaskInputs({});
       setActiveCompetitionId(null);
       setDailyTargets(null);
       setCurrentDailyLogsForPod([]);
-
-      // Fetch global daily tasks
-      const tasksDocRef = doc(db, 'companyTasks', 'global');
-      unsubscribeGlobalTasks = onSnapshot(tasksDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-              setDailyTasks((docSnap.data()?.tasks || []) as DailyTask[]);
-          } else {
-              setDailyTasks([]);
-          }
-      }, (err) => {
-          console.error("Error fetching global daily tasks:", err);
-          setError("Failed to load daily tasks.");
-      });
 
       try {
         const usersRef = collection(db, 'users');
@@ -285,7 +267,8 @@ export default function AdminLogAchievementsPage() {
             const initialTaskLogsQuery = query(
                 taskLogsRef,
                 where('podId', '==', selectedPodId),
-                where('date', '==', dateTimestamp)
+                where('date', '==', dateTimestamp),
+                 where('competitionId', '==', competitionForLogging.id)
             );
 
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
@@ -302,7 +285,7 @@ export default function AdminLogAchievementsPage() {
                     initialInputs[agent.id].naLogId = naLog?.id;
 
                     (competitionForLogging?.rules || []).forEach(rule => {
-                        if (!rule.id) return;
+                        if (!rule.id || rule.type === 'checkbox') return;
                         const existingLog = agentLogs.find(log => log.ruleId === rule.id && log.status !== 'absent');
                         initialInputs[agent.id!][rule.id] = {
                             value: existingLog ? existingLog.value : 0,
@@ -322,10 +305,10 @@ export default function AdminLogAchievementsPage() {
                 fetchedAgents.forEach(agent => {
                     if (!agent.id) return;
                     initialTaskInputs[agent.id] = {};
-                    dailyTasks.forEach(task => {
-                        if (!task.id) return;
-                        const existingLog = logs.find(log => log.agentId === agent.id && log.taskId === task.id);
-                        initialTaskInputs[agent.id!][task.id] = {
+                     (competitionForLogging?.rules || []).forEach(rule => {
+                        if (!rule.id || rule.type !== 'checkbox') return;
+                        const existingLog = logs.find(log => log.agentId === agent.id && log.taskId === rule.id);
+                        initialTaskInputs[agent.id!][rule.id] = {
                             checked: !!existingLog,
                             existingLogId: existingLog?.id,
                         };
@@ -372,9 +355,8 @@ export default function AdminLogAchievementsPage() {
       unsubscribeLogs();
       unsubscribeTaskLogs();
       unsubscribeTargets();
-      unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate, dailyTasks, toast]);
+  }, [selectedPodId, selectedDate]);
 
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
@@ -521,13 +503,13 @@ export default function AdminLogAchievementsPage() {
     setIsSaving(prev => ({ ...prev, [savingKey]: false }));
   };
 
-  const handleTaskChange = async (agentId: string, taskId: string, isChecked: boolean) => {
-    if (!selectedPodId || !currentUserUid) {
+  const handleTaskChange = async (agentId: string, ruleId: string, isChecked: boolean) => {
+    if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
       toast({ variant: 'destructive', title: 'Cannot save task', description: 'Missing required context (pod or user).' });
       return;
     }
 
-    const savingKey = `task-${agentId}-${taskId}`;
+    const savingKey = `task-${agentId}-${ruleId}`;
     setIsSaving(prev => ({ ...prev, [savingKey]: true }));
 
     // Optimistically update the UI state
@@ -535,15 +517,15 @@ export default function AdminLogAchievementsPage() {
       ...prev,
       [agentId]: {
         ...prev[agentId],
-        [taskId]: {
-          ...prev[agentId]?.[taskId],
+        [ruleId]: {
+          ...prev[agentId]?.[ruleId],
           checked: isChecked,
         },
       },
     }));
 
     const taskLogsRef = collection(db, 'dailyTaskLogs');
-    const existingLogId = taskInputs[agentId]?.[taskId]?.existingLogId;
+    const existingLogId = taskInputs[agentId]?.[ruleId]?.existingLogId;
 
     try {
       if (isChecked) {
@@ -552,7 +534,7 @@ export default function AdminLogAchievementsPage() {
           const taskLogEntry: Omit<DailyTaskLog, 'id'> = {
             agentId,
             podId: selectedPodId,
-            taskId,
+            taskId: ruleId,
             date: dateTimestamp,
             loggedAt: serverTimestamp() as Timestamp,
             loggedBy: currentUserUid,
@@ -563,8 +545,8 @@ export default function AdminLogAchievementsPage() {
             ...prev,
             [agentId]: {
               ...prev[agentId],
-              [taskId]: {
-                ...prev[agentId]?.[taskId],
+              [ruleId]: {
+                ...prev[agentId]?.[ruleId],
                 existingLogId: addedDoc.id,
               },
             },
@@ -578,8 +560,8 @@ export default function AdminLogAchievementsPage() {
             ...prev,
             [agentId]: {
               ...prev[agentId],
-              [taskId]: {
-                ...prev[agentId]?.[taskId],
+              [ruleId]: {
+                ...prev[agentId]?.[ruleId],
                 existingLogId: undefined,
               },
             },
@@ -594,8 +576,8 @@ export default function AdminLogAchievementsPage() {
         ...prev,
         [agentId]: {
           ...prev[agentId],
-          [taskId]: {
-            ...prev[agentId]?.[taskId],
+          [ruleId]: {
+            ...prev[agentId]?.[ruleId],
             checked: !isChecked, // Revert to previous state
           },
         },
@@ -642,7 +624,7 @@ export default function AdminLogAchievementsPage() {
 
         const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
         sortedRules.forEach(rule => {
-            if (!rule.id) return;
+            if (!rule.id || rule.type === 'checkbox') return;
             const logForRule = agentLogs.find(l => l.ruleId === rule.id);
             if (logForRule) {
                 totalPoints += logForRule.points;
@@ -661,7 +643,7 @@ export default function AdminLogAchievementsPage() {
 
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
-        if (!rule.id) return null;
+        if (!rule.id || rule.type === 'checkbox') return null;
         const achieved = currentDailyLogsForPod
             .filter(log => log.ruleId === rule.id && log.status !== 'absent')
             .reduce((sum, log) => sum + log.value, 0);
@@ -695,7 +677,7 @@ export default function AdminLogAchievementsPage() {
     }
 };
 
-  const canLog = selectedPodId && agents.length > 0 && (competitionRules.length > 0 || dailyTasks.length > 0);
+  const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0;
   const canSendToTeamsManually = !isLoading && !isManuallySendingTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
 
   return (
@@ -817,14 +799,6 @@ export default function AdminLogAchievementsPage() {
                             </div>
                         </TableHead>
                     ))}
-                    {dailyTasks.map(task => (
-                        <TableHead key={task.id} className="w-[100px] text-center">
-                            <div className="flex flex-col items-center justify-center gap-1">
-                                <span className="text-lg" title={task.name}>{task.emoji || '✅'}</span>
-                                <span className="text-xs font-normal truncate max-w-[80px]">{task.name}</span>
-                            </div>
-                        </TableHead>
-                    ))}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -849,29 +823,26 @@ export default function AdminLogAchievementsPage() {
                             {competitionRules.map(rule => (
                             rule.id ? (
                                 <TableCell key={rule.id} className="text-center">
-                                    <AchievementCard
-                                        rule={rule}
-                                        currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
-                                        isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
-                                        onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
-                                        onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
-                                        disabled={achievementInputs[agent.id!]?.isNA}
-                                    />
+                                    {rule.type === 'numeric' ? (
+                                        <AchievementCard
+                                            rule={rule}
+                                            currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
+                                            isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
+                                            onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
+                                            onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
+                                            disabled={achievementInputs[agent.id!]?.isNA}
+                                        />
+                                    ) : (
+                                        <Checkbox
+                                            id={`task-checkbox-${agent.id}-${rule.id}`}
+                                            checked={taskInputs[agent.id!]?.[rule.id!]?.checked || false}
+                                            onCheckedChange={(checked) => handleTaskChange(agent.id!, rule.id!, !!checked)}
+                                            disabled={isSaving[`task-${agent.id!}-${rule.id!}`] || achievementInputs[agent.id!]?.isNA}
+                                            aria-label={`Task ${rule.name} for ${agent.name}`}
+                                        />
+                                    )}
                                 </TableCell>
                             ) : null
-                            ))}
-                            {dailyTasks.map(task => (
-                                task.id ? (
-                                <TableCell key={task.id} className="text-center">
-                                    <Checkbox
-                                        id={`task-checkbox-${agent.id}-${task.id}`}
-                                        checked={taskInputs[agent.id!]?.[task.id!]?.checked || false}
-                                        onCheckedChange={(checked) => handleTaskChange(agent.id!, task.id!, !!checked)}
-                                        disabled={isSaving[`task-${agent.id!}-${task.id!}`] || achievementInputs[agent.id!]?.isNA}
-                                        aria-label={`Task ${task.name} for ${agent.name}`}
-                                        />
-                                </TableCell>
-                                ) : null
                             ))}
                         </TableRow>
                     ) : null
