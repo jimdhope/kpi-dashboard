@@ -81,12 +81,12 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
     mode: 'onChange',
   });
 
-  const { fields, append, remove, watch } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'rules',
   });
 
-  const watchedRules = watch();
+  const watchedRules = form.watch('rules');
 
   const fetchRules = useCallback(async () => {
     setIsLoading(true);
@@ -211,7 +211,7 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                     <FormField control={form.control} name={`rules.${index}.points`} render={({ field }) => (
                         <FormItem className="w-20">
                           <FormLabel className="sr-only">Points</FormLabel>
-                          <FormControl><Input type="number" placeholder="Pts" {...field} min="0" step="1" disabled={isSaving || watchedRules[index]?.type === 'checkbox'} /></FormControl>
+                          <FormControl><Input type="number" placeholder="Pts" {...field} min="0" step="1" disabled={isSaving || (watchedRules && watchedRules[index]?.type === 'checkbox')} /></FormControl>
                           <FormMessage className="text-xs" />
                         </FormItem>
                     )} />
