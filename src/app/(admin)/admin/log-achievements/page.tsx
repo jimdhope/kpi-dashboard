@@ -392,7 +392,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTargets();
       unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate, toast, dailyTasks]);
+  }, [selectedPodId, selectedDate, toast]);
 
 
   const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
@@ -904,3 +904,4 @@ export default function AdminLogAchievementsPage() {
   );
 }
 
+    
