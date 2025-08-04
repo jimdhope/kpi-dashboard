@@ -339,7 +339,6 @@ export default function AdminLogAchievementsPage() {
                 fetchedAgents.forEach(agent => {
                     if (!agent.id) return;
                     initialTaskInputs[agent.id] = {};
-                    const agentLogs = logs.filter(log => log.agentId === agent.id);
                     dailyTasks.forEach(task => {
                         if (!task.id) return;
                         const existingLog = agentLogs.find(log => log.taskId === task.id);
@@ -392,7 +391,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTargets();
       unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate, toast]);
+  }, [selectedPodId, selectedDate, toast, dailyTasks]);
 
 
   const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
@@ -549,46 +548,72 @@ export default function AdminLogAchievementsPage() {
         toast({ variant: 'destructive', title: 'Cannot save task', description: 'Missing required context (pod or user).' });
         return;
     }
+
+    // Optimistically update UI state first
+    setTaskInputs(prev => {
+        const newInputs = { ...prev };
+        if (!newInputs[agentId]) newInputs[agentId] = {};
+        newInputs[agentId][taskId] = { ...newInputs[agentId][taskId], checked: isChecked };
+        return newInputs;
+    });
+
+
     const savingKey = `task-${agentId}-${taskId}`;
     setIsSaving(prev => ({ ...prev, [savingKey]: true }));
     const taskLogsRef = collection(db, 'dailyTaskLogs');
     const existingLogId = taskInputs[agentId]?.[taskId]?.existingLogId;
 
-    if (isChecked) {
-        if (existingLogId) {
-             console.log("Task already logged.");
-             setIsSaving(prev => ({ ...prev, [savingKey]: false }));
-             return;
+    try {
+        if (isChecked) {
+            if (existingLogId) {
+                console.log("Task already logged.");
+            } else {
+                const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+                const taskLogEntry: Omit<DailyTaskLog, 'id'> = {
+                    agentId,
+                    podId: selectedPodId,
+                    taskId,
+                    date: dateTimestamp,
+                    loggedAt: serverTimestamp() as Timestamp,
+                    loggedBy: currentUserUid,
+                };
+                const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
+                // Update state with the new ID after successful save
+                setTaskInputs(prev => {
+                    const newInputs = { ...prev };
+                    if (newInputs[agentId]?.[taskId]) {
+                        newInputs[agentId][taskId].existingLogId = addedDoc.id;
+                    }
+                    return newInputs;
+                });
+            }
+        } else {
+            if (existingLogId) {
+                await deleteDoc(doc(taskLogsRef, existingLogId));
+                // Update state to remove the ID after successful deletion
+                setTaskInputs(prev => {
+                    const newInputs = { ...prev };
+                    if (newInputs[agentId]?.[taskId]) {
+                        newInputs[agentId][taskId].existingLogId = undefined;
+                    }
+                    return newInputs;
+                });
+            }
         }
-        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-        const taskLogEntry: Omit<DailyTaskLog, 'id'> = {
-            agentId,
-            podId: selectedPodId,
-            taskId,
-            date: dateTimestamp,
-            loggedAt: serverTimestamp() as Timestamp,
-            loggedBy: currentUserUid,
-        };
-        const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
-        setTaskInputs(prev => {
+    } catch (error) {
+         console.error("Error saving task log:", error);
+         toast({ variant: 'destructive', title: 'Task Save Failed', description: 'Could not save task change.' });
+         // Revert optimistic UI update on error
+          setTaskInputs(prev => {
             const newInputs = { ...prev };
-            if (!newInputs[agentId]) newInputs[agentId] = {};
-            newInputs[agentId][taskId] = { checked: true, existingLogId: addedDoc.id };
+            if (newInputs[agentId]?.[taskId]) {
+                newInputs[agentId][taskId].checked = !isChecked; // Revert the check
+            }
             return newInputs;
         });
-    } else {
-        if (existingLogId) {
-            await deleteDoc(doc(taskLogsRef, existingLogId));
-             setTaskInputs(prev => {
-                const newInputs = { ...prev };
-                if (newInputs[agentId]) {
-                    newInputs[agentId][taskId] = { checked: false, existingLogId: undefined };
-                }
-                return newInputs;
-            });
-        }
+    } finally {
+        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
-     setIsSaving(prev => ({ ...prev, [savingKey]: false }));
   };
 
   const handleManualSendToTeams = async () => {
@@ -830,7 +855,7 @@ export default function AdminLogAchievementsPage() {
                                             placeholder="Value"
                                             value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? ''}
                                             onChange={(e) => handleInputChange(agent.id!, rule.id!, e.target.value)}
-                                            className="h-8 w-full pr-6"
+                                            className="h-8 w-20 pr-6"
                                             disabled={isSaving[`${agent.id!}-${rule.id!}`] || achievementInputs[agent.id!]?.isNA}
                                             aria-label={`Achievement value for ${agent.name} - ${rule.name}`}
                                         />
