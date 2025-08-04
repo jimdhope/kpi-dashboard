@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -9,8 +10,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  deleteField,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -23,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Use Label
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Form,
@@ -33,17 +32,25 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Trash2, PlusCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Define the structure of a single rule
+// Define the structure of a single rule, now with a 'type'
 const ruleSchema = z.object({
-  id: z.string().optional(), // Optional ID for existing rules
+  id: z.string().optional(),
   name: z.string().min(1, { message: 'Rule name is required.' }).max(50, { message: 'Name max 50 chars.' }),
-  emoji: z.string().optional(), // Optional emoji
-  points: z.coerce.number().int().min(0, { message: 'Points must be 0 or more.' }), // Ensure points are non-negative integers
+  emoji: z.string().optional(),
+  points: z.coerce.number().int().min(0, { message: 'Points must be 0 or more.' }),
+  type: z.enum(['numeric', 'checkbox'], { required_error: 'Please select a rule type.' }), // Added type
 });
 
 // Define the schema for the entire form (an array of rules)
@@ -59,7 +66,7 @@ interface ManageCampaignRulesDialogProps {
   onClose: () => void;
 }
 
-const campaignRulesCollectionRef = collection(db, 'campaignRules'); // Collection to store rules
+const campaignRulesCollectionRef = collection(db, 'campaignRules');
 
 export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignRulesDialogProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -69,17 +76,18 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
   const form = useForm<CampaignRulesFormData>({
     resolver: zodResolver(campaignRulesFormSchema),
     defaultValues: {
-      rules: [], // Start with an empty array
+      rules: [],
     },
     mode: 'onChange',
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, watch } = useFieldArray({
     control: form.control,
     name: 'rules',
   });
 
-  // Fetch existing rules for the campaign
+  const watchedRules = watch();
+
   const fetchRules = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -89,14 +97,14 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
       if (rulesDocSnap.exists()) {
         const data = rulesDocSnap.data();
         const existingRules = data?.rules || [];
-         // Ensure IDs are present for existing rules
-         const rulesWithIds = existingRules.map((rule: any, index: number) => ({
+        const rulesWithDefaults = existingRules.map((rule: any, index: number) => ({
             ...rule,
-            id: rule.id || `temp-${index}` // Assign temporary ID if missing
-         }));
-        form.reset({ rules: rulesWithIds });
+            id: rule.id || `temp-${index}`,
+            type: rule.type || 'numeric', // Default to numeric if type is missing
+        }));
+        form.reset({ rules: rulesWithDefaults });
       } else {
-        form.reset({ rules: [] }); // No existing rules found
+        form.reset({ rules: [] });
       }
     } catch (error) {
       console.error("Error fetching campaign rules:", error);
@@ -105,7 +113,7 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
         title: "Error Loading Rules",
         description: "Could not load the rules for this campaign.",
       });
-      form.reset({ rules: [] }); // Reset on error
+      form.reset({ rules: [] });
     } finally {
       setIsLoading(false);
     }
@@ -115,33 +123,28 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
     fetchRules();
   }, [fetchRules]);
 
-  // Function to add a new empty rule field
   const addRule = () => {
-    append({ id: `new-${Date.now()}`, name: '', emoji: '', points: 0 });
+    append({ id: `new-${Date.now()}`, name: '', emoji: '', points: 0, type: 'numeric' });
   };
 
-  // Handle form submission
   const onSubmit = async (data: CampaignRulesFormData) => {
     setIsSaving(true);
     try {
       const rulesDocRef = doc(campaignRulesCollectionRef, campaign.id);
-
-      // Prepare rules data, ensuring IDs are consistent or generated if new
-       const rulesToSave = data.rules.map(rule => ({
-        id: rule.id?.startsWith('new-') ? doc(campaignRulesCollectionRef).id : rule.id || doc(campaignRulesCollectionRef).id, // Generate ID if new
+      const rulesToSave = data.rules.map(rule => ({
+        id: rule.id?.startsWith('new-') ? doc(campaignRulesCollectionRef).id : rule.id || doc(campaignRulesCollectionRef).id,
         name: rule.name,
-        emoji: rule.emoji || '', // Ensure emoji is empty string if not provided
-        points: rule.points,
+        emoji: rule.emoji || '',
+        points: rule.type === 'checkbox' ? 0 : rule.points, // Force points to 0 for checkbox type
+        type: rule.type,
       }));
 
-      // The data is saved here to Firestore
-      await setDoc(rulesDocRef, { rules: rulesToSave }, { merge: true }); // Use setDoc with merge to overwrite or create
-
+      await setDoc(rulesDocRef, { rules: rulesToSave }, { merge: true });
       toast({
         title: "Rules Updated",
         description: `Rules for campaign "${campaign.name}" have been saved.`,
       });
-      onClose(); // Close the dialog on success
+      onClose();
     } catch (error) {
       console.error("Error saving campaign rules:", error);
       toast({
@@ -155,17 +158,16 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
   };
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-2xl"> {/* Increased width */}
       <DialogHeader>
         <DialogTitle>Manage Rules for {campaign.name}</DialogTitle>
         <DialogDescription>
-          Define the default rules, emojis, and points for this campaign. These can be overridden at the pod level.
+          Define the default rules, emojis, points, and types for this campaign.
         </DialogDescription>
       </DialogHeader>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          {/* Wrap the rules list and Add Rule button in ScrollArea */}
            <ScrollArea className="max-h-[50vh] p-1 pr-4 mb-4">
             {isLoading ? (
                <div className="space-y-4 p-4">
@@ -173,7 +175,8 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                        <div key={index} className="flex items-center gap-2 border p-3 rounded-md">
                            <Skeleton className="h-8 w-12" />
                            <Skeleton className="h-8 flex-1" />
-                           <Skeleton className="h-8 w-16" /> {/* Skeleton for points */}
+                           <Skeleton className="h-8 w-16" />
+                           <Skeleton className="h-8 w-24" />
                            <Skeleton className="h-8 w-8" />
                        </div>
                    ))}
@@ -184,89 +187,46 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                </div>
             ) : (
               <div className="space-y-4 p-4">
-                {/* Add Headers for the columns */}
                  <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
                     <Label className="w-12 text-left">Emoji</Label>
                     <Label className="flex-1 text-left">Rule Name</Label>
-                    <Label className="w-20 text-left">Points</Label> {/* Adjusted width */}
-                    <div className="w-8" /> {/* Spacer for delete button */}
+                    <Label className="w-24 text-left">Type</Label>
+                    <Label className="w-20 text-left">Points</Label>
+                    <div className="w-8" />
                  </div>
-
                 {fields.map((field, index) => (
                   <div key={field.id} className="flex items-start gap-2 border p-3 rounded-md bg-card">
-                    <FormField
-                      control={form.control}
-                      name={`rules.${index}.emoji`}
-                      render={({ field }) => (
-                        <FormItem className="w-12">
-                          <FormLabel className="sr-only">Emoji</FormLabel>
-                          <FormControl>
-                             {/* Display fallback emoji in placeholder if field is empty */}
-                            <Input placeholder={field.value ? "" : "❓"} {...field} maxLength={4} disabled={isSaving} className="text-center" />
-                          </FormControl>
+                    <FormField control={form.control} name={`rules.${index}.emoji`} render={({ field }) => (<FormItem className="w-12"><FormLabel className="sr-only">Emoji</FormLabel><FormControl><Input placeholder={field.value ? "" : "❓"} {...field} maxLength={4} disabled={isSaving} className="text-center" /></FormControl><FormMessage className="text-xs" /></FormItem>)} />
+                    <FormField control={form.control} name={`rules.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormLabel className="sr-only">Rule Name</FormLabel><FormControl><Input placeholder="Rule Name" {...field} disabled={isSaving} /></FormControl><FormMessage className="text-xs" /></FormItem>)} />
+                    <FormField control={form.control} name={`rules.${index}.type`} render={({ field }) => (
+                        <FormItem className="w-24">
+                          <FormLabel className="sr-only">Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSaving}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger></FormControl>
+                            <SelectContent><SelectItem value="numeric">Numeric</SelectItem><SelectItem value="checkbox">Checkbox</SelectItem></SelectContent>
+                          </Select>
                           <FormMessage className="text-xs" />
                         </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`rules.${index}.name`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel className="sr-only">Rule Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Rule Name" {...field} disabled={isSaving} />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`rules.${index}.points`}
-                      render={({ field }) => (
-                        <FormItem className="w-20"> {/* Adjusted width */}
+                    )} />
+                    <FormField control={form.control} name={`rules.${index}.points`} render={({ field }) => (
+                        <FormItem className="w-20">
                           <FormLabel className="sr-only">Points</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="Points" {...field} min="0" step="1" disabled={isSaving} />
-                          </FormControl>
+                          <FormControl><Input type="number" placeholder="Pts" {...field} min="0" step="1" disabled={isSaving || watchedRules[index]?.type === 'checkbox'} /></FormControl>
                           <FormMessage className="text-xs" />
                         </FormItem>
-                      )}
-                    />
-                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 mt-1"
-                      onClick={() => remove(index)}
-                      disabled={isSaving}
-                      aria-label="Remove rule"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    )} />
+                     <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 mt-1" onClick={() => remove(index)} disabled={isSaving} aria-label="Remove rule"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
             )}
-             {/* Add Rule Button inside ScrollArea */}
              <div className="flex justify-start mb-6 px-4">
-                <Button type="button" variant="outline" onClick={addRule} disabled={isSaving}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
-                </Button>
+                <Button type="button" variant="outline" onClick={addRule} disabled={isSaving}><PlusCircle className="mr-2 h-4 w-4" /> Add Rule</Button>
              </div>
           </ScrollArea>
-
           <DialogFooter className="mt-auto pt-4 border-t">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={isSaving || isLoading}>
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isSaving ? 'Saving...' : 'Save Rules'}
-            </Button>
+            <DialogClose asChild><Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button></DialogClose>
+            <Button type="submit" disabled={isSaving || isLoading}>{isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{isSaving ? 'Saving...' : 'Save Rules'}</Button>
           </DialogFooter>
         </form>
       </Form>
