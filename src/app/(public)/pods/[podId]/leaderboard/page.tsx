@@ -12,7 +12,7 @@ import {
   orderBy,
   onSnapshot,
   Unsubscribe,
-  getDocs, // Import getDocs
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -250,9 +250,13 @@ export default function PublicPodLeaderboardPage({ params }: { params: { podId: 
           <CardTitle className="text-2xl md:text-3xl flex items-center gap-3">
              {isLoading ? <Skeleton className="h-8 w-48" /> : `Live Leaderboard: ${pod?.name || 'Pod'}`}
           </CardTitle>
-          <CardDescription>
-            {isLoading ? <Skeleton className="h-4 w-64" /> : `Showing results for competition: ${activeCompetition?.name || 'N/A'}`}
-          </CardDescription>
+          {isLoading ? (
+            <Skeleton className="h-4 w-64 mt-1.5" />
+          ) : (
+            <CardDescription>
+              {`Showing results for competition: ${activeCompetition?.name || 'N/A'}`}
+            </CardDescription>
+          )}
         </CardHeader>
       </Card>
       {renderContent()}
