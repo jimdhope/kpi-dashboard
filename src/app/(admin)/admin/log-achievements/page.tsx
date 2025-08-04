@@ -374,7 +374,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTargets();
       unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate, toast]);
+  }, [selectedPodId, selectedDate, dailyTasks, toast]);
 
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
@@ -527,84 +527,84 @@ export default function AdminLogAchievementsPage() {
       return;
     }
 
-    // Optimistically update the UI first
-    setTaskInputs(prev => ({
-        ...prev,
-        [agentId]: {
-            ...prev[agentId],
-            [taskId]: {
-                ...(prev[agentId]?.[taskId] || { checked: false, existingLogId: undefined }),
-                checked: isChecked,
-            },
-        },
-    }));
-
     const savingKey = `task-${agentId}-${taskId}`;
     setIsSaving(prev => ({ ...prev, [savingKey]: true }));
+
+    // Optimistically update the UI state
+    setTaskInputs(prev => ({
+      ...prev,
+      [agentId]: {
+        ...prev[agentId],
+        [taskId]: {
+          ...prev[agentId]?.[taskId],
+          checked: isChecked,
+        },
+      },
+    }));
+
     const taskLogsRef = collection(db, 'dailyTaskLogs');
     const existingLogId = taskInputs[agentId]?.[taskId]?.existingLogId;
 
     try {
-        if (isChecked) {
-            if (existingLogId) {
-                console.log("Task already logged.");
-            } else {
-                const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-                const taskLogEntry: Omit<DailyTaskLog, 'id'> = {
-                    agentId,
-                    podId: selectedPodId,
-                    taskId,
-                    date: dateTimestamp,
-                    loggedAt: serverTimestamp() as Timestamp,
-                    loggedBy: currentUserUid,
-                };
-                const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
-                // Update the state with the new ID from Firestore
-                setTaskInputs(prev => ({
-                    ...prev,
-                    [agentId]: {
-                        ...prev[agentId],
-                        [taskId]: {
-                            ...prev[agentId]?.[taskId],
-                            existingLogId: addedDoc.id,
-                        },
-                    },
-                }));
-            }
-        } else {
-            if (existingLogId) {
-                await deleteDoc(doc(taskLogsRef, existingLogId));
-                // Remove the ID from the state
-                setTaskInputs(prev => ({
-                    ...prev,
-                    [agentId]: {
-                        ...prev[agentId],
-                        [taskId]: {
-                            ...prev[agentId]?.[taskId],
-                            existingLogId: undefined,
-                        },
-                    },
-                }));
-            }
-        }
-    } catch (error) {
-         console.error("Error saving task log:", error);
-         toast({ variant: 'destructive', title: 'Task Save Failed', description: 'Could not save task change.' });
-          // Revert the optimistic UI update on error
+      if (isChecked) {
+        if (!existingLogId) {
+          const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+          const taskLogEntry: Omit<DailyTaskLog, 'id'> = {
+            agentId,
+            podId: selectedPodId,
+            taskId,
+            date: dateTimestamp,
+            loggedAt: serverTimestamp() as Timestamp,
+            loggedBy: currentUserUid,
+          };
+          const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
+          // Update state with new ID from Firestore
           setTaskInputs(prev => ({
             ...prev,
             [agentId]: {
-                ...prev[agentId],
-                [taskId]: {
-                    ...prev[agentId]?.[taskId],
-                    checked: !isChecked,
-                },
+              ...prev[agentId],
+              [taskId]: {
+                ...prev[agentId]?.[taskId],
+                existingLogId: addedDoc.id,
+              },
             },
-        }));
+          }));
+        }
+      } else {
+        if (existingLogId) {
+          await deleteDoc(doc(taskLogsRef, existingLogId));
+          // Remove ID from state
+          setTaskInputs(prev => ({
+            ...prev,
+            [agentId]: {
+              ...prev[agentId],
+              [taskId]: {
+                ...prev[agentId]?.[taskId],
+                existingLogId: undefined,
+              },
+            },
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error saving task log:", error);
+      toast({ variant: 'destructive', title: 'Task Save Failed', description: 'Could not save task change.' });
+      // Revert optimistic update on error
+      setTaskInputs(prev => ({
+        ...prev,
+        [agentId]: {
+          ...prev[agentId],
+          [taskId]: {
+            ...prev[agentId]?.[taskId],
+            checked: !isChecked, // Revert to previous state
+          },
+        },
+      }));
     } finally {
-        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
+      setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
   };
+
 
   const handleManualSendToTeams = async () => {
     if (isLoading || !selectedPodId || !activeCompetitionId || !currentUserUid) {
@@ -810,13 +810,19 @@ export default function AdminLogAchievementsPage() {
                     <TableRow>
                     <TableHead className="w-[250px]">Agent</TableHead>
                     {competitionRules.map(rule => (
-                        <TableHead key={rule.id}>
-                            <span title={rule.name}>{(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name}</span>
+                        <TableHead key={rule.id} className="w-[120px] text-center">
+                            <div className="flex flex-col items-center justify-center gap-1">
+                                <span className="text-lg" title={rule.name}>{(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}</span>
+                                <span className="text-xs font-normal truncate max-w-[100px]">{rule.name}</span>
+                            </div>
                         </TableHead>
                     ))}
                     {dailyTasks.map(task => (
-                        <TableHead key={task.id} className="text-center">
-                            <span title={task.name}>{task.emoji || '✅'}</span>
+                        <TableHead key={task.id} className="w-[100px] text-center">
+                            <div className="flex flex-col items-center justify-center gap-1">
+                                <span className="text-lg" title={task.name}>{task.emoji || '✅'}</span>
+                                <span className="text-xs font-normal truncate max-w-[80px]">{task.name}</span>
+                            </div>
                         </TableHead>
                     ))}
                     </TableRow>
@@ -842,7 +848,7 @@ export default function AdminLogAchievementsPage() {
                             </TableCell>
                             {competitionRules.map(rule => (
                             rule.id ? (
-                                <TableCell key={rule.id}>
+                                <TableCell key={rule.id} className="text-center">
                                     <AchievementCard
                                         rule={rule}
                                         currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
