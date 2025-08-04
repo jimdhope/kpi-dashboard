@@ -12,6 +12,7 @@ import {
   orderBy,
   onSnapshot,
   Unsubscribe,
+  getDocs, // Import getDocs
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
