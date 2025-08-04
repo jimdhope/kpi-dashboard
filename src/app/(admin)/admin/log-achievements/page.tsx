@@ -391,7 +391,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTargets();
       unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate, toast, dailyTasks]);
+  }, [selectedPodId, selectedDate, toast]);
 
 
   const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
@@ -545,17 +545,20 @@ export default function AdminLogAchievementsPage() {
 
   const handleTaskChange = async (agentId: string, taskId: string, isChecked: boolean) => {
     if (!selectedPodId || !currentUserUid) {
-        toast({ variant: 'destructive', title: 'Cannot save task', description: 'Missing required context (pod or user).' });
-        return;
+      toast({ variant: 'destructive', title: 'Cannot save task', description: 'Missing required context (pod or user).' });
+      return;
     }
 
-    // Optimistically update UI state first
-    setTaskInputs(prev => {
-        const newInputs = { ...prev };
-        if (!newInputs[agentId]) newInputs[agentId] = {};
-        newInputs[agentId][taskId] = { ...newInputs[agentId][taskId], checked: isChecked };
-        return newInputs;
-    });
+    setTaskInputs(prev => ({
+        ...prev,
+        [agentId]: {
+            ...prev[agentId],
+            [taskId]: {
+                ...(prev[agentId]?.[taskId] || { checked: false }),
+                checked: isChecked,
+            },
+        },
+    }));
 
 
     const savingKey = `task-${agentId}-${taskId}`;
@@ -578,7 +581,6 @@ export default function AdminLogAchievementsPage() {
                     loggedBy: currentUserUid,
                 };
                 const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
-                // Update state with the new ID after successful save
                 setTaskInputs(prev => {
                     const newInputs = { ...prev };
                     if (newInputs[agentId]?.[taskId]) {
@@ -590,7 +592,6 @@ export default function AdminLogAchievementsPage() {
         } else {
             if (existingLogId) {
                 await deleteDoc(doc(taskLogsRef, existingLogId));
-                // Update state to remove the ID after successful deletion
                 setTaskInputs(prev => {
                     const newInputs = { ...prev };
                     if (newInputs[agentId]?.[taskId]) {
@@ -603,11 +604,10 @@ export default function AdminLogAchievementsPage() {
     } catch (error) {
          console.error("Error saving task log:", error);
          toast({ variant: 'destructive', title: 'Task Save Failed', description: 'Could not save task change.' });
-         // Revert optimistic UI update on error
           setTaskInputs(prev => {
             const newInputs = { ...prev };
             if (newInputs[agentId]?.[taskId]) {
-                newInputs[agentId][taskId].checked = !isChecked; // Revert the check
+                newInputs[agentId][taskId].checked = !isChecked;
             }
             return newInputs;
         });
@@ -928,5 +928,3 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
-
-    
