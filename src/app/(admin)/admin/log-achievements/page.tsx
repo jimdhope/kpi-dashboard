@@ -18,6 +18,7 @@ import {
   Unsubscribe,
   onSnapshot,
   deleteDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -32,7 +33,7 @@ import { format, startOfDay, getDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ export interface DailyTaskLog {
   id?: string;
   agentId: string;
   podId: string;
+  competitionId: string; // Added competitionId
   taskId: string;
   date: Timestamp;
   loggedAt: Timestamp;
@@ -162,7 +164,7 @@ export default function AdminLogAchievementsPage() {
         setIsLoadingPods(false);
     });
     return () => unsubscribe();
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (!selectedPodId) {
@@ -356,7 +358,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTaskLogs();
       unsubscribeTargets();
     };
-  }, [selectedPodId, selectedDate]);
+  }, [selectedPodId, selectedDate, toast]);
 
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
@@ -469,59 +471,62 @@ export default function AdminLogAchievementsPage() {
     setIsSaving(prev => ({ ...prev, [savingKey]: true }));
     const achievementsRef = collection(db, 'dailyAchievements');
 
-    if (isChecked) {
-        const existingLogs = currentDailyLogsForPod.filter(log => log.agentId === agentId && log.status !== 'absent');
-        const deletePromises = existingLogs.map(log => log.id ? deleteDoc(doc(achievementsRef, log.id)) : Promise.resolve());
-        await Promise.all(deletePromises);
+    try {
+        if (isChecked) {
+            const batch = writeBatch(db);
+            const existingLogs = currentDailyLogsForPod.filter(log => log.agentId === agentId && log.status !== 'absent');
+            existingLogs.forEach(log => {
+                if(log.id) batch.delete(doc(achievementsRef, log.id));
+            });
 
-        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-        const naLogEntry: DailyAchievementLog = {
-            agentId,
-            podId: selectedPodId,
-            competitionId: activeCompetitionId,
-            ruleId: 'na', ruleName: 'N/A', date: dateTimestamp,
-            value: 0, points: 0,
-            loggedAt: serverTimestamp() as Timestamp,
-            loggedBy: currentUserUid,
-            status: 'absent'
-        };
-        const addedDoc = await addDoc(achievementsRef, naLogEntry);
-        setAchievementInputs(prev => ({
-            ...prev,
-            [agentId]: { ...prev[agentId], isNA: true, naLogId: addedDoc.id }
-        }));
-    } else {
-        const naLogId = achievementInputs[agentId]?.naLogId;
-        if (naLogId) {
-            await deleteDoc(doc(achievementsRef, naLogId));
+            const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+            const naLogEntry: DailyAchievementLog = {
+                agentId, podId: selectedPodId, competitionId: activeCompetitionId,
+                ruleId: 'na', ruleName: 'N/A', date: dateTimestamp,
+                value: 0, points: 0,
+                loggedAt: serverTimestamp() as Timestamp,
+                loggedBy: currentUserUid,
+                status: 'absent'
+            };
+            const newNaLogRef = doc(collection(db, 'dailyAchievements'));
+            batch.set(newNaLogRef, naLogEntry);
+            await batch.commit();
+
             setAchievementInputs(prev => ({
                 ...prev,
-                [agentId]: { ...prev[agentId], isNA: false, naLogId: undefined }
+                [agentId]: { ...prev[agentId], isNA: true, naLogId: newNaLogRef.id }
             }));
+
+        } else {
+            const naLogId = achievementInputs[agentId]?.naLogId;
+            if (naLogId) {
+                await deleteDoc(doc(achievementsRef, naLogId));
+                setAchievementInputs(prev => ({
+                    ...prev,
+                    [agentId]: { ...prev[agentId], isNA: false, naLogId: undefined }
+                }));
+            }
         }
+    } catch (error) {
+         console.error("Error changing N/A status:", error);
+         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update the N/A status.' });
+    } finally {
+        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
-    setIsSaving(prev => ({ ...prev, [savingKey]: false }));
   };
 
   const handleTaskChange = async (agentId: string, ruleId: string, isChecked: boolean) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
-      toast({ variant: 'destructive', title: 'Cannot save task', description: 'Missing required context (pod or user).' });
+      toast({ variant: 'destructive', title: 'Cannot save task', description: 'Missing required context (pod, user, or competition).' });
       return;
     }
 
     const savingKey = `task-${agentId}-${ruleId}`;
     setIsSaving(prev => ({ ...prev, [savingKey]: true }));
 
-    // Optimistically update the UI state
     setTaskInputs(prev => ({
       ...prev,
-      [agentId]: {
-        ...prev[agentId],
-        [ruleId]: {
-          ...prev[agentId]?.[ruleId],
-          checked: isChecked,
-        },
-      },
+      [agentId]: { ...prev[agentId], [ruleId]: { ...prev[agentId]?.[ruleId], checked: isChecked } },
     }));
 
     const taskLogsRef = collection(db, 'dailyTaskLogs');
@@ -532,55 +537,32 @@ export default function AdminLogAchievementsPage() {
         if (!existingLogId) {
           const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
           const taskLogEntry: Omit<DailyTaskLog, 'id'> = {
-            agentId,
-            podId: selectedPodId,
-            taskId: ruleId,
-            date: dateTimestamp,
+            agentId, podId: selectedPodId, competitionId: activeCompetitionId,
+            taskId: ruleId, date: dateTimestamp,
             loggedAt: serverTimestamp() as Timestamp,
             loggedBy: currentUserUid,
           };
           const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
-          // Update state with new ID from Firestore
           setTaskInputs(prev => ({
             ...prev,
-            [agentId]: {
-              ...prev[agentId],
-              [ruleId]: {
-                ...prev[agentId]?.[ruleId],
-                existingLogId: addedDoc.id,
-              },
-            },
+            [agentId]: { ...prev[agentId], [ruleId]: { ...prev[agentId]?.[ruleId], existingLogId: addedDoc.id } },
           }));
         }
       } else {
         if (existingLogId) {
           await deleteDoc(doc(taskLogsRef, existingLogId));
-          // Remove ID from state
           setTaskInputs(prev => ({
             ...prev,
-            [agentId]: {
-              ...prev[agentId],
-              [ruleId]: {
-                ...prev[agentId]?.[ruleId],
-                existingLogId: undefined,
-              },
-            },
+            [agentId]: { ...prev[agentId], [ruleId]: { ...prev[agentId]?.[ruleId], existingLogId: undefined } },
           }));
         }
       }
     } catch (error) {
       console.error("Error saving task log:", error);
       toast({ variant: 'destructive', title: 'Task Save Failed', description: 'Could not save task change.' });
-      // Revert optimistic update on error
       setTaskInputs(prev => ({
         ...prev,
-        [agentId]: {
-          ...prev[agentId],
-          [ruleId]: {
-            ...prev[agentId]?.[ruleId],
-            checked: !isChecked, // Revert to previous state
-          },
-        },
+        [agentId]: { ...prev[agentId], [ruleId]: { ...prev[agentId]?.[ruleId], checked: !isChecked } },
       }));
     } finally {
       setIsSaving(prev => ({ ...prev, [savingKey]: false }));
@@ -638,6 +620,7 @@ export default function AdminLogAchievementsPage() {
             agentFirstName: agent.name.split(' ')[0] || agent.name,
             totalPoints,
             emojiString: emojiString || '-',
+            isAbsent: false,
         };
     }).sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
