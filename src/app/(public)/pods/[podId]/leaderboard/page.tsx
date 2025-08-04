@@ -69,7 +69,8 @@ const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank:
 };
 
 
-export default function PublicPodLeaderboardPage({ params: { podId } }: { params: { podId: string } }) {
+export default function PublicPodLeaderboardPage({ params }: { params: { podId: string } }) {
+  const { podId } = params;
 
   const [pod, setPod] = useState<Pod | null>(null);
   const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null);
