@@ -19,7 +19,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Leaderboard } from '@/components/leaderboard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
-import { AlertCircle, BarChart, Users } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -69,8 +69,7 @@ const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank:
 };
 
 
-export default function PublicPodLeaderboardPage({ params }: { params: { podId: string } }) {
-  const { podId } = params;
+export default function PublicPodLeaderboardPage({ params: { podId } }: { params: { podId: string } }) {
 
   const [pod, setPod] = useState<Pod | null>(null);
   const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null);
