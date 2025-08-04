@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX } from 'lucide-react';
 import { format, startOfDay, getDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -39,7 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
-// Removed Switch and Tooltip imports as auto-send is removed
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Interface for the data stored in Firestore
 export interface DailyAchievementLog {
@@ -54,6 +54,7 @@ export interface DailyAchievementLog {
   points: number;
   loggedAt: Timestamp;
   loggedBy?: string | null;
+  status?: 'absent'; // New optional status field
 }
 
 // Interface for managing state within the component
@@ -63,6 +64,8 @@ interface AchievementInputState {
       value: string;
       existingLogId?: string;
     };
+    isNA?: boolean; // Track N/A state per agent
+    naLogId?: string; // Track the ID of the N/A log entry
   };
 }
 
@@ -119,7 +122,7 @@ export default function AdminLogAchievementsPage() {
   const [isManuallySendingTeams, setIsManuallySendingTeams] = useState(false); // State for manual send button
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
-  
+
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
 
 
@@ -260,15 +263,20 @@ export default function AdminLogAchievementsPage() {
 
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-                setCurrentDailyLogsForPod(logs); 
+                setCurrentDailyLogsForPod(logs);
 
                 const initialInputs: AchievementInputState = {};
                 fetchedAgents.forEach(agent => {
                     if (!agent.id) return;
                     initialInputs[agent.id] = {};
+                    const agentLogs = logs.filter(log => log.agentId === agent.id);
+                    const naLog = agentLogs.find(log => log.status === 'absent');
+                    initialInputs[agent.id].isNA = !!naLog;
+                    initialInputs[agent.id].naLogId = naLog?.id;
+
                     (competitionForLogging?.rules || []).forEach(rule => {
                         if (!rule.id) return;
-                        const existingLog = logs.find(log => log.agentId === agent.id && log.ruleId === rule.id);
+                        const existingLog = agentLogs.find(log => log.ruleId === rule.id && log.status !== 'absent');
                         initialInputs[agent.id!][rule.id] = {
                             value: existingLog ? String(existingLog.value) : '',
                             existingLogId: existingLog?.id,
@@ -331,7 +339,7 @@ export default function AdminLogAchievementsPage() {
     }
 
     const rule = competitionRules.find(r => r.id === ruleId);
-    const agentInput = achievementInputs[agentId]?.[ruleId]; 
+    const agentInput = achievementInputs[agentId]?.[ruleId];
 
     if (!rule || agentInput === undefined) {
        console.error("Rule or input data not found for auto-save. Rule:", rule, "AgentInput for agentId", agentId, "ruleId", ruleId, ":", agentInput);
@@ -344,14 +352,14 @@ export default function AdminLogAchievementsPage() {
        console.warn("Invalid input value for auto-save:", valueStr);
        return;
      }
-     
+
      const savingKey = `${agentId}-${ruleId}`;
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
 
     try {
        const points = rule.points * value;
        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-       const logEntry: Omit<DailyAchievementLog, 'id'> = {
+       const logEntry: Omit<DailyAchievementLog, 'id' | 'status'> = {
          agentId: agentId,
          podId: selectedPodId,
          competitionId: activeCompetitionId,
@@ -390,7 +398,7 @@ export default function AdminLogAchievementsPage() {
              else { newState[agentId][ruleId].existingLogId = addedDoc.id; }
              return newState;
          });
-       } else if (value === 0 && agentInput.existingLogId) { 
+       } else if (value === 0 && agentInput.existingLogId) {
            docRef = doc(achievementsRef, agentInput.existingLogId);
            await deleteDoc(docRef);
            setAchievementInputs(prev => {
@@ -409,7 +417,7 @@ export default function AdminLogAchievementsPage() {
        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
   }, [
-    selectedPodId, currentUserUid, activeCompetitionId, competitionRules, achievementInputs, 
+    selectedPodId, currentUserUid, activeCompetitionId, competitionRules, achievementInputs,
     selectedDate, toast
   ]);
 
@@ -427,6 +435,53 @@ export default function AdminLogAchievementsPage() {
       },
     }));
      debouncedInputSave(agentId, ruleId, value);
+  };
+
+  const handleNaChange = async (agentId: string, isChecked: boolean) => {
+    if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
+        toast({ variant: 'destructive', title: 'Cannot set N/A status', description: 'Missing required context (pod, user, or competition).' });
+        return;
+    }
+
+    const savingKey = `${agentId}-na`;
+    setIsSaving(prev => ({ ...prev, [savingKey]: true }));
+    const achievementsRef = collection(db, 'dailyAchievements');
+
+    if (isChecked) {
+        // Clear all existing numeric logs for this agent on this day
+        const existingLogs = currentDailyLogsForPod.filter(log => log.agentId === agentId && log.status !== 'absent');
+        const deletePromises = existingLogs.map(log => log.id ? deleteDoc(doc(achievementsRef, log.id)) : Promise.resolve());
+        await Promise.all(deletePromises);
+
+        // Add a single 'absent' log
+        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+        const naLogEntry: DailyAchievementLog = {
+            agentId,
+            podId: selectedPodId,
+            competitionId: activeCompetitionId,
+            ruleId: 'na', ruleName: 'N/A', date: dateTimestamp,
+            value: 0, points: 0,
+            loggedAt: serverTimestamp() as Timestamp,
+            loggedBy: currentUserUid,
+            status: 'absent'
+        };
+        const addedDoc = await addDoc(achievementsRef, naLogEntry);
+        setAchievementInputs(prev => ({
+            ...prev,
+            [agentId]: { ...prev[agentId], isNA: true, naLogId: addedDoc.id }
+        }));
+    } else {
+        // Remove the 'absent' log
+        const naLogId = achievementInputs[agentId]?.naLogId;
+        if (naLogId) {
+            await deleteDoc(doc(achievementsRef, naLogId));
+            setAchievementInputs(prev => ({
+                ...prev,
+                [agentId]: { ...prev[agentId], isNA: false, naLogId: undefined }
+            }));
+        }
+    }
+    setIsSaving(prev => ({ ...prev, [savingKey]: false }));
   };
 
 
@@ -453,6 +508,16 @@ export default function AdminLogAchievementsPage() {
         let totalPoints = 0;
         let emojiString = "";
         const agentLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
+        const isAbsent = agentLogs.some(log => log.status === 'absent');
+
+        if (isAbsent) {
+            return {
+                agentFirstName: agent.name.split(' ')[0] || agent.name,
+                totalPoints: 0,
+                emojiString: "N/A",
+                isAbsent: true
+            };
+        }
 
         const sortedRules = [...competitionRules].sort((a, b) => a.name.localeCompare(b.name));
         sortedRules.forEach(rule => {
@@ -477,7 +542,7 @@ export default function AdminLogAchievementsPage() {
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = competitionRules.map(rule => {
         if (!rule.id) return null;
         const achieved = currentDailyLogsForPod
-            .filter(log => log.ruleId === rule.id)
+            .filter(log => log.ruleId === rule.id && log.status !== 'absent')
             .reduce((sum, log) => sum + log.value, 0);
         const target = dailyTargets?.[rule.id]?.[dayOfWeek];
         if (target === undefined || target === null) return null;
@@ -515,74 +580,72 @@ export default function AdminLogAchievementsPage() {
 
 
   return (
-    // <TooltipProvider> // TooltipProvider removed as auto-send is removed
-        <div className="space-y-6">
-        <Card className="frosted-glass">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
-            </CardHeader>
-            <CardContent>
-            <div className="flex flex-wrap gap-4 items-end justify-between">
-                <div className="flex flex-wrap gap-4 items-end">
-                    <div className="grid gap-2">
-                    <Label htmlFor="pod-select">Pod</Label>
-                    <Select
-                        onValueChange={handleSelectedPodChange}
-                        value={selectedPodId}
-                        disabled={isLoadingPods}
-                    >
-                        <SelectTrigger id="pod-select" className="w-[200px]">
-                        <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {pods.map(pod => (
-                            <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                        ))}
-                        {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
-                        </SelectContent>
-                    </Select>
-                    </div>
-                    <div className="grid gap-2">
-                    <Label htmlFor="date-select">Date</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date-select"
-                            variant={"outline"}
-                            className={cn(
-                            "w-[200px] justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-50">
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    </div>
+    <div className="space-y-6">
+    <Card className="frosted-glass">
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+        <div className="flex flex-wrap gap-4 items-end justify-between">
+            <div className="flex flex-wrap gap-4 items-end">
+                <div className="grid gap-2">
+                <Label htmlFor="pod-select">Pod</Label>
+                <Select
+                    onValueChange={handleSelectedPodChange}
+                    value={selectedPodId}
+                    disabled={isLoadingPods}
+                >
+                    <SelectTrigger id="pod-select" className="w-[200px]">
+                    <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {pods.map(pod => (
+                        <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                    ))}
+                    {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
+                    </SelectContent>
+                </Select>
                 </div>
-                <div className="flex items-center gap-4">
-                    {/* Auto-send toggle and tooltip removed */}
+                <div className="grid gap-2">
+                <Label htmlFor="date-select">Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
                     <Button
-                        onClick={handleManualSendToTeams}
-                        disabled={!canSendToTeamsManually || isManuallySendingTeams}
-                        title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (currentDailyLogsForPod.length === 0 && (!dailyTargets || Object.keys(dailyTargets).length === 0)) ? "No data to send" : "Send summary to Teams"}
+                        id="date-select"
+                        variant={"outline"}
+                        className={cn(
+                        "w-[200px] justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                        )}
                     >
-                        {isManuallySendingTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                        {isManuallySendingTeams ? "Sending..." : "Send to Teams"}
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                     </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-50">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                        initialFocus
+                    />
+                    </PopoverContent>
+                </Popover>
                 </div>
             </div>
-            </CardContent>
-        </Card>
+            <div className="flex items-center gap-4">
+                <Button
+                    onClick={handleManualSendToTeams}
+                    disabled={!canSendToTeamsManually || isManuallySendingTeams}
+                    title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (currentDailyLogsForPod.length === 0 && (!dailyTargets || Object.keys(dailyTargets).length === 0)) ? "No data to send" : "Send summary to Teams"}
+                >
+                    {isManuallySendingTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    {isManuallySendingTeams ? "Sending..." : "Send to Teams"}
+                </Button>
+            </div>
+        </div>
+        </CardContent>
+    </Card>
 
         <Card className="frosted-glass">
             <CardHeader>
@@ -625,7 +688,7 @@ export default function AdminLogAchievementsPage() {
                 <Table>
                 <TableHeader className="sticky top-0 z-10 bg-background">
                     <TableRow>
-                    <TableHead className="w-[200px]">Agent</TableHead>
+                    <TableHead className="w-[250px]">Agent</TableHead>
                     {competitionRules.map(rule => (
                         <TableHead key={rule.id}>
                         {(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name} <span className="text-xs text-muted-foreground">({rule.points} pts)</span>
@@ -637,7 +700,21 @@ export default function AdminLogAchievementsPage() {
                     {agents.map((agent) => (
                     agent.id ? (
                         <TableRow key={agent.id}>
-                            <TableCell className="font-medium">{agent.name}</TableCell>
+                            <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        id={`na-checkbox-${agent.id}`}
+                                        checked={achievementInputs[agent.id]?.isNA || false}
+                                        onCheckedChange={(checked) => handleNaChange(agent.id!, !!checked)}
+                                        disabled={isSaving[`${agent.id}-na`]}
+                                        aria-label={`Mark ${agent.name} as N/A`}
+                                    />
+                                    <Label htmlFor={`na-checkbox-${agent.id}`} className={cn(achievementInputs[agent.id]?.isNA && "text-muted-foreground")}>
+                                        {agent.name}
+                                    </Label>
+                                    {isSaving[`${agent.id}-na`] && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                </div>
+                            </TableCell>
                             {competitionRules.map(rule => (
                             rule.id ? (
                                 <TableCell key={rule.id}>
@@ -649,7 +726,7 @@ export default function AdminLogAchievementsPage() {
                                             value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? ''}
                                             onChange={(e) => handleInputChange(agent.id!, rule.id!, e.target.value)}
                                             className="h-8 w-full pr-6"
-                                            disabled={isSaving[`${agent.id!}-${rule.id!}`]}
+                                            disabled={isSaving[`${agent.id!}-${rule.id!}`] || achievementInputs[agent.id!]?.isNA}
                                             aria-label={`Achievement value for ${agent.name} - ${rule.name}`}
                                         />
                                         {isSaving[`${agent.id!}-${rule.id!}`] && (
@@ -667,8 +744,7 @@ export default function AdminLogAchievementsPage() {
                 )}
             </CardContent>
         </Card>
-        </div>
-    // </TooltipProvider> // TooltipProvider removed
+    </div>
   );
 }
 

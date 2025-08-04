@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Send, Filter } from 'lucide-react'; // Removed Info
+import { CalendarIcon, Loader2, AlertCircle, Send, Filter } from 'lucide-react';
 import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -34,13 +34,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
-// import { Switch } from "@/components/ui/switch"; // Removed Switch import
-// import {
-//   Tooltip,
-//   TooltipContent,
-//   TooltipProvider,
-//   TooltipTrigger,
-// } from "@/components/ui/tooltip"; // Removed Tooltip imports
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 
 
@@ -50,6 +43,7 @@ interface AgentScore {
   agentFirstName: string;
   totalPoints: number;
   emojiString: string;
+  isAbsent: boolean; // Added isAbsent flag
 }
 
 // Interface for pod target summary used internally in this component
@@ -69,7 +63,6 @@ interface CompetitionWithRules extends Competition {
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const DAILY_SCORES_POD_KEY = 'dailyScoresPage_selectedPodId';
-// const KPIQUEST_AUTO_SEND_TEAMS_PREFIX = 'kpiQuest_autoSendTeams_'; // Removed, as toggle is removed
 
 
 export default function AdminDailyScoresPage() {
@@ -86,35 +79,18 @@ export default function AdminDailyScoresPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
-  // const [autoSendEnabledForPod, setAutoSendEnabledForPod] = useState<boolean>(false); // Removed state for auto-send toggle
 
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(DAILY_SCORES_POD_KEY);
     if (savedPodId) {
         setSelectedPodId(savedPodId);
-        // const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${savedPodId}`); // Removed
-        // setAutoSendEnabledForPod(savedAutoSend === 'true'); // Removed
     }
   }, []);
 
   const handleSelectedPodChange = (podId: string) => {
     setSelectedPodId(podId);
     localStorage.setItem(DAILY_SCORES_POD_KEY, podId);
-    // const savedAutoSend = localStorage.getItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${podId}`); // Removed
-    // setAutoSendEnabledForPod(savedAutoSend === 'true'); // Removed
   };
-
-  // const handleAutoSendToggle = (checked: boolean) => { // Removed this handler
-  //   setAutoSendEnabledForPod(checked);
-  //   if (selectedPodId) {
-  //       localStorage.setItem(`${KPIQUEST_AUTO_SEND_TEAMS_PREFIX}${selectedPodId}`, String(checked));
-  //       toast({
-  //           title: "Auto-send Preference Updated",
-  //           description: `Automatic Teams updates for this pod are now ${checked ? 'enabled' : 'disabled'}. Actual auto-sending is triggered from the 'Log Achievements' page.`,
-  //           duration: 5000,
-  //       });
-  //   }
-  // };
 
   useEffect(() => {
     setIsLoadingPods(true);
@@ -170,7 +146,6 @@ export default function AdminDailyScoresPage() {
             toast({ variant: "default", title: "No Agents", description: "No agents found in this pod." });
             setRules([]);
             setActiveCompetitionId(null);
-            // Don't set isLoadingData to false here, let the logs/targets effect handle it or if no competition found below
          }
 
         const competitionsRef = collection(db, 'competitions');
@@ -196,7 +171,6 @@ export default function AdminDailyScoresPage() {
           console.log(`[DailyScoresPage] Active competition found: ${foundCompetition.id}`);
           setRules(foundCompetition.rules || []);
           setActiveCompetitionId(foundCompetition.id);
-          // setIsLoadingData(false); // Data for agents/competition loaded, logs/targets will have their own loading
         } else {
           console.log("[DailyScoresPage] No active competition found.");
           setRules([]);
@@ -249,7 +223,6 @@ export default function AdminDailyScoresPage() {
               const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
               setDailyLogs(fetchedLogs);
               setError(null);
-              // Don't set isLoadingData false here, wait for targets or error
           }, (err) => {
               console.error("[DailyScoresPage] Error listening to achievements:", err);
               setError("Failed to load real-time achievement data.");
@@ -280,49 +253,49 @@ export default function AdminDailyScoresPage() {
              unsubscribeLogs();
              unsubscribeTargets();
          };
-   // Dependencies for this effect: activeCompetitionId, selectedPodId, selectedDate
    }, [activeCompetitionId, selectedPodId, selectedDate, toast]);
 
 
    const { agentScores, podTargetSummary, ruleKeyString, podTargetSummaryString } = useMemo(() => {
      console.log(`[DailyScoresPage] Recalculating scores. Logs: ${dailyLogs.length}, Targets: ${dailyTargets ? 'Yes' : 'No'}, Agents: ${agents.length}, Rules: ${rules.length}`);
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
-    const ruleTotals: Record<string, number> = {}; // ruleId -> total achieved value
+    const ruleTotals: Record<string, number> = {};
 
-    // Initialize rule totals
     rules.forEach(rule => {
         if(rule.id) ruleTotals[rule.id] = 0;
     });
 
-    // Aggregate points and achievements per agent and rule totals
     dailyLogs.forEach(log => {
-      // Agent Scores
+      if (log.status === 'absent') {
+          if (!scores[log.agentId]) {
+              scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: true };
+          } else {
+              scores[log.agentId].isAbsent = true;
+          }
+          return; // Skip point calculation for absent agents
+      }
+
       if (!scores[log.agentId]) {
-        scores[log.agentId] = { totalPoints: 0, emojiString: '' };
+        scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: false };
       }
       scores[log.agentId].totalPoints += log.points;
 
-      // Rule Totals for Pod Summary
       if (ruleTotals.hasOwnProperty(log.ruleId)) {
          ruleTotals[log.ruleId] += log.value;
       }
     });
 
-    // Build emoji strings for each agent
     agents.forEach(agent => {
        if (!agent.id) return;
-      const agentLogs = dailyLogs.filter(log => log.agentId === agent.id);
-      let emojis = '';
-       // Sort rules for consistent emoji order
+       const agentLogs = dailyLogs.filter(log => log.agentId === agent.id && log.status !== 'absent');
+       let emojis = '';
        const sortedRules = [...rules].sort((a, b) => a.name.localeCompare(b.name));
 
        sortedRules.forEach(rule => {
            if (!rule.id) return;
             const logForRule = agentLogs.find(log => log.ruleId === rule.id);
             if (logForRule && logForRule.value > 0) {
-                // Use emoji if it exists and is not empty, otherwise use fallback
                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-                // Repeat the emoji for the value count
                 for (let i = 0; i < logForRule.value; i++) {
                     emojis += emojiToUse;
                 }
@@ -332,19 +305,19 @@ export default function AdminDailyScoresPage() {
        if (scores[agent.id]) {
          scores[agent.id].emojiString = emojis;
        } else if (agents.find(a => a.id === agent.id)) {
-          // Ensure agent exists in scores map even if they have 0 points/logs for the day
-          scores[agent.id] = { totalPoints: 0, emojiString: '' };
+          scores[agent.id] = { totalPoints: 0, emojiString: '', isAbsent: false };
        }
     });
 
     const finalAgentScores: AgentScore[] = agents
       .map(agent => {
-         const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '' };
+         const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '', isAbsent: false };
           return {
             agentId: agent.id!,
             agentFirstName: agent.name.split(' ')[0] || agent.name,
             totalPoints: agentScoreData.totalPoints,
             emojiString: agentScoreData.emojiString,
+            isAbsent: agentScoreData.isAbsent,
           };
       })
       .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
@@ -355,23 +328,20 @@ export default function AdminDailyScoresPage() {
             if (!rule.id) return null;
             const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
             if (targetValue === undefined || targetValue === null) {
-                 // No target set for this rule on this day, don't include in summary
                  return null;
             }
-
-            const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
             const achieved = ruleTotals[rule.id] || 0;
             const progress = targetValue > 0 ? Math.min(100, Math.round((achieved / targetValue) * 100)) : (achieved > 0 ? 100 : 0);
             return {
                 ruleId: rule.id,
                 ruleName: rule.name,
-                ruleEmoji: emojiToUse,
+                ruleEmoji: rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓',
                 achieved: achieved,
                 target: targetValue,
                 progress: progress,
             };
         })
-        .filter((item): item is PodTargetSummary => item !== null) // Filter out rules without targets for the day
+        .filter((item): item is PodTargetSummary => item !== null)
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
      const finalRuleKeyString = rules
@@ -415,8 +385,9 @@ export default function AdminDailyScoresPage() {
 
     const agentScoresForTeams: AgentScoreForTeams[] = agentScores.map(as => ({
         agentFirstName: as.agentFirstName,
-        emojiString: as.emojiString,
+        emojiString: as.isAbsent ? "N/A" : as.emojiString,
         totalPoints: as.totalPoints,
+        isAbsent: as.isAbsent,
     }));
 
     const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = podTargetSummary.map(pts => ({
@@ -462,66 +433,64 @@ export default function AdminDailyScoresPage() {
   const canSendToTeams = !isLoadingDisplay && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (agentScores.length > 0 || podTargetSummary.length > 0);
 
   return (
-    // <TooltipProvider> // TooltipProvider removed
-        <div className="space-y-6">
-        <Card className="frosted-glass">
-            <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
-            </CardHeader>
-            <CardContent>
-            <div className="flex flex-wrap gap-4 items-end justify-between">
-                <div className="flex flex-wrap gap-4 items-end">
-                    <div className="grid gap-2">
-                    <Label htmlFor="pod-select">Pod</Label>
-                    <Select
-                        onValueChange={handleSelectedPodChange}
-                        value={selectedPodId}
-                        disabled={isLoadingPods || isLoadingData}
-                    >
-                        <SelectTrigger id="pod-select" className="w-[200px]">
-                        <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {pods.map(pod => (
-                            <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
-                        ))}
-                        {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
-                        </SelectContent>
-                    </Select>
-                    </div>
-
-                    <div className="grid gap-2">
-                    <Label htmlFor="date-select">Date</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date-select"
-                            variant={"outline"}
-                            className={cn(
-                            "w-[200px] justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
-                            )}
-                            disabled={isLoadingData}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-50">
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => date && setSelectedDate(startOfDay(date))}
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    </div>
+    <div className="space-y-6">
+    <Card className="frosted-glass">
+        <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+        <div className="flex flex-wrap gap-4 items-end justify-between">
+            <div className="flex flex-wrap gap-4 items-end">
+                <div className="grid gap-2">
+                <Label htmlFor="pod-select">Pod</Label>
+                <Select
+                    onValueChange={handleSelectedPodChange}
+                    value={selectedPodId}
+                    disabled={isLoadingPods || isLoadingData}
+                >
+                    <SelectTrigger id="pod-select" className="w-[200px]">
+                    <SelectValue placeholder={isLoadingPods ? "Loading..." : "Select Pod"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {pods.map(pod => (
+                        <SelectItem key={pod.id} value={pod.id}>{pod.name}</SelectItem>
+                    ))}
+                    {pods.length === 0 && !isLoadingPods && <SelectItem value="-" disabled>No pods found</SelectItem>}
+                    </SelectContent>
+                </Select>
                 </div>
-                {/* Removed Auto-send toggle and its surrounding div */}
+
+                <div className="grid gap-2">
+                <Label htmlFor="date-select">Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                    <Button
+                        id="date-select"
+                        variant={"outline"}
+                        className={cn(
+                        "w-[200px] justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                        )}
+                        disabled={isLoadingData}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-50">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(startOfDay(date))}
+                        initialFocus
+                    />
+                    </PopoverContent>
+                </Popover>
+                </div>
             </div>
-            </CardContent>
-        </Card>
+        </div>
+        </CardContent>
+    </Card>
 
         <Card className="frosted-glass">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -583,18 +552,21 @@ export default function AdminDailyScoresPage() {
                             <TableRow key={score.agentId}>
                                 <TableCell className="font-medium">{score.agentFirstName}</TableCell>
                                 <TableCell>
-                                    <div className="flex flex-wrap gap-1">
-                                        {/* Ensure emojiString is treated as an array of characters for mapping */}
-                                        {Array.from(score.emojiString).map((emoji, index) => (
-                                            <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
-                                                {emoji}
-                                            </span>
-                                        ))}
-                                        {score.emojiString === '' && <span className="text-sm text-muted-foreground">-</span>}
-                                    </div>
+                                    {score.isAbsent ? (
+                                        <span className="text-sm text-muted-foreground">N/A</span>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-1">
+                                            {Array.from(score.emojiString).map((emoji, index) => (
+                                                <span key={`${score.agentId}-emoji-${index}`} className="text-lg" title={rules.find(r => r.emoji === emoji)?.name}>
+                                                    {emoji}
+                                                </span>
+                                            ))}
+                                            {score.emojiString === '' && <span className="text-sm text-muted-foreground">-</span>}
+                                        </div>
+                                    )}
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-primary">
-                                    {score.totalPoints}
+                                    {score.isAbsent ? <span className="text-sm font-normal text-muted-foreground">N/A</span> : score.totalPoints}
                                 </TableCell>
                             </TableRow>
                             ))}
@@ -628,8 +600,7 @@ export default function AdminDailyScoresPage() {
                 )}
             </CardContent>
         </Card>
-        </div>
-    // </TooltipProvider> // TooltipProvider removed
+    </div>
   );
 }
 
