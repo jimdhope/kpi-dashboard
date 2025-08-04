@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX, ListTodo } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX } from 'lucide-react';
 import { format, startOfDay, getDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -374,7 +374,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTargets();
       unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate]);
+  }, [selectedPodId, selectedDate, dailyTasks, toast]);
 
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
@@ -766,8 +766,8 @@ export default function AdminLogAchievementsPage() {
         </CardContent>
     </Card>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="frosted-glass lg:col-span-2">
+    <div className="space-y-6">
+        <Card className="frosted-glass">
             <CardHeader>
             <CardTitle>Log Daily Achievements</CardTitle>
             <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
@@ -799,7 +799,7 @@ export default function AdminLogAchievementsPage() {
                         </TableRow>
                     ))}
                     </TableBody>
-                </Table>
+                 </Table>
             ) : !canLog && !error ? (
                 <p className="text-muted-foreground text-center py-6">
                     {agents.length === 0 ? "No agents found in this pod." : "No competition rules or daily tasks found."}
@@ -812,6 +812,11 @@ export default function AdminLogAchievementsPage() {
                     {competitionRules.map(rule => (
                         <TableHead key={rule.id}>
                             <span title={rule.name}>{(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'} {rule.name}</span>
+                        </TableHead>
+                    ))}
+                    {dailyTasks.map(task => (
+                        <TableHead key={task.id} className="text-center">
+                            <span title={task.name}>{task.emoji || '✅'}</span>
                         </TableHead>
                     ))}
                     </TableRow>
@@ -849,6 +854,19 @@ export default function AdminLogAchievementsPage() {
                                 </TableCell>
                             ) : null
                             ))}
+                            {dailyTasks.map(task => (
+                                task.id ? (
+                                <TableCell key={task.id} className="text-center">
+                                    <Checkbox
+                                        id={`task-checkbox-${agent.id}-${task.id}`}
+                                        checked={taskInputs[agent.id!]?.[task.id!]?.checked || false}
+                                        onCheckedChange={(checked) => handleTaskChange(agent.id!, task.id!, !!checked)}
+                                        disabled={isSaving[`task-${agent.id!}-${task.id!}`] || achievementInputs[agent.id!]?.isNA}
+                                        aria-label={`Task ${task.name} for ${agent.name}`}
+                                        />
+                                </TableCell>
+                                ) : null
+                            ))}
                         </TableRow>
                     ) : null
                     ))}
@@ -857,59 +875,7 @@ export default function AdminLogAchievementsPage() {
                 )}
             </CardContent>
         </Card>
-
-        <Card className="frosted-glass">
-             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><ListTodo /> Daily Tasks</CardTitle>
-                <CardDescription>Check off completed once-a-day tasks for each agent.</CardDescription>
-            </CardHeader>
-             <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
-                 {!selectedPodId ? (
-                     <p className="text-muted-foreground text-center">Please select a pod.</p>
-                 ) : isLoading ? (
-                      <Skeleton className="h-40 w-full" />
-                 ) : dailyTasks.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-4">No daily tasks defined.</p>
-                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Agent</TableHead>
-                                {dailyTasks.map(task => (
-                                    <TableHead key={task.id} className="text-center">
-                                        <span title={task.name}>{task.emoji || '✅'}</span>
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                           {agents.map(agent => (
-                               agent.id ? (
-                                <TableRow key={agent.id}>
-                                    <TableCell className="font-medium">{agent.name}</TableCell>
-                                    {dailyTasks.map(task => (
-                                        task.id ? (
-                                        <TableCell key={task.id} className="text-center">
-                                            <Checkbox
-                                                id={`task-checkbox-${agent.id}-${task.id}`}
-                                                checked={taskInputs[agent.id!]?.[task.id!]?.checked || false}
-                                                onCheckedChange={(checked) => handleTaskChange(agent.id!, task.id!, !!checked)}
-                                                disabled={isSaving[`task-${agent.id!}-${task.id!}`] || achievementInputs[agent.id!]?.isNA}
-                                                aria-label={`Task ${task.name} for ${agent.name}`}
-                                             />
-                                        </TableCell>
-                                        ) : null
-                                    ))}
-                                </TableRow>
-                               ) : null
-                           ))}
-                        </TableBody>
-                    </Table>
-                 )}
-            </CardContent>
-        </Card>
     </div>
     </div>
   );
 }
-
