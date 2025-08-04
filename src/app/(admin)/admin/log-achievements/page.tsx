@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX, ListTodo } from 'lucide-react'; // Added ListTodo
 import { format, startOfDay, getDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -40,10 +40,11 @@ import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { DailyTask } from '@/app/(admin)/admin/daily-tasks/page'; // Import DailyTask type
 
-// Interface for the data stored in Firestore
+// Interface for the data stored in Firestore for achievements
 export interface DailyAchievementLog {
-  id?: string; // Firestore ID
+  id?: string;
   agentId: string;
   podId: string;
   competitionId: string;
@@ -54,7 +55,18 @@ export interface DailyAchievementLog {
   points: number;
   loggedAt: Timestamp;
   loggedBy?: string | null;
-  status?: 'absent'; // New optional status field
+  status?: 'absent';
+}
+
+// Interface for daily task logs
+export interface DailyTaskLog {
+  id?: string;
+  agentId: string;
+  podId: string;
+  taskId: string;
+  date: Timestamp;
+  loggedAt: Timestamp;
+  loggedBy?: string | null;
 }
 
 // Interface for managing state within the component
@@ -64,18 +76,25 @@ interface AchievementInputState {
       value: string;
       existingLogId?: string;
     };
-    isNA?: boolean; // Track N/A state per agent
-    naLogId?: string; // Track the ID of the N/A log entry
+    isNA?: boolean;
+    naLogId?: string;
   };
 }
 
+interface TaskInputState {
+    [agentId: string]: {
+        [taskId: string]: {
+            checked: boolean;
+            existingLogId?: string;
+        };
+    };
+}
+
+
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-
 const LOG_ACHIEVEMENTS_POD_KEY = 'logAchievementsPage_selectedPodId';
-const DEBOUNCE_INPUT_SAVE_DELAY = 1000; // 1 second for saving individual input changes
+const DEBOUNCE_INPUT_SAVE_DELAY = 1000;
 
-
-// Custom hook for debouncing a callback, ensuring it uses the latest callback instance
 function useDebouncedCallback<A extends any[]>(
   callback: (...args: A) => void,
   delay: number
@@ -108,23 +127,24 @@ export default function AdminLogAchievementsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [competitionRules, setCompetitionRules] = useState<RuleFormData[]>([]);
+  const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]); // New state for daily tasks
   const [achievementInputs, setAchievementInputs] = useState<AchievementInputState>({});
+  const [taskInputs, setTaskInputs] = useState<TaskInputState>({}); // New state for task inputs
   const [isLoadingPods, setIsLoadingPods] = useState(true);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingRules, setIsLoadingRules] = useState(false);
-  const [isLoadingInitialAchievements, setIsLoadingInitialAchievements] = useState(false);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false); // Combined initial data loader
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
 
-  const [isManuallySendingTeams, setIsManuallySendingTeams] = useState(false); // State for manual send button
+  const [isManuallySendingTeams, setIsManuallySendingTeams] = useState(false);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
 
-  const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialAchievements;
-
+  const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialData;
 
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(LOG_ACHIEVEMENTS_POD_KEY);
@@ -144,7 +164,6 @@ export default function AdminLogAchievementsPage() {
     });
     return () => unsubscribe();
   }, []);
-
 
   useEffect(() => {
     setIsLoadingPods(true);
@@ -168,30 +187,49 @@ export default function AdminLogAchievementsPage() {
     if (!selectedPodId) {
       setAgents([]);
       setCompetitionRules([]);
+      setDailyTasks([]);
       setAchievementInputs({});
+      setTaskInputs({});
       setActiveCompetitionId(null);
       setDailyTargets(null);
       setCurrentDailyLogsForPod([]);
       setIsLoadingAgents(false);
       setIsLoadingRules(false);
-      setIsLoadingInitialAchievements(false);
+      setIsLoadingInitialData(false);
       return;
     }
 
     let unsubscribeLogs: Unsubscribe = () => {};
+    let unsubscribeTaskLogs: Unsubscribe = () => {};
     let unsubscribeTargets: Unsubscribe = () => {};
+    let unsubscribeGlobalTasks: Unsubscribe = () => {};
 
     const fetchPodDataAndListen = async () => {
       setIsLoadingAgents(true);
       setIsLoadingRules(true);
-      setIsLoadingInitialAchievements(true);
+      setIsLoadingInitialData(true);
       setError(null);
       setAgents([]);
       setCompetitionRules([]);
+      setDailyTasks([]);
       setAchievementInputs({});
+      setTaskInputs({});
       setActiveCompetitionId(null);
       setDailyTargets(null);
       setCurrentDailyLogsForPod([]);
+
+      // Fetch global daily tasks
+      const tasksDocRef = doc(db, 'companyTasks', 'global');
+      unsubscribeGlobalTasks = onSnapshot(tasksDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+              setDailyTasks((docSnap.data()?.tasks || []) as DailyTask[]);
+          } else {
+              setDailyTasks([]);
+          }
+      }, (err) => {
+          console.error("Error fetching global daily tasks:", err);
+          setError("Failed to load daily tasks.");
+      });
 
       try {
         const usersRef = collection(db, 'users');
@@ -209,7 +247,7 @@ export default function AdminLogAchievementsPage() {
         if (fetchedAgents.length === 0) {
             toast({ variant: "default", title: "No Agents", description: "No users with 'agent' role found in this pod." });
             setIsLoadingRules(false);
-            setIsLoadingInitialAchievements(false);
+            setIsLoadingInitialData(false);
             setActiveCompetitionId(null);
             return;
         }
@@ -260,6 +298,12 @@ export default function AdminLogAchievementsPage() {
                 where('date', '==', dateTimestamp),
                 where('competitionId', '==', competitionForLogging.id)
             );
+            const taskLogsRef = collection(db, 'dailyTaskLogs');
+            const initialTaskLogsQuery = query(
+                taskLogsRef,
+                where('podId', '==', selectedPodId),
+                where('date', '==', dateTimestamp)
+            );
 
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
@@ -284,12 +328,28 @@ export default function AdminLogAchievementsPage() {
                     });
                 });
                 setAchievementInputs(initialInputs);
-                setIsLoadingInitialAchievements(false);
-
             }, (err) => {
                 console.error("Error listening to daily logs:", err);
                 setError("Failed to load real-time achievement data.");
-                setIsLoadingInitialAchievements(false);
+            });
+
+            unsubscribeTaskLogs = onSnapshot(initialTaskLogsQuery, (snapshot) => {
+                const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyTaskLog));
+                const initialTaskInputs: TaskInputState = {};
+                fetchedAgents.forEach(agent => {
+                    if (!agent.id) return;
+                    initialTaskInputs[agent.id] = {};
+                    const agentLogs = logs.filter(log => log.agentId === agent.id);
+                    dailyTasks.forEach(task => {
+                        if (!task.id) return;
+                        const existingLog = agentLogs.find(log => log.taskId === task.id);
+                        initialTaskInputs[agent.id!][task.id] = {
+                            checked: !!existingLog,
+                            existingLogId: existingLog?.id,
+                        };
+                    });
+                });
+                setTaskInputs(initialTaskInputs);
             });
 
             const targetsDocId = `${competitionForLogging.id}_${selectedPodId}`;
@@ -304,13 +364,14 @@ export default function AdminLogAchievementsPage() {
                 console.error("Error listening to daily targets:", err);
                 setError("Failed to load daily target data.");
             });
+             setIsLoadingInitialData(false);
 
         } else {
             setActiveCompetitionId(null);
             setCompetitionRules([]);
             toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod. Cannot log achievements.` });
             setIsLoadingRules(false);
-            setIsLoadingInitialAchievements(false);
+            setIsLoadingInitialData(false);
         }
       } catch (err) {
         console.error("Error fetching pod data:", err);
@@ -320,16 +381,18 @@ export default function AdminLogAchievementsPage() {
       } finally {
         if (isLoadingAgents) setIsLoadingAgents(false);
         if (isLoadingRules) setIsLoadingRules(false);
-        if (isLoadingInitialAchievements) setIsLoadingInitialAchievements(false);
+        if (isLoadingInitialData) setIsLoadingInitialData(false);
       }
     };
 
     fetchPodDataAndListen();
     return () => {
       unsubscribeLogs();
+      unsubscribeTaskLogs();
       unsubscribeTargets();
+      unsubscribeGlobalTasks();
     };
-  }, [selectedPodId, selectedDate, toast]);
+  }, [selectedPodId, selectedDate, toast, dailyTasks]);
 
 
   const handleSaveAchievementCallback = useCallback(async (agentId: string, ruleId: string, valueStr: string | undefined) => {
@@ -448,12 +511,10 @@ export default function AdminLogAchievementsPage() {
     const achievementsRef = collection(db, 'dailyAchievements');
 
     if (isChecked) {
-        // Clear all existing numeric logs for this agent on this day
         const existingLogs = currentDailyLogsForPod.filter(log => log.agentId === agentId && log.status !== 'absent');
         const deletePromises = existingLogs.map(log => log.id ? deleteDoc(doc(achievementsRef, log.id)) : Promise.resolve());
         await Promise.all(deletePromises);
 
-        // Add a single 'absent' log
         const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
         const naLogEntry: DailyAchievementLog = {
             agentId,
@@ -471,7 +532,6 @@ export default function AdminLogAchievementsPage() {
             [agentId]: { ...prev[agentId], isNA: true, naLogId: addedDoc.id }
         }));
     } else {
-        // Remove the 'absent' log
         const naLogId = achievementInputs[agentId]?.naLogId;
         if (naLogId) {
             await deleteDoc(doc(achievementsRef, naLogId));
@@ -484,6 +544,52 @@ export default function AdminLogAchievementsPage() {
     setIsSaving(prev => ({ ...prev, [savingKey]: false }));
   };
 
+  const handleTaskChange = async (agentId: string, taskId: string, isChecked: boolean) => {
+    if (!selectedPodId || !currentUserUid) {
+        toast({ variant: 'destructive', title: 'Cannot save task', description: 'Missing required context (pod or user).' });
+        return;
+    }
+    const savingKey = `task-${agentId}-${taskId}`;
+    setIsSaving(prev => ({ ...prev, [savingKey]: true }));
+    const taskLogsRef = collection(db, 'dailyTaskLogs');
+    const existingLogId = taskInputs[agentId]?.[taskId]?.existingLogId;
+
+    if (isChecked) {
+        if (existingLogId) {
+             console.log("Task already logged.");
+             setIsSaving(prev => ({ ...prev, [savingKey]: false }));
+             return;
+        }
+        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+        const taskLogEntry: Omit<DailyTaskLog, 'id'> = {
+            agentId,
+            podId: selectedPodId,
+            taskId,
+            date: dateTimestamp,
+            loggedAt: serverTimestamp() as Timestamp,
+            loggedBy: currentUserUid,
+        };
+        const addedDoc = await addDoc(taskLogsRef, taskLogEntry);
+        setTaskInputs(prev => {
+            const newInputs = { ...prev };
+            if (!newInputs[agentId]) newInputs[agentId] = {};
+            newInputs[agentId][taskId] = { checked: true, existingLogId: addedDoc.id };
+            return newInputs;
+        });
+    } else {
+        if (existingLogId) {
+            await deleteDoc(doc(taskLogsRef, existingLogId));
+             setTaskInputs(prev => {
+                const newInputs = { ...prev };
+                if (newInputs[agentId]) {
+                    newInputs[agentId][taskId] = { checked: false, existingLogId: undefined };
+                }
+                return newInputs;
+            });
+        }
+    }
+     setIsSaving(prev => ({ ...prev, [savingKey]: false }));
+  };
 
   const handleManualSendToTeams = async () => {
     if (isLoading || !selectedPodId || !activeCompetitionId || !currentUserUid) {
@@ -574,10 +680,8 @@ export default function AdminLogAchievementsPage() {
     }
 };
 
-
-  const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0 && activeCompetitionId;
+  const canLog = selectedPodId && agents.length > 0 && (competitionRules.length > 0 || dailyTasks.length > 0);
   const canSendToTeamsManually = !isLoading && !isManuallySendingTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
-
 
   return (
     <div className="space-y-6">
@@ -647,7 +751,8 @@ export default function AdminLogAchievementsPage() {
         </CardContent>
     </Card>
 
-        <Card className="frosted-glass">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="frosted-glass lg:col-span-2">
             <CardHeader>
             <CardTitle>Log Daily Achievements</CardTitle>
             <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
@@ -682,7 +787,7 @@ export default function AdminLogAchievementsPage() {
                 </Table>
             ) : !canLog && !error ? (
                 <p className="text-muted-foreground text-center py-6">
-                    {agents.length === 0 ? "No agents found in this pod." : activeCompetitionId === null ? `No competition found associated with ${selectedDate.toLocaleDateString()}.` : "No competition rules found."}
+                    {agents.length === 0 ? "No agents found in this pod." : "No competition rules or daily tasks found."}
                 </p>
                 ) : (
                 <Table>
@@ -744,6 +849,57 @@ export default function AdminLogAchievementsPage() {
                 )}
             </CardContent>
         </Card>
+
+        <Card className="frosted-glass">
+             <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ListTodo /> Daily Tasks</CardTitle>
+                <CardDescription>Check off completed once-a-day tasks for each agent.</CardDescription>
+            </CardHeader>
+             <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
+                 {!selectedPodId ? (
+                     <p className="text-muted-foreground text-center">Please select a pod.</p>
+                 ) : isLoading ? (
+                      <Skeleton className="h-40 w-full" />
+                 ) : dailyTasks.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">No daily tasks defined.</p>
+                 ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Agent</TableHead>
+                                {dailyTasks.map(task => (
+                                    <TableHead key={task.id} className="text-center">
+                                        <span title={task.name}>{task.emoji || '✅'}</span>
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                           {agents.map(agent => (
+                               agent.id ? (
+                                <TableRow key={agent.id}>
+                                    <TableCell className="font-medium">{agent.name}</TableCell>
+                                    {dailyTasks.map(task => (
+                                        task.id ? (
+                                        <TableCell key={task.id} className="text-center">
+                                            <Checkbox
+                                                checked={taskInputs[agent.id!]?.[task.id!]?.checked || false}
+                                                onCheckedChange={(checked) => handleTaskChange(agent.id!, task.id!, !!checked)}
+                                                disabled={isSaving[`task-${agent.id!}-${task.id!}`] || achievementInputs[agent.id!]?.isNA}
+                                                aria-label={`Task ${task.name} for ${agent.name}`}
+                                             />
+                                        </TableCell>
+                                        ) : null
+                                    ))}
+                                </TableRow>
+                               ) : null
+                           ))}
+                        </TableBody>
+                    </Table>
+                 )}
+            </CardContent>
+        </Card>
+    </div>
     </div>
   );
 }
