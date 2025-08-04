@@ -18,7 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare } from 'lucide-react'; // Added MessageSquare
+import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, ListTodo } from 'lucide-react'; // Added ListTodo
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -209,6 +209,14 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                         <UsersRound />
                         <span>Users</span>
                       </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <Link href="/admin/daily-tasks" passHref>
+                    <SidebarMenuButton tooltip="Daily Tasks" isActive={currentPath === '/admin/daily-tasks'}>
+                      <ListTodo />
+                      <span>Daily Tasks</span>
+                    </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
