@@ -21,7 +21,8 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Edit, Trash2, PlusCircle, Loader2, Users, Shield, UserPlus, Search } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Loader2, Users, Shield, UserPlus, Search, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -543,6 +544,17 @@ export default function AdminPodsPage() {
                                 </TableCell>
                                 <TableCell className="text-right">
                                 <div className="flex gap-1 justify-end">
+                                    <Link href={`/pods/${pod.id}/leaderboard`} passHref legacyBehavior>
+                                        <a target="_blank" rel="noopener noreferrer">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                title={`View public leaderboard for ${pod.name}`}
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                            </Button>
+                                        </a>
+                                    </Link>
                                     <Button
                                         variant="outline"
                                         size="sm"
