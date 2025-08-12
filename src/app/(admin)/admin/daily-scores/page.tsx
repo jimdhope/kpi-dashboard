@@ -33,7 +33,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
-import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams } from '@/services/teamsWebhook';
+import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type SimpleTaskLog } from '@/services/teamsWebhook';
 import type { DailyAchievementLog, DailyTaskLog } from '@/app/(admin)/admin/log-achievements/page';
 
 
@@ -444,6 +444,12 @@ export default function AdminDailyScoresPage() {
         achieved: pts.achieved,
         target: pts.target,
     }));
+    
+    // Convert full DailyTaskLog objects to simple, serializable objects
+    const simpleTaskLogs: SimpleTaskLog[] = dailyTaskLogs.map(log => ({
+        agentId: log.agentId,
+        taskId: log.taskId,
+    }));
 
     setIsSendingToTeams(true);
     console.log(`[DailyScoresPage] Calling sendTeamsUpdate for pod ID: ${selectedPodId}, podName: ${podName}, date: ${selectedDate}`);
@@ -455,7 +461,7 @@ export default function AdminDailyScoresPage() {
         rules,
         agentScoresForTeams,
         podTargetSummaryForTeams,
-        dailyTaskLogs
+        simpleTaskLogs // Pass the simplified array
       );
       toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
       console.log(`[DailyScoresPage] sendTeamsUpdate completed successfully for pod ID: ${selectedPodId}`);
@@ -648,3 +654,5 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
+
+    

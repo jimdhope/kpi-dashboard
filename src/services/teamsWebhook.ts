@@ -3,7 +3,6 @@
 
 import { format } from 'date-fns';
 import type { RuleFormData } from '@/models/types';
-import type { DailyTaskLog } from '@/app/(admin)/admin/log-achievements/page';
 
 // Interface for agent scores passed TO this function
 export interface AgentScoreForTeams {
@@ -20,6 +19,12 @@ export interface PodTargetSummaryForTeams {
     ruleEmoji: string;
     achieved: number;
     target: number | null;
+}
+
+// Interface for a simplified, serializable task log
+export interface SimpleTaskLog {
+    agentId: string;
+    taskId: string;
 }
 
 
@@ -114,7 +119,8 @@ export const sendTeamsUpdate = async (
     date: Date,
     rules: RuleFormData[],
     agentScoresForTeams: AgentScoreForTeams[],
-    podTargetSummaryForTeams: PodTargetSummaryForTeams[]
+    podTargetSummaryForTeams: PodTargetSummaryForTeams[],
+    dailyTaskLogs: SimpleTaskLog[] // Changed to accept simplified task logs
 ) => {
     console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}, Webhook URL Provided: ${!!webhookUrl}`);
     let currentStep = "Initial Checks";
@@ -194,3 +200,5 @@ export const sendTeamsUpdate = async (
         throw new Error(`Error during Teams update (${currentStep}): ${error.message}`);
     }
 };
+
+    
