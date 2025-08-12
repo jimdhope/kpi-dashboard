@@ -50,7 +50,6 @@ interface DailyAchievementLog {
   ruleName: string;
   date: Timestamp;
   value: number;
-  points: number;
   loggedAt: Timestamp;
   loggedBy?: string | null;
 }
@@ -278,6 +277,11 @@ export default function AdminLeaderboardPage() {
 
     // 5. Calculate Leaderboard Scores (useMemo)
     const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
+        const competition = competitions.find(c => c.id === selectedCompetitionId);
+        if (!competition) return { agentLeaderboard: [], teamLeaderboard: [] };
+
+        const rulesMap = new Map((competition.rules || []).map(rule => [rule.id, rule]));
+
         // Filter agents based on selectedPodId if necessary
         const relevantAgents = selectedPodId
             ? agents.filter(agent => agent.podId === selectedPodId && agent.roles?.includes('agent'))
@@ -290,9 +294,12 @@ export default function AdminLeaderboardPage() {
         relevantAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
         allLogs.forEach(log => {
-            const points = typeof log.points === 'number' ? log.points : 0;
-            if (agentScores.hasOwnProperty(log.agentId)) {
-                agentScores[log.agentId] += points;
+            const rule = rulesMap.get(log.ruleId);
+            if (rule) {
+                const points = (log.value || 0) * (rule.points || 0);
+                if (agentScores.hasOwnProperty(log.agentId)) {
+                    agentScores[log.agentId] += points;
+                }
             }
         });
 
@@ -317,10 +324,13 @@ export default function AdminLeaderboardPage() {
         teams.forEach(team => { teamScores[team.id] = 0; });
 
         allLogs.forEach(log => {
-            const points = typeof log.points === 'number' ? log.points : 0;
-            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-            if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
-                teamScores[agentTeam.id] += points;
+            const rule = rulesMap.get(log.ruleId);
+            if (rule) {
+                const points = (log.value || 0) * (rule.points || 0);
+                const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+                if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
+                    teamScores[agentTeam.id] += points;
+                }
             }
         });
 
@@ -345,7 +355,7 @@ export default function AdminLeaderboardPage() {
 
 
         return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-    }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid]);
+    }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid, competitions, selectedCompetitionId]);
 
 
   const isLoading = isLoadingBase || isLoadingData;
@@ -459,5 +469,3 @@ export default function AdminLeaderboardPage() {
     </TooltipProvider>
   );
 }
-
-    

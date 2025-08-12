@@ -52,7 +52,6 @@ export interface DailyAchievementLog {
   ruleName: string;
   date: Timestamp;
   value: number;
-  points: number;
   loggedAt: Timestamp;
   loggedBy?: string | null;
   status?: 'absent';
@@ -362,7 +361,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTaskLogs();
       unsubscribeTargets();
     };
-  }, [selectedPodId, selectedDate]);
+  }, [selectedPodId, selectedDate, toast]);
 
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
@@ -381,7 +380,6 @@ export default function AdminLogAchievementsPage() {
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
 
     try {
-       const points = rule.points * value;
        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
        const logEntry: Omit<DailyAchievementLog, 'id' | 'status'> = {
          agentId: agentId,
@@ -391,7 +389,6 @@ export default function AdminLogAchievementsPage() {
          ruleName: rule.name,
          date: dateTimestamp,
          value: value,
-         points: points,
          loggedAt: serverTimestamp() as Timestamp,
          loggedBy: currentUserUid,
        };
@@ -487,7 +484,7 @@ export default function AdminLogAchievementsPage() {
             const naLogEntry: DailyAchievementLog = {
                 agentId, podId: selectedPodId, competitionId: activeCompetitionId,
                 ruleId: 'na', ruleName: 'N/A', date: dateTimestamp,
-                value: 0, points: 0,
+                value: 0,
                 loggedAt: serverTimestamp() as Timestamp,
                 loggedBy: currentUserUid,
                 status: 'absent'
@@ -593,6 +590,8 @@ export default function AdminLogAchievementsPage() {
 
     setIsManuallySendingTeams(true);
 
+    const rulesMap = new Map(competitionRules.map(rule => [rule.id, rule]));
+
     const agentScoresForTeams: AgentScoreForTeams[] = agents.map(agent => {
         let totalPoints = 0;
         let emojiString = "";
@@ -615,7 +614,7 @@ export default function AdminLogAchievementsPage() {
             if (!rule.id) return;
             const logForRule = agentLogs.find(l => l.ruleId === rule.id);
             if (logForRule) {
-                totalPoints += logForRule.points;
+                totalPoints += (logForRule.value || 0) * (rule.points || 0);
                 const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
                 for (let i = 0; i < logForRule.value; i++) {
                     emojiString += emojiToUse;
@@ -665,7 +664,8 @@ export default function AdminLogAchievementsPage() {
             selectedDate,
             competitionRules,
             agentScoresForTeams,
-            podTargetSummaryForTeams
+            podTargetSummaryForTeams,
+            currentDailyTaskLogsForPod
         );
         toast({ title: "Sent to Teams", description: `Summary for ${currentPod.name} sent.` });
     } catch (err: any) {
