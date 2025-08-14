@@ -137,21 +137,25 @@ export default function CertificateGenerationPage() {
 
      // --- Dense Ranking Logic ---
      const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
-         if (items.length === 0) return [];
+        if (!Array.isArray(items) || items.length === 0) return [];
 
-         const sortedItems = [...items].sort((a, b) => b.score - a.score);
+         const sortedItems = [...items].sort((a, b) => (b.score || 0) - (a.score || 0));
          const scoreRankMap = new Map<number, number>();
          let rankCounter = 1;
 
          for (const item of sortedItems) {
-             if (!scoreRankMap.has(item.score)) {
-                 scoreRankMap.set(item.score, rankCounter++);
+              const score = typeof item.score === 'number' && !isNaN(item.score) ? item.score : 0;
+             if (!scoreRankMap.has(score)) {
+                 scoreRankMap.set(score, rankCounter++);
              }
          }
-         return sortedItems.map(item => ({
-             ...item,
-             rank: scoreRankMap.get(item.score)!
-         }));
+         return sortedItems.map(item => {
+             const score = typeof item.score === 'number' && !isNaN(item.score) ? item.score : 0;
+             return {
+                 ...item,
+                 rank: scoreRankMap.get(score)!
+             };
+        });
      };
 
 
@@ -185,6 +189,9 @@ export default function CertificateGenerationPage() {
                  throw new Error("Could not load competition or pod details.");
              }
 
+            // Fetch Competition Rules
+            const rulesMap = new Map((competition.rules || []).map(rule => [rule.id, rule]));
+
 
             // Fetch Users in the Pod
             const usersQuery = query(collection(db, 'users'), where('podId', '==', selectedPodId), where('roles', 'array-contains', 'agent'));
@@ -217,30 +224,42 @@ export default function CertificateGenerationPage() {
             const logs = logsSnapshot.docs.map(doc => doc.data() as DailyAchievementLog);
 
             // --- Calculate Scores ---
-            // Agent Scores
+            // Agent Scores (dynamic calculation)
             const agentScoresMap: { [agentId: string]: number } = {};
             podAgentUsers.forEach(agent => { agentScoresMap[agent.id!] = 0; });
             logs.forEach(log => {
-                if (agentScoresMap.hasOwnProperty(log.agentId)) {
-                    agentScoresMap[log.agentId] += log.points;
+                const rule = rulesMap.get(log.ruleId);
+                if (rule && rule.type === 'numeric') { // Only score numeric rules
+                    const points = (log.value || 0) * (rule.points || 0);
+                    if (agentScoresMap.hasOwnProperty(log.agentId)) {
+                        agentScoresMap[log.agentId] += points;
+                    }
                 }
             });
-            const agentScores = podAgentUsers
-                .map(agent => ({ ...agent, score: agentScoresMap[agent.id!] || 0 }))
-                .sort((a, b) => b.score - a.score); // Sort descending for ranking
+            const agentScores = podAgentUsers.map(agent => ({
+                ...agent,
+                score: agentScoresMap[agent.id!] || 0
+            }));
 
-            // Team Scores
+
+            // Team Scores (dynamic calculation)
             const teamScoresMap: { [teamId: string]: number } = {};
             competitionTeams.forEach(team => { teamScoresMap[team.id] = 0; });
             logs.forEach(log => {
-                const agentTeam = competitionTeams.find(team => team.agentIds?.includes(log.agentId));
-                if (agentTeam) {
-                    teamScoresMap[agentTeam.id] += log.points;
+                const rule = rulesMap.get(log.ruleId);
+                 if (rule && rule.type === 'numeric') {
+                    const points = (log.value || 0) * (rule.points || 0);
+                    const agentTeam = competitionTeams.find(team => team.agentIds?.includes(log.agentId));
+                    if (agentTeam) {
+                        teamScoresMap[agentTeam.id] += points;
+                    }
                 }
             });
-            const teamScores = competitionTeams
-                .map(team => ({ ...team, score: teamScoresMap[team.id] || 0 }))
-                .sort((a, b) => b.score - a.score); // Sort descending for ranking
+            const teamScores = competitionTeams.map(team => ({
+                 ...team,
+                 score: teamScoresMap[team.id] || 0
+            }));
+
 
             // Assign ranks using dense ranking logic
             const rankedAgents = assignDenseRanks(agentScores);
