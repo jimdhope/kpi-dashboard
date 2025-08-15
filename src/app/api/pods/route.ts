@@ -2,7 +2,21 @@
 import { NextResponse } from 'next/server';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
+
+// Define a specific, accurate interface for the data stored in Firestore for a Pod.
+// This avoids relying on the front-end `Pod` type which includes derived fields.
+interface ApiPod {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  logoInitials?: string;
+  logoBgColor?: string;
+  campaignId: string;
+  podManagerId: string;
+  teamLeaderId: string;
+  agentIds?: string[];
+  teamsWebhookUrl?: string;
+}
 
 /**
  * @api {get} /api/pods Request All Pods
@@ -16,6 +30,7 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
  * @apiSuccess {String} pods.podManagerId ID of the pod manager.
  * @apiSuccess {String} pods.teamLeaderId ID of the team leader.
  * @apiSuccess {String[]} pods.agentIds List of agent IDs in the pod.
+ * @apiSuccess {String} [pods.teamsWebhookUrl] Optional webhook URL for Microsoft Teams.
  *
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 OK
@@ -26,7 +41,8 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
  *         "campaignId": "campaign-abc",
  *         "podManagerId": "user-manager-1",
  *         "teamLeaderId": "user-leader-1",
- *         "agentIds": ["user-agent-1", "user-agent-2"]
+ *         "agentIds": ["user-agent-1", "user-agent-2"],
+ *         "teamsWebhookUrl": "https://your-webhook-url"
  *       }
  *     ]
  *
@@ -38,26 +54,27 @@ export async function GET() {
     const q = query(podsCollectionRef, orderBy('name'));
     const querySnapshot = await getDocs(q);
 
-    const pods: Omit<Pod, 'campaignName' | 'podManagerName' | 'teamLeaderName' | 'agentNames'>[] = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      name: doc.data().name,
-      campaignId: doc.data().campaignId,
-      podManagerId: doc.data().podManagerId,
-      teamLeaderId: doc.data().teamLeaderId,
-      agentIds: doc.data().agentIds || [],
-      logoUrl: doc.data().logoUrl || '',
-      logoInitials: doc.data().logoInitials || '',
-      logoBgColor: doc.data().logoBgColor || '',
-      teamsWebhookUrl: doc.data().teamsWebhookUrl || '',
-    }));
+    // Map the documents to the ApiPod interface.
+    const pods: ApiPod[] = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            name: data.name || 'Unnamed Pod',
+            campaignId: data.campaignId,
+            podManagerId: data.podManagerId,
+            teamLeaderId: data.teamLeaderId,
+            agentIds: data.agentIds || [],
+            logoUrl: data.logoUrl || '',
+            logoInitials: data.logoInitials || '',
+            logoBgColor: data.logoBgColor || '',
+            teamsWebhookUrl: data.teamsWebhookUrl || '',
+        };
+    });
 
     return NextResponse.json(pods, { status: 200 });
   } catch (error: any) {
     console.error("Error fetching pods:", error);
-    return NextResponse.json({ error: "Failed to fetch pods" }, { status: 500 });
+    // It's good practice to log the actual error on the server.
+    return NextResponse.json({ error: `Failed to fetch pods. Server Error: ${error.message}` }, { status: 500 });
   }
 }
-
-// Optional: You can add POST, PUT, DELETE functions here later for full CRUD functionality.
-// For example:
-// export async function POST(request: Request) { ... }
