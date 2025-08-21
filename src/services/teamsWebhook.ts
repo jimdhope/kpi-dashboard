@@ -164,15 +164,15 @@ export const sendTeamsUpdate = async (
         const taskRules = rules.filter(r => r.type === 'checkbox');
         const kpiKeyText = generateKpiKey(numericRules);
 
-        // Generate team standings text
-        const teamStandingsText = `**Current Standings:** ${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()} pts**`).join(' | ')}`;
+        // Generate team standings text with a line break
+        const teamStandingsText = `**Current Standings:**\n\n${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()} pts**`).join(' | ')}`;
 
         // Generate daily bonus text if applicable
         const dailyBonusText = teamBonusSummary.length > 0
             ? `**Today's Adjustments:** ${teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints} pts**`).join(' | ')}`
             : null;
 
-        // Construct the Adaptive Card body elements, REMOVING the main title
+        // Construct the Adaptive Card body elements
         const adaptiveCardBodyElements = [
             {
                 "type": "TextBlock",
@@ -188,23 +188,22 @@ export const sendTeamsUpdate = async (
                 "spacing": "Medium",
                 "size": "Small"
             },
-            // Insert the array of ColumnSet elements for the table
-            ...generateAgentScoresAdaptiveCardElements(agentScoresForTeams, taskRules),
-            // Add team standings and bonuses at the end
+            // Wrap the agent scores table in a styled container
             {
                 "type": "Container",
-                "separator": true,
-                "spacing": "Medium",
                 "style": "emphasis",
-                "items": [
-                    {
-                        "type": "TextBlock",
-                        "text": teamStandingsText,
-                        "wrap": true
-                    },
-                     ...(dailyBonusText ? [{ "type": "TextBlock", "text": dailyBonusText, "wrap": true, "size": "Small", "spacing": "Small" }] : [])
-                ]
-            }
+                "spacing": "Medium",
+                "items": generateAgentScoresAdaptiveCardElements(agentScoresForTeams, taskRules)
+            },
+            // Add team standings and bonuses at the end as plain text
+            {
+                "type": "TextBlock",
+                "text": teamStandingsText,
+                "wrap": true,
+                "separator": true,
+                "spacing": "Medium"
+            },
+             ...(dailyBonusText ? [{ "type": "TextBlock", "text": dailyBonusText, "wrap": true, "size": "Small", "spacing": "Small" }] : [])
         ];
 
         const webhookPayload = {
@@ -216,8 +215,8 @@ export const sendTeamsUpdate = async (
                     "content": {
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
-                        "version": "1.4", // Keeping version 1.4
-                        "body": adaptiveCardBodyElements.slice(1) // Remove the first element (the title)
+                        "version": "1.4",
+                        "body": adaptiveCardBodyElements
                     }
                 }
             ]
