@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -69,7 +70,7 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
             }),
         });
 
-    const form = useForm<UserFormData>({
+    const form = useForm<z.infer<typeof dynamicSchema>>({
         resolver: zodResolver(dynamicSchema),
         defaultValues: {
             name: initialData?.name || '',
