@@ -170,13 +170,6 @@ export const sendTeamsUpdate = async (
         const adaptiveCardBodyElements = [
             {
                 "type": "TextBlock",
-                "text": `**Daily Summary for ${podName} - ${format(date, "PPP")}**`,
-                "wrap": true,
-                "weight": "Bolder",
-                "size": "Large"
-            },
-            {
-                "type": "TextBlock",
                 "text": `**Key:** ${kpiKeyText}`,
                 "wrap": true,
                 "spacing": "Medium",
