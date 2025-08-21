@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -36,7 +35,7 @@ const profileFormSchema = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters.' }).max(50, { message: 'Name must be 50 characters or less.' }),
   avatarInitials: z.string().max(2, { message: "Initials can be max 2 characters."}).optional(),
   avatarBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')),
-  currentPassword: z.string().optional(), // Only needed if enforcing re-authentication on client
+  currentPassword: z.string().optional(), // This field is now used for re-authentication flow if password is being changed
   newPassword: z.string().optional(),
   confirmPassword: z.string().optional(),
 })
@@ -183,6 +182,20 @@ export default function ProfilePage() {
         if (data.newPassword && data.confirmPassword) {
              console.log("Attempting password update...");
              try {
+                // For client-side password updates, re-authentication is required for security.
+                // This is a basic example. A better UX would be a modal asking for the password.
+                 if (!data.currentPassword) {
+                     toast({
+                         variant: "destructive",
+                         title: "Current Password Required",
+                         description: "Please enter your current password to set a new one.",
+                     });
+                     throw new Error("Current password not provided.");
+                 }
+                const credential = EmailAuthProvider.credential(user.email!, data.currentPassword);
+                await reauthenticateWithCredential(user, credential);
+
+                // If re-authentication is successful, update the password
                  await updateAuthPassword(user, data.newPassword);
                  console.log("Password updated successfully in Firebase Auth.");
                  passwordUpdateSuccess = true;
@@ -195,18 +208,19 @@ export default function ProfilePage() {
                  });
              } catch (error: any) {
                   console.error("Error updating password:", error);
-                  if (error.code === 'auth/requires-recent-login') {
+                  if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                      toast({
+                          variant: "destructive",
+                          title: "Authentication Failed",
+                          description: "The current password you entered is incorrect.",
+                      });
+                  } else if (error.code === 'auth/requires-recent-login') {
                      toast({
                          variant: "destructive",
                          title: "Re-authentication Required",
-                         description: "Please log out and log back in to change your password.",
+                         description: "For security, please log out and log back in to change your password.",
                          duration: 7000,
                      });
-                     // TODO: Implement re-authentication flow if desired, potentially using data.currentPassword
-                     // Example (requires data.currentPassword to be filled):
-                     // const credential = EmailAuthProvider.credential(user.email!, data.currentPassword);
-                     // await reauthenticateWithCredential(user, credential);
-                     // await updateAuthPassword(user, data.newPassword); // Retry after re-auth
                  } else {
                      toast({
                          variant: "destructive",
@@ -382,24 +396,23 @@ export default function ProfilePage() {
                <div className="space-y-4">
                    <h3 className="text-lg font-semibold flex items-center gap-2"><KeyRound className="h-5 w-5"/>Change Password</h3>
                    <p className="text-sm text-muted-foreground">
-                       Leave these fields blank to keep your current password. Changing your password may require you to log in again.
+                       Leave the fields below blank to keep your current password.
                    </p>
-                  {/* Optional: Add current password field for re-authentication */}
-                   {/*
+                   {/* Current password field for re-authentication */}
                    <FormField
                        control={form.control}
                        name="currentPassword"
                        render={({ field }) => (
                            <FormItem>
                            <FormLabel>Current Password</FormLabel>
+                            <FormDescription>Required to set a new password.</FormDescription>
                            <FormControl>
-                               <PasswordInput placeholder="Required to change password" {...field} disabled={isSubmitting} />
+                               <PasswordInput placeholder="Enter your current password" {...field} disabled={isSubmitting} />
                            </FormControl>
                            <FormMessage />
                            </FormItem>
                        )}
                        />
-                   */}
                     <FormField
                        control={form.control}
                        name="newPassword"

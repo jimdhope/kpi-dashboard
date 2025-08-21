@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -43,6 +42,8 @@ const userFormSchemaBase = z.object({
 
 // Conditional validation for password based on mode
 const userFormSchema = userFormSchemaBase.superRefine((data, ctx) => {
+    // This password validation is now only truly enforced for 'add' mode via the dynamic schema.
+    // For edit mode, it's optional, so this check is less critical but harmless.
     if (data.password && data.password.length < 6) {
          ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -70,7 +71,7 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
         ? userFormSchemaBase.extend({
             password: z.string().min(6, { message: 'Password is required and must be at least 6 characters.' }),
           })
-        : userFormSchemaBase; // Password is optional for edit
+        : userFormSchemaBase.omit({ password: true }); // Omit password from validation in edit mode entirely
 
     const form = useForm<UserFormData>({
         resolver: zodResolver(dynamicSchema),
@@ -90,7 +91,6 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
         name: initialData.name,
         email: initialData.email,
         roles: initialData.roles || [],
-        password: '', // Don't pre-fill password in edit mode
       });
     } else if (mode === 'add') {
         form.reset({
@@ -110,8 +110,8 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
             const dataToSend: UserFormData = {
                 ...data,
                 roles: rolesToSend,
-                // Conditionally remove password if editing and it's empty
-                ...(mode === 'edit' && !data.password && { password: undefined }),
+                // Omit password from submission data in edit mode
+                ...(mode === 'edit' && { password: undefined }),
             };
             await onSubmit(dataToSend);
         } catch (error) {
@@ -149,6 +149,7 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
               <FormControl>
                 <Input type="email" placeholder="agent@kpiquest.com" {...field} disabled={isSubmitting || mode === 'edit'} />
               </FormControl>
+               {mode === 'edit' && <p className="text-xs text-muted-foreground">Email cannot be changed after creation.</p>}
                <FormMessage />
             </FormItem>
           )}
@@ -195,21 +196,22 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
             />
 
 
-         {/* User Password */}
-         <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>{mode === 'add' ? 'Password' : 'New Password (Optional)'}</FormLabel>
-                <FormControl>
-                     <PasswordInput placeholder="Min. 6 characters" {...field} disabled={isSubmitting}/>
-                </FormControl>
-                {mode === 'edit' && <p className="text-xs text-muted-foreground">Leave blank to keep current password.</p>}
-                <FormMessage />
-                </FormItem>
-            )}
-        />
+         {/* User Password (only in 'add' mode) */}
+         {mode === 'add' && (
+             <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                         <PasswordInput placeholder="Min. 6 characters" {...field} disabled={isSubmitting}/>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+         )}
 
 
           <DialogFooter className="pt-4"> {/* Add padding top */}

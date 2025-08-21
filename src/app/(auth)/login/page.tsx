@@ -98,7 +98,7 @@ export default function LoginPage() {
       console.error("Email/Password Login Error:", err);
       // Handle specific Firebase auth errors
        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
-         setError('Invalid email or password. Please try again.');
+         setError('Invalid email or password. Please check your credentials and try again.');
        } else if (err.code === 'auth/too-many-requests') {
          setError('Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.');
        } else {

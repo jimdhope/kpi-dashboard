@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -190,27 +189,8 @@ export default function AdminUsersPage() {
          // 1. Update Firestore Document (name, roles, etc.)
          await updateDoc(userDocRef, updates);
 
-         // 2. Handle Email Update (Requires Backend/Admin SDK for reliability)
-         if (data.email !== selectedUser.email) {
-             console.warn(`Attempting to update email for ${selectedUser.email} to ${data.email}. This requires recent authentication or backend implementation.`);
-             toast({
-                 title: "Email Update Requires Backend",
-                 description: `Firestore updated, but changing Auth email from ${selectedUser.email} to ${data.email} needs Admin SDK.`,
-                 variant: "default",
-                 duration: 10000,
-             });
-         }
-
-         // 3. Handle Password Update (Requires Backend/Admin SDK for reliability)
-         if (data.password) {
-             console.warn(`Attempting to update password for ${selectedUser.email}. This requires backend implementation (Admin SDK) for password resets.`);
-              toast({
-                 title: "Password Update Requires Backend",
-                 description: `Firestore updated, but Auth password changes require Admin SDK for resets.`,
-                 variant: "default",
-                 duration: 10000,
-             });
-         }
+         // Password updates are removed from this form. They must be done by the user themselves.
+         // Email updates are also removed as they require backend logic.
 
          toast({
            title: "User Updated",
@@ -441,7 +421,7 @@ export default function AdminUsersPage() {
                              <Info className="inline-block h-4 w-4 ml-1 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="text-sm">Email and password changes require backend setup (Firebase Admin SDK) for security and reliability. Only Firestore data (name, roles) is updated directly here.</p>
+                            <p className="text-sm">Password and email changes must be done by the user themselves from their profile page for security reasons.</p>
                         </TooltipContent>
                      </Tooltip>
                 </DialogDescription>
@@ -478,5 +458,3 @@ export default function AdminUsersPage() {
     </TooltipProvider>
   );
 }
-
-    
