@@ -38,7 +38,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
-import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type SimpleTaskLog } from '@/services/teamsWebhook';
+import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type SimpleTaskLog, type TeamBonusSummary, type TeamTotalScore } from '@/services/teamsWebhook';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AchievementCard } from '@/components/achievement-card'; // Import the new card
 import { Input } from '@/components/ui/input';
@@ -157,6 +157,8 @@ export default function AdminLogAchievementsPage() {
   const [currentDailyLogsForPod, setCurrentDailyLogsForPod] = useState<DailyAchievementLog[]>([]);
   const [currentDailyTaskLogsForPod, setCurrentDailyTaskLogsForPod] = useState<DailyTaskLog[]>([]);
   const [currentDailyBonusLogsForPod, setCurrentDailyBonusLogsForPod] = useState<TeamBonusLog[]>([]);
+  const [allCompetitionLogs, setAllCompetitionLogs] = useState<DailyAchievementLog[]>([]);
+  const [allCompetitionBonusLogs, setAllCompetitionBonusLogs] = useState<TeamBonusLog[]>([]);
 
   const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialData;
 
@@ -210,6 +212,8 @@ export default function AdminLogAchievementsPage() {
       setCurrentDailyLogsForPod([]);
       setCurrentDailyTaskLogsForPod([]);
       setCurrentDailyBonusLogsForPod([]);
+      setAllCompetitionLogs([]);
+      setAllCompetitionBonusLogs([]);
       setIsLoadingAgents(false);
       setIsLoadingRules(false);
       setIsLoadingInitialData(false);
@@ -220,6 +224,8 @@ export default function AdminLogAchievementsPage() {
     let unsubscribeTaskLogs: Unsubscribe = () => {};
     let unsubscribeBonusLogs: Unsubscribe = () => {};
     let unsubscribeTargets: Unsubscribe = () => {};
+    let unsubscribeAllCompLogs: Unsubscribe = () => {};
+    let unsubscribeAllBonusLogs: Unsubscribe = () => {};
 
     const fetchPodDataAndListen = async () => {
       setIsLoadingAgents(true);
@@ -237,6 +243,8 @@ export default function AdminLogAchievementsPage() {
       setCurrentDailyLogsForPod([]);
       setCurrentDailyTaskLogsForPod([]);
       setCurrentDailyBonusLogsForPod([]);
+      setAllCompetitionLogs([]);
+      setAllCompetitionBonusLogs([]);
 
       try {
         const usersRef = collection(db, 'users');
@@ -272,7 +280,6 @@ export default function AdminLogAchievementsPage() {
 
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] };
-            // Ensure dates are valid JS Date objects before comparing
             const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
             const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
 
@@ -286,7 +293,7 @@ export default function AdminLogAchievementsPage() {
             setActiveCompetitionId(competitionForLogging.id);
             setCompetitionRules(competitionForLogging.rules || []);
             setTeams(competitionForLogging.teams?.filter(team => team.agentIds.some(agentId => fetchedAgents.some(agent => agent.id === agentId))) || []);
-             setIsLoadingRules(false); // We have rules now, so this is done.
+             setIsLoadingRules(false);
 
             const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
             const achievementsRef = collection(db, 'dailyAchievements');
@@ -359,6 +366,19 @@ export default function AdminLogAchievementsPage() {
                 setCurrentDailyBonusLogsForPod(logs);
             });
 
+            // Listeners for ALL competition logs
+            const allCompLogsQuery = query(achievementsRef, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id));
+            unsubscribeAllCompLogs = onSnapshot(allCompLogsQuery, (snapshot) => {
+                const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+                setAllCompetitionLogs(logs);
+            });
+
+            const allBonusLogsQuery = query(bonusLogsRef, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id));
+            unsubscribeAllBonusLogs = onSnapshot(allBonusLogsQuery, (snapshot) => {
+                const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
+                setAllCompetitionBonusLogs(logs);
+            });
+
             const targetsDocId = `${competitionForLogging.id}_${selectedPodId}`;
             const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
             unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
@@ -397,6 +417,8 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTaskLogs();
       unsubscribeBonusLogs();
       unsubscribeTargets();
+      unsubscribeAllCompLogs();
+      unsubscribeAllBonusLogs();
     };
   }, [selectedPodId, selectedDate, toast]);
 
@@ -640,7 +662,6 @@ export default function AdminLogAchievementsPage() {
     }
 
     try {
-        // Query existing bonus logs for this day to update them or create new ones
         const q = query(bonusLogsRef, where('podId', '==', selectedPodId), where('competitionId', '==', activeCompetitionId), where('date', '==', dateTimestamp));
         const snapshot = await getDocs(q);
         const existingLogsMap = new Map(snapshot.docs.map(doc => [doc.data().teamId, doc.id]));
@@ -658,7 +679,7 @@ export default function AdminLogAchievementsPage() {
 
         await batch.commit();
         toast({ title: "Success", description: "Team bonus points have been awarded." });
-        setBonusInputs({}); // Clear inputs after saving
+        setBonusInputs({}); 
     } catch (error) {
         console.error("Error saving bonus points:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not save bonus points." });
@@ -667,9 +688,126 @@ export default function AdminLogAchievementsPage() {
     }
   };
 
+    const { agentScores, teamBonusSummary, teamTotalScores } = useMemo(() => {
+        const dayOfWeek = daysOfWeek[getDay(selectedDate)];
+        const rulesMap = new Map(competitionRules.map(rule => [rule.id, rule]));
+
+        const dailyAgentScores: AgentScoreForTeams[] = agents.map(agent => {
+            if (!agent.id) return null;
+            const agentDailyLogs = currentDailyLogsForPod.filter(log => log.agentId === agent.id);
+            const isAbsent = agentDailyLogs.some(log => log.status === 'absent');
+            if (isAbsent) {
+                return { agentId: agent.id, agentFirstName: agent.name.split(' ')[0], totalPoints: 0, emojiString: '', isAbsent: true, completedTasks: [], teamEmoji: undefined, targetProgress: '' };
+            }
+
+            let totalPoints = 0;
+            let emojiString = '';
+            const numericRules = competitionRules.filter(r => r.type === 'numeric').sort((a,b) => a.name.localeCompare(b.name));
+
+            numericRules.forEach(rule => {
+                if (!rule.id) return;
+                const log = agentDailyLogs.find(l => l.ruleId === rule.id);
+                if (log && log.value > 0) {
+                    totalPoints += (log.value || 0) * (rule.points || 0);
+                    const emoji = (rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓';
+                    emojiString += emoji.repeat(log.value);
+                }
+            });
+            const targetProgressParts = numericRules.map(rule => {
+                if (!rule.id) return null;
+                const target = dailyTargets?.[rule.id]?.[dayOfWeek];
+                if (target === undefined || target === null || target < 0) return null;
+                const achieved = agentDailyLogs.find(log => log.ruleId === rule.id)?.value || 0;
+                return `${rule.emoji || '❓'} ${achieved}/${target}`;
+            }).filter(Boolean);
+
+            const agentTaskLogs = currentDailyTaskLogsForPod.filter(log => log.agentId === agent.id);
+            const completedTasks = agentTaskLogs.map(taskLog => {
+                const rule = competitionRules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
+                return { ruleName: rule?.name || 'Unknown Task', ruleEmoji: (rule?.emoji && rule.emoji.trim() !== '') ? rule.emoji : '✅' };
+            });
+
+            const agentTeam = teams.find(team => team.agentIds?.includes(agent.id!));
+            return {
+                agentId: agent.id,
+                agentFirstName: agent.name.split(' ')[0],
+                totalPoints,
+                emojiString,
+                isAbsent: false,
+                completedTasks,
+                teamEmoji: agentTeam?.emoji,
+                targetProgress: targetProgressParts.join(' | ')
+            };
+        }).filter((a): a is AgentScoreForTeams => a !== null)
+          .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
+
+        const dailyTeamBonusSummary: TeamBonusSummary[] = teams.map(team => {
+            const bonus = currentDailyBonusLogsForPod.filter(log => log.teamId === team.id).reduce((acc, log) => acc + log.points, 0);
+            return { teamName: team.name, teamEmoji: team.emoji, bonusPoints: bonus };
+        }).filter(summary => summary.bonusPoints !== 0);
+
+        const teamTotalScoresMap: { [teamId: string]: number } = {};
+        teams.forEach(team => teamTotalScoresMap[team.id] = 0);
+        allCompetitionLogs.forEach(log => {
+            const rule = rulesMap.get(log.ruleId);
+            if (rule) {
+                const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+                if (agentTeam) {
+                    const points = (log.value || 0) * (rule.points || 0);
+                    teamTotalScoresMap[agentTeam.id] = (teamTotalScoresMap[agentTeam.id] || 0) + points;
+                }
+            }
+        });
+        allCompetitionBonusLogs.forEach(log => {
+            if(teamTotalScoresMap.hasOwnProperty(log.teamId)) {
+                teamTotalScoresMap[log.teamId] += log.points || 0;
+            }
+        });
+
+        const finalTeamTotalScores = teams.map(team => ({
+            teamName: team.name,
+            teamEmoji: team.emoji,
+            totalPoints: teamTotalScoresMap[team.id] || 0
+        })).sort((a,b) => b.totalPoints - a.totalPoints);
+
+        return { agentScores: dailyAgentScores, teamBonusSummary: dailyTeamBonusSummary, teamTotalScores: finalTeamTotalScores };
+    }, [agents, competitionRules, currentDailyLogsForPod, currentDailyTaskLogsForPod, currentDailyBonusLogsForPod, dailyTargets, selectedDate, teams, allCompetitionLogs, allCompetitionBonusLogs]);
+
+    const handleSendToTeams = async () => {
+        const currentPod = pods.find(p => p.id === selectedPodId);
+        if (!currentPod || !currentPod.teamsWebhookUrl) {
+            toast({ variant: "destructive", title: "Missing Webhook", description: "No Teams webhook URL configured for this pod." });
+            return;
+        }
+        if (agentScores.length === 0 && teamBonusSummary.length === 0) {
+            toast({ variant: "default", title: "No Data", description: "Nothing to send to Teams for this day." });
+            return;
+        }
+        setIsManuallySendingTeams(true);
+        try {
+            await sendTeamsUpdate(
+                currentPod.name,
+                currentPod.teamsWebhookUrl,
+                selectedDate,
+                competitionRules,
+                agentScores,
+                [], // podTargetSummaryForTeams - not needed here
+                currentDailyTaskLogsForPod,
+                teamBonusSummary,
+                teamTotalScores
+            );
+            toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
+        } catch (err: any) {
+            console.error("Error sending to Teams from log page:", err);
+            toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
+        } finally {
+            setIsManuallySendingTeams(false);
+        }
+    };
+
 
   const canLog = selectedPodId && agents.length > 0 && competitionRules.length > 0;
-  const canSendToTeamsManually = !isLoading && !isManuallySendingTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || currentDailyTaskLogsForPod.length > 0 || Object.values(dailyTargets || {}).length > 0);
+  const canSendToTeamsManually = !isLoading && !isManuallySendingTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (currentDailyLogsForPod.length > 0 || currentDailyTaskLogsForPod.length > 0 || currentDailyBonusLogsForPod.length > 0);
 
   return (
     <div className="space-y-6">
@@ -726,11 +864,8 @@ export default function AdminLogAchievementsPage() {
                 </div>
             </div>
             <div className="flex items-center gap-4">
-                <Button
-                    onClick={() => {}} // Placeholder for future send to teams logic
-                    disabled={true} // Disabled for now
-                >
-                    <Send className="mr-2 h-4 w-4" />
+                 <Button onClick={handleSendToTeams} disabled={!canSendToTeamsManually}>
+                    {isManuallySendingTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4" />}
                     Send to Teams
                 </Button>
             </div>
