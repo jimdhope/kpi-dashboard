@@ -397,14 +397,23 @@ export default function AdminDailyScoresPage() {
         return { teamName: team.name, teamEmoji: team.emoji, bonusPoints: bonus };
      }).filter(summary => summary.bonusPoints > 0);
 
+     // Recalculate team total scores correctly
      const teamTotalScoresMap: { [teamId: string]: number } = {};
      teams.forEach(team => teamTotalScoresMap[team.id] = 0);
+     
+     // Calculate points from achievement logs
      competitionLogs.forEach(log => {
-        const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-        if (agentTeam) {
-            teamTotalScoresMap[agentTeam.id] += log.points || 0;
+        const rule = rulesMap.get(log.ruleId);
+        if (rule) {
+            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+            if (agentTeam) {
+                const points = (log.value || 0) * (rule.points || 0);
+                teamTotalScoresMap[agentTeam.id] = (teamTotalScoresMap[agentTeam.id] || 0) + points;
+            }
         }
      });
+
+     // Add points from bonus logs
      competitionBonusLogs.forEach(log => {
         if(teamTotalScoresMap.hasOwnProperty(log.teamId)) {
             teamTotalScoresMap[log.teamId] += log.points || 0;
