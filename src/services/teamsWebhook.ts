@@ -86,7 +86,7 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
         // Combine numeric emojis with task emojis
         const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
         const achievementsDisplay = score.isAbsent ? "N/A" : (`${score.emojiString || ''}${taskEmojis}`.trim() || '-');
-        const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints} pts`;
+        const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints}`; // Removed " pts"
 
         return {
             type: "ColumnSet",
@@ -154,11 +154,16 @@ export const sendTeamsUpdate = async (
         const kpiKeyText = generateKpiKey(numericRules);
 
         // Generate team standings text with a line break
-        const teamStandingsText = `**Current Standings:**\n\n${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()} pts**`).join(' | ')}`;
+        const teamStandingsText = `**Current Standings:**\n\n${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()}**`).join(' | ')}`;
 
         // Generate daily bonus text if applicable
         const dailyBonusText = teamBonusSummary.length > 0
-            ? `**Today's Adjustments:** ${teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints} pts**`).join(' | ')}`
+            ? `**Today's Adjustments:** ${teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints}**`).join(' | ')}`
+            : null;
+
+        // Generate pod target text if applicable
+        const podTargetsText = podTargetSummaryForTeams.length > 0
+            ? `**Today's Pod Targets:** ${generatePodTargetsSummary(podTargetSummaryForTeams)}`
             : null;
 
         // Construct the Adaptive Card body elements
@@ -177,6 +182,8 @@ export const sendTeamsUpdate = async (
                 "spacing": "Medium",
                 "items": generateAgentScoresAdaptiveCardElements(agentScoresForTeams, taskRules)
             },
+            // Add Pod Targets if they exist
+            ...(podTargetsText ? [{ "type": "TextBlock", "text": podTargetsText, "wrap": true, "separator": true, "spacing": "Medium" }] : []),
             // Add team standings and bonuses at the end as plain text
             {
                 "type": "TextBlock",
