@@ -113,7 +113,7 @@ export default function AdminRpsScoresPage() {
     setIsLoadingBase(true);
     const unsubscribes: Unsubscribe[] = [];
     unsubscribes.push(onSnapshot(query(collection(db, 'pods'), orderBy('name')), (snap) => setPods(snap.docs.map(d => ({id: d.id, ...d.data()} as Pod)))));
-    unsubscribes.push(onSnapshot(query(collection(db, 'competitions'), orderBy('name')), (snap) => setCompetitions(snap.docs.map(d => ({id: d.id, ...d.data()} as Competition)))));
+    unsubscribes.push(onSnapshot(query(collection(db, 'competitions'), orderBy('startDate', 'desc')), (snap) => setCompetitions(snap.docs.map(d => ({id: d.id, ...d.data()} as Competition)))));
     unsubscribes.push(onSnapshot(query(collection(db, 'users'), orderBy('name')), (snap) => {
         setUsers(snap.docs.map(d => ({id: d.id, ...d.data()} as AppUser)));
         setIsLoadingBase(false);
@@ -334,5 +334,3 @@ export default function AdminRpsScoresPage() {
     </div>
   );
 }
-
-    
