@@ -86,7 +86,7 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
         // Combine numeric emojis with task emojis
         const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
         const achievementsDisplay = score.isAbsent ? "N/A" : (`${score.emojiString || ''}${taskEmojis}`.trim() || '-');
-        const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints}`; // Removed " pts"
+        const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints}`;
 
         return {
             type: "ColumnSet",
@@ -123,8 +123,8 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
 const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[]): string => {
   if (podTargetSummary.length === 0) return "No pod targets set for today.";
   return podTargetSummary
-    .map(summary => `${summary.ruleEmoji} ${summary.ruleName}  ${summary.achieved}${summary.target !== null ? ` / ${summary.target}` : ''}`)
-    .join(' | ');
+    .map(summary => `${summary.ruleEmoji} ${summary.ruleName}: **${summary.achieved.toLocaleString()}**${summary.target !== null ? ` / ${summary.target.toLocaleString()}` : ''}`)
+    .join('   |   ');
 };
 
 
@@ -205,7 +205,15 @@ export const sendTeamsUpdate = async (
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
                         "version": "1.4",
-                        "body": adaptiveCardBodyElements
+                        "body": [
+                           {
+                             "type": "TextBlock",
+                             "size": "Large",
+                             "weight": "Bolder",
+                             "text": `${podName} Daily Summary - ${format(date, 'PPP')}`
+                           },
+                           ...adaptiveCardBodyElements
+                        ]
                     }
                 }
             ]

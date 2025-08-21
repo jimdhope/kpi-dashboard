@@ -312,7 +312,7 @@ export default function AdminDailyScoresPage() {
    }, [activeCompetitionId, selectedPodId, selectedDate, toast]);
 
 
-   const { agentScores, teamBonusSummary, teamTotalScores, ruleKeyString } = useMemo(() => {
+   const { agentScores, teamBonusSummary, teamTotalScores, podTargetSummaryForTeams, ruleKeyString } = useMemo(() => {
     const todayStart = startOfDay(selectedDate);
     const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
@@ -320,6 +320,9 @@ export default function AdminDailyScoresPage() {
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
     const rulesMap = new Map(rules.map(rule => [rule.id, rule]));
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
+
+    const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
+    const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
 
     dailyLogs.forEach(log => {
       if (log.status === 'absent') {
@@ -397,11 +400,9 @@ export default function AdminDailyScoresPage() {
         return { teamName: team.name, teamEmoji: team.emoji, bonusPoints: bonus };
      }).filter(summary => summary.bonusPoints > 0);
 
-     // Recalculate team total scores correctly
      const teamTotalScoresMap: { [teamId: string]: number } = {};
      teams.forEach(team => teamTotalScoresMap[team.id] = 0);
      
-     // Calculate points from achievement logs
      competitionLogs.forEach(log => {
         const rule = rulesMap.get(log.ruleId);
         if (rule) {
@@ -413,7 +414,6 @@ export default function AdminDailyScoresPage() {
         }
      });
 
-     // Add points from bonus logs
      competitionBonusLogs.forEach(log => {
         if(teamTotalScoresMap.hasOwnProperty(log.teamId)) {
             teamTotalScoresMap[log.teamId] += log.points || 0;
@@ -433,10 +433,28 @@ export default function AdminDailyScoresPage() {
          finalRuleKeyString += (finalRuleKeyString ? ' | ' : '') + taskKeyString;
      }
 
+     const dailyPodRuleTotals: Record<string, number> = {};
+     numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
+     dailyLogs.forEach(log => {
+        if(dailyPodRuleTotals.hasOwnProperty(log.ruleId)){
+            dailyPodRuleTotals[log.ruleId] += (log.value || 0);
+        }
+     });
+     const finalPodTargetSummaryForTeams: PodTargetSummaryForTeams[] = numericRules
+        .map(rule => {
+            if (!rule.id || !dailyTargets?.[rule.id]?.[dayOfWeek]) return null;
+            const individualTarget = dailyTargets[rule.id]?.[dayOfWeek] ?? null;
+            if (individualTarget === null) return null;
+            const podTarget = individualTarget * activeAgents.length;
+            const achieved = dailyPodRuleTotals[rule.id] || 0;
+            return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };
+        }).filter((s): s is PodTargetSummaryForTeams => s !== null);
+
     return {
         agentScores: finalAgentScores,
         teamBonusSummary: teamBonusSummary,
         teamTotalScores: finalTeamTotalScores,
+        podTargetSummaryForTeams: finalPodTargetSummaryForTeams,
         ruleKeyString: finalRuleKeyString,
     };
   }, [competitionLogs, competitionBonusLogs, dailyTaskLogs, agents, rules, dailyTargets, selectedDate, teams]);
@@ -463,7 +481,7 @@ export default function AdminDailyScoresPage() {
         completedTasks: as.completedTasks || [],
         targetProgress: as.targetProgress,
     }));
-    const podTargetSummaryForTeams: PodTargetSummaryForTeams[] = [];
+
     const simpleTaskLogs: SimpleTaskLog[] = dailyTaskLogs.map(log => ({ agentId: log.agentId, taskId: log.taskId }));
 
     setIsSendingToTeams(true);
