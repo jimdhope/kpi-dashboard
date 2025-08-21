@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Send, Filter, Swords, Trophy } from 'lucide-react'; // Added Swords & Trophy
+import { CalendarIcon, Loader2, AlertCircle, Filter, Swords, Trophy } from 'lucide-react'; // Removed Send
 import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -33,7 +33,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
-import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type SimpleTaskLog, type TeamTotalScore } from '@/services/teamsWebhook'; // Import TeamTotalScore
 import type { DailyAchievementLog, DailyTaskLog, TeamBonusLog } from '@/app/(admin)/admin/log-achievements/page';
 
 
@@ -88,7 +87,6 @@ export default function AdminDailyScoresPage() {
   const [teams, setTeams] = useState<Team[]>([]); // State for teams
   const [isLoadingPods, setIsLoadingPods] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false); // Combined loading for agents, competition, logs, targets
-  const [isSendingToTeams, setIsSendingToTeams] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
@@ -312,7 +310,7 @@ export default function AdminDailyScoresPage() {
    }, [activeCompetitionId, selectedPodId, selectedDate, toast]);
 
 
-   const { agentScores, teamBonusSummary, teamTotalScores, podTargetSummaryForTeams, ruleKeyString } = useMemo(() => {
+   const { agentScores, teamBonusSummary, teamTotalScores, podTargetSummary, ruleKeyString } = useMemo(() => {
     const todayStart = startOfDay(selectedDate);
     const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
@@ -440,76 +438,29 @@ export default function AdminDailyScoresPage() {
             dailyPodRuleTotals[log.ruleId] += (log.value || 0);
         }
      });
-     const finalPodTargetSummaryForTeams: PodTargetSummaryForTeams[] = numericRules
+     const finalPodTargetSummary: PodTargetSummary[] = numericRules
         .map(rule => {
             if (!rule.id || !dailyTargets?.[rule.id]?.[dayOfWeek]) return null;
             const individualTarget = dailyTargets[rule.id]?.[dayOfWeek] ?? null;
             if (individualTarget === null) return null;
             const podTarget = individualTarget * activeAgents.length;
             const achieved = dailyPodRuleTotals[rule.id] || 0;
-            return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };
-        }).filter((s): s is PodTargetSummaryForTeams => s !== null);
+            const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
+            return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
+        }).filter((s): s is PodTargetSummary => s !== null);
 
     return {
         agentScores: finalAgentScores,
         teamBonusSummary: teamBonusSummary,
         teamTotalScores: finalTeamTotalScores,
-        podTargetSummaryForTeams: finalPodTargetSummaryForTeams,
+        podTargetSummary: finalPodTargetSummary,
         ruleKeyString: finalRuleKeyString,
     };
   }, [competitionLogs, competitionBonusLogs, dailyTaskLogs, agents, rules, dailyTargets, selectedDate, teams]);
 
-  const handleSendToTeams = async () => {
-    const currentPod = pods.find(p => p.id === selectedPodId);
-    if (!currentPod || !currentPod.teamsWebhookUrl) {
-      toast({ variant: "destructive", title: "Missing Webhook", description: "No Teams webhook URL configured for this pod." });
-      return;
-    }
-    const webhookUrl = currentPod.teamsWebhookUrl;
-    const podName = currentPod.name;
-    if (agentScores.length === 0 && teamBonusSummary.length === 0) {
-      toast({ variant: "default", title: "No Data", description: "Nothing to send to Teams for this day." });
-      return;
-    }
-
-    const agentScoresForTeams: AgentScoreForTeams[] = agentScores.map(as => ({
-        agentFirstName: as.agentFirstName,
-        emojiString: as.isAbsent ? "N/A" : as.emojiString,
-        totalPoints: as.totalPoints,
-        isAbsent: as.isAbsent,
-        teamEmoji: as.teamEmoji,
-        completedTasks: as.completedTasks || [],
-        targetProgress: as.targetProgress,
-    }));
-
-    const simpleTaskLogs: SimpleTaskLog[] = dailyTaskLogs.map(log => ({ agentId: log.agentId, taskId: log.taskId }));
-
-    setIsSendingToTeams(true);
-    try {
-      await sendTeamsUpdate(
-        podName,
-        webhookUrl,
-        selectedDate,
-        rules,
-        agentScoresForTeams,
-        podTargetSummaryForTeams,
-        simpleTaskLogs,
-        teamBonusSummary,
-        teamTotalScores, // Pass total scores
-      );
-      toast({ title: "Sent to Teams", description: "Daily scores summary has been sent." });
-    } catch (err: any) {
-      console.error("[DailyScoresPage] Error sending to Teams:", err);
-      toast({ variant: "destructive", title: "Send Failed", description: err.message || "Could not send summary to Teams." });
-    } finally {
-      setIsSendingToTeams(false);
-    }
-  };
-
 
   const isLoadingDisplay = isLoadingPods || isLoadingData;
   const canDisplayTable = !isLoadingDisplay && selectedPodId && rules.length > 0 && agents.length > 0;
-  const canSendToTeams = !isLoadingDisplay && !isSendingToTeams && selectedPodId && pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl && (agentScores.length > 0 || teamBonusSummary.length > 0);
 
   return (
     <div className="space-y-6">
@@ -577,14 +528,6 @@ export default function AdminDailyScoresPage() {
                     <CardTitle>Daily Scores</CardTitle>
                     <CardDescription>View daily scores and individual target progress for the selected pod and date.</CardDescription>
                 </div>
-                <Button
-                    onClick={handleSendToTeams}
-                    disabled={!canSendToTeams}
-                    title={!selectedPodId ? "Select a pod first" : !pods.find(p => p.id === selectedPodId)?.teamsWebhookUrl ? "No webhook URL configured" : (agentScores.length === 0 && teamBonusSummary.length === 0) ? "No data to send" : "Send summary to Teams"}
-                >
-                    {isSendingToTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    {isSendingToTeams ? "Sending..." : "Send to Teams"}
-                </Button>
             </CardHeader>
             <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
             {error && <p className="text-destructive mb-4">{error}</p>}
@@ -669,11 +612,11 @@ export default function AdminDailyScoresPage() {
                 <div className="mt-6 p-4 border-t">
                     <h4 className="font-semibold mb-2 flex items-center gap-2"><Trophy className="h-4 w-4"/>Current Team Standings</h4>
                     <p className="text-sm whitespace-pre-wrap break-words text-muted-foreground">
-                        {teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.totalPoints.toLocaleString()} pts`).join(' | ')}
+                        {teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.totalPoints.toLocaleString()}`).join(' | ')}
                     </p>
                     {teamBonusSummary.length > 0 && (
                         <p className="text-xs whitespace-pre-wrap break-words mt-2">
-                           <span className="font-medium">Today's Adjustments:</span> {teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints} pts`).join(' | ')}
+                           <span className="font-medium">Today's Adjustments:</span> {teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints}`).join(' | ')}
                         </p>
                     )}
                 </div>
