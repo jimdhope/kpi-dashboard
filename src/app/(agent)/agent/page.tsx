@@ -557,37 +557,6 @@ export default function AgentDashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
-                 <Card className="frosted-glass">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><ListTodo /> Daily Tasks</CardTitle>
-                        <CardDescription>Check off your completed one-off tasks for today.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? <div className="space-y-3"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-5/6" /></div>
-                        : checkboxRules.length > 0 ? (
-                            <div className="space-y-4">
-                                {checkboxRules.map(task => (
-                                    task.id ? (
-                                    <div key={task.id} className="flex items-center space-x-3">
-                                        <Checkbox
-                                            id={`task-${task.id}`}
-                                            checked={taskInputs[task.id]?.checked || false}
-                                            onCheckedChange={(checked) => handleTaskChange(task.id!, !!checked)}
-                                            disabled={isSaving[`task-${task.id}`]}
-                                        />
-                                        <Label htmlFor={`task-${task.id}`} className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                           {task.emoji} {task.name}
-                                        </Label>
-                                         {isSaving[`task-${task.id}`] && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>}
-                                    </div>
-                                    ) : null
-                                ))}
-                            </div>
-                        ) : (
-                             <p className="text-muted-foreground text-sm text-center py-4">No daily tasks assigned today.</p>
-                        )}
-                    </CardContent>
-                </Card>
                 <Card className="frosted-glass shadow-md">
                     <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="h-5 w-5"/>Your Scores</CardTitle><CardDescription>Your total scores for the currently selected competition.</CardDescription></CardHeader>
                     <CardContent>
@@ -663,3 +632,4 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
+
