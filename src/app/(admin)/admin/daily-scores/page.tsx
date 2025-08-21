@@ -323,80 +323,63 @@ export default function AdminDailyScoresPage() {
     const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
     const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
     
-    // Create a single source of truth for daily rule totals by summing the values from dailyLogs
-    const dailyPodRuleTotals: Record<string, number> = {};
-    numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
-    dailyLogs.forEach(log => {
-       if (log.ruleId && dailyPodRuleTotals.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
-           dailyPodRuleTotals[log.ruleId] += (log.value || 0);
-       }
-    });
-
     // Agent daily scores calculation
-    const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
-
-    dailyLogs.forEach(log => {
-      if (log.status === 'absent') {
-        if (!scores[log.agentId]) scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: true, completedTasks: [], targetProgress: '' };
-        else scores[log.agentId].isAbsent = true;
-        return;
-      }
-      const rule = rulesMap.get(log.ruleId);
-      if (rule) {
-        const points = (log.value || 0) * (rule.points || 0);
-        if (!scores[log.agentId]) scores[log.agentId] = { totalPoints: 0, emojiString: '', isAbsent: false, completedTasks: [], targetProgress: '' };
-        scores[log.agentId].totalPoints += points;
-      }
+    const agentScoreData: Record<string, { totalPoints: number, achievements: Record<string, number> }> = {};
+    agents.forEach(agent => {
+        if (agent.id) agentScoreData[agent.id] = { totalPoints: 0, achievements: {} };
     });
 
-    agents.forEach(agent => {
-      if (!agent.id) return;
-      const agentLogs = dailyLogs.filter(log => log.agentId === agent.id && log.status !== 'absent');
-      let emojis = '';
-      const sortedNumericRules = numericRules.sort((a, b) => a.name.localeCompare(b.name));
-      sortedNumericRules.forEach(rule => {
-        if (!rule.id) return;
-        const logForRule = agentLogs.find(log => log.ruleId === rule.id);
-        if (logForRule && logForRule.value > 0) {
-          const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
-          for (let i = 0; i < logForRule.value; i++) { emojis += emojiToUse; }
-        }
-      });
-      const targetProgressParts = sortedNumericRules.map(rule => {
-          if (!rule.id) return null;
-          const target = dailyTargets?.[rule.id]?.[dayOfWeek];
-          if (target === undefined || target === null || target < 0) return null;
-          const achieved = agentLogs.find(log => log.ruleId === rule.id)?.value || 0;
-          return `${rule.emoji || '❓'} ${achieved}/${target}`;
-      }).filter(Boolean);
-      const agentTaskLogs = dailyTaskLogs.filter(log => log.agentId === agent.id);
-      const completedTasks = agentTaskLogs.map(taskLog => {
-        const rule = rules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
-        return { ruleName: rule?.name || 'Unknown Task', ruleEmoji: (rule?.emoji && rule.emoji.trim() !== '') ? rule.emoji : '✅' };
-      });
-      const agentTeam = teams.find(team => team.agentIds?.includes(agent.id!));
-      if (scores[agent.id]) {
-        scores[agent.id].emojiString = emojis;
-        scores[agent.id].completedTasks = completedTasks;
-        scores[agent.id].teamEmoji = agentTeam?.emoji;
-        scores[agent.id].targetProgress = targetProgressParts.join(' | ');
-      } else if (agents.find(a => a.id === agent.id)) {
-        scores[agent.id] = { totalPoints: 0, emojiString: '', isAbsent: false, completedTasks: completedTasks, teamEmoji: agentTeam?.emoji, targetProgress: targetProgressParts.join(' | ') };
+    dailyLogs.forEach(log => {
+      if (log.status === 'absent') return;
+      const rule = rulesMap.get(log.ruleId);
+      if (rule && agentScoreData[log.agentId]) {
+        const points = (log.value || 0) * (rule.points || 0);
+        agentScoreData[log.agentId].totalPoints += points;
+        agentScoreData[log.agentId].achievements[log.ruleId] = (agentScoreData[log.agentId].achievements[log.ruleId] || 0) + (log.value || 0);
       }
     });
 
     const finalAgentScores: AgentScore[] = agents
       .map(agent => {
-        const agentScoreData = scores[agent.id!] || { totalPoints: 0, emojiString: '', isAbsent: false, completedTasks: [], teamEmoji: undefined, targetProgress: '' };
+        const agentData = agentScoreData[agent.id!] || { totalPoints: 0, achievements: {} };
+        const isAbsent = absentAgentIds.has(agent.id!);
+        let emojis = '';
+        if (!isAbsent) {
+            const sortedNumericRules = numericRules.sort((a, b) => a.name.localeCompare(b.name));
+            sortedNumericRules.forEach(rule => {
+                const achievementValue = agentData.achievements[rule.id!] || 0;
+                if (achievementValue > 0) {
+                    const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+                    emojis += emojiToUse.repeat(achievementValue);
+                }
+            });
+        }
+        
+        const targetProgressParts = numericRules.map(rule => {
+            if (!rule.id) return null;
+            const target = dailyTargets?.[rule.id]?.[dayOfWeek];
+            if (target === undefined || target === null || target < 0) return null;
+            const achieved = agentData.achievements[rule.id] || 0;
+            return `${rule.emoji || '❓'} ${achieved}/${target}`;
+        }).filter(Boolean);
+
+        const agentTaskLogs = dailyTaskLogs.filter(log => log.agentId === agent.id);
+        const completedTasks = agentTaskLogs.map(taskLog => {
+            const rule = rules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
+            return { ruleName: rule?.name || 'Unknown Task', ruleEmoji: (rule?.emoji && rule.emoji.trim() !== '') ? rule.emoji : '✅' };
+        });
+
+        const agentTeam = teams.find(team => team.agentIds?.includes(agent.id!));
+
         return {
           agentId: agent.id!,
           agentFirstName: agent.name.split(' ')[0] || agent.name,
-          totalPoints: agentScoreData.totalPoints,
-          emojiString: agentScoreData.emojiString,
-          isAbsent: agentScoreData.isAbsent,
-          completedTasks: agentScoreData.completedTasks,
-          teamEmoji: agentScoreData.teamEmoji,
-          targetProgress: agentScoreData.targetProgress,
+          totalPoints: agentData.totalPoints,
+          emojiString: emojis,
+          isAbsent: isAbsent,
+          completedTasks: completedTasks,
+          teamEmoji: agentTeam?.emoji,
+          targetProgress: targetProgressParts.join(' | '),
         };
       })
       .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
@@ -441,7 +424,7 @@ export default function AdminDailyScoresPage() {
         finalRuleKeyString += (finalRuleKeyString ? ' | ' : '') + taskKeyString;
     }
 
-    // Pod Target Summary calculation - now using the unified daily totals
+    // Pod Target Summary calculation - now derived from agent scores for consistency
     const finalPodTargetSummary: PodTargetSummary[] = numericRules
         .map(rule => {
             if (!rule.id) return null;
@@ -449,7 +432,7 @@ export default function AdminDailyScoresPage() {
             if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
             
             const podTarget = individualTarget * activeAgents.length;
-            const achieved = dailyPodRuleTotals[rule.id] || 0; // Use the single source of truth
+            const achieved = Object.values(agentScoreData).reduce((total, agentData) => total + (agentData.achievements[rule.id!] || 0), 0);
             const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
             
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
