@@ -121,9 +121,9 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
 
 // Helper function to generate the pod targets summary string
 const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[]): string => {
-  if (podTargetSummary.length === 0) return "No pod targets set for today.";
+  if (podTargetSummary.length === 0) return "";
   return podTargetSummary
-    .map(summary => `${summary.ruleEmoji} ${summary.ruleName}: **${summary.achieved.toLocaleString()}**${summary.target !== null ? ` / ${summary.target.toLocaleString()}` : ''}`)
+    .map(summary => `${summary.ruleEmoji} ${summary.achieved.toLocaleString()}${summary.target !== null ? ` / ${summary.target.toLocaleString()}` : ''}`)
     .join('   |   ');
 };
 
@@ -163,7 +163,7 @@ export const sendTeamsUpdate = async (
 
         // Generate pod target text if applicable
         const podTargetsText = podTargetSummaryForTeams.length > 0
-            ? `**Today's Pod Targets:** ${generatePodTargetsSummary(podTargetSummaryForTeams)}`
+            ? `${generatePodTargetsSummary(podTargetSummaryForTeams)}`
             : null;
 
         // Construct the Adaptive Card body elements
@@ -205,15 +205,7 @@ export const sendTeamsUpdate = async (
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
                         "version": "1.4",
-                        "body": [
-                           {
-                             "type": "TextBlock",
-                             "size": "Large",
-                             "weight": "Bolder",
-                             "text": `${podName} Daily Summary - ${format(date, 'PPP')}`
-                           },
-                           ...adaptiveCardBodyElements
-                        ]
+                        "body": adaptiveCardBodyElements
                     }
                 }
             ]
@@ -247,3 +239,5 @@ export const sendTeamsUpdate = async (
         throw new Error(`Error during Teams update (${currentStep}): ${error.message}`);
     }
 };
+
+    
