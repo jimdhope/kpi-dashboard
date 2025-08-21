@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo } from 'lucide-react'; // Added ListTodo
+import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy } from 'lucide-react'; // Added Trophy
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
@@ -26,6 +26,8 @@ import { MessageOfTheDayDisplay } from '@/components/message-of-the-day-display'
 import { AlertCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 import { Label } from '@/components/ui/label'; // Import Label
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 // Interfaces
 interface LeaderboardEntry {
@@ -97,47 +99,6 @@ interface MessageOfTheDayDB {
 
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-
-const getMedalColor = (rank: number) => {
-    switch (rank) {
-        case 1: return 'text-yellow-400';
-        case 2: return 'text-gray-300';
-        case 3: return 'text-orange-400';
-        default: return 'text-muted-foreground';
-    }
-};
-const getRankHighlightStyle = (rank: number): React.CSSProperties => {
-    switch (rank) {
-        case 1: return { backgroundColor: '#9f8f5e', color: '#ffffff' };
-        case 2: return { backgroundColor: '#969696', color: '#ffffff' };
-        case 3: return { backgroundColor: '#996b4f', color: '#ffffff' };
-        default: return {};
-    }
-};
-
-const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
-    if (!Array.isArray(items) || items.length === 0) {
-        return [];
-    }
-    const sortedItems = [...items].sort((a, b) => (b.score || 0) - (a.score || 0));
-    const scoreRankMap = new Map<number, number>();
-    let rankCounter = 1;
-    for (const item of sortedItems) {
-        const score = typeof item.score === 'number' && !isNaN(item.score) ? item.score : 0;
-        if (!scoreRankMap.has(score)) {
-            scoreRankMap.set(score, rankCounter++);
-        }
-    }
-    return sortedItems.map(item => {
-        const score = typeof item.score === 'number' && !isNaN(item.score) ? item.score : 0;
-        const rank = scoreRankMap.get(score)!;
-        return {
-            ...item,
-            rank: rank
-        };
-    });
-};
-
 
 export default function AgentDashboardPage() {
   const [error, setError] = useState<string | null>(null);
@@ -372,14 +333,12 @@ export default function AgentDashboardPage() {
   }, [agentPodId, currentUser?.id, isLoadingUser, cleanupListeners, toast]);
 
 
-  const { agentDailyAchievements, agentCompetitionAchievements, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
+  const { agentDailyAchievements, agentCompetitionAchievements, podTargetSummary } = useMemo(() => {
     if (isLoadingUser || isLoadingData || !currentUser || !agentPodId || !activeCompetition) {
         return {
             agentDailyAchievements: { totalPoints: 0, achievements: [] },
             agentCompetitionAchievements: { totalPoints: 0, achievements: [] },
             podTargetSummary: [],
-            agentLeaderboard: [],
-            teamLeaderboard: []
         };
     }
 
@@ -440,29 +399,8 @@ export default function AgentDashboardPage() {
         .filter((item): item is PodTargetSummary => item !== null)
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
 
-    const agentScoresMap: Record<string, number> = {};
-    podAgents.forEach(agent => { if (agent.id) agentScoresMap[agent.id] = 0; });
-    podLogs.forEach(log => {
-        if (log.agentId && agentScoresMap.hasOwnProperty(log.agentId)) {
-            agentScoresMap[log.agentId] += log.points || 0;
-        }
-    });
-    const agentLeaderboardDataPreSort = podAgents.map(agent => ({ id: agent.id!, name: agent.name || 'Unknown Agent', totalPoints: agentScoresMap[agent.id!] || 0, score: agentScoresMap[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isCurrentUser: agent.id === currentUser?.id })).filter(item => item.id);
-    const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardDataPreSort);
-
-    const teamScoresMap: Record<string, number> = {};
-    teams.forEach(team => { if (team.id) teamScoresMap[team.id] = 0; });
-    podLogs.forEach(log => {
-        const agentTeam = teams.find(team => team.agentIds.includes(log.agentId));
-        if (agentTeam?.id) {
-            teamScoresMap[agentTeam.id] += log.points || 0;
-        }
-    });
-    const teamLeaderboardDataPreSort = teams.map(team => ({ id: team.id, name: team.name || 'Unknown Team', totalPoints: teamScoresMap[team.id] || 0, score: teamScoresMap[team.id] || 0, isCurrentUserTeam: team.agentIds.includes(currentUser?.id || '') })).filter(item => item.id);
-    const finalTeamLeaderboard = assignDenseRanks(teamLeaderboardDataPreSort);
-
-    return { agentDailyAchievements: finalAgentDailyAchievements, agentCompetitionAchievements: finalAgentCompetitionAchievements, podTargetSummary: finalPodTargetSummary, agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-  }, [isLoadingUser, isLoadingData, currentUser, agentPodId, activeCompetition, dailyLogs, podLogs, rules, dailyTargets, podAgents, teams]);
+    return { agentDailyAchievements: finalAgentDailyAchievements, agentCompetitionAchievements: finalAgentCompetitionAchievements, podTargetSummary: finalPodTargetSummary };
+  }, [isLoadingUser, isLoadingData, currentUser, agentPodId, activeCompetition, dailyLogs, podLogs, rules, dailyTargets]);
 
 
   const debounce = useCallback((func: Function, delay: number) => {
@@ -623,41 +561,17 @@ export default function AgentDashboardPage() {
                 </Card>
             </div>
         </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-           {isLoading ? (
-                <>
-                    <Skeleton className="h-[400px] w-full frosted-glass" />
-                    <Skeleton className="h-[400px] w-full frosted-glass" />
-                </>
-           ) : !activeCompetition ? (
-                <div className="md:col-span-2">
-                    <Card className="h-[100px] flex items-center justify-center shadow-md frosted-glass">
-                        <CardContent className="text-muted-foreground text-center">
-                            No competition currently active for your pod.
-                        </CardContent>
-                    </Card>
+        <Card className="mt-6 frosted-glass">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5"/>Competition Leaderboards</CardTitle>
+                    <Link href="/agent/leaderboard" passHref>
+                        <Button variant="outline" size="sm">View Full Leaderboard</Button>
+                    </Link>
                 </div>
-           ) : (
-                <>
-                    {teamLeaderboard.length > 0 ? (
-                        <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} description="Current Competition Ranking" />
-                    ) : (
-                        <Card className="h-full flex items-center justify-center shadow-md frosted-glass">
-                            <CardContent className="text-muted-foreground text-center">No teams configured for this competition.</CardContent>
-                        </Card>
-                    )}
-                     {agentLeaderboard.length > 0 ? (
-                        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} description="Current Competition Ranking" />
-                    ) : (
-                        <Card className="h-full flex items-center justify-center shadow-md frosted-glass">
-                            <CardContent className="text-muted-foreground text-center">No agent data available for this competition yet.</CardContent>
-                        </Card>
-                    )}
-                </>
-           )}
-      </div>
+                <CardDescription>A quick look at the top performers in the current competition.</CardDescription>
+            </CardHeader>
+        </Card>
     </div>
   );
 }
-

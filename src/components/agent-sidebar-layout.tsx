@@ -19,7 +19,7 @@ import {
   SidebarGroupLabel, // Added import
   SidebarSeparator, // Added import
 } from '@/components/ui/sidebar';
-import { Home, Settings, UserSquare, CheckSquare, Star, ClipboardList, Target, Swords } from 'lucide-react'; // Added Swords icon
+import { Home, Settings, UserSquare, CheckSquare, Star, ClipboardList, Target, Swords, Trophy } from 'lucide-react'; // Added Trophy
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -120,6 +120,14 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                   <SidebarMenuButton tooltip="Dashboard" isActive={currentPath === '/agent'}>
                     <Home />
                     <span>My Dashboard</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <Link href="/agent/leaderboard" passHref>
+                  <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/agent/leaderboard'}>
+                    <Trophy />
+                    <span>Leaderboard</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
