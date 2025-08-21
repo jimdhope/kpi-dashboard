@@ -140,7 +140,7 @@ export default function RpsGamePage() {
       });
 
       // Refetch stats after a game
-      fetchDailyStats();
+      await fetchDailyStats();
     } catch (error) {
       console.error('Error saving game result:', error);
       toast({
@@ -202,7 +202,7 @@ export default function RpsGamePage() {
             {!isLoading && cooldown === 0 && result && (
               <div className="space-y-2">
                 <p className="text-xl">
-                  You threw {getThrowIcon(playerThrow)}, opponent threw {getThrowIcon(opponentThrow)}.
+                  You threw {getThrowIcon(playerThrow)}, the app threw {getThrowIcon(opponentThrow)}.
                 </p>
                 <p className="text-2xl font-bold uppercase text-primary">
                   You {result === 'draw' ? 'Drew' : result}!
