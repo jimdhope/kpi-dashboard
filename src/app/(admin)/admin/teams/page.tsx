@@ -35,11 +35,18 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import { ManageTeamAgentsDialog } from '@/components/manage-team-agents-dialog';
 import { cn } from '@/lib/utils';
+import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export interface Team {
   id: string;
   name: string;
   agentIds: string[];
+  emoji?: string; // Emoji is now optional and can be edited
 }
 
 const UNASSIGNED_CONTAINER_ID = 'unassigned-agents';
@@ -61,6 +68,7 @@ export default function AdminTeamsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isManageTeamAgentsOpen, setIsManageTeamAgentsOpen] = useState(false);
   const [selectedTeamForAgents, setSelectedTeamForAgents] = useState<Team | null>(null);
+  const [openEmojiPickerId, setOpenEmojiPickerId] = useState<string | null>(null); // Track open emoji picker
   const { toast } = useToast();
 
   const competitionsCollectionRef = collection(db, 'competitions');
@@ -157,12 +165,13 @@ export default function AdminTeamsPage() {
                          ...team,
                          id: team.id || `team-${index + 1}-${Date.now()}`,
                          agentIds: Array.isArray(team.agentIds) ? team.agentIds : [],
+                         emoji: team.emoji || '🏆', // Default emoji
                      }));
 
                      const teamsToUse = existingTeams.length > 0 ? existingTeams : [
-                        { id: `team-1-${Date.now()}`, name: 'Team 1', agentIds: [] },
-                        { id: `team-2-${Date.now()}`, name: 'Team 2', agentIds: [] },
-                        { id: `team-3-${Date.now()}`, name: 'Team 3', agentIds: [] },
+                        { id: `team-1-${Date.now()}`, name: 'Team 1', agentIds: [], emoji: '🏆' },
+                        { id: `team-2-${Date.now()}`, name: 'Team 2', agentIds: [], emoji: '🚀' },
+                        { id: `team-3-${Date.now()}`, name: 'Team 3', agentIds: [], emoji: '🔥' },
                      ];
 
                     const assignedAgentIds = new Set(teamsToUse.flatMap(t => t.agentIds));
@@ -246,6 +255,16 @@ export default function AdminTeamsPage() {
     );
   };
 
+  const handleTeamEmojiChange = (teamId: string, emoji: EmojiClickData) => {
+    setTeams(currentTeams =>
+        currentTeams.map(team =>
+            team.id === teamId ? { ...team, emoji: emoji.emoji } : team
+        )
+    );
+    setOpenEmojiPickerId(null); // Close picker after selection
+  };
+
+
    const handleRandomAssignment = useCallback(() => {
        if (podAgents.length === 0 || teams.length === 0) {
          toast({ variant: "destructive", title: "Assignment Error", description: "No agents in the pod or no teams defined." });
@@ -280,7 +299,7 @@ export default function AdminTeamsPage() {
       setIsSubmitting(true);
       try {
           const compDocRef = doc(db, 'competitions', selectedCompetitionId);
-           const teamsToSave = teams.map(({ id, name, agentIds }) => ({ id, name, agentIds }));
+           const teamsToSave = teams.map(({ id, name, agentIds, emoji }) => ({ id, name, agentIds, emoji })); // Include emoji in save
           await updateDoc(compDocRef, {
               teams: teamsToSave
           });
@@ -429,17 +448,27 @@ export default function AdminTeamsPage() {
                             {teams.map((team) => (
                                 <Card key={team.id} className="flex flex-col frosted-glass">
                                     <CardHeader className="p-4 flex flex-row items-start justify-between gap-2">
-                                        <div className='flex-1'>
-                                            <Label htmlFor={`team-name-${team.id}`} className="sr-only">Team Name</Label>
-                                            <Input
-                                                id={`team-name-${team.id}`}
-                                                value={team.name}
-                                                onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                                                placeholder={`Team Name`}
-                                                className="text-base font-semibold border-0 shadow-none focus-visible:ring-0 px-0 h-auto mb-1 bg-transparent"
-                                                disabled={isSubmitting}
-                                            />
-                                            <CardDescription>({team.agentIds.length} Agents)</CardDescription>
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <Popover open={openEmojiPickerId === team.id} onOpenChange={(isOpen) => setOpenEmojiPickerId(isOpen ? team.id : null)}>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="outline" className="text-xl p-2 h-auto" disabled={isSubmitting}>{team.emoji || '🏆'}</Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0 border-0 shadow-lg z-50">
+                                                    <EmojiPicker onEmojiClick={(emojiData) => handleTeamEmojiChange(team.id, emojiData)} />
+                                                </PopoverContent>
+                                            </Popover>
+                                            <div className="flex-1">
+                                                <Label htmlFor={`team-name-${team.id}`} className="sr-only">Team Name</Label>
+                                                <Input
+                                                    id={`team-name-${team.id}`}
+                                                    value={team.name}
+                                                    onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
+                                                    placeholder={`Team Name`}
+                                                    className="text-base font-semibold border-0 shadow-none focus-visible:ring-0 px-0 h-auto mb-1 bg-transparent"
+                                                    disabled={isSubmitting}
+                                                />
+                                                <CardDescription>({team.agentIds.length} Agents)</CardDescription>
+                                            </div>
                                         </div>
                                         <DialogTrigger asChild>
                                             <Button
@@ -516,5 +545,3 @@ export default function AdminTeamsPage() {
         </Dialog>
     );
 }
-
-    

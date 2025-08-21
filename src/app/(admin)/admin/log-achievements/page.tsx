@@ -275,23 +275,29 @@ export default function AdminLogAchievementsPage() {
             const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
             const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
 
-            if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
-                competitionForLogging = comp;
-                break;
-            }
+             if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
+                 competitionForLogging = comp;
+                 break; // Found the active one, no need to look further
+             }
         }
+        
+        // If no active competition is found, select the most recent one as a fallback.
         if (!competitionForLogging && competitionSnapshot.docs.length > 0) {
-            const mostRecentValidComp = competitionSnapshot.docs.find(docSnap => {
-                const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-                const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
-                const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
-                return startDate && endDate;
-            });
+            // Find the most recent competition with valid dates from the already fetched list
+            const mostRecentValidComp = competitionSnapshot.docs
+                .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] }))
+                .find(comp => comp.startDate instanceof Timestamp && comp.endDate instanceof Timestamp); // Just need valid dates
+
             if (mostRecentValidComp) {
-                competitionForLogging = { id: mostRecentValidComp.id, ...mostRecentValidComp.data() } as Competition & { id: string; teams?: Team[] };
-                 toast({ variant: "default", title: "Logging to Past/Future Competition", description: `No competition active for ${selectedDate.toLocaleDateString()}. Logging against "${competitionForLogging.name}". Ensure this is correct.` });
+                competitionForLogging = mostRecentValidComp;
+                toast({
+                    variant: "default",
+                    title: "Logging to Past/Future Competition",
+                    description: `No competition active for ${format(selectedDate, 'PPP')}. Logging against "${competitionForLogging.name}".`
+                });
             }
         }
+
 
         if (competitionForLogging) {
             setActiveCompetitionId(competitionForLogging.id);
@@ -655,7 +661,6 @@ export default function AdminLogAchievementsPage() {
                 points, reason: "Manual Adjustment", date: dateTimestamp,
                 loggedAt: serverTimestamp() as Timestamp, loggedBy: currentUserUid,
             };
-            const existingLogId = existingLogsMap.get(teamId);
             const docRef = existingLogId ? doc(bonusLogsRef, existingLogId) : doc(bonusLogsRef);
             batch.set(docRef, logEntry);
         }
