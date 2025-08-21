@@ -47,6 +47,8 @@ interface AgentScore {
   teamEmoji?: string; // Added teamEmoji
   completedTasks?: { ruleName: string; ruleEmoji: string }[];
   targetProgress?: string; // New string for target progress display
+  // Added this to derive pod target progress correctly
+  achievements: Record<string, number>;
 }
 
 // Interface for pod target summary used internally in this component
@@ -324,24 +326,20 @@ export default function AdminDailyScoresPage() {
     const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
     
     // Agent daily scores calculation
-    const agentScoreData: Record<string, { totalPoints: number, achievements: Record<string, number> }> = {};
-    agents.forEach(agent => {
-        if (agent.id) agentScoreData[agent.id] = { totalPoints: 0, achievements: {} };
-    });
-
-    dailyLogs.forEach(log => {
-      if (log.status === 'absent') return;
-      const rule = rulesMap.get(log.ruleId);
-      if (rule && agentScoreData[log.agentId]) {
-        const points = (log.value || 0) * (rule.points || 0);
-        agentScoreData[log.agentId].totalPoints += points;
-        agentScoreData[log.agentId].achievements[log.ruleId] = (agentScoreData[log.agentId].achievements[log.ruleId] || 0) + (log.value || 0);
-      }
-    });
-
     const finalAgentScores: AgentScore[] = agents
       .map(agent => {
-        const agentData = agentScoreData[agent.id!] || { totalPoints: 0, achievements: {} };
+        const agentData = { totalPoints: 0, achievements: {} as Record<string, number> };
+        const agentDailyLogs = dailyLogs.filter(log => log.agentId === agent.id && log.status !== 'absent');
+        
+        agentDailyLogs.forEach(log => {
+            const rule = rulesMap.get(log.ruleId);
+            if (rule) {
+                const points = (log.value || 0) * (rule.points || 0);
+                agentData.totalPoints += points;
+                agentData.achievements[rule.id!] = (agentData.achievements[rule.id!] || 0) + (log.value || 0);
+            }
+        });
+
         const isAbsent = absentAgentIds.has(agent.id!);
         let emojis = '';
         if (!isAbsent) {
@@ -380,6 +378,7 @@ export default function AdminDailyScoresPage() {
           completedTasks: completedTasks,
           teamEmoji: agentTeam?.emoji,
           targetProgress: targetProgressParts.join(' | '),
+          achievements: agentData.achievements, // Pass this for pod target calculation
         };
       })
       .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
@@ -424,7 +423,7 @@ export default function AdminDailyScoresPage() {
         finalRuleKeyString += (finalRuleKeyString ? ' | ' : '') + taskKeyString;
     }
 
-    // Pod Target Summary calculation - now derived from agent scores for consistency
+    // Pod Target Summary calculation - DERIVED FROM AGENT SCORES
     const finalPodTargetSummary: PodTargetSummary[] = numericRules
         .map(rule => {
             if (!rule.id) return null;
@@ -432,7 +431,7 @@ export default function AdminDailyScoresPage() {
             if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
             
             const podTarget = individualTarget * activeAgents.length;
-            const achieved = Object.values(agentScoreData).reduce((total, agentData) => total + (agentData.achievements[rule.id!] || 0), 0);
+            const achieved = finalAgentScores.reduce((total, agent) => total + (agent.achievements[rule.id!] || 0), 0);
             const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
             
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
