@@ -66,12 +66,14 @@ interface AgentCompetitionAchievements {
 }
 
 
+// Updated to include individual and pod targets
 interface PodTargetSummary {
   ruleId: string;
   ruleName: string;
   ruleEmoji: string;
   achieved: number;
-  target: number | null;
+  individualTarget: number | null;
+  podTarget: number | null;
   progress?: number;
 }
 
@@ -380,16 +382,27 @@ export default function AgentDashboardPage() {
      });
 
     const finalPodTargetSummary: PodTargetSummary[] = displayRules
-        .map(rule => {
-            if (!rule.id) return null;
-            const targetValue = dailyTargets?.[rule.id]?.[dayOfWeek];
-            if (targetValue === undefined || targetValue === null || targetValue < 0) return null;
-            const achieved = podRuleTotalsToday[rule.id] || 0;
-            const progress = targetValue > 0 ? Math.min(100, Math.round((achieved / targetValue) * 100)) : (achieved > 0 ? 100 : 0);
-            return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved: achieved, target: targetValue, progress: progress };
-        })
-        .filter((item): item is PodTargetSummary => item !== null)
-        .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
+      .map(rule => {
+          if (!rule.id) return null;
+          const individualTarget = dailyTargets?.[rule.id]?.[dayOfWeek];
+          if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
+
+          const podTarget = podAgents.length > 0 ? individualTarget * podAgents.length : null;
+          const achieved = podRuleTotalsToday[rule.id] || 0;
+          const progress = podTarget && podTarget > 0 ? Math.min(100, Math.round((achieved / podTarget) * 100)) : (achieved > 0 ? 100 : 0);
+          
+          return {
+              ruleId: rule.id,
+              ruleName: rule.name,
+              ruleEmoji: rule.emoji || '❓',
+              achieved: achieved,
+              individualTarget: individualTarget,
+              podTarget: podTarget,
+              progress: progress
+          };
+      })
+      .filter((item): item is PodTargetSummary => item !== null)
+      .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
     
     // Leaderboard logic
     const rulesMap = new Map((rules || []).map(rule => [rule.id, rule]));
@@ -527,8 +540,8 @@ export default function AgentDashboardPage() {
         )}
         <MessageOfTheDayDisplay emoji={messageOfTheDay?.emoji || null} content={messageOfTheDay?.isEnabled ? messageOfTheDay.content : null} isLoading={isLoadingMessage} />
         
-        <Card className="frosted-glass">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="w-full frosted-glass">
+             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div><CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today&apos;s Achievements</CardTitle></div>
                 <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
             </CardHeader>
@@ -575,8 +588,6 @@ export default function AgentDashboardPage() {
                         )}
                     </CardContent>
                 </Card>
-            </div>
-            <div className="lg:col-span-2 space-y-6">
                 <Card className="frosted-glass shadow-md">
                     <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="h-5 w-5"/>Your Scores</CardTitle><CardDescription>Your total scores for the currently selected competition.</CardDescription></CardHeader>
                     <CardContent>
@@ -586,11 +597,13 @@ export default function AgentDashboardPage() {
                         : !error && !isLoading && activeCompetition ? <p className="text-sm text-muted-foreground text-center pt-4">No achievements logged yet for this competition.</p> : null }
                     </CardContent>
                 </Card>
+            </div>
+            <div className="lg:col-span-2 space-y-6">
                 <Card className="frosted-glass shadow-md">
                     <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle><CardDescription>Your pod&apos;s progress towards today&apos;s targets.</CardDescription></CardHeader>
                     <CardContent>
                         {isLoading ? <div className="space-y-3"><Skeleton className="h-6 w-full rounded mb-2" /><Skeleton className="h-6 w-5/6 rounded mb-2" /><Skeleton className="h-6 w-3/4 rounded" /></div>
-                        : podTargetSummary.length > 0 ? <div className="space-y-3">{podTargetSummary.map(summary => <div key={summary.ruleId}><div className="flex items-center justify-between text-sm mb-1"><span className="font-medium truncate" title={summary.ruleName}>{summary.ruleEmoji} {summary.ruleName}</span><span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>{summary.achieved.toLocaleString()} / {summary.target?.toLocaleString()}</span></div><Progress value={summary.progress ?? 0} className="h-2" /></div>)}</div>
+                        : podTargetSummary.length > 0 ? <div className="space-y-3">{podTargetSummary.map(summary => <div key={summary.ruleId}><div className="flex items-center justify-between text-sm mb-1"><span className="font-medium truncate" title={summary.ruleName}>{summary.ruleEmoji} {summary.ruleName}</span><span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>{summary.achieved.toLocaleString()} / {summary.podTarget?.toLocaleString()}</span></div><Progress value={summary.progress ?? 0} className="h-2" /><p className="text-xs text-muted-foreground mt-1">Individual Target: {summary.individualTarget?.toLocaleString()}</p></div>)}</div>
                         : !error && !isLoading && activeCompetition ? <p className="text-muted-foreground text-sm text-center pt-4">No targets set for your pod today.</p> : null }
                     </CardContent>
                 </Card>
