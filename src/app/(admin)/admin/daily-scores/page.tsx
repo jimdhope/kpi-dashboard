@@ -328,7 +328,7 @@ export default function AdminDailyScoresPage() {
     numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
     dailyLogs.forEach(log => {
        if (log.ruleId && dailyPodRuleTotals.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
-           dailyPodRuleTotals[rule.id] += (log.value || 0);
+           dailyPodRuleTotals[log.ruleId] += (log.value || 0);
        }
     });
 
@@ -667,5 +667,3 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
-
-    
