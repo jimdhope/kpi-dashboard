@@ -19,7 +19,7 @@ import {
   SidebarGroupLabel, // Added import
   SidebarSeparator, // Added import
 } from '@/components/ui/sidebar';
-import { Home, Settings, UserSquare, CheckSquare, Star, ClipboardList, Target, Swords, Trophy } from 'lucide-react'; // Added Trophy
+import { Home, Settings, UserSquare, CheckSquare, Star, ClipboardList, Target, Swords, Trophy, UserCog } from 'lucide-react'; // Added UserCog
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -96,6 +96,9 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
 
    const getInitials = (name?: string | null) => generateInitials(name || '');
 
+    // Determine if the user has any admin-level roles
+   const hasAdminPrivileges = roles.includes('admin') || roles.includes('podManager') || roles.includes('teamLeader');
+
   return (
     <SidebarProvider defaultOpen={true}>
       {/* Fixed Background Container */}
@@ -123,6 +126,14 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
+               <SidebarMenuItem>
+                <Link href="/agent/leaderboard" passHref>
+                  <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/agent/leaderboard'}>
+                    <Trophy />
+                    <span>Leaderboard</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <Link href="/agent/rps-game" passHref>
                   <SidebarMenuButton tooltip="Rock Paper Scissors" isActive={currentPath === '/agent/rps-game'}>
@@ -131,6 +142,20 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
+                {/* Conditional Admin Dashboard Link */}
+                {hasAdminPrivileges && (
+                    <>
+                        <SidebarSeparator />
+                        <SidebarMenuItem>
+                            <Link href="/admin" passHref>
+                                <SidebarMenuButton tooltip="Go to Admin Dashboard" isActive={currentPath.startsWith('/admin')}>
+                                    <UserCog />
+                                    <span>Admin Dashboard</span>
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    </>
+                )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4 border-t border-sidebar-border">
