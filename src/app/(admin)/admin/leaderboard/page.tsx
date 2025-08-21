@@ -52,21 +52,22 @@ interface DailyAchievementLog {
   value: number;
   loggedAt: Timestamp;
   loggedBy?: string | null;
+  points?: number; // Add points to log
 }
 
 // Interface for leaderboard entries - Added agentFirstNames
 interface LeaderboardEntry {
   id: string; // Can be agentId or teamId or podId
   name: string;
-  totalPoints: number;
+  score: number;
   rank?: number;
-  avatarUrl?: string; // Keep for data storage, but don't display image
+  avatarUrl?: string;
   avatarInitials?: string;
   avatarBgColor?: string;
-  isCurrentUser?: boolean;
+  emoji?: string; // Add emoji for teams
+  isUser?: boolean;
   isCurrentUserTeam?: boolean;
   agentFirstNames?: string[]; // Array of first names for team entries
-  score: number; // Added score for compatibility
 }
 
 // Team structure within Competition
@@ -74,6 +75,7 @@ interface Team {
   id: string;
   name: string;
   agentIds: string[];
+  emoji?: string;
 }
 
 // Helper functions for medals and rank styles (same as before)
@@ -258,23 +260,6 @@ export default function AdminLeaderboardPage() {
     }, [competitions, pods, selectedCompetitionId]);
 
 
-    // Dense Ranking Logic (1, 2, 2, 3...)
-    const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
-        if (items.length === 0) return [];
-
-         const sortedItems = [...items].sort((a, b) => b.score - a.score);
-         let currentRank = 0;
-         let lastScore = Infinity;
-         const rankedItems = sortedItems.map((item) => {
-             if (item.score < lastScore) {
-                 currentRank++;
-             }
-             lastScore = item.score;
-             return { ...item, rank: currentRank };
-         });
-         return rankedItems;
-    };
-
     // 5. Calculate Leaderboard Scores (useMemo)
     const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
         const competition = competitions.find(c => c.id === selectedCompetitionId);
@@ -294,47 +279,37 @@ export default function AdminLeaderboardPage() {
         relevantAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
         allLogs.forEach(log => {
-            const rule = rulesMap.get(log.ruleId);
-            if (rule) {
-                const points = (log.value || 0) * (rule.points || 0);
-                if (agentScores.hasOwnProperty(log.agentId)) {
-                    agentScores[log.agentId] += points;
-                }
+            // Use log.points directly if available, otherwise calculate
+            const points = log.points ?? (log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0);
+            if (agentScores.hasOwnProperty(log.agentId)) {
+                agentScores[log.agentId] += points;
             }
         });
 
-        const agentLeaderboardData = relevantAgents
+        const finalAgentLeaderboard: LeaderboardEntry[] = relevantAgents
             .map(agent => ({
                 id: agent.id!,
                 name: agent.name,
-                totalPoints: agentScores[agent.id!] || 0,
                 score: agentScores[agent.id!] || 0,
                 avatarUrl: agent.avatarUrl,
                 avatarInitials: agent.avatarInitials,
                 avatarBgColor: agent.avatarBgColor,
-                isCurrentUser: agent.id === auth.currentUser?.uid,
-            }))
-
-
-        const finalAgentLeaderboard = assignDenseRanks(agentLeaderboardData);
-
+                isUser: agent.id === auth.currentUser?.uid,
+            }));
 
         // Team calculations
         const teamScores: Record<string, number> = {};
         teams.forEach(team => { teamScores[team.id] = 0; });
 
         allLogs.forEach(log => {
-            const rule = rulesMap.get(log.ruleId);
-            if (rule) {
-                const points = (log.value || 0) * (rule.points || 0);
-                const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-                if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
-                    teamScores[agentTeam.id] += points;
-                }
+            const points = log.points ?? (log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0);
+            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+            if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
+                teamScores[agentTeam.id] += points;
             }
         });
 
-        const teamLeaderboardData = teams
+        const finalTeamLeaderboard: LeaderboardEntry[] = teams
             .map(team => {
                 const agentFirstNames = (team.agentIds || [])
                     .map(agentId => agents.find(a => a.id === agentId)?.name.split(' ')[0])
@@ -344,15 +319,12 @@ export default function AdminLeaderboardPage() {
                 return {
                     id: team.id,
                     name: team.name,
-                    totalPoints: teamScores[team.id] || 0,
                     score: teamScores[team.id] || 0,
                     agentFirstNames: agentFirstNames,
-                    isCurrentUserTeam: team.agentIds?.includes(auth.currentUser?.uid || ''),
+                    emoji: team.emoji, // Pass emoji
+                    isUser: team.agentIds?.includes(auth.currentUser?.uid || ''),
                 };
-            })
-
-        const finalTeamLeaderboard = assignDenseRanks(teamLeaderboardData);
-
+            });
 
         return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
     }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid, competitions, selectedCompetitionId]);

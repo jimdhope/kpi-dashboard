@@ -34,20 +34,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface LeaderboardEntry {
   id: string;
   name: string;
-  totalPoints: number;
+  score: number;
   rank?: number;
   avatarUrl?: string;
   avatarInitials?: string;
   avatarBgColor?: string;
-  isCurrentUser?: boolean;
-  isCurrentUserTeam?: boolean;
-  score: number;
+  emoji?: string;
+  isUser?: boolean;
 }
 
 interface Team {
   id: string;
   name: string;
   agentIds: string[];
+  emoji?: string; // Added emoji
 }
 
 interface CompetitionWithRules extends Competition {
@@ -287,7 +287,7 @@ export default function AgentDashboardPage() {
 
         const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
         const dailyQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('date', '==', dateTimestamp), where('competitionId', '==', selectedCompetitionId));
-        listenerRefs.current.dailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
+        listenerRefs.current.dailyAchievements = onSnapshot(snapshot, (snapshot) => {
             if (!isMounted) return;
             const existingAchievements = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
             const initialInputs: AgentAchievementInputState = {};
@@ -410,12 +410,9 @@ export default function AgentDashboardPage() {
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
     podLogs.forEach(log => {
-        const rule = rulesMap.get(log.ruleId);
-        if (rule) {
-            const points = (log.value || 0) * (rule.points || 0);
-            if (agentScores.hasOwnProperty(log.agentId)) {
-                agentScores[log.agentId] += points;
-            }
+        const points = log.points ?? (log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0);
+        if (agentScores.hasOwnProperty(log.agentId)) {
+            agentScores[log.agentId] += points;
         }
     });
 
@@ -423,14 +420,11 @@ export default function AgentDashboardPage() {
      teams.forEach(team => { teamScores[team.id] = 0; });
  
      podLogs.forEach(log => {
-         const rule = rulesMap.get(log.ruleId);
-         if (rule) {
-             const points = (log.value || 0) * (rule.points || 0);
-             const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-             if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
-                 teamScores[agentTeam.id] += points;
-             }
-         }
+        const points = log.points ?? (log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0);
+        const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+        if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
+            teamScores[agentTeam.id] += points;
+        }
      });
 
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
@@ -446,8 +440,8 @@ export default function AgentDashboardPage() {
         return sortedItems.map(item => ({...item, rank: scoreRankMap.get(item.score)!}));
     };
 
-    const finalAgentLeaderboard = assignDenseRanks(podAgents.map(agent => ({ id: agent.id!, name: agent.name, totalPoints: agentScores[agent.id!] || 0, score: agentScores[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isCurrentUser: agent.id === currentUser?.id, })));
-    const finalTeamLeaderboard = assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, totalPoints: teamScores[team.id] || 0, score: teamScores[team.id] || 0, isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || '') })));
+    const finalAgentLeaderboard = assignDenseRanks(podAgents.map(agent => ({ id: agent.id!, name: agent.name, score: agentScores[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isUser: agent.id === currentUser?.id, })));
+    const finalTeamLeaderboard = assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') })));
 
     return { agentDailyAchievements: finalAgentDailyAchievements, agentCompetitionAchievements: finalAgentCompetitionAchievements, podTargetSummary: finalPodTargetSummary, agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
   }, [isLoadingUser, isLoadingData, currentUser, agentPodId, activeCompetition, dailyLogs, podLogs, rules, dailyTargets, podAgents, teams]);
@@ -632,4 +626,3 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
-
