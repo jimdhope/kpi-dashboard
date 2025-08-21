@@ -568,30 +568,6 @@ export default function AgentDashboardPage() {
                     </CardContent>
                 </Card>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card className="frosted-glass shadow-md flex flex-col h-full">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <div className="flex items-center gap-2"><ListChecks className="h-5 w-5"/><CardTitle>Your Scores</CardTitle></div>
-                            <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                            {isLoading ? <div className="space-y-2"><Skeleton className="h-4 w-full rounded mb-1" /><Skeleton className="h-4 w-5/6 rounded mb-1" /><Skeleton className="h-4 w-3/4 rounded" /></div>
-                            : agentCompetitionAchievements?.achievements.length > 0 ? <div className="space-y-1 text-sm">{agentCompetitionAchievements.achievements.map(ach => <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap"><span className="font-medium truncate" title={ach.ruleName}>{ach.ruleEmoji} {ach.ruleName}</span><span className="text-muted-foreground">{ach.value.toLocaleString()} ({ach.points.toLocaleString()} pts)</span></div>)}</div>
-                            : !error && !isLoading && activeCompetition ? <p className="text-sm text-muted-foreground text-center pt-4">No achievements logged yet for this competition.</p> : null }
-                        </CardContent>
-                    </Card>
-                    <Card className="frosted-glass shadow-md flex flex-col h-full">
-                        <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle><CardDescription>Your pod&apos;s progress towards today&apos;s targets.</CardDescription></CardHeader>
-                        <CardContent className="flex-grow">
-                            {isLoading ? <div className="space-y-3"><Skeleton className="h-6 w-full rounded mb-2" /><Skeleton className="h-6 w-5/6 rounded mb-2" /><Skeleton className="h-6 w-3/4 rounded" /></div>
-                            : podTargetSummary.length > 0 ? <div className="space-y-3">{podTargetSummary.map(summary => <div key={summary.ruleId}><div className="flex items-center justify-between text-sm mb-1"><span className="font-medium truncate" title={summary.ruleName}>{summary.ruleEmoji} {summary.ruleName}</span><span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>{summary.achieved.toLocaleString()} / {summary.target?.toLocaleString()}</span></div><Progress value={summary.progress ?? 0} className="h-2" /></div>)}</div>
-                            : !error && !isLoading && activeCompetition ? <p className="text-muted-foreground text-sm text-center pt-4">No targets set for your pod today.</p> : null }
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-
-             <div className="lg:col-span-1 space-y-6">
                 <Card className="frosted-glass">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><ListTodo /> Daily Tasks</CardTitle>
@@ -623,24 +599,65 @@ export default function AgentDashboardPage() {
                         )}
                     </CardContent>
                 </Card>
+            </div>
 
-                {isLoading ? <Skeleton className="h-[400px] w-full frosted-glass" />
-                : teamLeaderboard.length > 0 ? <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} description="Current Competition Ranking" />
-                : !error && activeCompetition && teams.length > 0 ? <Card className="h-full flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No team data available yet.</CardContent></Card>
-                : null}
+             <div className="lg:col-span-1 space-y-6">
+                <Card className="frosted-glass shadow-md flex flex-col h-full">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <div className="flex items-center gap-2"><ListChecks className="h-5 w-5"/><CardTitle>Your Scores</CardTitle></div>
+                        <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                        {isLoading ? <div className="space-y-2"><Skeleton className="h-4 w-full rounded mb-1" /><Skeleton className="h-4 w-5/6 rounded mb-1" /><Skeleton className="h-4 w-3/4 rounded" /></div>
+                        : agentCompetitionAchievements?.achievements.length > 0 ? <div className="space-y-1 text-sm">{agentCompetitionAchievements.achievements.map(ach => <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap"><span className="font-medium truncate" title={ach.ruleName}>{ach.ruleEmoji} {ach.ruleName}</span><span className="text-muted-foreground">{ach.value.toLocaleString()} ({ach.points.toLocaleString()} pts)</span></div>)}</div>
+                        : !error && !isLoading && activeCompetition ? <p className="text-sm text-muted-foreground text-center pt-4">No achievements logged yet for this competition.</p> : null }
+                    </CardContent>
+                </Card>
+                <Card className="frosted-glass shadow-md flex flex-col h-full">
+                    <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle><CardDescription>Your pod&apos;s progress towards today&apos;s targets.</CardDescription></CardHeader>
+                    <CardContent className="flex-grow">
+                        {isLoading ? <div className="space-y-3"><Skeleton className="h-6 w-full rounded mb-2" /><Skeleton className="h-6 w-5/6 rounded mb-2" /><Skeleton className="h-6 w-3/4 rounded" /></div>
+                        : podTargetSummary.length > 0 ? <div className="space-y-3">{podTargetSummary.map(summary => <div key={summary.ruleId}><div className="flex items-center justify-between text-sm mb-1"><span className="font-medium truncate" title={summary.ruleName}>{summary.ruleEmoji} {summary.ruleName}</span><span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>{summary.achieved.toLocaleString()} / {summary.target?.toLocaleString()}</span></div><Progress value={summary.progress ?? 0} className="h-2" /></div>)}</div>
+                        : !error && !isLoading && activeCompetition ? <p className="text-muted-foreground text-sm text-center pt-4">No targets set for your pod today.</p> : null }
+                    </CardContent>
+                </Card>
             </div>
         </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-          {isLoading ? (<><Skeleton className="h-[400px] w-full frosted-glass" /></>)
-           : (<>
-                {agentLeaderboard.length > 0 ? <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} description="Current Competition Ranking" />
-                : !error && activeCompetition && podAgents.length > 0 ? <Card className="h-[400px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No agent data available yet.</CardContent></Card>
-                : null}
-                {error === "No active competition found for your pod today." && !isLoading && <Card className="md:col-span-2 h-[100px] flex items-center justify-center shadow-md frosted-glass"><CardContent className="text-muted-foreground text-center">No competition currently active.</CardContent></Card>}
-             </>)
-           }
+           {isLoading ? (
+                <>
+                    <Skeleton className="h-[400px] w-full frosted-glass" />
+                    <Skeleton className="h-[400px] w-full frosted-glass" />
+                </>
+           ) : !activeCompetition ? (
+                <div className="md:col-span-2">
+                    <Card className="h-[100px] flex items-center justify-center shadow-md frosted-glass">
+                        <CardContent className="text-muted-foreground text-center">
+                            No competition currently active for your pod.
+                        </CardContent>
+                    </Card>
+                </div>
+           ) : (
+                <>
+                    {teamLeaderboard.length > 0 ? (
+                        <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} description="Current Competition Ranking" />
+                    ) : (
+                        <Card className="h-full flex items-center justify-center shadow-md frosted-glass">
+                            <CardContent className="text-muted-foreground text-center">No teams configured for this competition.</CardContent>
+                        </Card>
+                    )}
+                     {agentLeaderboard.length > 0 ? (
+                        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} description="Current Competition Ranking" />
+                    ) : (
+                        <Card className="h-full flex items-center justify-center shadow-md frosted-glass">
+                            <CardContent className="text-muted-foreground text-center">No agent data available for this competition yet.</CardContent>
+                        </Card>
+                    )}
+                </>
+           )}
       </div>
     </div>
   );
 }
+
