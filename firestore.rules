@@ -2,15 +2,28 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read access to the pods collection for the API endpoint.
-    // Writes are restricted to authenticated users (and should be further restricted to admins in a real app).
+
+    // Allow public read-only access for the pods collection for the API
     match /pods/{podId} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // All other collections require an authenticated user to read or write.
-    // You can refine these rules later for more granular control (e.g., only admins can write to campaigns).
+    // Rules for the new RPS Game collection
+    match /rpsGames/{gameId} {
+      // Users can only create their own game entries
+      // They can read any game entry (e.g., for a future history view)
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+
+    // Rules for the new Team Bonus Logs collection
+    match /teamBonusLogs/{logId} {
+        // Any authenticated user (typically an admin/manager via the app) can create and read bonus logs.
+        allow read, create: if request.auth != null;
+    }
+
+    // Default rule for all other collections: require authentication for read/write
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
