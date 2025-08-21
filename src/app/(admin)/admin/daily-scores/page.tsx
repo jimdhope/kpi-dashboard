@@ -435,6 +435,8 @@ export default function AdminDailyScoresPage() {
     // Correct Pod Target Summary calculation using only dailyLogs
     const dailyPodRuleTotals: Record<string, number> = {};
     numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
+
+    // Use dailyLogs which is already filtered for the selected day
     dailyLogs.forEach(log => {
        if (log.ruleId && dailyPodRuleTotals.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
            dailyPodRuleTotals[log.ruleId] += (log.value || 0);
