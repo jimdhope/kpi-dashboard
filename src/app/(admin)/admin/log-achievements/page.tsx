@@ -217,6 +217,7 @@ export default function AdminLogAchievementsPage() {
     let unsubscribeLogs: Unsubscribe = () => {};
     let unsubscribeTaskLogs: Unsubscribe = () => {};
     let unsubscribeBonusLogs: Unsubscribe = () => {};
+    let unsubscribeCompLogs: Unsubscribe = () => {};
 
     const fetchPodDataAndListen = async () => {
       setIsLoadingAgents(true);
@@ -282,12 +283,21 @@ export default function AdminLogAchievementsPage() {
 
             const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
             const achievementsRef = collection(db, 'dailyAchievements');
+            
+            // Listener for all logs for the entire competition (for totals)
+            const allLogsQuery = query(achievementsRef, where('competitionId', '==', competitionForLogging.id), where('podId', '==', selectedPodId));
+            unsubscribeCompLogs = onSnapshot(allLogsQuery, (snapshot) => {
+                setCompetitionLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as DailyAchievementLog)));
+            });
+
+            // Listener for just today's logs (for form inputs)
             const initialAchievementsQuery = query(
                 achievementsRef,
                 where('podId', '==', selectedPodId),
                 where('date', '==', dateTimestamp),
                 where('competitionId', '==', competitionForLogging.id)
             );
+            
             const taskLogsRef = collection(db, 'dailyTaskLogs');
             const initialTaskLogsQuery = query(
                 taskLogsRef,
@@ -301,7 +311,6 @@ export default function AdminLogAchievementsPage() {
             
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-                setCompetitionLogs(logs);
 
                 const initialInputs: AchievementInputState = {};
                 fetchedAgents.forEach(agent => {
@@ -387,6 +396,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeLogs();
       unsubscribeTaskLogs();
       unsubscribeBonusLogs();
+      unsubscribeCompLogs();
     };
   }, [selectedPodId, selectedDate, toast]);
 
@@ -674,9 +684,12 @@ export default function AdminLogAchievementsPage() {
     try {
         // Data Calculation for webhook
         const todayStart = startOfDay(selectedDate);
+        const dayOfWeek = daysOfWeek[getDay(selectedDate)];
+
+        // Filter logs for the selected date *only*
         const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
         const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
-        const dayOfWeek = daysOfWeek[getDay(selectedDate)];
+
         const rulesMap = new Map(competitionRules.map(rule => [rule.id, rule]));
         const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
         const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
@@ -712,9 +725,9 @@ export default function AdminLogAchievementsPage() {
         const podTargetSummary: PodTargetSummaryForTeams[] = competitionRules.filter(r => r.type === 'numeric' && dailyTargets?.[r.id!]?.[dayOfWeek] != null).map(rule => {
             const individualTarget = dailyTargets![rule.id!]![dayOfWeek]!;
             const podTarget = individualTarget * activeAgents.length;
-            const achieved = dailyLogs.filter(l => l.ruleId === rule.id).reduce((sum, l) => sum + l.value, 0);
+            const achieved = dailyLogs.filter(l => l.ruleId === rule.id!).reduce((sum, l) => sum + (l.value || 0), 0);
             return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };
-        });
+        }).filter((s): s is PodTargetSummaryForTeams => s !== null);
 
         // Team Scores
         const teamTotalScores: TeamTotalScore[] = teams.map(team => {
@@ -722,7 +735,7 @@ export default function AdminLogAchievementsPage() {
                 const agentScore = agentScores.find(s => s.agentFirstName === agents.find(a => a.id === agentId)?.name.split(' ')[0] && !s.isAbsent);
                 return teamTotal + (agentScore?.totalPoints || 0);
             }, 0);
-            const bonusPoints = competitionBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
+            const bonusPoints = dailyBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
             return { teamName: team.name, teamEmoji: team.emoji, totalPoints: totalPoints + bonusPoints };
         }).sort((a,b) => b.totalPoints - a.totalPoints);
         
