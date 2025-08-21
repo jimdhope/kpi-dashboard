@@ -10,7 +10,8 @@ export interface AgentScoreForTeams {
     totalPoints: number;
     emojiString: string;
     isAbsent?: boolean;
-    completedTasks?: { ruleName: string; ruleEmoji: string }[]; // New field for tasks
+    teamEmoji?: string;
+    completedTasks?: { ruleName: string; ruleEmoji: string }[];
     targetProgress?: string;
 }
 
@@ -171,9 +172,9 @@ export const sendTeamsUpdate = async (
             ? `**Today's Adjustments:** ${teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints} pts**`).join(' | ')}`
             : null;
 
-        // Construct the Adaptive Card body elements
+        // Construct the Adaptive Card body elements, REMOVING the main title
         const adaptiveCardBodyElements = [
-             {
+            {
                 "type": "TextBlock",
                 "text": `**Daily Scores for ${podName} - ${format(date, "PPP")}**`,
                 "wrap": true,
@@ -216,7 +217,7 @@ export const sendTeamsUpdate = async (
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
                         "version": "1.4", // Keeping version 1.4
-                        "body": adaptiveCardBodyElements
+                        "body": adaptiveCardBodyElements.slice(1) // Remove the first element (the title)
                     }
                 }
             ]
