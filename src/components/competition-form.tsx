@@ -460,90 +460,89 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                      </div>
                  )}
 
-                 {/* Wrap rules list in ScrollArea */}
-                 <ScrollArea className="h-60 w-full">
-                    {!isLoadingRules && fields.length === 0 ? (
-                         <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md">
-                             <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/>
-                             <p>No rules defined. Click "Add Item" to start.</p>
-                         </div>
-                     ) : null }
+                 {/* REMOVED ScrollArea, now it grows naturally */}
+                 {!isLoadingRules && fields.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md">
+                          <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/>
+                          <p>No rules defined. Click "Add Item" to start.</p>
+                      </div>
+                  ) : null }
 
-                    {!isLoadingRules && fields.length > 0 && (
-                        <div className="space-y-4 pr-4"> {/* Added padding-right */}
-                            {/* Header Row */}
-                            <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
-                                <Label className="w-12 text-left">Emoji</Label>
-                                <Label className="flex-1 text-left">Item Name</Label>
-                                <Label className="w-24 text-left">Type</Label>
-                                <Label className="w-20 text-left">Points</Label>
-                                <div className="w-8" /> {/* Spacer */}
-                            </div>
-                            {/* Rule Rows */}
-                            {fields.map((field, index) => (
-                                <div key={field.fieldId} className="flex items-start gap-2 border p-3 rounded-md bg-card">
-                                    <FormField
-                                        control={form.control}
-                                        name={`rules.${index}.emoji`}
-                                        render={({ field: ruleField }) => (
-                                            <FormItem className="w-12">
-                                             <FormLabel className="sr-only">Emoji</FormLabel>
-                                            <FormControl><Input placeholder={ruleField.value ? "" : "❓"} {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
-                                            <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`rules.${index}.name`}
-                                        render={({ field: ruleField }) => (
-                                            <FormItem className="flex-1">
-                                             <FormLabel className="sr-only">Rule Name</FormLabel>
-                                            <FormControl><Input placeholder="Rule Name" {...ruleField} disabled={isSubmitting} className="h-9" /></FormControl>
-                                            <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField control={form.control} name={`rules.${index}.type`} render={({ field: ruleField }) => (
-                                        <FormItem className="w-24">
-                                            <FormLabel className="sr-only">Type</FormLabel>
-                                            <Select onValueChange={ruleField.onChange} value={ruleField.value} disabled={isSubmitting}>
-                                                <FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Type" /></SelectTrigger></FormControl>
-                                                <SelectContent><SelectItem value="numeric">Numeric</SelectItem><SelectItem value="checkbox">Checkbox</SelectItem></SelectContent>
-                                            </Select>
-                                            <FormMessage className="text-xs" />
-                                        </FormItem>
-                                    )} />
-                                    <FormField
-                                        control={form.control}
-                                        name={`rules.${index}.points`}
-                                        render={({ field: ruleField }) => (
-                                            <FormItem className="w-20">
-                                             <FormLabel className="sr-only">Points</FormLabel>
-                                            <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting || watchedRules[index]?.type === 'checkbox'} className="h-9" /></FormControl>
-                                            <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-destructive hover:bg-destructive/10 mt-0.5 h-9 w-9"
-                                        onClick={() => remove(index)}
-                                        disabled={isSubmitting}
-                                        aria-label="Remove rule"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                     )}
-                </ScrollArea>
-                    {form.formState.errors.rules?.root && (
-                        <FormMessage>{form.formState.errors.rules.root.message}</FormMessage>
-                    )}
+                 {!isLoadingRules && fields.length > 0 && (
+                     <div className="space-y-4"> {/* Removed pr-4 */}
+                         {/* Header Row */}
+                         <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
+                             <Label className="w-12 text-left">Emoji</Label>
+                             <Label className="flex-1 text-left">Item Name</Label>
+                             <Label className="w-24 text-left">Type</Label>
+                             <Label className="w-20 text-left">Points</Label>
+                             <div className="w-8" /> {/* Spacer */}
+                         </div>
+                         {/* Rule Rows */}
+                         {fields.map((field, index) => (
+                             <div key={field.fieldId} className="flex items-start gap-2 border p-3 rounded-md bg-card">
+                                 <FormField
+                                     control={form.control}
+                                     name={`rules.${index}.emoji`}
+                                     render={({ field: ruleField }) => (
+                                         <FormItem className="w-12">
+                                          <FormLabel className="sr-only">Emoji</FormLabel>
+                                         <FormControl><Input placeholder={ruleField.value ? "" : "❓"} {...ruleField} maxLength={4} disabled={isSubmitting} className="text-center h-9" /></FormControl>
+                                         <FormMessage className="text-xs" />
+                                         </FormItem>
+                                     )}
+                                 />
+                                 <FormField
+                                     control={form.control}
+                                     name={`rules.${index}.name`}
+                                     render={({ field: ruleField }) => (
+                                         <FormItem className="flex-1">
+                                          <FormLabel className="sr-only">Rule Name</FormLabel>
+                                         <FormControl><Input placeholder="Rule Name" {...ruleField} disabled={isSubmitting} className="h-9" /></FormControl>
+                                         <FormMessage className="text-xs" />
+                                         </FormItem>
+                                     )}
+                                 />
+                                 <FormField control={form.control} name={`rules.${index}.type`} render={({ field: ruleField }) => (
+                                     <FormItem className="w-24">
+                                         <FormLabel className="sr-only">Type</FormLabel>
+                                         <Select onValueChange={ruleField.onChange} value={ruleField.value} disabled={isSubmitting}>
+                                             <FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Type" /></SelectTrigger></FormControl>
+                                             <SelectContent><SelectItem value="numeric">Numeric</SelectItem><SelectItem value="checkbox">Checkbox</SelectItem></SelectContent>
+                                         </Select>
+                                         <FormMessage className="text-xs" />
+                                     </FormItem>
+                                 )} />
+                                 <FormField
+                                     control={form.control}
+                                     name={`rules.${index}.points`}
+                                     render={({ field: ruleField }) => (
+                                         <FormItem className="w-20">
+                                          <FormLabel className="sr-only">Points</FormLabel>
+                                         <FormControl><Input type="number" placeholder="Pts" {...ruleField} min="0" step="1" disabled={isSubmitting || watchedRules[index]?.type === 'checkbox'} className="h-9" /></FormControl>
+                                         <FormMessage className="text-xs" />
+                                         </FormItem>
+                                     )}
+                                 />
+                                 <Button
+                                     type="button"
+                                     variant="ghost"
+                                     size="icon"
+                                     className="text-destructive hover:bg-destructive/10 mt-0.5 h-9 w-9"
+                                     onClick={() => remove(index)}
+                                     disabled={isSubmitting}
+                                     aria-label="Remove rule"
+                                 >
+                                     <Trash2 className="h-4 w-4" />
+                                 </Button>
+                             </div>
+                         ))}
+                     </div>
+                  )}
+
+                 {form.formState.errors.rules?.root && (
+                     <FormMessage>{form.formState.errors.rules.root.message}</FormMessage>
+                 )}
             </div>
 
             {/* Submit and Cancel Buttons */}
