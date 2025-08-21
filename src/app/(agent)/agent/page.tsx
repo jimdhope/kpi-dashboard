@@ -28,6 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 import { Label } from '@/components/ui/label'; // Import Label
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
 
 // Interfaces
 interface LeaderboardEntry {
@@ -99,6 +100,7 @@ interface MessageOfTheDayDB {
 
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const AGENT_DASHBOARD_COMP_KEY = 'agentDashboard_selectedCompetitionId';
 
 export default function AgentDashboardPage() {
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export default function AgentDashboardPage() {
   const [rules, setRules] = useState<RuleFormData[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
   const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]);
-  const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]); // New state for task logs
+  const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
@@ -117,8 +119,11 @@ export default function AgentDashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null);
 
+  const [allCompetitions, setAllCompetitions] = useState<CompetitionWithRules[]>([]);
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
+
   const [achievementInputs, setAchievementInputs] = useState<AgentAchievementInputState>({});
-  const [taskInputs, setTaskInputs] = useState<AgentTaskInputState>({}); // New state for task inputs
+  const [taskInputs, setTaskInputs] = useState<AgentTaskInputState>({});
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
 
   const [messageOfTheDay, setMessageOfTheDay] = useState<MessageOfTheDayDB | null>(null);
@@ -209,136 +214,123 @@ export default function AgentDashboardPage() {
   }, [toast]);
 
   useEffect(() => {
-    let isMounted = true;
-    if (isLoadingUser || !agentPodId || !currentUser?.id ) {
-        cleanupListeners(['agents', 'competition', 'userLogs', 'podLogs', 'targets', 'dailyAchievements', 'userTaskLogs']);
-        if (!isLoadingUser) {
-             setIsLoadingData(false);
-             setActiveCompetition(null); setRules([]); setTeams([]); setPodAgents([]);
-             setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
-             setDailyTaskLogs([]); setTaskInputs({});
+        let isMounted = true;
+        if (isLoadingUser || !agentPodId) {
+            if (!isLoadingUser) setIsLoadingData(false);
+            return;
         }
+
+        const compQuery = query(collection(db, 'competitions'), where('podIds', 'array-contains', agentPodId), orderBy('startDate', 'desc'));
+        const unsubscribeComps = onSnapshot(compQuery, (snapshot) => {
+            if (!isMounted) return;
+            const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithRules));
+            setAllCompetitions(fetchedComps);
+
+            const savedCompId = localStorage.getItem(AGENT_DASHBOARD_COMP_KEY);
+            if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
+                setSelectedCompetitionId(savedCompId);
+            } else if (fetchedComps.length > 0) {
+                const latestActiveComp = fetchedComps.find(c => c.endDate.toDate() >= startOfDay(new Date())) || fetchedComps[0];
+                setSelectedCompetitionId(latestActiveComp.id);
+            }
+        });
+
+        return () => {
+            isMounted = false;
+            unsubscribeComps();
+        };
+  }, [isLoadingUser, agentPodId]);
+
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isLoadingUser || !agentPodId || !currentUser?.id || !selectedCompetitionId ) {
+        if (!isLoadingUser) setIsLoadingData(false);
+        setActiveCompetition(null); setRules([]); setTeams([]); setPodAgents([]);
+        setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
+        setDailyTaskLogs([]); setTaskInputs({});
         return () => { isMounted = false; cleanupListeners(); };
     }
 
     setIsLoadingData(true);
 
-    const usersRef = collection(db, 'users');
-    const agentsQuery = query(usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
-    cleanupListeners(['agents']);
-    listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => {
+    const compDocRef = doc(db, 'competitions', selectedCompetitionId);
+    listenerRefs.current.competition = onSnapshot(compDocRef, (compSnap) => {
         if (!isMounted) return;
-        const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-        setPodAgents(currentAgents => JSON.stringify(currentAgents) !== JSON.stringify(fetchedAgents) ? fetchedAgents : currentAgents);
-    });
-
-    const competitionsRef = collection(db, 'competitions');
-    const todayStart = startOfDay(new Date());
-    const competitionQuery = query(
-        competitionsRef,
-        where('podIds', 'array-contains', agentPodId),
-        where('startDate', '<=', Timestamp.fromDate(todayStart)),
-        orderBy('startDate', 'desc')
-    );
-    cleanupListeners(['competition']);
-    listenerRefs.current.competition = onSnapshot(competitionQuery, (competitionSnapshot) => {
-        if (!isMounted) return;
-        let foundActiveCompetition: CompetitionWithRules | null = null;
-        for (const docSnap of competitionSnapshot.docs) {
-            const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules;
-            if (comp.endDate && comp.endDate instanceof Timestamp && endOfDay(comp.endDate.toDate()) >= todayStart) {
-                foundActiveCompetition = comp;
-                break;
-            }
+        if (!compSnap.exists()) {
+             setError("Selected competition not found.");
+             setActiveCompetition(null);
+             setIsLoadingData(false);
+             return;
         }
+        const newActiveComp = { id: compSnap.id, ...compSnap.data() } as CompetitionWithRules;
+        setActiveCompetition(newActiveComp);
+        setRules(newActiveComp.rules || []);
+        setTeams(newActiveComp.teams || []);
 
-        setActiveCompetition(currentActiveComp => {
-            const newActiveCompId = foundActiveCompetition?.id || null;
-            const currentActiveCompId = currentActiveComp?.id || null;
-            if (newActiveCompId !== currentActiveCompId) {
-                cleanupListeners(['userLogs', 'podLogs', 'targets', 'dailyAchievements', 'userTaskLogs']);
-                setRules([]); setTeams([]); setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
-                setDailyTaskLogs([]); setTaskInputs({});
-                if (foundActiveCompetition) {
-                    const activeCompId = foundActiveCompetition.id;
-                    setRules((foundActiveCompetition.rules || []));
-                    setTeams(foundActiveCompetition.teams || []);
-                    const achievementsRef = collection(db, 'dailyAchievements');
-                    const compStartDate = foundActiveCompetition.startDate;
-                    if (!(compStartDate instanceof Timestamp)) {
-                        setError("Invalid competition start date found."); setIsLoadingData(false); return foundActiveCompetition;
-                    }
-                    const userLogsQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('competitionId', '==', activeCompId), where('date', '>=', compStartDate));
-                    listenerRefs.current.userLogs = onSnapshot(userLogsQuery, (snapshot) => { if (isMounted) setDailyLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog))); });
-                    const podLogsQuery = query(achievementsRef, where('podId', '==', agentPodId), where('competitionId', '==', activeCompId), where('date', '>=', compStartDate));
-                    listenerRefs.current.podLogs = onSnapshot(podLogsQuery, (snapshot) => { if (isMounted) setPodLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog))); });
-                    const targetsDocId = `${activeCompId}_${agentPodId}`;
-                    const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
-                    listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => { if (isMounted) setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null); });
+        cleanupListeners(['agents', 'userLogs', 'podLogs', 'targets', 'dailyAchievements', 'userTaskLogs']);
+        const usersRef = collection(db, 'users');
+        const agentsQuery = query(usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
+        listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => { if(isMounted) setPodAgents(agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser))); });
 
-                    const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
-                    const dailyQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompId));
-                    listenerRefs.current.dailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
-                        if (!isMounted) return;
-                        const existingAchievements = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
-                        const initialInputs: AgentAchievementInputState = {};
-                        setRules(currentRules => {
-                            currentRules.filter(r => r.type === 'numeric').forEach(rule => {
-                                if (rule.id) {
-                                    const existingLog = existingAchievements.find(log => log.ruleId === rule.id);
-                                    initialInputs[rule.id] = { value: existingLog ? existingLog.value : 0, existingLogId: existingLog?.id };
-                                }
-                            });
-                            return currentRules;
-                        });
-                        setAchievementInputs(initialInputs);
-                    }, (e) => { if (isMounted) { console.error(e); }});
+        const achievementsRef = collection(db, 'dailyAchievements');
+        const userLogsQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
+        listenerRefs.current.userLogs = onSnapshot(userLogsQuery, (snapshot) => { if (isMounted) setDailyLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog))); });
 
-                    const taskLogsRef = collection(db, 'dailyTaskLogs');
-                    const userTaskLogsQuery = query(taskLogsRef, where('agentId', '==', currentUser.id), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompId));
-                    listenerRefs.current.userTaskLogs = onSnapshot(userTaskLogsQuery, (snapshot) => {
-                        if (!isMounted) return;
-                        const tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyTaskLog));
-                        setDailyTaskLogs(tasks);
-                        const initialTaskInputs: AgentTaskInputState = {};
-                        setRules(currentRules => {
-                            currentRules.filter(r => r.type === 'checkbox').forEach(task => {
-                                if (task.id) {
-                                    const existingLog = tasks.find(log => log.taskId === task.id);
-                                    initialTaskInputs[task.id] = { checked: !!existingLog, existingLogId: existingLog?.id };
-                                }
-                            });
-                            return currentRules;
-                        });
-                        setTaskInputs(initialTaskInputs);
-                        setIsLoadingData(false);
-                    }, (e) => { if (isMounted) { console.error(e); setIsLoadingData(false); }});
-                } else {
-                     setError(prevError => prevError?.startsWith("You are not") ? prevError : "No active competition found for your pod today.");
-                     setIsLoadingData(false);
+        const podLogsQuery = query(achievementsRef, where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
+        listenerRefs.current.podLogs = onSnapshot(podLogsQuery, (snapshot) => { if (isMounted) setPodLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog))); });
+
+        const targetsDocRef = doc(db, 'dailyPodTargets', `${selectedCompetitionId}_${agentPodId}`);
+        listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => { if (isMounted) setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null); });
+
+        const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
+        const dailyQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('date', '==', dateTimestamp), where('competitionId', '==', selectedCompetitionId));
+        listenerRefs.current.dailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
+            if (!isMounted) return;
+            const existingAchievements = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
+            const initialInputs: AgentAchievementInputState = {};
+             (newActiveComp.rules || []).filter(r => r.type === 'numeric').forEach(rule => {
+                if (rule.id) {
+                    const existingLog = existingAchievements.find(log => log.ruleId === rule.id);
+                    initialInputs[rule.id] = { value: existingLog ? existingLog.value : 0, existingLogId: existingLog?.id };
                 }
-                return foundActiveCompetition;
-            }
-            if (isLoadingData && currentActiveComp === foundActiveCompetition) setIsLoadingData(false);
-            return currentActiveComp;
+            });
+            setAchievementInputs(initialInputs);
         });
-    }, (err) => {
-        if (isMounted) { setError("Failed to load competition data."); setIsLoadingData(false); }
+
+        const taskLogsRef = collection(db, 'dailyTaskLogs');
+        const userTaskLogsQuery = query(taskLogsRef, where('agentId', '==', currentUser.id), where('date', '==', dateTimestamp), where('competitionId', '==', selectedCompetitionId));
+        listenerRefs.current.userTaskLogs = onSnapshot(userTaskLogsQuery, (snapshot) => {
+            if (!isMounted) return;
+            const tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyTaskLog));
+            setDailyTaskLogs(tasks);
+            const initialTaskInputs: AgentTaskInputState = {};
+             (newActiveComp.rules || []).filter(r => r.type === 'checkbox').forEach(task => {
+                if (task.id) {
+                    const existingLog = tasks.find(log => log.taskId === task.id);
+                    initialTaskInputs[task.id] = { checked: !!existingLog, existingLogId: existingLog?.id };
+                }
+            });
+            setTaskInputs(initialTaskInputs);
+            setIsLoadingData(false);
+        }, (e) => { if (isMounted) setIsLoadingData(false); });
     });
 
     return () => {
         isMounted = false;
         cleanupListeners();
     };
-  }, [agentPodId, currentUser?.id, isLoadingUser, cleanupListeners, toast]);
+  }, [agentPodId, currentUser?.id, isLoadingUser, cleanupListeners, toast, selectedCompetitionId]);
 
 
-  const { agentDailyAchievements, agentCompetitionAchievements, podTargetSummary } = useMemo(() => {
+  const { agentDailyAchievements, agentCompetitionAchievements, podTargetSummary, agentLeaderboard, teamLeaderboard } = useMemo(() => {
     if (isLoadingUser || isLoadingData || !currentUser || !agentPodId || !activeCompetition) {
         return {
             agentDailyAchievements: { totalPoints: 0, achievements: [] },
             agentCompetitionAchievements: { totalPoints: 0, achievements: [] },
             podTargetSummary: [],
+            agentLeaderboard: [],
+            teamLeaderboard: [],
         };
     }
 
@@ -398,9 +390,54 @@ export default function AgentDashboardPage() {
         })
         .filter((item): item is PodTargetSummary => item !== null)
         .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
+    
+    // Leaderboard logic
+    const rulesMap = new Map((rules || []).map(rule => [rule.id, rule]));
+    const agentScores: Record<string, number> = {};
+    podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
-    return { agentDailyAchievements: finalAgentDailyAchievements, agentCompetitionAchievements: finalAgentCompetitionAchievements, podTargetSummary: finalPodTargetSummary };
-  }, [isLoadingUser, isLoadingData, currentUser, agentPodId, activeCompetition, dailyLogs, podLogs, rules, dailyTargets]);
+    podLogs.forEach(log => {
+        const rule = rulesMap.get(log.ruleId);
+        if (rule) {
+            const points = (log.value || 0) * (rule.points || 0);
+            if (agentScores.hasOwnProperty(log.agentId)) {
+                agentScores[log.agentId] += points;
+            }
+        }
+    });
+
+     const teamScores: Record<string, number> = {};
+     teams.forEach(team => { teamScores[team.id] = 0; });
+ 
+     podLogs.forEach(log => {
+         const rule = rulesMap.get(log.ruleId);
+         if (rule) {
+             const points = (log.value || 0) * (rule.points || 0);
+             const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+             if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
+                 teamScores[agentTeam.id] += points;
+             }
+         }
+     });
+
+    const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+        if (items.length === 0) return [];
+        const sortedItems = [...items].sort((a, b) => b.score - a.score);
+        const scoreRankMap = new Map<number, number>();
+        let rankCounter = 1;
+        for (const item of sortedItems) {
+            if (!scoreRankMap.has(item.score)) {
+                scoreRankMap.set(item.score, rankCounter++);
+            }
+        }
+        return sortedItems.map(item => ({...item, rank: scoreRankMap.get(item.score)!}));
+    };
+
+    const finalAgentLeaderboard = assignDenseRanks(podAgents.map(agent => ({ id: agent.id!, name: agent.name, totalPoints: agentScores[agent.id!] || 0, score: agentScores[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isCurrentUser: agent.id === currentUser?.id, })));
+    const finalTeamLeaderboard = assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, totalPoints: teamScores[team.id] || 0, score: teamScores[team.id] || 0, isCurrentUserTeam: team.agentIds?.includes(currentUser?.id || '') })));
+
+    return { agentDailyAchievements: finalAgentDailyAchievements, agentCompetitionAchievements: finalAgentCompetitionAchievements, podTargetSummary: finalPodTargetSummary, agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
+  }, [isLoadingUser, isLoadingData, currentUser, agentPodId, activeCompetition, dailyLogs, podLogs, rules, dailyTargets, podAgents, teams]);
 
 
   const debounce = useCallback((func: Function, delay: number) => {
@@ -481,6 +518,7 @@ export default function AgentDashboardPage() {
   const numericRules = useMemo(() => rules.filter(r => r.type === 'numeric'), [rules]);
   const checkboxRules = useMemo(() => rules.filter(r => r.type === 'checkbox'), [rules]);
   const canLog = !isLoading && currentUser && agentPodId && rules.length > 0 && activeCompetition;
+  const competitionName = allCompetitions.find(c => c.id === selectedCompetitionId)?.name;
 
   return (
     <div className="space-y-6">
@@ -489,24 +527,24 @@ export default function AgentDashboardPage() {
         )}
         <MessageOfTheDayDisplay emoji={messageOfTheDay?.emoji || null} content={messageOfTheDay?.isEnabled ? messageOfTheDay.content : null} isLoading={isLoadingMessage} />
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-                <Card className="frosted-glass">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <div><CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today&apos;s Achievements</CardTitle></div>
-                        <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{Array.from({ length: 3 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[130px] w-full" />))}</div>
-                        : !canLog && !error && !isLoadingUser && !agentPodId ? <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
-                        : !canLog && !error && numericRules.length === 0 ? <p className="text-muted-foreground text-center py-6">No numerical achievements to log for your pod today.</p>
-                        : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {numericRules.map((rule) => rule.id ? <AchievementCard key={rule.id} rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /> : null)}
-                        </div>}
-                    </CardContent>
-                </Card>
+        <Card className="frosted-glass">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div><CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today&apos;s Achievements</CardTitle></div>
+                <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[90px] w-full" />))}</div>
+                : !canLog && !error && !isLoadingUser && !agentPodId ? <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
+                : !canLog && !error && numericRules.length === 0 ? <p className="text-muted-foreground text-center py-6">No numerical achievements to log for your pod today.</p>
+                : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {numericRules.map((rule) => rule.id ? <AchievementCard key={rule.id} rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /> : null)}
+                </div>}
+            </CardContent>
+        </Card>
 
-                <Card className="frosted-glass">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+                 <Card className="frosted-glass">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><ListTodo /> Daily Tasks</CardTitle>
                         <CardDescription>Check off your completed one-off tasks for today.</CardDescription>
@@ -538,22 +576,19 @@ export default function AgentDashboardPage() {
                     </CardContent>
                 </Card>
             </div>
-
-             <div className="lg:col-span-1 space-y-6">
-                <Card className="frosted-glass shadow-md flex flex-col h-full">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <div className="flex items-center gap-2"><ListChecks className="h-5 w-5"/><CardTitle>Your Scores</CardTitle></div>
-                        <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
+            <div className="lg:col-span-2 space-y-6">
+                <Card className="frosted-glass shadow-md">
+                    <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="h-5 w-5"/>Your Scores</CardTitle><CardDescription>Your total scores for the currently selected competition.</CardDescription></CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-primary mb-2">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</div>
                         {isLoading ? <div className="space-y-2"><Skeleton className="h-4 w-full rounded mb-1" /><Skeleton className="h-4 w-5/6 rounded mb-1" /><Skeleton className="h-4 w-3/4 rounded" /></div>
                         : agentCompetitionAchievements?.achievements.length > 0 ? <div className="space-y-1 text-sm">{agentCompetitionAchievements.achievements.map(ach => <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap"><span className="font-medium truncate" title={ach.ruleName}>{ach.ruleEmoji} {ach.ruleName}</span><span className="text-muted-foreground">{ach.value.toLocaleString()} ({ach.points.toLocaleString()} pts)</span></div>)}</div>
                         : !error && !isLoading && activeCompetition ? <p className="text-sm text-muted-foreground text-center pt-4">No achievements logged yet for this competition.</p> : null }
                     </CardContent>
                 </Card>
-                <Card className="frosted-glass shadow-md flex flex-col h-full">
+                <Card className="frosted-glass shadow-md">
                     <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle><CardDescription>Your pod&apos;s progress towards today&apos;s targets.</CardDescription></CardHeader>
-                    <CardContent className="flex-grow">
+                    <CardContent>
                         {isLoading ? <div className="space-y-3"><Skeleton className="h-6 w-full rounded mb-2" /><Skeleton className="h-6 w-5/6 rounded mb-2" /><Skeleton className="h-6 w-3/4 rounded" /></div>
                         : podTargetSummary.length > 0 ? <div className="space-y-3">{podTargetSummary.map(summary => <div key={summary.ruleId}><div className="flex items-center justify-between text-sm mb-1"><span className="font-medium truncate" title={summary.ruleName}>{summary.ruleEmoji} {summary.ruleName}</span><span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>{summary.achieved.toLocaleString()} / {summary.target?.toLocaleString()}</span></div><Progress value={summary.progress ?? 0} className="h-2" /></div>)}</div>
                         : !error && !isLoading && activeCompetition ? <p className="text-muted-foreground text-sm text-center pt-4">No targets set for your pod today.</p> : null }
@@ -561,16 +596,56 @@ export default function AgentDashboardPage() {
                 </Card>
             </div>
         </div>
+
         <Card className="mt-6 frosted-glass">
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5"/>Competition Leaderboards</CardTitle>
-                    <Link href="/agent/leaderboard" passHref>
-                        <Button variant="outline" size="sm">View Full Leaderboard</Button>
-                    </Link>
+                    <div className="grid gap-2 max-w-sm">
+                        <Select
+                        onValueChange={(value) => {
+                            setSelectedCompetitionId(value);
+                            localStorage.setItem(AGENT_DASHBOARD_COMP_KEY, value);
+                        }}
+                        value={selectedCompetitionId}
+                        disabled={isLoading || allCompetitions.length === 0}
+                        >
+                        <SelectTrigger id="competition-select" className="h-8 text-xs">
+                            <SelectValue placeholder={isLoading ? "Loading..." : "Select Competition"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {allCompetitions.map(comp => (
+                            <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-                <CardDescription>A quick look at the top performers in the current competition.</CardDescription>
+                 <CardDescription>{`Showing overall standings for competition: ${competitionName || '...'}`}</CardDescription>
             </CardHeader>
+            <CardContent>
+                 {isLoadingData ? (
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <Skeleton className="h-[300px] w-full" />
+                        <Skeleton className="h-[300px] w-full" />
+                    </div>
+                ) : !selectedCompetitionId ? (
+                    <p className="text-muted-foreground text-center py-4">Please select a competition to view the leaderboards.</p>
+                ) : (
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <Leaderboard
+                            title="Agent Leaderboard"
+                            entries={agentLeaderboard}
+                            isStickyHeader={false}
+                        />
+                        <Leaderboard
+                            title="Team Leaderboard"
+                            entries={teamLeaderboard}
+                            isStickyHeader={false}
+                        />
+                    </div>
+                )}
+            </CardContent>
         </Card>
     </div>
   );

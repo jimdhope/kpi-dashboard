@@ -123,14 +123,6 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-               <SidebarMenuItem>
-                <Link href="/agent/leaderboard" passHref>
-                  <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/agent/leaderboard'}>
-                    <Trophy />
-                    <span>Leaderboard</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <Link href="/agent/rps-game" passHref>
                   <SidebarMenuButton tooltip="Rock Paper Scissors" isActive={currentPath === '/agent/rps-game'}>
