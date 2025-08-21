@@ -70,7 +70,12 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
             {
                 type: "Column",
                 width: "stretch",
-                items: [{ type: "TextBlock", text: "Progress", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
+                items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
+            },
+            {
+                type: "Column",
+                width: "stretch",
+                items: [{ type: "TextBlock", text: "Targets", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
             },
             {
                 type: "Column",
@@ -84,8 +89,8 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
     const agentRows = agentScores.map(score => {
         // Combine numeric emojis with task emojis
         const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
-        const allAchievements = `${score.emojiString || ''}${taskEmojis}`;
-        const progressDisplay = score.isAbsent ? "N/A" : (score.targetProgress || allAchievements.trim() || '-');
+        const achievementsDisplay = score.isAbsent ? "N/A" : (`${score.emojiString || ''}${taskEmojis}`.trim() || '-');
+        const targetDisplay = score.isAbsent ? "N/A" : (score.targetProgress || '-');
         const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints} pts`;
 
         return {
@@ -101,7 +106,12 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
                 {
                     type: "Column",
                     width: "stretch",
-                    items: [{ type: "TextBlock", text: progressDisplay, wrap: true, horizontalAlignment: "Center"}]
+                    items: [{ type: "TextBlock", text: achievementsDisplay, wrap: true, horizontalAlignment: "Center"}]
+                },
+                 {
+                    type: "Column",
+                    width: "stretch",
+                    items: [{ type: "TextBlock", text: targetDisplay, wrap: true, horizontalAlignment: "Center"}]
                 },
                 {
                     type: "Column",
