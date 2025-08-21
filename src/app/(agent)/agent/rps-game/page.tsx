@@ -92,7 +92,12 @@ export default function RpsGamePage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchDailyStats();
+    const unsubscribe = auth.onAuthStateChanged(user => {
+        if(user) {
+            fetchDailyStats();
+        }
+    });
+
     /*
     const interval = setInterval(() => {
       const nextPlayableTime = parseInt(localStorage.getItem(RPS_COOLDOWN_KEY) || '0', 10);
@@ -100,9 +105,10 @@ export default function RpsGamePage() {
       const remaining = Math.max(0, Math.ceil((nextPlayableTime - now) / 1000));
       setCooldown(remaining);
     }, 1000);
-
-    return () => clearInterval(interval);
     */
+
+    //return () => clearInterval(interval);
+     return () => unsubscribe();
   }, [fetchDailyStats]);
 
   const handleThrow = async (choice: Throw) => {
@@ -112,6 +118,16 @@ export default function RpsGamePage() {
       return;
     }
     */
+    const user = auth.currentUser;
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Not Logged In',
+            description: 'You must be logged in to play.',
+        });
+        return;
+    }
+
 
     setIsLoading(true);
     setPlayerThrow(choice);
@@ -125,7 +141,7 @@ export default function RpsGamePage() {
 
     try {
       await addDoc(collection(db, 'rpsGames'), {
-        userId: auth.currentUser?.uid || null, // Allow anonymous play
+        userId: user.uid,
         userThrow: choice,
         opponentThrow: opponentChoice,
         result: gameResult,
