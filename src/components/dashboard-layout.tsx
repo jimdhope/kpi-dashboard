@@ -19,7 +19,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare } from 'lucide-react'; // Removed ListTodo
+import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords } from 'lucide-react'; // Added Swords
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -136,6 +136,14 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                         <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/admin/daily-scores'}>
                             <ClipboardList />
                             <span>Daily Scores</span>
+                        </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                     <SidebarMenuItem>
+                        <Link href="/admin/rps-scores" passHref>
+                        <SidebarMenuButton tooltip="RPS Scores" isActive={currentPath === '/admin/rps-scores'}>
+                            <Swords />
+                            <span>RPS Scores</span>
                         </SidebarMenuButton>
                         </Link>
                     </SidebarMenuItem>
@@ -298,3 +306,5 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
     </SidebarProvider>
   );
 }
+
+    
