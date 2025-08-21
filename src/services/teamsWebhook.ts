@@ -11,6 +11,7 @@ export interface AgentScoreForTeams {
     emojiString: string;
     isAbsent?: boolean;
     completedTasks?: { ruleName: string; ruleEmoji: string }[]; // New field for tasks
+    targetProgress?: string;
 }
 
 // Interface for pod target summary passed TO this function
@@ -25,6 +26,20 @@ export interface PodTargetSummaryForTeams {
 export interface SimpleTaskLog {
     agentId: string;
     taskId: string;
+}
+
+// Interface for daily bonus summary
+export interface TeamBonusSummary {
+    teamName: string;
+    teamEmoji?: string;
+    bonusPoints: number;
+}
+
+// Interface for team total scores
+export interface TeamTotalScore {
+    teamName: string;
+    teamEmoji?: string;
+    totalPoints: number;
 }
 
 
@@ -55,12 +70,12 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
             {
                 type: "Column",
                 width: "stretch",
-                items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
+                items: [{ type: "TextBlock", text: "Progress", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
             },
             {
                 type: "Column",
                 width: "auto", // Adjust width as needed for points
-                items: [{ type: "TextBlock", text: "Total Score", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }]
+                items: [{ type: "TextBlock", text: "Score", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }]
             }
         ]
     };
@@ -70,7 +85,7 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
         // Combine numeric emojis with task emojis
         const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
         const allAchievements = `${score.emojiString || ''}${taskEmojis}`;
-        const achievementsDisplay = score.isAbsent ? "N/A" : (allAchievements.trim() !== '' ? allAchievements : '-');
+        const progressDisplay = score.isAbsent ? "N/A" : (score.targetProgress || allAchievements.trim() || '-');
         const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints} pts`;
 
         return {
@@ -81,12 +96,12 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
                 {
                     type: "Column",
                     width: "stretch",
-                    items: [{ type: "TextBlock", text: score.agentFirstName, wrap: true }]
+                    items: [{ type: "TextBlock", text: `${score.teamEmoji || ''} ${score.agentFirstName}`, wrap: true }]
                 },
                 {
                     type: "Column",
                     width: "stretch",
-                    items: [{ type: "TextBlock", text: achievementsDisplay, wrap: true, horizontalAlignment: "Center"}]
+                    items: [{ type: "TextBlock", text: progressDisplay, wrap: true, horizontalAlignment: "Center"}]
                 },
                 {
                     type: "Column",
@@ -98,7 +113,7 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
     });
 
      const taskKey = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
-     const taskKeyElement = taskKey ? { type: "TextBlock", text: taskKey, wrap: true, spacing: "Small", size: "Small" } : null;
+     const taskKeyElement = taskKey ? { type: "TextBlock", text: `Tasks: ${taskKey}`, wrap: true, spacing: "Small", size: "Small" } : null;
 
     return [headerRow, ...agentRows, taskKeyElement].filter(Boolean);
 };
@@ -120,7 +135,9 @@ export const sendTeamsUpdate = async (
     rules: RuleFormData[],
     agentScoresForTeams: AgentScoreForTeams[],
     podTargetSummaryForTeams: PodTargetSummaryForTeams[],
-    dailyTaskLogs: SimpleTaskLog[] // Changed to accept simplified task logs
+    dailyTaskLogs: SimpleTaskLog[], // Changed to accept simplified task logs
+    teamBonusSummary: TeamBonusSummary[],
+    teamTotalScores: TeamTotalScore[]
 ) => {
     console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}, Webhook URL Provided: ${!!webhookUrl}`);
     let currentStep = "Initial Checks";
@@ -135,24 +152,47 @@ export const sendTeamsUpdate = async (
         const numericRules = rules.filter(r => r.type === 'numeric');
         const taskRules = rules.filter(r => r.type === 'checkbox');
         const kpiKeyText = generateKpiKey(numericRules);
-        const kpiTargetsText = generatePodTargetsSummary(podTargetSummaryForTeams);
+
+        // Generate team standings text
+        const teamStandingsText = `**Current Standings:** ${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()} pts**`).join(' | ')}`;
+
+        // Generate daily bonus text if applicable
+        const dailyBonusText = teamBonusSummary.length > 0
+            ? `**Today's Adjustments:** ${teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints} pts**`).join(' | ')}`
+            : null;
 
         // Construct the Adaptive Card body elements
         const adaptiveCardBodyElements = [
+             {
+                "type": "TextBlock",
+                "text": `**Daily Scores for ${podName} - ${format(date, "PPP")}**`,
+                "wrap": true,
+                "size": "Large",
+                "weight": "Bolder"
+            },
             {
                 "type": "TextBlock",
-                "text": kpiKeyText,
+                "text": `**Key:** ${kpiKeyText}`,
                 "wrap": true,
-                "spacing": "Medium"
+                "spacing": "Medium",
+                "size": "Small"
             },
             // Insert the array of ColumnSet elements for the table
             ...generateAgentScoresAdaptiveCardElements(agentScoresForTeams, taskRules),
+            // Add team standings and bonuses at the end
             {
-                "type": "TextBlock",
-                "text": kpiTargetsText,
-                "wrap": true,
+                "type": "Container",
                 "separator": true,
-                "spacing": "Medium"
+                "spacing": "Medium",
+                "style": "emphasis",
+                "items": [
+                    {
+                        "type": "TextBlock",
+                        "text": teamStandingsText,
+                        "wrap": true
+                    },
+                     ...(dailyBonusText ? [{ "type": "TextBlock", "text": dailyBonusText, "wrap": true, "size": "Small", "spacing": "Small" }] : [])
+                ]
             }
         ];
 
@@ -200,5 +240,3 @@ export const sendTeamsUpdate = async (
         throw new Error(`Error during Teams update (${currentStep}): ${error.message}`);
     }
 };
-
-    
