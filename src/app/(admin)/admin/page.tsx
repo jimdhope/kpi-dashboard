@@ -13,7 +13,7 @@ import type { AppUser } from '@/services/user';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -121,29 +121,20 @@ export default function AdminDashboardPage() {
             const competitionsQuery = query(collection(db, 'competitions'), orderBy('startDate', 'desc')); // Changed orderBy to startDate desc
             unsubscribes.push(onSnapshot(competitionsQuery, (snapshot) => {
                 if (!isMounted) return;
-                setAllCompetitions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition)));
+                const fetchedCompetitions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
+                setAllCompetitions(fetchedCompetitions);
+                 // After competitions are fetched, also fetch all rules
+                 const rules = fetchedCompetitions.flatMap(c => c.rules || []);
+                 const uniqueRulesMap = new Map<string, RuleFormData>();
+                  rules.forEach(rule => {
+                      if (rule.id) {
+                         uniqueRulesMap.set(rule.id, rule);
+                      }
+                  });
+                 setAllRules(Array.from(uniqueRulesMap.values()));
+
             }, err => { if (isMounted) console.error("Error fetching competitions:", err); }));
 
-            const rulesPromises = [
-                getDocs(collection(db, 'campaignRules')),
-                getDocs(collection(db, 'competitions'))
-            ];
-            const [campaignRulesSnapshots, competitionDocsSnapshots] = await Promise.all(rulesPromises);
-            const rules: RuleFormData[] = [];
-            campaignRulesSnapshots.forEach(doc => {
-                 rules.push(...(doc.data().rules || []).map((r: any) => ({...r, id: r.id || `rule-${Math.random().toString(36).substr(2, 9)}` })));
-            });
-            competitionDocsSnapshots.forEach(doc => {
-                rules.push(...(doc.data().rules || []).map((r: any) => ({...r, id: r.id || `rule-${Math.random().toString(36).substr(2, 9)}` })));
-            });
-            const uniqueRulesMap = new Map<string, RuleFormData>();
-            rules.forEach(rule => {
-                const key = rule.id || rule.name;
-                if (!uniqueRulesMap.has(key)) {
-                    uniqueRulesMap.set(key, rule);
-                }
-            });
-            setAllRules(Array.from(uniqueRulesMap.values()));
 
         } catch (err) {
              if (isMounted) {
@@ -222,15 +213,21 @@ export default function AdminDashboardPage() {
             return { podLeaderboard: [], individualLeaderboard: [], achievementSummary: [] };
         }
 
+        const rulesMap = new Map(allRules.map(rule => [rule.id, rule]));
+
         // Agent scores (used for individual leaderboard)
         const agentScores: Record<string, number> = {};
         allUsers.forEach(user => {
              if(user.id) agentScores[user.id] = 0;
         });
-        achievementLogs.forEach(log => { // These logs are already filtered
-            const points = typeof log.points === 'number' ? log.points : 0;
-            if (agentScores.hasOwnProperty(log.agentId)) {
-                agentScores[log.agentId] += points;
+
+        achievementLogs.forEach(log => {
+            const rule = rulesMap.get(log.ruleId);
+            if (rule && rule.type === 'numeric') {
+                const points = (log.value || 0) * (rule.points || 0);
+                if (agentScores.hasOwnProperty(log.agentId)) {
+                    agentScores[log.agentId] += points;
+                }
             }
         });
 
@@ -259,11 +256,12 @@ export default function AdminDashboardPage() {
         allPods.forEach(pod => {
              podScores[pod.id] = { id: pod.id, name: pod.name, score: 0 };
         });
-        achievementLogs.forEach(log => { // These logs are already filtered
-            const points = typeof log.points === 'number' ? log.points : 0;
-            if (log.podId && podScores[log.podId]) {
+        achievementLogs.forEach(log => {
+             const rule = rulesMap.get(log.ruleId);
+             if (rule && rule.type === 'numeric' && log.podId && podScores[log.podId]) {
+                 const points = (log.value || 0) * (rule.points || 0);
                  podScores[log.podId].score += points;
-            }
+             }
         });
 
         const finalPodLeaderboard: LeaderboardEntry[] = Object.values(podScores)
@@ -284,11 +282,10 @@ export default function AdminDashboardPage() {
 
         // Achievement Summary
         const summary: Record<string, Omit<AchievementSummaryEntry, 'ruleName' | 'emoji'>> = {};
-        // Use rule details from the logs themselves, or fall back to allRules for canonical names/emojis if only ID is present
-        const ruleDetailsMap = new Map(allRules.map(rule => [rule.id || rule.name, { name: rule.name, emoji: rule.emoji || '❓' }]));
+        const ruleDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
 
-        achievementLogs.forEach(log => { // These logs are already filtered
-             const ruleKey = log.ruleId || log.ruleName; // Prefer ID if available
+        achievementLogs.forEach(log => {
+             const ruleKey = log.ruleId;
              if (!summary[ruleKey]) {
                  summary[ruleKey] = { totalValue: 0 };
              }
@@ -298,13 +295,10 @@ export default function AdminDashboardPage() {
 
         const finalAchievementSummary: AchievementSummaryEntry[] = Object.entries(summary)
             .map(([key, data]) => {
-                 // Try to get name/emoji from the first log entry for this rule, or fallback to allRules map
-                 const firstLogForRule = achievementLogs.find(log => (log.ruleId || log.ruleName) === key);
-                 const name = firstLogForRule?.ruleName || ruleDetailsMap.get(key)?.name || key;
-                 const emoji = firstLogForRule?.emoji || ruleDetailsMap.get(key)?.emoji || '❓';
+                 const details = ruleDetailsMap.get(key) || { name: 'Unknown Rule', emoji: '❓' };
                  return {
-                     ruleName: name,
-                     emoji: emoji,
+                     ruleName: details.name,
+                     emoji: details.emoji,
                      totalValue: data.totalValue,
                  };
             })
