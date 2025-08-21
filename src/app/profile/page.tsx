@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -23,19 +24,18 @@ import { onAuthStateChanged, type User, updatePassword as updateAuthPassword, re
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db, auth as firebaseAuth } from '@/lib/firebase';
 import { AppUser } from '@/services/user';
-// import type { Pod } from '@/app/(admin)/admin/pods/page'; // No longer needed
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Save, KeyRound } from 'lucide-react'; // Icons - Removed UserCircle, Building2
+import { Loader2, Save, KeyRound } from 'lucide-react';
 import { generateInitials } from '@/lib/utils';
-import { PasswordInput } from '@/components/ui/password-input'; // Import PasswordInput
-import { Separator } from '@/components/ui/separator'; // Import Separator
+import { PasswordInput } from '@/components/ui/password-input';
+import { Separator } from '@/components/ui/separator';
 
 // Extend validation schema for profile update including optional password change
 const profileFormSchema = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters.' }).max(50, { message: 'Name must be 50 characters or less.' }),
   avatarInitials: z.string().max(2, { message: "Initials can be max 2 characters."}).optional(),
   avatarBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')),
-  currentPassword: z.string().optional(), // This field is now used for re-authentication flow if password is being changed
+  currentPassword: z.string().optional(),
   newPassword: z.string().optional(),
   confirmPassword: z.string().optional(),
 })
@@ -44,10 +44,10 @@ const profileFormSchema = z.object({
     if (data.newPassword) {
         return data.confirmPassword && data.newPassword === data.confirmPassword;
     }
-    return true; // No validation needed if newPassword is not provided
+    return true;
   }, {
     message: "New passwords must match.",
-    path: ['confirmPassword'], // Error shown on confirmPassword field
+    path: ['confirmPassword'],
   })
  .refine(data => {
      // If newPassword is provided, it must meet length requirement
@@ -66,9 +66,6 @@ type ProfileFormData = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<AppUser | null>(null);
-  // Removed state for Pod Manager and Team Leader names
-  // const [podManagerName, setPodManagerName] = useState<string | null>(null);
-  // const [teamLeaderName, setTeamLeaderName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -79,82 +76,56 @@ export default function ProfilePage() {
       name: '',
       avatarInitials: '',
       avatarBgColor: '',
-      currentPassword: '', // Initialize password fields
+      currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     },
     mode: 'onChange',
   });
 
-   // Removed fetchUserName helper as it's no longer needed for this page
-
    // Fetch user data
   useEffect(() => {
      setIsLoading(true);
-     // Reset removed state
-     // setPodManagerName(null);
-     // setTeamLeaderName(null);
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         const userDocRef = doc(db, 'users', currentUser.uid);
-        console.log(`Auth state changed: Logged in user ${currentUser.uid}`);
         try {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const fetchedUserData = { id: userDocSnap.id, ...userDocSnap.data() } as AppUser;
-             // Ensure uid is present, fallback to id if necessary (shouldn't happen with correct setup)
              fetchedUserData.uid = fetchedUserData.uid || fetchedUserData.id!;
             setUserData(fetchedUserData);
-             console.log("Fetched user data:", fetchedUserData); // Log user data
-
-            // Reset form with fetched user data
             form.reset({
               name: fetchedUserData.name || '',
               avatarInitials: fetchedUserData.avatarInitials || '',
               avatarBgColor: fetchedUserData.avatarBgColor || '',
-              currentPassword: '', // Always clear password fields on load
+              currentPassword: '',
               newPassword: '',
               confirmPassword: '',
             });
-
-             // --- Removed Pod Manager and Team Leader Name Fetching Logic ---
-
           } else {
             console.warn(`Firestore document for user ${currentUser.uid} not found.`);
             form.reset({ name: currentUser.displayName || currentUser.email || '', avatarInitials: '', avatarBgColor: '' });
-            // Ensure a minimal userData object is set even if Firestore doc is missing
             setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [], podId: null });
             toast({ variant: "destructive", title: "Profile Data Missing", description: "Could not load full profile details." });
-             // Removed setting Pod Manager/Team Leader names
-            // setPodManagerName('N/A');
-            // setTeamLeaderName('N/A');
           }
         } catch (error) {
            console.error("Error fetching user data:", error);
            toast({ variant: "destructive", title: "Error Loading Profile", description: "Could not load profile." });
            form.reset({ name: currentUser.displayName || currentUser.email || '', avatarInitials: '', avatarBgColor: '' });
            setUserData({ uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email || '', roles: [], podId: null });
-            // Removed setting Pod Manager/Team Leader names
-           // setPodManagerName('Error Loading');
-           // setTeamLeaderName('Error Loading');
         }
       } else {
-         console.log("Auth state changed: No user logged in.");
-        // No user logged in
         setUser(null);
         setUserData(null);
-         // Removed setting Pod Manager/Team Leader names
-        // setPodManagerName(null);
-        // setTeamLeaderName(null);
-         // Optionally redirect: router.push('/login');
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-   }, [form, toast]); // Removed fetchUserName from dependencies
+   }, [form, toast]);
 
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -175,15 +146,13 @@ export default function ProfilePage() {
         avatarBgColor: data.avatarBgColor || '',
       };
       await setDoc(userDocRef, profileUpdates, { merge: true });
-      setUserData((prev) => prev ? { ...prev, ...profileUpdates } as AppUser : null); // Optimistic update
+      setUserData((prev) => prev ? { ...prev, ...profileUpdates } as AppUser : null);
       profileUpdateSuccess = true;
 
        // --- Update Password ---
         if (data.newPassword && data.confirmPassword) {
              console.log("Attempting password update...");
              try {
-                // For client-side password updates, re-authentication is required for security.
-                // This is a basic example. A better UX would be a modal asking for the password.
                  if (!data.currentPassword) {
                      toast({
                          variant: "destructive",
@@ -194,14 +163,11 @@ export default function ProfilePage() {
                  }
                 const credential = EmailAuthProvider.credential(user.email!, data.currentPassword);
                 await reauthenticateWithCredential(user, credential);
-
-                // If re-authentication is successful, update the password
-                 await updateAuthPassword(user, data.newPassword);
+                await updateAuthPassword(user, data.newPassword);
                  console.log("Password updated successfully in Firebase Auth.");
                  passwordUpdateSuccess = true;
-                 // Clear password fields after successful update
                  form.reset({
-                     ...form.getValues(), // Keep other form values
+                     ...form.getValues(),
                      currentPassword: '',
                      newPassword: '',
                      confirmPassword: '',
@@ -228,15 +194,12 @@ export default function ProfilePage() {
                          description: error.message || "Could not update your password.",
                      });
                  }
-                 // Do not set passwordUpdateSuccess = true if it fails
              }
         } else {
-            // If no new password was entered, consider it "successful" in the context of not failing
              passwordUpdateSuccess = true;
         }
 
 
-      // --- Final Toast Message ---
        if (profileUpdateSuccess && passwordUpdateSuccess) {
             let description = "Your profile details have been saved.";
             if (data.newPassword) {
@@ -244,10 +207,8 @@ export default function ProfilePage() {
             }
            toast({ title: "Profile Updated", description: description });
        } else if (profileUpdateSuccess) {
-            // Profile saved, but password failed (toast for password failure already shown)
             toast({ title: "Profile Details Updated", description: "Your basic profile details were saved, but the password change failed." });
        }
-      // If profile update fails, the specific error is caught below
 
     } catch (error: any) {
       console.error("Error updating profile:", error);
@@ -269,7 +230,6 @@ export default function ProfilePage() {
   const previewBgColor = watchBgColor;
 
   if (isLoading) {
-    // Skeleton loading state... (remains the same)
      return (
        <div className="space-y-6">
          <Card>
@@ -289,7 +249,7 @@ export default function ProfilePage() {
              <Skeleton className="h-10 w-full rounded" />
              <Skeleton className="h-10 w-full rounded" />
              <Skeleton className="h-10 w-full rounded" />
-             <Skeleton className="h-10 w-full rounded" /> {/* Password */}
+             <Skeleton className="h-10 w-full rounded" />
              <Skeleton className="h-10 w-24 rounded" />
            </CardContent>
          </Card>
@@ -298,7 +258,6 @@ export default function ProfilePage() {
   }
 
    if (!user) {
-    // User not logged in state... (remains the same)
      return (
        <div className="flex justify-center items-center h-full">
          <p>Please <a href="/login" className="underline text-primary">log in</a> to view your profile.</p>
@@ -316,7 +275,6 @@ export default function ProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-               {/* Avatar Preview and Customization */}
               <div className="flex flex-col sm:flex-row items-start gap-6">
                 <div className="flex-shrink-0">
                   <Label>Avatar Preview</Label>
@@ -324,7 +282,7 @@ export default function ProfilePage() {
                     <AvatarFallback
                       initials={previewInitials}
                       backgroundColor={previewBgColor}
-                      key={previewInitials + previewBgColor} // Add key to force re-render on change
+                      key={previewInitials + previewBgColor}
                     >
                       {previewInitials}
                     </AvatarFallback>
@@ -366,7 +324,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Name Field */}
               <FormField
                 control={form.control}
                 name="name"
@@ -381,24 +338,19 @@ export default function ProfilePage() {
                 )}
               />
 
-              {/* Display Email (Read-only) */}
               <div className="space-y-2">
                  <Label>Email Address</Label>
                  <Input value={user?.email || 'Loading...'} readOnly disabled className="bg-muted/50"/>
                  <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
               </div>
 
-               {/* Removed Team Information Section */}
-
               <Separator />
 
-               {/* Password Change Section */}
                <div className="space-y-4">
                    <h3 className="text-lg font-semibold flex items-center gap-2"><KeyRound className="h-5 w-5"/>Change Password</h3>
                    <p className="text-sm text-muted-foreground">
                        Leave the fields below blank to keep your current password.
                    </p>
-                   {/* Current password field for re-authentication */}
                    <FormField
                        control={form.control}
                        name="currentPassword"
@@ -448,10 +400,6 @@ export default function ProfilePage() {
             </form>
           </Form>
         </CardContent>
-         {/* Optional Footer */}
-         {/* <CardFooter>
-            <p className="text-xs text-muted-foreground">Last updated: ...</p>
-         </CardFooter> */}
       </Card>
     </div>
   );
