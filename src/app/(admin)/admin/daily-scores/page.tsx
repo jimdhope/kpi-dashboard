@@ -315,15 +315,16 @@ export default function AdminDailyScoresPage() {
     const todayStart = startOfDay(selectedDate);
     const rulesMap = new Map(rules.map(rule => [rule.id, rule]));
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
+    const numericRules = rules.filter(r => r.type === 'numeric');
 
     // Filter logs for the selected day for daily calculations
     const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
+    const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
+    const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
 
     // Agent daily scores calculation
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
-    const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
-    const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
 
     dailyLogs.forEach(log => {
       if (log.status === 'absent') {
@@ -343,7 +344,7 @@ export default function AdminDailyScoresPage() {
       if (!agent.id) return;
       const agentLogs = dailyLogs.filter(log => log.agentId === agent.id && log.status !== 'absent');
       let emojis = '';
-      const sortedNumericRules = rules.filter(r => r.type === 'numeric').sort((a, b) => a.name.localeCompare(b.name));
+      const sortedNumericRules = numericRules.sort((a, b) => a.name.localeCompare(b.name));
       sortedNumericRules.forEach(rule => {
         if (!rule.id) return;
         const logForRule = agentLogs.find(log => log.ruleId === rule.id);
@@ -424,7 +425,6 @@ export default function AdminDailyScoresPage() {
     })).sort((a,b) => b.totalPoints - a.totalPoints);
 
     // Rule Key String generation
-    const numericRules = rules.filter(r => r.type === 'numeric');
     const taskRules = rules.filter(r => r.type === 'checkbox');
     let finalRuleKeyString = numericRules.map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`).join('  ');
     const taskKeyString = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
@@ -432,7 +432,7 @@ export default function AdminDailyScoresPage() {
         finalRuleKeyString += (finalRuleKeyString ? ' | ' : '') + taskKeyString;
     }
 
-    // Correct Pod Target Summary calculation
+    // Correct Pod Target Summary calculation using only dailyLogs
     const dailyPodRuleTotals: Record<string, number> = {};
     numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
     dailyLogs.forEach(log => {
@@ -443,11 +443,11 @@ export default function AdminDailyScoresPage() {
 
     const finalPodTargetSummary: PodTargetSummary[] = numericRules
         .map(rule => {
-            if (!rule.id || !dailyTargets?.[rule.id]?.[dayOfWeek]) return null;
-            const individualTarget = dailyTargets[rule.id]?.[dayOfWeek] ?? null;
-            if (individualTarget === null || individualTarget < 0) return null;
+            if (!rule.id) return null;
+            const individualTarget = dailyTargets?.[rule.id]?.[dayOfWeek];
+            if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
             const podTarget = individualTarget * activeAgents.length;
-            const achieved = dailyPodRuleTotals[rule.id] || 0; // Use the correctly filtered daily totals
+            const achieved = dailyPodRuleTotals[rule.id] || 0;
             const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
         }).filter((s): s is PodTargetSummary => s !== null);
@@ -537,7 +537,7 @@ export default function AdminDailyScoresPage() {
 
             {isLoadingDisplay && (
                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableHeader>
                         <TableRow>
                             <TableHead className="w-[150px]"><Skeleton className="h-4 w-20" /></TableHead>
                             <TableHead><Skeleton className="h-4 w-3/4" /></TableHead>
@@ -565,7 +565,7 @@ export default function AdminDailyScoresPage() {
             {canDisplayTable && (
                 <>
                     <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-background">
+                        <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[30px]">Team</TableHead>
                                 <TableHead className="w-[150px]">Agent</TableHead>
@@ -664,3 +664,5 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
+
+    
