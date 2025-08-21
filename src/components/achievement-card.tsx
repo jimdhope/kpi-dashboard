@@ -2,11 +2,11 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Minus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
+import type { RuleFormData } from '@/models/types';
 
 interface AchievementCardProps {
   rule: RuleFormData;
@@ -19,16 +19,23 @@ interface AchievementCardProps {
 
 export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onDecrement, disabled = false }: AchievementCardProps) {
   return (
-    <Card className={cn("shadow-sm overflow-hidden", disabled && "opacity-50 bg-muted/50")}>
-      <CardContent className="p-0 flex items-center justify-between">
-        <div className="flex-grow p-2 flex items-center justify-center">
-          <p className="text-xl font-bold text-primary">{currentValue}</p>
+    <Card className={cn("shadow-sm overflow-hidden flex flex-col h-full", disabled && "opacity-50 bg-muted/50")}>
+       <CardHeader className="p-3 pb-0">
+         <CardTitle className="text-sm font-medium truncate flex items-center gap-2">
+            <span className="text-lg">{rule.emoji || '❓'}</span>
+            <span className="truncate" title={rule.name}>{rule.name}</span>
+         </CardTitle>
+         <CardDescription className="text-xs">{rule.points} pts each</CardDescription>
+       </CardHeader>
+      <CardContent className="p-3 flex items-center justify-between flex-grow">
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-2xl font-bold text-primary">{currentValue}</p>
         </div>
-        <div className="flex flex-col border-l">
+        <div className="flex flex-col border-l ml-3 pl-3">
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-none border-b"
+                className="h-9 w-9 rounded-md border-b"
                 onClick={onIncrement}
                 disabled={isSaving || disabled}
                 aria-label={`Increase ${rule.name}`}
@@ -38,7 +45,7 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-none"
+                className="h-9 w-9 rounded-md"
                 onClick={onDecrement}
                 disabled={isSaving || currentValue <= 0 || disabled}
                 aria-label={`Decrease ${rule.name}`}

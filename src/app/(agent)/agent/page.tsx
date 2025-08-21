@@ -337,6 +337,7 @@ export default function AgentDashboardPage() {
     }
 
     const todayStart = startOfDay(new Date());
+    const rulesMap = new Map(rules.map(rule => [rule.id, rule]));
     const todayUserLogs = dailyLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
 
     let dailyTotalPoints = 0;
@@ -344,7 +345,7 @@ export default function AgentDashboardPage() {
     const displayRules = rules.filter(rule => rule.type === 'numeric');
 
     todayUserLogs.forEach(log => {
-        const rule = displayRules.find(r => r.id === log.ruleId);
+        const rule = rulesMap.get(log.ruleId);
         if (rule?.id) {
             const pointsToAdd = log.points || 0;
             dailyTotalPoints += pointsToAdd;
@@ -359,7 +360,7 @@ export default function AgentDashboardPage() {
     let competitionTotalPoints = 0;
     const competitionAchievementsMap = new Map<string, AgentCompetitionAchievements['achievements'][0]>();
      dailyLogs.forEach(log => {
-        const rule = displayRules.find(r => r.id === log.ruleId);
+        const rule = rulesMap.get(log.ruleId);
         if (rule?.id) {
             const pointsToAdd = log.points || 0;
             competitionTotalPoints += pointsToAdd;
@@ -405,7 +406,6 @@ export default function AgentDashboardPage() {
       .sort((a, b) => a.ruleName.localeCompare(b.ruleName));
     
     // Leaderboard logic
-    const rulesMap = new Map((rules || []).map(rule => [rule.id, rule]));
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
@@ -523,7 +523,6 @@ export default function AgentDashboardPage() {
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingMessage;
   const numericRules = useMemo(() => rules.filter(r => r.type === 'numeric'), [rules]);
-  const checkboxRules = useMemo(() => rules.filter(r => r.type === 'checkbox'), [rules]);
   const canLog = !isLoading && currentUser && agentPodId && rules.length > 0 && activeCompetition;
   const competitionName = allCompetitions.find(c => c.id === selectedCompetitionId)?.name;
 
@@ -540,7 +539,7 @@ export default function AgentDashboardPage() {
                 <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
             </CardHeader>
             <CardContent>
-                {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[90px] w-full" />))}</div>
+                {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[120px] w-full" />))}</div>
                 : !canLog && !error && !isLoadingUser && !agentPodId ? <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
                 : !canLog && !error && numericRules.length === 0 ? <p className="text-muted-foreground text-center py-6">No numerical achievements to log for your pod today.</p>
                 : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -626,3 +625,4 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
+
