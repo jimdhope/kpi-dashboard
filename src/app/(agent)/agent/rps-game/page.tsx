@@ -214,16 +214,12 @@ export default function RpsGamePage() {
             </Button>
           </div>
 
-          <div className="min-h-[80px] flex flex-col items-center justify-center text-center p-4 border rounded-lg bg-muted/50">
+          <div className="min-h-[80px] flex flex-col items-center justify-center text-center p-4 border rounded-lg bg-muted/50 space-y-2">
             {isLoading && <p>Throwing...</p>}
-            {!isLoading && cooldown > 0 && (
-              <div className="flex items-center gap-2 text-lg">
-                <Hourglass className="h-5 w-5 animate-spin" />
-                Play again in {Math.floor(cooldown / 60)}:{(cooldown % 60).toString().padStart(2, '0')}
-              </div>
-            )}
-            {!isLoading && cooldown === 0 && result && (
-              <div className="space-y-2">
+
+            {/* Always show result if it exists */}
+            {!isLoading && result && (
+              <div className="space-y-1">
                 <p className="text-xl">
                   You threw {getThrowIcon(playerThrow)}, the app threw {getThrowIcon(opponentThrow)}.
                 </p>
@@ -232,9 +228,19 @@ export default function RpsGamePage() {
                 </p>
               </div>
             )}
-             {!isLoading && cooldown === 0 && !result && (
-                <p className="text-muted-foreground">Make your throw!</p>
-             )}
+            
+            {/* Show cooldown timer if active */}
+            {!isLoading && cooldown > 0 && (
+              <div className="flex items-center gap-2 text-lg">
+                <Hourglass className="h-5 w-5 animate-spin" />
+                Play again in {Math.floor(cooldown / 60)}:{(cooldown % 60).toString().padStart(2, '0')}
+              </div>
+            )}
+
+            {/* Show initial prompt if no game has been played yet */}
+            {!isLoading && !result && cooldown === 0 && (
+              <p className="text-muted-foreground">Make your throw!</p>
+            )}
           </div>
 
           <Card>
