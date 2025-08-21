@@ -443,14 +443,14 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
            {/* Rules Section */}
             <div className="space-y-4 rounded-md border p-4 mt-4">
                 <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">Competition Rules</h3>
+                    <h3 className="text-lg font-semibold">Achievements & Tasks</h3>
                      <Button type="button" variant="outline" size="sm" onClick={handleAddRule} disabled={isSubmitting || isLoadingRules}>
                        {isLoadingRules ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                       Add Rule
+                       Add Item
                      </Button>
                 </div>
                 <FormDescription>
-                   {mode === 'add' ? 'Add rules specific to this competition.' : 'Modify the rules for this specific competition.'}
+                   Add point-based achievements (Numeric) or daily completion items (Checkbox) for this competition.
                 </FormDescription>
 
                  {isLoadingRules && (
@@ -465,7 +465,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                     {!isLoadingRules && fields.length === 0 ? (
                          <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md">
                              <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/>
-                             <p>No rules defined. Click "Add Rule" to start.</p>
+                             <p>No rules defined. Click "Add Item" to start.</p>
                          </div>
                      ) : null }
 
@@ -474,7 +474,7 @@ export function CompetitionForm({ onSubmit, onCancel, initialData, campaigns, po
                             {/* Header Row */}
                             <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
                                 <Label className="w-12 text-left">Emoji</Label>
-                                <Label className="flex-1 text-left">Rule Name</Label>
+                                <Label className="flex-1 text-left">Item Name</Label>
                                 <Label className="w-24 text-left">Type</Label>
                                 <Label className="w-20 text-left">Points</Label>
                                 <div className="w-8" /> {/* Spacer */}
