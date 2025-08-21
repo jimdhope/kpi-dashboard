@@ -287,7 +287,7 @@ export default function AgentDashboardPage() {
 
         const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
         const dailyQuery = query(achievementsRef, where('agentId', '==', currentUser.id), where('podId', '==', agentPodId), where('date', '==', dateTimestamp), where('competitionId', '==', selectedCompetitionId));
-        listenerRefs.current.dailyAchievements = onSnapshot(snapshot, (snapshot) => {
+        listenerRefs.current.dailyAchievements = onSnapshot(dailyQuery, (snapshot) => {
             if (!isMounted) return;
             const existingAchievements = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog));
             const initialInputs: AgentAchievementInputState = {};
