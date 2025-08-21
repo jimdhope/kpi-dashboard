@@ -260,7 +260,7 @@ export default function AdminLogAchievementsPage() {
         }
 
         const competitionsRef = collection(db, 'competitions');
-        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+        const dateForQuery = startOfDay(selectedDate); // Use start of day for comparison
         const competitionQuery = query(
             competitionsRef,
             where('podIds', 'array-contains', selectedPodId),
@@ -272,37 +272,23 @@ export default function AdminLogAchievementsPage() {
 
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] };
-            const startDate = comp.startDate;
-            const endDate = comp.endDate;
+            // Ensure dates are valid JS Date objects before comparing
+            const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
+            const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
 
-             if (startDate instanceof Timestamp && endDate instanceof Timestamp && selectedDate >= startDate.toDate() && selectedDate <= endDate.toDate()) {
+            if (startDate && endDate && dateForQuery >= startDate && dateForQuery <= endDate) {
                  competitionForLogging = comp;
-                 break; // Found the active one, no need to look further
+                 break;
              }
         }
-        
-        // If no active competition is found, select the most recent one as a fallback.
-        if (!competitionForLogging && competitionSnapshot.docs.length > 0) {
-            const mostRecentValidComp = competitionSnapshot.docs
-                .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] }))
-                .find(comp => comp.startDate instanceof Timestamp && comp.endDate instanceof Timestamp); // Just need valid dates
-
-            if (mostRecentValidComp) {
-                competitionForLogging = mostRecentValidComp;
-                toast({
-                    variant: "default",
-                    title: "Logging to Past/Future Competition",
-                    description: `No competition active for ${format(selectedDate, 'PPP')}. Logging against "${competitionForLogging.name}".`
-                });
-            }
-        }
-
 
         if (competitionForLogging) {
             setActiveCompetitionId(competitionForLogging.id);
             setCompetitionRules(competitionForLogging.rules || []);
             setTeams(competitionForLogging.teams?.filter(team => team.agentIds.some(agentId => fetchedAgents.some(agent => agent.id === agentId))) || []);
+             setIsLoadingRules(false); // We have rules now, so this is done.
 
+            const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
             const achievementsRef = collection(db, 'dailyAchievements');
             const initialAchievementsQuery = query(
                 achievementsRef,
@@ -390,7 +376,7 @@ export default function AdminLogAchievementsPage() {
         } else {
             setActiveCompetitionId(null);
             setCompetitionRules([]);
-            toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod. Cannot log achievements.` });
+            toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod on this date. Cannot log achievements.` });
             setIsLoadingRules(false);
             setIsLoadingInitialData(false);
         }
@@ -399,10 +385,9 @@ export default function AdminLogAchievementsPage() {
         setError("Failed to load data for the selected pod/date.");
         toast({ variant: "destructive", title: "Error", description: "Could not load agent or competition data." });
         setAgents([]); setCompetitionRules([]); setAchievementInputs({}); setActiveCompetitionId(null);
-      } finally {
-        if (isLoadingAgents) setIsLoadingAgents(false);
-        if (isLoadingRules) setIsLoadingRules(false);
-        if (isLoadingInitialData) setIsLoadingInitialData(false);
+        setIsLoadingAgents(false);
+        setIsLoadingRules(false);
+        setIsLoadingInitialData(false);
       }
     };
 
@@ -900,3 +885,5 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
+
+    
