@@ -98,26 +98,28 @@ export default function RpsGamePage() {
         }
     });
 
-    /*
+    
     const interval = setInterval(() => {
       const nextPlayableTime = parseInt(localStorage.getItem(RPS_COOLDOWN_KEY) || '0', 10);
       const now = new Date().getTime();
       const remaining = Math.max(0, Math.ceil((nextPlayableTime - now) / 1000));
       setCooldown(remaining);
     }, 1000);
-    */
+    
 
-    //return () => clearInterval(interval);
-     return () => unsubscribe();
+    return () => {
+        clearInterval(interval);
+        unsubscribe();
+    }
   }, [fetchDailyStats]);
 
   const handleThrow = async (choice: Throw) => {
-    /*
+    
     if (cooldown > 0) {
       toast({ title: 'Cooldown Active', description: `You can play again in ${cooldown} seconds.` });
       return;
     }
-    */
+    
     const user = auth.currentUser;
     if (!user) {
         toast({
@@ -148,12 +150,12 @@ export default function RpsGamePage() {
         timestamp: Timestamp.now(),
       });
 
-      /*
+      
       // Set cooldown for 15 minutes (900,000 milliseconds)
       const nextPlayableTime = new Date().getTime() + 15 * 60 * 1000;
       localStorage.setItem(RPS_COOLDOWN_KEY, nextPlayableTime.toString());
       setCooldown(900); // 15 mins in seconds
-      */
+      
 
       toast({
         title: `You ${gameResult === 'draw' ? 'drew' : gameResult}!`,
