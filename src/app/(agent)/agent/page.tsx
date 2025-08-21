@@ -346,8 +346,8 @@ export default function AgentDashboardPage() {
 
     todayUserLogs.forEach(log => {
         const rule = rulesMap.get(log.ruleId);
-        if (rule?.id) {
-            const pointsToAdd = log.points || 0;
+        if (rule?.id && rule.type === 'numeric') {
+            const pointsToAdd = (log.value || 0) * (rule.points || 0); // Correctly calculate points
             dailyTotalPoints += pointsToAdd;
             const currentRuleData = dailyAchievementsMap.get(rule.id) || { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0, points: 0 };
             currentRuleData.value += log.value || 0;
@@ -361,8 +361,8 @@ export default function AgentDashboardPage() {
     const competitionAchievementsMap = new Map<string, AgentCompetitionAchievements['achievements'][0]>();
      dailyLogs.forEach(log => {
         const rule = rulesMap.get(log.ruleId);
-        if (rule?.id) {
-            const pointsToAdd = log.points || 0;
+        if (rule?.id && rule.type === 'numeric') {
+            const pointsToAdd = (log.value || 0) * (rule.points || 0); // Correctly calculate points
             competitionTotalPoints += pointsToAdd;
             const currentRuleData = competitionAchievementsMap.get(rule.id) || { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', value: 0, points: 0 };
             currentRuleData.value += log.value || 0;
@@ -410,9 +410,12 @@ export default function AgentDashboardPage() {
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
     podLogs.forEach(log => {
-        const points = log.points ?? (log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0);
-        if (agentScores.hasOwnProperty(log.agentId)) {
-            agentScores[log.agentId] += points;
+        const rule = rulesMap.get(log.ruleId);
+        if (rule?.id && rule.type === 'numeric') {
+            const points = (log.value || 0) * (rule.points || 0);
+            if (agentScores.hasOwnProperty(log.agentId)) {
+                agentScores[log.agentId] += points;
+            }
         }
     });
 
@@ -420,10 +423,13 @@ export default function AgentDashboardPage() {
      teams.forEach(team => { teamScores[team.id] = 0; });
  
      podLogs.forEach(log => {
-        const points = log.points ?? (log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0);
-        const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-        if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
-            teamScores[agentTeam.id] += points;
+        const rule = rulesMap.get(log.ruleId);
+        if (rule?.id && rule.type === 'numeric') {
+            const points = (log.value || 0) * (rule.points || 0);
+            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+            if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
+                teamScores[agentTeam.id] += points;
+            }
         }
      });
 
