@@ -317,18 +317,18 @@ export default function AdminDailyScoresPage() {
     const dayOfWeek = daysOfWeek[getDay(selectedDate)];
     const numericRules = rules.filter(r => r.type === 'numeric');
 
-    // Filter logs for the selected day for daily calculations
+    // Filter logs for the selected day for all daily calculations
     const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
     const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
     
-    // Create a single source of truth for daily rule totals
+    // Create a single source of truth for daily rule totals by summing the values from dailyLogs
     const dailyPodRuleTotals: Record<string, number> = {};
     numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
     dailyLogs.forEach(log => {
        if (log.ruleId && dailyPodRuleTotals.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
-           dailyPodRuleTotals[log.ruleId] += (log.value || 0);
+           dailyPodRuleTotals[rule.id] += (log.value || 0);
        }
     });
 
@@ -449,7 +449,7 @@ export default function AdminDailyScoresPage() {
             if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
             
             const podTarget = individualTarget * activeAgents.length;
-            const achieved = dailyPodRuleTotals[rule.id] || 0;
+            const achieved = dailyPodRuleTotals[rule.id] || 0; // Use the single source of truth
             const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
             
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
@@ -659,7 +659,7 @@ export default function AdminDailyScoresPage() {
                 {!isLoadingDisplay && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
                     <p className="text-center text-muted-foreground mt-6">No active competition found for this pod and date.</p>
                 )}
-                {!isLoadingDisplay && canDisplayTable && agentScores.length === 0 && competitionLogs.filter(log => startOfDay(log.date.toDate()).getTime() === startOfDay(selectedDate).getTime()).length === 0 && (
+                {!isLoadingDisplay && canDisplayTable && agentScores.length === 0 && competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === startOfDay(selectedDate).getTime()).length === 0 && (
                     <p className="text-center text-muted-foreground mt-6">No achievements logged for this pod on this date.</p>
                 )}
             </CardContent>
