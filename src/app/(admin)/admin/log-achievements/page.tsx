@@ -272,10 +272,10 @@ export default function AdminLogAchievementsPage() {
 
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] };
-            const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
-            const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
+            const startDate = comp.startDate;
+            const endDate = comp.endDate;
 
-             if (startDate && endDate && selectedDate >= startDate && selectedDate <= endDate) {
+             if (startDate instanceof Timestamp && endDate instanceof Timestamp && selectedDate >= startDate.toDate() && selectedDate <= endDate.toDate()) {
                  competitionForLogging = comp;
                  break; // Found the active one, no need to look further
              }
@@ -283,7 +283,6 @@ export default function AdminLogAchievementsPage() {
         
         // If no active competition is found, select the most recent one as a fallback.
         if (!competitionForLogging && competitionSnapshot.docs.length > 0) {
-            // Find the most recent competition with valid dates from the already fetched list
             const mostRecentValidComp = competitionSnapshot.docs
                 .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] }))
                 .find(comp => comp.startDate instanceof Timestamp && comp.endDate instanceof Timestamp); // Just need valid dates
@@ -447,7 +446,13 @@ export default function AdminLogAchievementsPage() {
        };
 
        const achievementsRef = collection(db, 'dailyAchievements');
-       const existingLogId = achievementInputs[agentId]?.[ruleId]?.existingLogId;
+       // Use a function form of setState to get the latest achievementInputs
+       let existingLogId: string | undefined;
+       setAchievementInputs(currentInputs => {
+           existingLogId = currentInputs[agentId]?.[ruleId]?.existingLogId;
+           return currentInputs;
+       });
+
 
        if (existingLogId) {
          const docRef = doc(achievementsRef, existingLogId);
@@ -491,7 +496,7 @@ export default function AdminLogAchievementsPage() {
        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
   }, [
-    selectedPodId, currentUserUid, activeCompetitionId, competitionRules, achievementInputs,
+    selectedPodId, currentUserUid, activeCompetitionId, competitionRules,
     selectedDate, toast
   ]);
 
@@ -656,6 +661,7 @@ export default function AdminLogAchievementsPage() {
         const existingLogsMap = new Map(snapshot.docs.map(doc => [doc.data().teamId, doc.id]));
 
         for (const { teamId, points } of logsToProcess) {
+            const existingLogId = existingLogsMap.get(teamId);
             const logEntry: Omit<TeamBonusLog, 'id'> = {
                 teamId, podId: selectedPodId, competitionId: activeCompetitionId,
                 points, reason: "Manual Adjustment", date: dateTimestamp,
