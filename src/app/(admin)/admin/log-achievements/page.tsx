@@ -729,12 +729,11 @@ export default function AdminLogAchievementsPage() {
             return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };
         }).filter((s): s is PodTargetSummaryForTeams => s !== null);
 
-        // Team Scores
+        // Daily Team Scores
         const teamTotalScores: TeamTotalScore[] = teams.map(team => {
-            const totalPoints = team.agentIds.reduce((teamTotal, agentId) => {
-                const agentScore = agentScores.find(s => s.agentFirstName === agents.find(a => a.id === agentId)?.name.split(' ')[0] && !s.isAbsent);
-                return teamTotal + (agentScore?.totalPoints || 0);
-            }, 0);
+            const teamAgentIds = new Set(team.agentIds);
+            const teamDailyLogs = dailyLogs.filter(log => teamAgentIds.has(log.agentId));
+            const totalPoints = teamDailyLogs.reduce((sum, log) => sum + (log.points || 0), 0);
             const bonusPoints = dailyBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
             return { teamName: team.name, teamEmoji: team.emoji, totalPoints: totalPoints + bonusPoints };
         }).sort((a,b) => b.totalPoints - a.totalPoints);

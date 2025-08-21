@@ -154,7 +154,7 @@ export const sendTeamsUpdate = async (
         const kpiKeyText = generateKpiKey(numericRules);
 
         // Generate team standings text with a line break
-        const teamStandingsText = `**Current Standings:**\n\n${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()}**`).join(' | ')}`;
+        const teamStandingsText = `${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()}**`).join(' | ')}`;
 
         // Generate daily bonus text if applicable
         const dailyBonusText = teamBonusSummary.length > 0
@@ -239,5 +239,3 @@ export const sendTeamsUpdate = async (
         throw new Error(`Error during Teams update (${currentStep}): ${error.message}`);
     }
 };
-
-    
