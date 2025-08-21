@@ -38,22 +38,11 @@ const formatRoleForDisplay = (role: UserRole) => {
 };
 
 // Define the validation schema using Zod
-const userFormSchemaBase = z.object({
+const userFormSchema = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters.' }).max(50, { message: 'Name must be 50 characters or less.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   roles: z.array(z.enum(USER_ROLES)).min(1, { message: 'Please select at least one role.' }),
   password: z.string().optional(),
-});
-
-// Full schema for validation use, especially for 'add' mode
-const userFormSchema = userFormSchemaBase.superRefine((data, ctx) => {
-    if (data.password && data.password.length < 6) {
-         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Password must be at least 6 characters.',
-            path: ['password'],
-         });
-    }
 });
 
 // Type for form data based on the schema
