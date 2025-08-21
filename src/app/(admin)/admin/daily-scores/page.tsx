@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, AlertCircle, Filter, Swords, Trophy } from 'lucide-react'; // Removed Send
+import { CalendarIcon, Loader2, AlertCircle, Filter, Swords, Trophy, Target } from 'lucide-react'; // Added Target
 import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -34,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import type { DailyAchievementLog, DailyTaskLog, TeamBonusLog } from '@/app/(admin)/admin/log-achievements/page';
+import { Progress } from '@/components/ui/progress';
 
 
 // Interface for processed agent scores used internally in this component
@@ -442,7 +443,7 @@ export default function AdminDailyScoresPage() {
         .map(rule => {
             if (!rule.id || !dailyTargets?.[rule.id]?.[dayOfWeek]) return null;
             const individualTarget = dailyTargets[rule.id]?.[dayOfWeek] ?? null;
-            if (individualTarget === null) return null;
+            if (individualTarget === null || individualTarget < 0) return null;
             const podTarget = individualTarget * activeAgents.length;
             const achieved = dailyPodRuleTotals[rule.id] || 0;
             const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
@@ -619,6 +620,27 @@ export default function AdminDailyScoresPage() {
                            <span className="font-medium">Today's Adjustments:</span> {teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints}`).join(' | ')}
                         </p>
                     )}
+                </div>
+            )}
+
+            {!isLoadingDisplay && podTargetSummary.length > 0 && (
+                <div className="mt-6 p-4 border-t">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Target className="h-4 w-4" /> Pod Target Progress</h4>
+                    <div className="space-y-3">
+                    {podTargetSummary.map(summary => (
+                        <div key={summary.ruleId}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="font-medium truncate" title={summary.ruleName}>
+                            {summary.ruleEmoji} {summary.ruleName}
+                            </span>
+                            <span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>
+                            {summary.achieved.toLocaleString()} / {summary.target?.toLocaleString()}
+                            </span>
+                        </div>
+                        <Progress value={summary.progress ?? 0} className="h-2" />
+                        </div>
+                    ))}
+                    </div>
                 </div>
             )}
 
