@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -6,8 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Keep Label
-import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -18,10 +19,16 @@ import {
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { PasswordInput } from './ui/password-input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import type { AppUser } from '@/services/user';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
-// Define available user roles (remains the same)
+// Define available user roles
 export const USER_ROLES = ['admin', 'podManager', 'teamLeader', 'agent'] as const;
 export type UserRole = typeof USER_ROLES[number];
 
@@ -31,19 +38,15 @@ const formatRoleForDisplay = (role: UserRole) => {
 };
 
 // Define the validation schema using Zod
-// roles is now an array of enums, required to have at least one role
 const userFormSchemaBase = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters.' }).max(50, { message: 'Name must be 50 characters or less.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   roles: z.array(z.enum(USER_ROLES)).min(1, { message: 'Please select at least one role.' }),
   password: z.string().optional(),
-  // Add other user fields if needed
 });
 
-// Conditional validation for password based on mode
+// Full schema for validation use, especially for 'add' mode
 const userFormSchema = userFormSchemaBase.superRefine((data, ctx) => {
-    // This password validation is now only truly enforced for 'add' mode via the dynamic schema.
-    // For edit mode, it's optional, so this check is less critical but harmless.
     if (data.password && data.password.length < 6) {
          ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -66,22 +69,26 @@ interface UserFormProps {
 export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Adjust schema based on mode for password requirement
+    // Dynamic schema for validation based on mode
     const dynamicSchema = mode === 'add'
-        ? userFormSchemaBase.extend({
+        ? userFormSchema.extend({
             password: z.string().min(6, { message: 'Password is required and must be at least 6 characters.' }),
           })
-        : userFormSchemaBase.omit({ password: true }); // Omit password from validation in edit mode entirely
+        : userFormSchema.extend({
+            password: z.string().optional().refine(val => !val || val.length >= 6, {
+                message: 'New password must be at least 6 characters.',
+            }),
+        });
 
     const form = useForm<UserFormData>({
         resolver: zodResolver(dynamicSchema),
         defaultValues: {
             name: initialData?.name || '',
             email: initialData?.email || '',
-            roles: initialData?.roles || [], // Initialize roles as empty array or from initialData
-            password: '', // Always clear password field initially
+            roles: initialData?.roles || [],
+            password: '',
         },
-        mode: 'onChange', // Validate on change
+        mode: 'onChange',
     });
 
   // Reset form if initialData or mode changes
@@ -91,6 +98,7 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
         name: initialData.name,
         email: initialData.email,
         roles: initialData.roles || [],
+        password: '', // Always clear password for edit form
       });
     } else if (mode === 'add') {
         form.reset({
@@ -105,13 +113,12 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
    const handleFormSubmit = async (data: UserFormData) => {
         setIsSubmitting(true);
         try {
-            // Ensure roles is always an array
             const rolesToSend = Array.isArray(data.roles) ? data.roles : [];
             const dataToSend: UserFormData = {
                 ...data,
                 roles: rolesToSend,
-                // Omit password from submission data in edit mode
-                ...(mode === 'edit' && { password: undefined }),
+                 // Only include password if it's provided
+                 password: data.password || undefined,
             };
             await onSubmit(dataToSend);
         } catch (error) {
@@ -122,110 +129,57 @@ export function UserForm({ onSubmit, onCancel, initialData, mode }: UserFormProp
     };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4"> {/* Increased gap */}
-        {/* User Name */}
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Full Name</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Jane Doe" {...field} disabled={isSubmitting}/>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* User Email */}
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email Address</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="agent@kpiquest.com" {...field} disabled={isSubmitting || mode === 'edit'} />
-              </FormControl>
-               {mode === 'edit' && <p className="text-xs text-muted-foreground">Email cannot be changed after creation.</p>}
-               <FormMessage />
-            </FormItem>
-          )}
-        />
-
-         {/* User Roles Checkboxes */}
-         <FormField
-            control={form.control}
-            name="roles"
-            render={() => ( // No field needed directly, we manage checkboxes individually
-                <FormItem>
-                    <FormLabel>Roles</FormLabel>
-                    <div className="grid grid-cols-2 gap-4 pt-2">
-                        {USER_ROLES.map((role) => (
-                            <FormField
-                                key={role}
-                                control={form.control}
-                                name="roles"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                        <FormControl>
-                                            <Checkbox
-                                                checked={field.value?.includes(role)}
-                                                onCheckedChange={(checked) => {
-                                                    const currentRoles = field.value || [];
-                                                    return checked
-                                                        ? field.onChange([...currentRoles, role])
-                                                        : field.onChange(currentRoles.filter((value) => value !== role));
-                                                }}
-                                                disabled={isSubmitting}
-                                            />
-                                        </FormControl>
-                                        <FormLabel className="font-normal">
-                                            {formatRoleForDisplay(role)}
-                                        </FormLabel>
-                                    </FormItem>
-                                )}
-                            />
-                        ))}
-                    </div>
-                    <FormMessage /> {/* Show validation message for the roles array */}
-                </FormItem>
-            )}
-            />
-
-
-         {/* User Password (only in 'add' mode) */}
-         {mode === 'add' && (
-             <FormField
+    <TooltipProvider>
+        <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-6 py-4">
+            <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Jane Doe" {...field} disabled={isSubmitting}/></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="agent@kpiquest.com" {...field} disabled={isSubmitting || mode === 'edit'} /></FormControl>{mode === 'edit' && <p className="text-xs text-muted-foreground">Email cannot be changed after creation.</p>}<FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="roles" render={() => (<FormItem><FormLabel>Roles</FormLabel><div className="grid grid-cols-2 gap-4 pt-2">{USER_ROLES.map((role) => (<FormField key={role} control={form.control} name="roles" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(role)} onCheckedChange={(checked) => { const currentRoles = field.value || []; return checked ? field.onChange([...currentRoles, role]) : field.onChange(currentRoles.filter((value) => value !== role));}} disabled={isSubmitting} /></FormControl><FormLabel className="font-normal">{formatRoleForDisplay(role)}</FormLabel></FormItem>)} />))}</div><FormMessage /></FormItem>)} />
+            
+            {/* Password field logic */}
+            <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                         <PasswordInput placeholder="Min. 6 characters" {...field} disabled={isSubmitting}/>
-                    </FormControl>
-                    <FormMessage />
+                        <FormLabel>
+                            {mode === 'add' ? 'Password' : 'Reset Password (Optional)'}
+                            {mode === 'edit' && (
+                                 <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="inline-block h-3 w-3 ml-1 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-xs">
+                                        <p className="text-sm">
+                                            For security, changing another user's password from the admin panel requires a backend service (like a Firebase Function), which is not implemented here. 
+                                            The most reliable way to reset a password for a user who is locked out is to delete their user record and re-create it with a new temporary password.
+                                        </p>
+                                    </TooltipContent>
+                                 </Tooltip>
+                            )}
+                        </FormLabel>
+                        <FormControl>
+                            <PasswordInput placeholder={mode === 'add' ? "Min. 6 characters" : "Enter new password"} {...field} disabled={isSubmitting}/>
+                        </FormControl>
+                         {mode === 'edit' && <FormDescription>Leave blank to keep the current password unchanged.</FormDescription>}
+                        <FormMessage />
                     </FormItem>
                 )}
             />
-         )}
 
-
-          <DialogFooter className="pt-4"> {/* Add padding top */}
-             <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-                    Cancel
+            <DialogFooter className="pt-4">
+                <DialogClose asChild>
+                    <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+                        Cancel
+                    </Button>
+                </DialogClose>
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isSubmitting ? 'Saving...' : (mode === 'add' ? 'Create User' : 'Update User')}
                 </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                 {isSubmitting ? 'Saving...' : (mode === 'add' ? 'Create User' : 'Update User')}
-              </Button>
-          </DialogFooter>
-      </form>
-    </Form>
+            </DialogFooter>
+        </form>
+        </Form>
+    </TooltipProvider>
   );
 }
