@@ -1,3 +1,4 @@
+
 // src/components/agent-sidebar-layout.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
@@ -18,7 +19,7 @@ import {
   SidebarGroupLabel, // Added import
   SidebarSeparator, // Added import
 } from '@/components/ui/sidebar';
-import { Home, Settings, UserSquare, CheckSquare, Star, ClipboardList, Target } from 'lucide-react'; // Added more icons
+import { Home, Settings, UserSquare, CheckSquare, Star, ClipboardList, Target, Swords } from 'lucide-react'; // Added Swords icon
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -122,7 +123,14 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-              {/* Add other agent-specific menu items here if needed */}
+              <SidebarMenuItem>
+                <Link href="/agent/rps-game" passHref>
+                  <SidebarMenuButton tooltip="Rock Paper Scissors" isActive={currentPath === '/agent/rps-game'}>
+                    <Swords />
+                    <span>RPS Game</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4 border-t border-sidebar-border">

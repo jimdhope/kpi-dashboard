@@ -212,7 +212,7 @@ export default function AdminPodTargetsPage() {
 
       await setDoc(targetsDocRef, cleanedTargets); // Overwrite with cleaned data
 
-      toast({ title: "Targets Saved", description: "Daily pod targets have been updated." });
+      toast({ title: "Targets Saved", description: "Daily agent targets have been updated." });
     } catch (err: any) {
       console.error("Error saving targets:", err);
       toast({ variant: "destructive", title: "Save Error", description: "Could not save daily targets." });
@@ -300,8 +300,8 @@ export default function AdminPodTargetsPage() {
 
       <Card className="frosted-glass">
         <CardHeader>
-          <CardTitle>Manage Pod Daily Targets</CardTitle>
-          <CardDescription>Set daily achievement targets for each rule within the selected competition and pod.</CardDescription>
+          <CardTitle>Manage Agent Daily Targets</CardTitle>
+          <CardDescription>Set the daily achievement targets for each agent in the selected pod. Pod targets are calculated from these values.</CardDescription>
         </CardHeader>
         <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
           {error && <p className="text-destructive text-center mb-4">{error}</p>}
@@ -314,8 +314,8 @@ export default function AdminPodTargetsPage() {
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
               </div>
-            ) : competitionRules.length === 0 ? (
-               <p className="text-center text-muted-foreground mt-6">No rules found for the selected competition.</p>
+            ) : competitionRules.filter(r => r.type === 'numeric').length === 0 ? (
+               <p className="text-center text-muted-foreground mt-6">No numeric rules found for the selected competition to set targets for.</p>
             ) : (
               <div className="space-y-4">
                   <div className="overflow-x-auto">
@@ -329,7 +329,7 @@ export default function AdminPodTargetsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {competitionRules.map((rule) => (
+                        {competitionRules.filter(r => r.type === 'numeric').map((rule) => (
                            rule.id && ( // Ensure rule has an ID
                                 <TableRow key={rule.id}>
                                 <TableCell className="font-medium">

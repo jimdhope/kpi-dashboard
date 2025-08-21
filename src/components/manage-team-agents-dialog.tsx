@@ -95,7 +95,7 @@ export function ManageTeamAgentsDialog({ team, unassignedAgents, agentNameMap, o
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>Assign Agents to {team.name}</DialogTitle>
+        <DialogTitle>Assign Agents to {team.name} {team.emoji}</DialogTitle>
         <DialogDescription>
           Select agents to include in this team. Agents not selected here or in other teams will remain unassigned.
         </DialogDescription>
