@@ -12,7 +12,7 @@ export interface AgentScoreForTeams {
     isAbsent?: boolean;
     teamEmoji?: string;
     completedTasks?: { ruleName: string; ruleEmoji: string }[];
-    targetProgress?: string;
+    targetProgress?: string; // This is not used in the webhook but can be kept for other purposes
 }
 
 // Interface for pod target summary passed TO this function
@@ -61,7 +61,7 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
     // Header Row
     const headerRow = {
         type: "ColumnSet",
-        spacing: "Medium",
+        spacing: "Small", // Reduced spacing
         columns: [
             {
                 type: "Column",
@@ -86,7 +86,7 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
         // Combine numeric emojis with task emojis
         const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
         const achievementsDisplay = score.isAbsent ? "N/A" : (`${score.emojiString || ''}${taskEmojis}`.trim() || '-');
-        const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints}`;
+        const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints.toLocaleString()}`;
 
         return {
             type: "ColumnSet",
@@ -113,7 +113,7 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
     });
 
      const taskKey = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
-     const taskKeyElement = taskKey ? { type: "TextBlock", text: `Tasks: ${taskKey}`, wrap: true, spacing: "Small", size: "Small" } : null;
+     const taskKeyElement = taskKey ? { type: "TextBlock", text: `**Tasks:** ${taskKey}`, wrap: true, spacing: "Small", size: "Small" } : null;
 
     return [headerRow, ...agentRows, taskKeyElement].filter(Boolean);
 };
@@ -135,7 +135,7 @@ export const sendTeamsUpdate = async (
     rules: RuleFormData[],
     agentScoresForTeams: AgentScoreForTeams[],
     podTargetSummaryForTeams: PodTargetSummaryForTeams[],
-    dailyTaskLogs: SimpleTaskLog[], // Changed to accept simplified task logs
+    dailyTaskLogs: SimpleTaskLog[],
     teamBonusSummary: TeamBonusSummary[],
     teamTotalScores: TeamTotalScore[]
 ) => {
@@ -163,11 +163,18 @@ export const sendTeamsUpdate = async (
 
         // Generate pod target text if applicable
         const podTargetsText = podTargetSummaryForTeams.length > 0
-            ? `${generatePodTargetsSummary(podTargetSummaryForTeams)}`
+            ? `**Pod Targets:** ${generatePodTargetsSummary(podTargetSummaryForTeams)}`
             : null;
 
         // Construct the Adaptive Card body elements
         const adaptiveCardBodyElements = [
+            {
+                "type": "TextBlock",
+                "text": `**Daily Summary for ${podName} - ${format(date, "PPP")}**`,
+                "wrap": true,
+                "weight": "Bolder",
+                "size": "Large"
+            },
             {
                 "type": "TextBlock",
                 "text": `**Key:** ${kpiKeyText}`,
@@ -187,7 +194,7 @@ export const sendTeamsUpdate = async (
             // Add team standings and bonuses at the end as plain text
             {
                 "type": "TextBlock",
-                "text": teamStandingsText,
+                "text": `**Competition Standings:** ${teamStandingsText}`,
                 "wrap": true,
                 "separator": true,
                 "spacing": "Medium"

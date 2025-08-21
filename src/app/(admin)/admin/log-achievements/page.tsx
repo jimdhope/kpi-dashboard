@@ -38,7 +38,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
-import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type SimpleTaskLog, type TeamBonusSummary, type TeamTotalScore } from '@/services/teamsWebhook';
+import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type TeamBonusSummary, type TeamTotalScore } from '@/services/teamsWebhook';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AchievementCard } from '@/components/achievement-card'; // Import the new card
 import { Input } from '@/components/ui/input';
@@ -218,6 +218,7 @@ export default function AdminLogAchievementsPage() {
     let unsubscribeTaskLogs: Unsubscribe = () => {};
     let unsubscribeBonusLogs: Unsubscribe = () => {};
     let unsubscribeCompLogs: Unsubscribe = () => {};
+    let unsubscribeCompBonusLogs: Unsubscribe = () => {};
 
     const fetchPodDataAndListen = async () => {
       setIsLoadingAgents(true);
@@ -290,6 +291,12 @@ export default function AdminLogAchievementsPage() {
                 setCompetitionLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as DailyAchievementLog)));
             });
 
+            const bonusLogsRefComp = collection(db, 'teamBonusLogs');
+            const bonusLogsQueryComp = query(bonusLogsRefComp, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id));
+            unsubscribeCompBonusLogs = onSnapshot(bonusLogsQueryComp, (snapshot) => {
+                setCompetitionBonusLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog)));
+            });
+
             // Listener for just today's logs (for form inputs)
             const initialAchievementsQuery = query(
                 achievementsRef,
@@ -357,7 +364,7 @@ export default function AdminLogAchievementsPage() {
             
             unsubscribeBonusLogs = onSnapshot(initialBonusLogsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
-                setCompetitionBonusLogs(logs);
+                 // setCompetitionBonusLogs(logs); This listener was for daily bonus logs, which we don't need a separate state for
             });
 
              // Fetch targets
@@ -397,6 +404,7 @@ export default function AdminLogAchievementsPage() {
       unsubscribeTaskLogs();
       unsubscribeBonusLogs();
       unsubscribeCompLogs();
+      unsubscribeCompBonusLogs();
     };
   }, [selectedPodId, selectedDate, toast]);
 
@@ -682,11 +690,10 @@ export default function AdminLogAchievementsPage() {
     setIsSendingToTeams(true);
 
     try {
-        // Data Calculation for webhook
         const todayStart = startOfDay(selectedDate);
         const dayOfWeek = daysOfWeek[getDay(selectedDate)];
 
-        // Filter logs for the selected date *only*
+        // 1. Correctly filter logs for the selected date *only*
         const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
         const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
 
@@ -694,7 +701,7 @@ export default function AdminLogAchievementsPage() {
         const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
         const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
         
-        // Agent Scores
+        // 2. Correctly calculate Agent Daily Scores
         const agentScores: AgentScoreForTeams[] = agents.map(agent => {
             const isAbsent = absentAgentIds.has(agent.id!);
             if (isAbsent) {
@@ -711,31 +718,29 @@ export default function AdminLogAchievementsPage() {
                 const rule = competitionRules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
                 return { ruleName: rule?.name || 'Task', ruleEmoji: rule?.emoji || '✅' };
             });
-            const targetProgress = competitionRules.filter(r => r.type === 'numeric').map(rule => {
-                const target = dailyTargets?.[rule.id!]?.[dayOfWeek];
-                if (target === undefined || target === null) return null;
-                const achieved = agentLogs.find(l => l.ruleId === rule.id)?.value || 0;
-                return `${rule.emoji || '❓'} ${achieved}/${target}`;
-            }).filter(Boolean).join(' | ');
 
-            return { agentFirstName: agent.name.split(' ')[0], totalPoints, emojiString, completedTasks, targetProgress, isAbsent: false, teamEmoji: teams.find(t => t.agentIds.includes(agent.id!))?.emoji };
+            return { agentFirstName: agent.name.split(' ')[0], totalPoints, emojiString, completedTasks, isAbsent: false, teamEmoji: teams.find(t => t.agentIds.includes(agent.id!))?.emoji };
         }).sort((a,b) => (agents.find(u => u.name.startsWith(a.agentFirstName))?.name || '').localeCompare(agents.find(u => u.name.startsWith(b.agentFirstName))?.name || ''));
 
-        // Pod Targets
-        const podTargetSummary: PodTargetSummaryForTeams[] = competitionRules.filter(r => r.type === 'numeric' && dailyTargets?.[r.id!]?.[dayOfWeek] != null).map(rule => {
-            const individualTarget = dailyTargets![rule.id!]![dayOfWeek]!;
-            const podTarget = individualTarget * activeAgents.length;
-            const achieved = dailyLogs.filter(l => l.ruleId === rule.id!).reduce((sum, l) => sum + (l.value || 0), 0);
-            return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };
-        }).filter((s): s is PodTargetSummaryForTeams => s !== null);
+        // 3. Correctly calculate Pod Daily Target Summary
+        const podTargetSummary: PodTargetSummaryForTeams[] = competitionRules
+            .filter(r => r.type === 'numeric' && dailyTargets?.[r.id!]?.[dayOfWeek] != null)
+            .map(rule => {
+                const individualTarget = dailyTargets![rule.id!]![dayOfWeek]!;
+                const podTarget = individualTarget * activeAgents.length;
+                const achieved = dailyLogs
+                    .filter(l => l.ruleId === rule.id!)
+                    .reduce((sum, l) => sum + (l.value || 0), 0);
+                return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };
+            }).filter((s): s is PodTargetSummaryForTeams => s !== null);
 
-        // Daily Team Scores
+        // 4. Correctly calculate Team Competition Scores
         const teamTotalScores: TeamTotalScore[] = teams.map(team => {
             const teamAgentIds = new Set(team.agentIds);
-            const teamDailyLogs = dailyLogs.filter(log => teamAgentIds.has(log.agentId));
-            const totalPoints = teamDailyLogs.reduce((sum, log) => sum + (log.points || 0), 0);
-            const bonusPoints = dailyBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
-            return { teamName: team.name, teamEmoji: team.emoji, totalPoints: totalPoints + bonusPoints };
+            const teamCompetitionLogs = competitionLogs.filter(log => teamAgentIds.has(log.agentId));
+            const totalPoints = teamCompetitionLogs.reduce((sum, log) => sum + (log.points || 0), 0);
+            const totalBonusPoints = competitionBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
+            return { teamName: team.name, teamEmoji: team.emoji, totalPoints: totalPoints + totalBonusPoints };
         }).sort((a,b) => b.totalPoints - a.totalPoints);
         
         const teamBonusSummary: TeamBonusSummary[] = dailyBonusLogs.map(log => ({ teamName: teams.find(t => t.id === log.teamId)?.name || 'Unknown', teamEmoji: teams.find(t => t.id === log.teamId)?.emoji, bonusPoints: log.points }));
