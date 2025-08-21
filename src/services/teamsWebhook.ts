@@ -75,11 +75,6 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
             },
             {
                 type: "Column",
-                width: "stretch",
-                items: [{ type: "TextBlock", text: "Targets", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
-            },
-            {
-                type: "Column",
                 width: "auto", // Adjust width as needed for points
                 items: [{ type: "TextBlock", text: "Score", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }]
             }
@@ -91,7 +86,6 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
         // Combine numeric emojis with task emojis
         const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
         const achievementsDisplay = score.isAbsent ? "N/A" : (`${score.emojiString || ''}${taskEmojis}`.trim() || '-');
-        const targetDisplay = score.isAbsent ? "N/A" : (score.targetProgress || '-');
         const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints} pts`;
 
         return {
@@ -108,11 +102,6 @@ const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams
                     type: "Column",
                     width: "stretch",
                     items: [{ type: "TextBlock", text: achievementsDisplay, wrap: true, horizontalAlignment: "Center"}]
-                },
-                 {
-                    type: "Column",
-                    width: "stretch",
-                    items: [{ type: "TextBlock", text: targetDisplay, wrap: true, horizontalAlignment: "Center"}]
                 },
                 {
                     type: "Column",
@@ -174,13 +163,6 @@ export const sendTeamsUpdate = async (
 
         // Construct the Adaptive Card body elements
         const adaptiveCardBodyElements = [
-            {
-                "type": "TextBlock",
-                "text": `**Daily Scores for ${podName} - ${format(date, "PPP")}**`,
-                "wrap": true,
-                "size": "Large",
-                "weight": "Bolder"
-            },
             {
                 "type": "TextBlock",
                 "text": `**Key:** ${kpiKeyText}`,
