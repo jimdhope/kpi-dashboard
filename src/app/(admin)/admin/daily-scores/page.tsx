@@ -314,20 +314,21 @@ export default function AdminDailyScoresPage() {
 
 
    const { agentScores, teamBonusSummary, teamTotalScores, podTargetSummary, ruleKeyString } = useMemo(() => {
+    // --- Single Source of Truth for Daily Data ---
     const todayStart = startOfDay(selectedDate);
-    const rulesMap = new Map(rules.map(rule => [rule.id, rule]));
-    const dayOfWeek = daysOfWeek[getDay(selectedDate)];
-    const numericRules = rules.filter(r => r.type === 'numeric');
-
-    // Filter logs for the selected day for all daily calculations
     const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
     const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
-    
-    // Agent daily scores calculation
+    const rulesMap = new Map(rules.map(rule => [rule.id, rule]));
+    const dayOfWeek = daysOfWeek[getDay(selectedDate)];
+    const numericRules = rules.filter(r => r.type === 'numeric');
+    const taskRules = rules.filter(r => r.type === 'checkbox');
+
+    // --- Agent Daily Scores Calculation ---
     const finalAgentScores: AgentScore[] = agents
       .map(agent => {
+        if (!agent.id) return null;
         const agentData = { totalPoints: 0, achievements: {} as Record<string, number> };
         const agentDailyLogs = dailyLogs.filter(log => log.agentId === agent.id && log.status !== 'absent');
         
@@ -340,14 +341,14 @@ export default function AdminDailyScoresPage() {
             }
         });
 
-        const isAbsent = absentAgentIds.has(agent.id!);
+        const isAbsent = absentAgentIds.has(agent.id);
         let emojis = '';
         if (!isAbsent) {
-            const sortedNumericRules = numericRules.sort((a, b) => a.name.localeCompare(b.name));
+            const sortedNumericRules = [...numericRules].sort((a, b) => a.name.localeCompare(b.name));
             sortedNumericRules.forEach(rule => {
                 const achievementValue = agentData.achievements[rule.id!] || 0;
                 if (achievementValue > 0) {
-                    const emojiToUse = rule.emoji && rule.emoji.trim() !== '' ? rule.emoji : '❓';
+                    const emojiToUse = (rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓';
                     emojis += emojiToUse.repeat(achievementValue);
                 }
             });
@@ -381,49 +382,18 @@ export default function AdminDailyScoresPage() {
           achievements: agentData.achievements, // Pass this for pod target calculation
         };
       })
+      .filter((a): a is AgentScore => a !== null)
       .sort((a, b) => a.agentFirstName.localeCompare(b.agentFirstName));
 
-    // Daily Team Bonus Summary calculation
-    const teamBonusSummary = teams.map(team => {
-        const bonus = dailyBonusLogs.filter(log => log.teamId === team.id).reduce((acc, log) => acc + log.points, 0);
-        return { teamName: team.name, teamEmoji: team.emoji, bonusPoints: bonus };
-    }).filter(summary => summary.bonusPoints > 0);
-
-    // Competition-wide Team Total Scores calculation
-    const teamTotalScoresMap: { [teamId: string]: number } = {};
-    teams.forEach(team => teamTotalScoresMap[team.id] = 0);
-
-    competitionLogs.forEach(log => { // Use all competition logs here
-        const rule = rulesMap.get(log.ruleId);
-        if (rule) {
-            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-            if (agentTeam) {
-                const points = (log.value || 0) * (rule.points || 0);
-                teamTotalScoresMap[agentTeam.id] = (teamTotalScoresMap[agentTeam.id] || 0) + points;
-            }
-        }
+    // --- Pod Target Summary (Derived from the correct daily logs) ---
+    const dailyPodRuleTotals: Record<string, number> = {};
+    numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
+    dailyLogs.forEach(log => {
+       if (log.ruleId && dailyPodRuleTotals.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
+           dailyPodRuleTotals[log.ruleId] += (log.value || 0);
+       }
     });
 
-    competitionBonusLogs.forEach(log => { // Use all competition bonus logs
-        if (teamTotalScoresMap.hasOwnProperty(log.teamId)) {
-            teamTotalScoresMap[log.teamId] += log.points || 0;
-        }
-    });
-    const finalTeamTotalScores = teams.map(team => ({
-        teamName: team.name,
-        teamEmoji: team.emoji,
-        totalPoints: teamTotalScoresMap[team.id] || 0
-    })).sort((a,b) => b.totalPoints - a.totalPoints);
-
-    // Rule Key String generation
-    const taskRules = rules.filter(r => r.type === 'checkbox');
-    let finalRuleKeyString = numericRules.map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`).join('  ');
-    const taskKeyString = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
-    if (taskKeyString) {
-        finalRuleKeyString += (finalRuleKeyString ? ' | ' : '') + taskKeyString;
-    }
-
-    // Pod Target Summary calculation - DERIVED FROM AGENT SCORES
     const finalPodTargetSummary: PodTargetSummary[] = numericRules
         .map(rule => {
             if (!rule.id) return null;
@@ -431,11 +401,39 @@ export default function AdminDailyScoresPage() {
             if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
             
             const podTarget = individualTarget * activeAgents.length;
-            const achieved = finalAgentScores.reduce((total, agent) => total + (agent.achievements[rule.id!] || 0), 0);
+            const achieved = dailyPodRuleTotals[rule.id] || 0;
             const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
             
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
         }).filter((s): s is PodTargetSummary => s !== null);
+
+    // --- Team & Rule Key Calculations (Unaffected, but kept for context) ---
+    const teamBonusSummary = teams.map(team => {
+        const bonus = dailyBonusLogs.filter(log => log.teamId === team.id).reduce((acc, log) => acc + log.points, 0);
+        return { teamName: team.name, teamEmoji: team.emoji, bonusPoints: bonus };
+    }).filter(summary => summary.bonusPoints > 0);
+
+    const teamTotalScoresMap: { [teamId: string]: number } = {};
+    teams.forEach(team => teamTotalScoresMap[team.id] = 0);
+    competitionLogs.forEach(log => {
+        const rule = rulesMap.get(log.ruleId);
+        if (rule) {
+            const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
+            if (agentTeam) {
+                teamTotalScoresMap[agentTeam.id] = (teamTotalScoresMap[agentTeam.id] || 0) + ((log.value || 0) * (rule.points || 0));
+            }
+        }
+    });
+    competitionBonusLogs.forEach(log => {
+        if (teamTotalScoresMap.hasOwnProperty(log.teamId)) teamTotalScoresMap[log.teamId] += log.points || 0;
+    });
+    const finalTeamTotalScores = teams.map(team => ({
+        teamName: team.name, teamEmoji: team.emoji, totalPoints: teamTotalScoresMap[team.id] || 0
+    })).sort((a,b) => b.totalPoints - a.totalPoints);
+    
+    const numericKeyString = numericRules.map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`).join('  ');
+    const taskKeyString = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
+    const finalRuleKeyString = [numericKeyString, taskKeyString].filter(Boolean).join(' | ');
 
     return {
         agentScores: finalAgentScores,
