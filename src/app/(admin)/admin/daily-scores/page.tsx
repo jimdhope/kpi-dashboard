@@ -322,6 +322,15 @@ export default function AdminDailyScoresPage() {
     const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
     const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
+    
+    // Create a single source of truth for daily rule totals
+    const dailyPodRuleTotals: Record<string, number> = {};
+    numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
+    dailyLogs.forEach(log => {
+       if (log.ruleId && dailyPodRuleTotals.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
+           dailyPodRuleTotals[log.ruleId] += (log.value || 0);
+       }
+    });
 
     // Agent daily scores calculation
     const scores: Record<string, Omit<AgentScore, 'agentId' | 'agentFirstName'>> = {};
@@ -432,25 +441,17 @@ export default function AdminDailyScoresPage() {
         finalRuleKeyString += (finalRuleKeyString ? ' | ' : '') + taskKeyString;
     }
 
-    // Correct Pod Target Summary calculation using only dailyLogs
-    const dailyPodRuleTotals: Record<string, number> = {};
-    numericRules.forEach(rule => { if (rule.id) dailyPodRuleTotals[rule.id] = 0; });
-
-    // Use dailyLogs which is already filtered for the selected day
-    dailyLogs.forEach(log => {
-       if (log.ruleId && dailyPodRuleTotals.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
-           dailyPodRuleTotals[log.ruleId] += (log.value || 0);
-       }
-    });
-
+    // Pod Target Summary calculation - now using the unified daily totals
     const finalPodTargetSummary: PodTargetSummary[] = numericRules
         .map(rule => {
             if (!rule.id) return null;
             const individualTarget = dailyTargets?.[rule.id]?.[dayOfWeek];
             if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
+            
             const podTarget = individualTarget * activeAgents.length;
             const achieved = dailyPodRuleTotals[rule.id] || 0;
             const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
+            
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
         }).filter((s): s is PodTargetSummary => s !== null);
 
