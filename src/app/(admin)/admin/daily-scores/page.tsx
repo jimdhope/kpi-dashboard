@@ -530,7 +530,7 @@ export default function AdminDailyScoresPage() {
                     <CardDescription>View daily scores and individual target progress for the selected pod and date.</CardDescription>
                 </div>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[calc(100vh-350px)]">
+            <CardContent>
             {error && <p className="text-destructive mb-4">{error}</p>}
 
             {isLoadingDisplay && (
