@@ -693,75 +693,66 @@ export default function AdminLogAchievementsPage() {
         const todayStart = startOfDay(selectedDate);
         const dayOfWeek = daysOfWeek[getDay(selectedDate)];
         const rulesMap = new Map(competitionRules.map(rule => [rule.id, rule]));
+        const numericRules = competitionRules.filter(r => r.type === 'numeric');
 
-        // Correctly filter logs for the selected date *only*
-        const dailyLogsForPod = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime() && log.podId === selectedPodId);
-        
+        // Fetch a fresh, filtered set of logs for only the selected date
+        const achievementsRef = collection(db, 'dailyAchievements');
+        const dailyLogsQuery = query(
+            achievementsRef,
+            where('podId', '==', selectedPodId),
+            where('competitionId', '==', activeCompetitionId),
+            where('date', '==', Timestamp.fromDate(todayStart))
+        );
+        const dailyLogsSnapshot = await getDocs(dailyLogsQuery);
+        const dailyLogsForPod = dailyLogsSnapshot.docs.map(doc => doc.data() as DailyAchievementLog);
+
         const absentAgentIds = new Set(dailyLogsForPod.filter(log => log.status === 'absent').map(log => log.agentId));
         const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
         
-        // 1. Correctly calculate Agent Daily Scores
+        // 1. Calculate Agent Daily Scores (using dailyLogsForPod)
         const agentScores: AgentScoreForTeams[] = agents.map(agent => {
-            if (!agent.id) return null; // Should not happen but for type safety
+            if (!agent.id) return null;
             const isAbsent = absentAgentIds.has(agent.id);
             if (isAbsent) {
                 return { agentFirstName: agent.name.split(' ')[0], emojiString: '', totalPoints: 0, isAbsent: true, teamEmoji: teams.find(t => t.agentIds.includes(agent.id!))?.emoji };
             }
-
             const agentDailyLogs = dailyLogsForPod.filter(l => l.agentId === agent.id);
-            const agentDailyTaskLogs = dailyTaskLogs.filter(l => l.agentId === agent.id && l.date.toDate().getTime() === todayStart.getTime());
-
-            const totalPoints = agentDailyLogs.reduce((acc, log) => {
-                const rule = rulesMap.get(log.ruleId);
-                return acc + ((log.value || 0) * (rule?.points || 0));
-            }, 0);
-
-            const emojiString = competitionRules.filter(r => r.type === 'numeric').map(rule => {
-                const log = agentDailyLogs.find(l => l.ruleId === rule.id);
-                return log && log.value > 0 ? (rule.emoji || '❓').repeat(log.value) : '';
-            }).join('');
-            
-            const completedTasks = agentDailyTaskLogs.map(taskLog => {
-                const rule = competitionRules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
-                return { ruleName: rule?.name || 'Task', ruleEmoji: rule?.emoji || '✅' };
-            });
-
+            const agentDailyTaskLogs = dailyTaskLogs.filter(l => l.agentId === agent.id);
+            const totalPoints = agentDailyLogs.reduce((acc, log) => acc + ((log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0)), 0);
+            const emojiString = numericRules.map(rule => (agentDailyLogs.find(l => l.ruleId === rule.id)?.value || 0) > 0 ? (rule.emoji || '❓').repeat(agentDailyLogs.find(l => l.ruleId === rule.id)!.value) : '').join('');
+            const completedTasks = agentDailyTaskLogs.map(taskLog => ({ ruleName: rules.find(r => r.id === taskLog.taskId)?.name || 'Task', ruleEmoji: rules.find(r => r.id === taskLog.taskId)?.emoji || '✅' }));
             return { agentFirstName: agent.name.split(' ')[0], totalPoints, emojiString, completedTasks, isAbsent: false, teamEmoji: teams.find(t => t.agentIds.includes(agent.id!))?.emoji };
         }).filter((a): a is AgentScoreForTeams => a !== null)
           .sort((a,b) => (agents.find(u => u.name.startsWith(a.agentFirstName))?.name || '').localeCompare(agents.find(u => u.name.startsWith(b.agentFirstName))?.name || ''));
 
-        // 2. Correctly calculate Pod Daily Target Summary
-        const podTargetSummary: PodTargetSummaryForTeams[] = competitionRules
-            .filter(r => r.type === 'numeric' && dailyTargets?.[r.id!]?.[dayOfWeek] != null)
-            .map(rule => {
-                const individualTarget = dailyTargets![rule.id!]![dayOfWeek]!;
+        // 2. Calculate Pod Daily Target Summary (using dailyLogsForPod)
+        const podRuleTotalsToday: Record<string, number> = {};
+        numericRules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
+        dailyLogsForPod.forEach(log => {
+             if (log.ruleId && podRuleTotalsToday.hasOwnProperty(log.ruleId)) {
+                 podRuleTotalsToday[log.ruleId] += log.value || 0;
+             }
+        });
+        const podTargetSummary: PodTargetSummaryForTeams[] = numericRules.map(rule => {
+                const individualTarget = dailyTargets?.[rule.id!]?.[dayOfWeek];
+                if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
                 const podTarget = individualTarget * activeAgents.length;
-                const achieved = dailyLogsForPod
-                    .filter(l => l.ruleId === rule.id!)
-                    .reduce((sum, l) => sum + (l.value || 0), 0);
+                const achieved = podRuleTotalsToday[rule.id!] || 0;
                 return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };
             }).filter((s): s is PodTargetSummaryForTeams => s !== null);
 
-        // 3. Correctly calculate Team Competition Scores
+        // 3. Calculate Team Competition Scores (using competitionLogs)
         const teamTotalScores: TeamTotalScore[] = teams.map(team => {
             const teamAgentIds = new Set(team.agentIds);
-            
-            // Filter all competition logs for this team's agents
             const teamCompetitionLogs = competitionLogs.filter(log => teamAgentIds.has(log.agentId));
-            const totalPoints = teamCompetitionLogs.reduce((sum, log) => {
-                 const rule = rulesMap.get(log.ruleId);
-                 return sum + ((log.value || 0) * (rule?.points || 0));
-            }, 0);
-
-            // Filter all bonus logs for this team
+            const totalPoints = teamCompetitionLogs.reduce((sum, log) => sum + ((log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0)), 0);
             const totalBonusPoints = competitionBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
-            
             return { teamName: team.name, teamEmoji: team.emoji, totalPoints: totalPoints + totalBonusPoints };
         }).sort((a,b) => b.totalPoints - a.totalPoints);
         
-        // 4. Correctly filter for Today's bonus logs only
-        const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
-        const teamBonusSummary: TeamBonusSummary[] = dailyBonusLogs.map(log => ({ teamName: teams.find(t => t.id === log.teamId)?.name || 'Unknown', teamEmoji: teams.find(t => t.id === log.teamId)?.emoji, bonusPoints: log.points }));
+        // 4. Correctly filter for Today's bonus logs only (using competitionBonusLogs)
+        const dailyBonusLogsForPod = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
+        const teamBonusSummary: TeamBonusSummary[] = dailyBonusLogsForPod.map(log => ({ teamName: teams.find(t => t.id === log.teamId)?.name || 'Unknown', teamEmoji: teams.find(t => t.id === log.teamId)?.emoji, bonusPoints: log.points }));
 
       await sendTeamsUpdate(
         currentPod.name,
