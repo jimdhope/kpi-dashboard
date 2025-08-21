@@ -126,14 +126,16 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
+               {/* Link to achievements page (removed from default view)
                <SidebarMenuItem>
-                <Link href="/agent/leaderboard" passHref>
-                  <SidebarMenuButton tooltip="Leaderboard" isActive={currentPath === '/agent/leaderboard'}>
-                    <Trophy />
-                    <span>Leaderboard</span>
+                <Link href="/agent/achievements" passHref>
+                  <SidebarMenuButton tooltip="My Achievements" isActive={currentPath === '/agent/achievements'}>
+                    <CheckSquare />
+                    <span>My Achievements</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
+              */}
               <SidebarMenuItem>
                 <Link href="/agent/rps-game" passHref>
                   <SidebarMenuButton tooltip="Rock Paper Scissors" isActive={currentPath === '/agent/rps-game'}>

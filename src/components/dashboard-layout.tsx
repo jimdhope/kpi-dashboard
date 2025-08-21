@@ -306,5 +306,3 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
     </SidebarProvider>
   );
 }
-
-    
