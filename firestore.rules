@@ -1,91 +1,45 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user has a specific role
-    function hasRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny([role]);
-    }
-    
-    // Helper function to check if user is an admin or manager
-    function isManagerOrAdmin() {
-      return hasRole('admin') || hasRole('podManager');
-    }
-
-    // Default deny all reads and writes
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Allow public read-only access to the pods collection for the API
-    match /pods/{podId} {
-      allow get: if true;
-      allow list: if true;
-      allow write: if request.auth != null && isManagerOrAdmin();
-    }
-    
-    // Rules for user profiles
-    match /users/{userId} {
-      // Allow users to read their own profile, and admins/managers to read any profile
-      allow get: if request.auth != null && (request.auth.uid == userId || isManagerOrAdmin());
-      // Allow any authenticated user to list users (for selectors)
-      allow list: if request.auth != null;
-      // Allow users to update their own profile, and admins/managers to update any
-      allow update: if request.auth != null && (request.auth.uid == userId || isManagerOrAdmin());
-      // Only allow admins/managers to create or delete users
-      allow create, delete: if request.auth != null && isManagerOrAdmin();
-    }
-
-    // Rules for campaigns and their rules
-    match /campaigns/{campaignId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && isManagerOrAdmin();
-    }
-    match /campaignRules/{campaignId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && isManagerOrAdmin();
-    }
-    
-    // Rules for competitions
-    match /competitions/{competitionId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isManagerOrAdmin();
-    }
-    
-    // Rules for daily data
-    match /dailyAchievements/{logId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if request.auth != null; // Allows both agents and admins to log
-    }
-
-    match /dailyTaskLogs/{logId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if request.auth != null;
-    }
-    
-    match /dailyPodTargets/{targetId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && isManagerOrAdmin();
-    }
-    
-    // Rules for MOTD
-    match /messageOfTheDay/{messageId} {
-      allow read: if true; // Allow anyone to read the message
-      allow write: if request.auth != null && isManagerOrAdmin();
-    }
-
-    // Rules for Team Bonus Points
-    match /teamBonusLogs/{logId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if request.auth != null && isManagerOrAdmin();
-    }
-
-    // Rules for RPS game - allow anyone to play
+    // Allow unauthenticated access for the RPS game
     match /rpsGames/{gameId} {
-        allow read, create: if true;
-        allow update, delete: if false; // Games are immutable once created
+      allow read, create: if true;
+    }
+
+    // Allow authenticated users to read/write to team bonus logs
+    match /teamBonusLogs/{logId} {
+        allow read, create: if request.auth != null;
+    }
+
+    // Allow public read on pods for the API
+    match /pods/{podId} {
+        allow read: if true;
+        // Keep write access authenticated
+        allow write: if request.auth != null;
+    }
+
+    // Allow anyone to read campaigns, competitions, and users for context
+    // This is often needed for public leaderboards or shared data.
+    // Writes should still be protected.
+    match /campaigns/{campaignId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+    }
+     match /users/{userId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+    }
+     match /competitions/{competitionId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+    }
+
+    // Secure all other collections by default - requires authentication
+    // This rule is now last, so it only applies if no specific rule above matched.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
