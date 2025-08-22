@@ -9,7 +9,6 @@ import {
   orderBy,
   onSnapshot,
   Unsubscribe,
-  getDocs,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -35,7 +34,7 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
   const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
 
-  // Fetch all possible competitions for the user's pod
+  // Effect 1: Fetch all possible competitions for the user's pod
   useEffect(() => {
     if (!currentUser?.podId) return;
 
@@ -47,29 +46,35 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
     const unsubscribe = onSnapshot(compQuery, (snapshot) => {
         const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
         setAllCompetitions(fetchedComps);
-        // Set default competition if not already set
-        if (!selectedCompetitionId && fetchedComps.length > 0) {
+        
+        // Set default competition if not already set, or if current selection is invalid
+        if (!selectedCompetitionId || !fetchedComps.some(c => c.id === selectedCompetitionId)) {
             const savedCompId = localStorage.getItem(AGENT_LEADERBOARD_COMP_KEY);
             if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
                 setSelectedCompetitionId(savedCompId);
-            } else {
+            } else if (fetchedComps.length > 0) {
                  setSelectedCompetitionId(fetchedComps[0].id);
             }
         }
     });
     return () => unsubscribe();
-  }, [currentUser?.podId, selectedCompetitionId]);
+  }, [currentUser?.podId]);
 
 
-  // Fetch agents and logs based on selected competition
+  // Effect 2: Fetch agents and competition-specific logs when selection changes
   useEffect(() => {
     if (!selectedCompetitionId || !currentUser?.podId) {
         setIsLoading(false);
+        setPodAgents([]);
+        setCompetitionLogs([]);
         return;
     }
     
     const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);
-    if (!selectedCompetition) return;
+    if (!selectedCompetition) {
+        setIsLoading(false);
+        return;
+    }
 
 
     setIsLoading(true);
@@ -85,9 +90,7 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
     const logsQuery = query(
         collection(db, 'dailyAchievements'),
         where('competitionId', '==', selectedCompetitionId),
-        where('podId', '==', currentUser.podId),
-        where('date', '>=', selectedCompetition.startDate),
-        where('date', '<=', selectedCompetition.endDate)
+        where('podId', '==', currentUser.podId)
     );
     unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
         setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
@@ -107,14 +110,21 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
   };
 
   const agentLeaderboard = useMemo(() => {
-    if (isLoading || podAgents.length === 0) {
+    const competition = allCompetitions.find(c => c.id === selectedCompetitionId);
+    if (isLoading || podAgents.length === 0 || !competition) {
       return [];
     }
-    // Correctly calculate score from `points` field in each log
+
+    const rulesMap = new Map((competition.rules || []).map(rule => [rule.id, rule]));
+
     const agentScores = podAgents.reduce((acc, agent) => {
       acc[agent.id!] = competitionLogs
         .filter(log => log.agentId === agent.id)
-        .reduce((sum, log) => sum + (log.points || 0), 0);
+        .reduce((sum, log) => {
+            const rule = rulesMap.get(log.ruleId);
+            const points = log.points ?? ((log.value || 0) * (rule?.points || 0));
+            return sum + points;
+        }, 0);
       return acc;
     }, {} as Record<string, number>);
 
@@ -127,7 +137,7 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
       avatarBgColor: agent.avatarBgColor,
       isUser: agent.id === currentUser?.id,
     }));
-  }, [isLoading, competitionLogs, podAgents, currentUser]);
+  }, [isLoading, competitionLogs, podAgents, currentUser, allCompetitions, selectedCompetitionId]);
 
 
   const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);
