@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +35,14 @@ import {
 
 // --- Zod Schema Definitions ---
 
-export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links';
+export type WidgetType = 
+    | 'motd' 
+    | 'achievements' 
+    | 'pod-targets' 
+    | 'leaderboard-agent'
+    | 'leaderboard-team'
+    | 'leaderboard-pod'
+    | 'custom-html';
 
 const baseWidgetSchema = z.object({
   id: z.string(),
@@ -49,29 +57,21 @@ const motdWidgetSchema = baseWidgetSchema.extend({
   content: z.string().min(1, 'Message content is required.'),
 });
 
-const linksWidgetSchema = baseWidgetSchema.extend({
-    type: z.literal('links'),
-    links: z.array(z.object({
-        id: z.string(),
-        title: z.string().min(1, 'Link title is required.'),
-        url: z.string().url('Please enter a valid URL.'),
-    })),
+const customHtmlWidgetSchema = baseWidgetSchema.extend({
+  type: z.literal('custom-html'),
+  content: z.string().min(1, 'HTML content is required.'),
 });
 
-const leaderboardsWidgetSchema = baseWidgetSchema.extend({
-    type: z.literal('leaderboards'),
-    leaderboardTypes: z.array(z.object({
-        id: z.enum(['agent', 'team', 'pod']),
-        name: z.string(),
-        isEnabled: z.boolean(),
-    })).min(1, "At least one leaderboard type must be configured."),
+const standardWidgetSchema = baseWidgetSchema.extend({
+    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod']),
 });
+
 
 // Discriminated union for specific widget types
 const specificWidgetSchema = z.discriminatedUnion('type', [
     motdWidgetSchema,
-    linksWidgetSchema,
-    leaderboardsWidgetSchema,
+    customHtmlWidgetSchema,
+    standardWidgetSchema,
 ]);
 
 export type SpecificWidget = z.infer<typeof specificWidgetSchema>;
@@ -115,8 +115,12 @@ const SETTINGS_COLLECTION = "settings";
 
 const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'motd', name: 'Message of the Day' },
-    { id: 'leaderboards', name: 'Competition Leaderboards' },
-    { id: 'links', name: 'External Links' },
+    { id: 'achievements', name: 'Today\'s Achievements' },
+    { id: 'pod-targets', name: 'Pod Targets Today' },
+    { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
+    { id: 'leaderboard-team', name: 'Team Leaderboard' },
+    { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
+    { id: 'custom-html', name: 'Custom HTML' },
 ];
 
 const AVAILABLE_SIDEBAR_ITEMS: SidebarMenuItem[] = [
@@ -152,16 +156,22 @@ export default function AgentDashboardSettingsPage() {
         switch (widgetType) {
             case 'motd':
                 return { ...base, type: 'motd', name: 'Message of the Day', emoji: '🎉', content: '<p>Welcome!</p>' };
-            case 'links':
-                return { ...base, type: 'links', name: 'External Links', links: [] };
-            case 'leaderboards':
-                return { ...base, type: 'leaderboards', name: 'Competition Leaderboards', leaderboardTypes: [
-                    { id: 'agent', name: 'Agent Leaderboard', isEnabled: true },
-                    { id: 'team', name: 'Team Leaderboard', isEnabled: true },
-                    { id: 'pod', name: 'Pod Leaderboard', isEnabled: true },
-                ]};
+            case 'achievements':
+                return { ...base, type: 'achievements', name: 'Today\'s Achievements' };
+            case 'pod-targets':
+                return { ...base, type: 'pod-targets', name: 'Pod Targets Today' };
+            case 'leaderboard-agent':
+                return { ...base, type: 'leaderboard-agent', name: 'Agent Leaderboard' };
+            case 'leaderboard-team':
+                return { ...base, type: 'leaderboard-team', name: 'Team Leaderboard' };
+            case 'leaderboard-pod':
+                return { ...base, type: 'leaderboard-pod', name: 'Pod Leaderboard' };
+            case 'custom-html':
+                 return { ...base, type: 'custom-html', name: 'Custom HTML', content: '<p>Your custom content here.</p>' };
             default:
-                 throw new Error(`Invalid widget type: ${widgetType}`);
+                 // This ensures that all cases are handled. If a new WidgetType is added, TypeScript will error here.
+                 const exhaustiveCheck: never = widgetType;
+                 throw new Error(`Invalid widget type: ${exhaustiveCheck}`);
         }
     };
 
@@ -375,11 +385,6 @@ interface ColumnEditorProps {
 function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onSelectWidget, onRemoveWidget, form }: ColumnEditorProps) {
     const { control } = form;
     const widget = form.watch(`rows.${rowIndex}.columns.${colIndex}.widget`);
-
-    const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray({
-        control,
-        name: `rows.${rowIndex}.columns.${colIndex}.widget.links`,
-    });
     
     const { fields: leaderboardFields } = useFieldArray({
         control,
@@ -426,43 +431,13 @@ function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onSelectWidget, onRe
                                         <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.content`} render={({ field }) => (<FormItem><FormLabel>Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
                                     </>
                                 )}
-                                {widget.type === 'links' && (
-                                     <div className="space-y-2">
-                                        {linkFields.map((link, linkIndex) => (
-                                            <div key={link.id} className="flex items-end gap-2 p-2 border rounded-md">
-                                                <div className="flex-1 space-y-2">
-                                                    <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.links.${linkIndex}.title`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Title</FormLabel><FormControl><Input {...field} placeholder="Link Title" className="h-8"/></FormControl></FormItem>)} />
-                                                    <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.links.${linkIndex}.url`} render={({ field }) => (<FormItem><FormLabel className="text-xs">URL</FormLabel><FormControl><Input {...field} placeholder="https://..." type="url" className="h-8"/></FormControl></FormItem>)} />
-                                                </div>
-                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeLink(linkIndex)}><Trash2 className="h-4 w-4"/></Button>
-                                            </div>
-                                        ))}
-                                        <Button type="button" variant="outline" size="sm" onClick={() => appendLink({id: `link-${Date.now()}`, title: '', url: ''})}><PlusCircle className="h-4 w-4 mr-2"/>Add Link</Button>
-                                    </div>
+                                {widget.type === 'custom-html' && (
+                                    <>
+                                        <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.content`} render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
+                                    </>
                                 )}
-                                 {widget.type === 'leaderboards' && (
-                                    <div className="space-y-2">
-                                        {leaderboardFields.map((item, leaderboardIndex) => (
-                                            <FormField
-                                                key={item.id}
-                                                control={control}
-                                                name={`rows.${rowIndex}.columns.${colIndex}.widget.leaderboardTypes.${leaderboardIndex}.isEnabled`}
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-2 bg-background/50">
-                                                        <div className="space-y-0.5">
-                                                            <FormLabel className="text-sm">{(item as any).name}</FormLabel>
-                                                        </div>
-                                                        <FormControl>
-                                                            <Switch
-                                                                checked={field.value}
-                                                                onCheckedChange={field.onChange}
-                                                            />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        ))}
-                                    </div>
+                                {(widget.type === 'achievements' || widget.type === 'pod-targets' || widget.type.startsWith('leaderboard-')) && (
+                                     <p className="text-sm text-muted-foreground">This widget has no additional settings.</p>
                                 )}
                             </AccordionContent>
                         </AccordionItem>
