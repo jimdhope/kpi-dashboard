@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, orderBy, onSnapshot, Unsubscribe, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Unsubscribe, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -74,7 +74,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     });
 
     return () => unsubscribe();
-  }, [agentPodId]);
+  }, [agentPodId, selectedCompetitionId]);
 
 
   // Effect 2: Fetch competition-specific data when selection changes
@@ -87,32 +87,41 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
       return;
     }
 
+    const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);
+
+    if (!selectedCompetition) {
+        setIsLoading(false);
+        return;
+    }
+
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
 
     const fetchCompetitionData = async () => {
         try {
-            // Get Team definitions from the competition document
-            const compDocRef = doc(db, 'competitions', selectedCompetitionId);
-            const compDocSnap = await getDoc(compDocRef);
-            if (compDocSnap.exists()) {
-                const compData = compDocSnap.data() as CompetitionWithTeams;
-                setTeams(compData.teams || []);
-            } else {
-                 setTeams([]);
-            }
+            setTeams(selectedCompetition.teams || []);
 
-            // Listen for all achievement logs for the competition
-            const logsQuery = query(collection(db, 'dailyAchievements'), where('competitionId', '==', selectedCompetitionId));
+            // Listen for all achievement logs for the competition for the correct date range
+            const logsQuery = query(
+                collection(db, 'dailyAchievements'),
+                where('competitionId', '==', selectedCompetitionId),
+                where('date', '>=', selectedCompetition.startDate),
+                where('date', '<=', selectedCompetition.endDate)
+            );
             unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
                 setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
             }));
 
             // Listen for all bonus logs for the competition
-            const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('competitionId', '==', selectedCompetitionId));
+            const bonusLogsQuery = query(
+                collection(db, 'teamBonusLogs'),
+                where('competitionId', '==', selectedCompetitionId),
+                where('date', '>=', selectedCompetition.startDate),
+                where('date', '<=', selectedCompetition.endDate)
+            );
             unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
                 setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
-                setIsLoading(false);
+                setIsLoading(false); // Only set loading to false after the final fetch
             }));
         } catch (error) {
             console.error("Error fetching competition data:", error);
@@ -123,7 +132,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     fetchCompetitionData();
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedCompetitionId]);
+  }, [selectedCompetitionId, allCompetitions]);
 
 
   const teamLeaderboard = useMemo(() => {
@@ -131,8 +140,6 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     if (isLoading || !competition || teams.length === 0) {
         return [];
     }
-    
-    const podTeams = teams.filter(team => team.agentIds.some(agentId => (currentUser?.podId && agentId) && doc(db, 'users', agentId).path.includes(currentUser.podId)));
     
     const teamScores = teams.reduce((acc, team) => {
       const teamAgentIds = new Set(team.agentIds);
