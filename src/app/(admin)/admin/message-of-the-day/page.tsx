@@ -132,14 +132,14 @@ const SETTINGS_COLLECTION = "settings";
 
 
 // --- Available Widgets Toolbox ---
-const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
-  { id: 'motd', name: 'Message of the Day' },
-  { id: 'achievements', name: 'Today\'s Achievements' },
-  { id: 'pod-targets', name: 'Pod Targets' },
-  { id: 'leaderboards', name: 'Competition Leaderboards' },
-  { id: 'links', name: 'External Links' },
-  { id: 'sidebar', name: 'Sidebar: RPS Game Page' },
-  { id: 'sidebar', name: 'Sidebar: Agent Guide' },
+const AVAILABLE_WIDGETS: { id: string; name: string }[] = [
+    { id: 'motd', name: 'Message of the Day' },
+    { id: 'achievements', name: 'Today\'s Achievements' },
+    { id: 'pod-targets', name: 'Pod Targets' },
+    { id: 'leaderboards', name: 'Competition Leaderboards' },
+    { id: 'links', name: 'External Links' },
+    { id: 'sidebar-rps-game', name: 'Sidebar: RPS Game Page' },
+    { id: 'sidebar-agent-guide', name: 'Sidebar: Agent Guide' },
 ];
 
 function DraggableWidget({ id, name }: { id: string; name: string }) {
@@ -183,7 +183,7 @@ export default function AgentDashboardSettingsPage() {
         keyName: "fieldId",
     });
 
-    const getWidgetDefaultData = (widgetType: WidgetType | string, widgetName: string): Omit<Widget, 'id' | 'name'> => {
+    const getWidgetDefaultData = (widgetType: string, widgetName: string): Omit<Widget, 'id' | 'name'> => {
         switch (widgetType) {
             case 'motd':
                 return { type: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' };
@@ -198,13 +198,12 @@ export default function AgentDashboardSettingsPage() {
                         { id: 'team', name: 'Team Leaderboard', isEnabled: true },
                     ],
                 };
-             case 'sidebar':
-                 // This needs to be more specific if we have multiple sidebar types
-                 // For now, let's assume the name differentiates them enough
+             case 'sidebar-rps-game':
+             case 'sidebar-agent-guide':
                 return { type: 'sidebar', isEnabled: true };
             case 'achievements':
             case 'pod-targets':
-                return { type: widgetType, isEnabled: true };
+                return { type: widgetType as 'achievements' | 'pod-targets', isEnabled: true };
             default: // Fallback for any other standard type
                  return { type: 'standard', isEnabled: true };
         }
