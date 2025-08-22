@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -145,8 +145,8 @@ export default function AgentDashboardSettingsPage() {
     },
   });
 
-  const { fields: linkFields, append: appendLink, remove: removeLink, move: moveLink } = useForm({ control: form.control, name: "externalLinks.links" });
-  const { fields: widgetFields, move: moveWidget } = useForm({ control: form.control, name: "widgets" });
+  const { fields: linkFields, append: appendLink, remove: removeLink, move: moveLink } = useFieldArray({ control: form.control, name: "externalLinks.links", keyName: "fieldId" });
+  const { fields: widgetFields, move: moveWidget } = useFieldArray({ control: form.control, name: "widgets", keyName: "fieldId" });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -174,7 +174,7 @@ export default function AgentDashboardSettingsPage() {
         ];
 
         // Merge saved widget settings with defaults to handle new widgets
-        const savedWidgets = data.widgets || [];
+        const savedWidgets = Array.isArray(data.widgets) ? data.widgets : [];
         const widgetMap = new Map(savedWidgets.map(w => [w.id, w]));
         const mergedWidgets = defaultWidgets.map(dw => widgetMap.has(dw.id) ? widgetMap.get(dw.id)! : dw);
         
