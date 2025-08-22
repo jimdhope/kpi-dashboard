@@ -45,7 +45,8 @@ export type WidgetType =
     | 'leaderboard-agent'
     | 'leaderboard-team'
     | 'leaderboard-pod'
-    | 'custom-html';
+    | 'custom-html'
+    | 'log-achievements'; // Added new widget type
 
 const baseWidgetSchema = z.object({
   id: z.string(),
@@ -67,7 +68,7 @@ const customHtmlWidgetSchema = baseWidgetSchema.extend({
 });
 
 const standardWidgetSchema = baseWidgetSchema.extend({
-    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod']),
+    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod', 'log-achievements']),
 });
 
 const specificWidgetSchema = z.discriminatedUnion('type', [
@@ -123,6 +124,7 @@ const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
     { id: 'leaderboard-team', name: 'Team Leaderboard' },
     { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
+    { id: 'log-achievements', name: 'Log Achievements' }, // Added new widget
     { id: 'custom-html', name: 'Custom HTML' },
 ];
 
@@ -169,6 +171,8 @@ export default function AgentDashboardSettingsPage() {
                 return { ...base, type: 'leaderboard-team', name: 'Team Leaderboard' };
             case 'leaderboard-pod':
                 return { ...base, type: 'leaderboard-pod', name: 'Pod Leaderboard' };
+            case 'log-achievements':
+                return { ...base, type: 'log-achievements', name: 'Log Achievements' };
             case 'custom-html':
                  return { ...base, type: 'custom-html', name: 'Custom HTML', content: '<p>Your custom content here.</p>' };
             default:
@@ -608,3 +612,4 @@ function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }:
          </div>
     );
 }
+

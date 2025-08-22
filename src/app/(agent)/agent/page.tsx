@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy, Swords, Edit, Trash2 } from 'lucide-react';
+import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy, Swords, Edit, Trash2, Plus, Minus, Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
-import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, setDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, setDoc, addDoc, serverTimestamp, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -69,7 +69,16 @@ interface PodTargetSummary {
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const AGENT_DASHBOARD_COMP_KEY = 'agentDashboard_selectedCompetitionId';
-const SETTINGS_DOC_ID = "agentDashboardSettings_v3"; // Ensure this matches the settings page
+const SETTINGS_DOC_ID = "agentDashboardSettings_v3";
+
+// Debounce utility function
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  return (...args: any[]) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
 
 export default function AgentDashboardPage() {
   const [error, setError] = useState<string | null>(null);
@@ -287,8 +296,7 @@ export default function AgentDashboardPage() {
             case 'leaderboard-team':
                 return <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} />;
             case 'leaderboard-pod':
-                // Pod leaderboard might not be relevant for a single agent view, but can be shown.
-                 return <Leaderboard title="My Pod's Score" entries={podLeaderboard} />;
+                return <Leaderboard title="My Pod's Score" entries={podLeaderboard} />;
             case 'achievements':
                  return <TodaysAchievementsWidget
                            rules={rules}
@@ -303,6 +311,14 @@ export default function AgentDashboardPage() {
                             dailyTargets={dailyTargets}
                             podAgents={podAgents}
                         />;
+            case 'log-achievements':
+                return <LogAchievementsWidget 
+                            rules={rules}
+                            currentUser={currentUser}
+                            agentPodId={agentPodId}
+                            activeCompetitionId={activeCompetition?.id}
+                            toast={toast}
+                       />;
             case 'custom-html':
                  return (
                      <Card>
@@ -418,9 +434,6 @@ const TodaysAchievementsWidget: React.FC<TodaysAchievementsWidgetProps> = ({ rul
                         ))}
                     </ul>
                 )}
-                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">
-                   <Link href="/agent/log-achievements">Log or Edit Achievements</Link>
-                </Button>
             </CardContent>
         </Card>
     );
@@ -482,6 +495,187 @@ const PodTargetsWidget: React.FC<PodTargetsWidgetProps> = ({ rules, podLogs, dai
                                     </span>
                                 </div>
                                 <Progress value={summary.progress} className="h-2" />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
+
+// New Widget for Logging
+interface LogAchievementsWidgetProps {
+    rules: RuleFormData[];
+    currentUser: AppUser | null;
+    agentPodId: string | null;
+    activeCompetitionId: string | null;
+    toast: any; // Simplified toast type
+}
+
+const LogAchievementsWidget: React.FC<LogAchievementsWidgetProps> = ({ rules, currentUser, agentPodId, activeCompetitionId, toast }) => {
+    const [achievementInputs, setAchievementInputs] = useState<Record<string, { value: number; logId?: string }>>({});
+    const [taskInputs, setTaskInputs] = useState<Record<string, { checked: boolean; logId?: string }>>({});
+    const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
+
+    // Effect to populate initial state from Firestore (one-time fetch or could be listener)
+    useEffect(() => {
+        if (!currentUser?.id || !agentPodId || !activeCompetitionId) return;
+
+        const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
+        const initialInputs: typeof achievementInputs = {};
+        const initialTaskInputs: typeof taskInputs = {};
+
+        const achievementsQuery = query(
+            collection(db, 'dailyAchievements'),
+            where('agentId', '==', currentUser.id),
+            where('podId', '==', agentPodId),
+            where('date', '==', dateTimestamp),
+            where('competitionId', '==', activeCompetitionId)
+        );
+        
+        const taskLogsQuery = query(
+            collection(db, 'dailyTaskLogs'),
+            where('agentId', '==', currentUser.id),
+            where('podId', '==', agentPodId),
+            where('date', '==', dateTimestamp),
+            where('competitionId', '==', activeCompetitionId)
+        );
+
+        const unsubAchievements = onSnapshot(achievementsQuery, (snapshot) => {
+            snapshot.forEach(doc => {
+                const log = doc.data() as DailyAchievementLog;
+                initialInputs[log.ruleId] = { value: log.value, logId: doc.id };
+            });
+            setAchievementInputs(initialInputs);
+        });
+
+         const unsubTasks = onSnapshot(taskLogsQuery, (snapshot) => {
+            snapshot.forEach(doc => {
+                const log = doc.data() as DailyTaskLog;
+                initialTaskInputs[log.taskId] = { checked: true, logId: doc.id };
+            });
+             setTaskInputs(initialTaskInputs);
+        });
+
+        return () => {
+            unsubAchievements();
+            unsubTasks();
+        };
+
+    }, [currentUser, agentPodId, activeCompetitionId]);
+
+    const handleSaveAchievement = useCallback(async (ruleId: string, value: number) => {
+         if (!agentPodId || !currentUser?.id || !activeCompetitionId) return;
+         const rule = rules.find(r => r.id === ruleId);
+         if (!rule) return;
+
+         setIsSaving(prev => ({...prev, [ruleId]: true }));
+         const logId = achievementInputs[ruleId]?.logId;
+         const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
+         
+         try {
+             if (logId) { // Update or delete existing
+                 if (value > 0) {
+                     await setDoc(doc(db, 'dailyAchievements', logId), { value, points: (rule.points || 0) * value }, { merge: true });
+                 } else {
+                     await deleteDoc(doc(db, 'dailyAchievements', logId));
+                     setAchievementInputs(prev => { const newState = {...prev}; delete newState[ruleId]; return newState; });
+                 }
+             } else if (value > 0) { // Create new
+                 const newDocRef = await addDoc(collection(db, 'dailyAchievements'), {
+                     agentId: currentUser.id, podId: agentPodId, competitionId: activeCompetitionId,
+                     ruleId, ruleName: rule.name, date: dateTimestamp, value, points: (rule.points || 0) * value,
+                     loggedAt: serverTimestamp(), loggedBy: currentUser.uid
+                 });
+                 setAchievementInputs(prev => ({...prev, [ruleId]: { ...prev[ruleId], logId: newDocRef.id }}));
+             }
+         } catch (e) {
+             toast({ variant: 'destructive', title: 'Save Failed' });
+         } finally {
+             setIsSaving(prev => ({...prev, [ruleId]: false }));
+         }
+    }, [agentPodId, currentUser, activeCompetitionId, rules, achievementInputs, toast]);
+
+    const handleTaskChange = useCallback(async (ruleId: string, checked: boolean) => {
+        if (!agentPodId || !currentUser?.id || !activeCompetitionId) return;
+        setIsSaving(prev => ({...prev, [ruleId]: true }));
+        const logId = taskInputs[ruleId]?.logId;
+        
+        try {
+            if (checked) {
+                if (!logId) {
+                     const newDocRef = await addDoc(collection(db, 'dailyTaskLogs'), {
+                         agentId: currentUser.id, podId: agentPodId, competitionId: activeCompetitionId,
+                         taskId: ruleId, date: Timestamp.fromDate(startOfDay(new Date())),
+                         loggedAt: serverTimestamp(), loggedBy: currentUser.uid
+                     });
+                     setTaskInputs(prev => ({...prev, [ruleId]: { ...prev[ruleId], logId: newDocRef.id }}));
+                }
+            } else {
+                 if (logId) {
+                     await deleteDoc(doc(db, 'dailyTaskLogs', logId));
+                     setTaskInputs(prev => { const newState = {...prev}; delete newState[ruleId]; return newState; });
+                 }
+            }
+        } catch (e) {
+             toast({ variant: 'destructive', title: 'Save Failed' });
+        } finally {
+            setIsSaving(prev => ({...prev, [ruleId]: false }));
+        }
+    }, [agentPodId, currentUser, activeCompetitionId, taskInputs, toast]);
+
+
+    const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), [handleSaveAchievement]);
+
+    const handleValueChange = (ruleId: string, change: number) => {
+        const currentValue = achievementInputs[ruleId]?.value ?? 0;
+        const newValue = Math.max(0, currentValue + change);
+        setAchievementInputs(prev => ({ ...prev, [ruleId]: { ...prev[ruleId], value: newValue } }));
+        debouncedSave(ruleId, newValue);
+    };
+
+    const numericRules = rules.filter(r => r.type === 'numeric');
+    const taskRules = rules.filter(r => r.type === 'checkbox');
+
+    if (numericRules.length === 0 && taskRules.length === 0) return null;
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-primary"/> Log Today's Progress</CardTitle>
+                <CardDescription>Your changes are saved automatically.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {numericRules.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {numericRules.map(rule => (
+                            <AchievementCard
+                                key={rule.id}
+                                rule={rule}
+                                currentValue={achievementInputs[rule.id!]?.value ?? 0}
+                                isSaving={isSaving[rule.id!] || false}
+                                onIncrement={() => handleValueChange(rule.id!, 1)}
+                                onDecrement={() => handleValueChange(rule.id!, -1)}
+                            />
+                        ))}
+                    </div>
+                )}
+                {taskRules.length > 0 && (
+                    <div className="space-y-2 pt-4 border-t">
+                         <Label className="text-sm font-medium">Daily Tasks</Label>
+                        {taskRules.map(rule => (
+                            <div key={rule.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`task-${rule.id}`}
+                                    checked={taskInputs[rule.id!]?.checked || false}
+                                    onCheckedChange={(checked) => handleTaskChange(rule.id!, !!checked)}
+                                    disabled={isSaving[rule.id!] || false}
+                                />
+                                <label htmlFor={`task-${rule.id}`} className="text-sm font-normal">
+                                    {rule.emoji} {rule.name}
+                                </label>
+                                {isSaving[rule.id!] && <Loader2 className="h-4 w-4 animate-spin" />}
                             </div>
                         ))}
                     </div>
