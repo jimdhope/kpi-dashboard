@@ -253,31 +253,36 @@ export default function AgentDashboardPage() {
   }, []);
 
   const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
+    if (!activeCompetition) return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
+    
+    const rulesMap = new Map((activeCompetition.rules || []).map(rule => [rule.id, rule]));
+
+    // Agent scores
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
     podLogs.forEach(log => {
-      if (log.ruleId && rules.find(r => r.id === log.ruleId)?.type === 'numeric') {
-        agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
+      const rule = rulesMap.get(log.ruleId);
+      if (rule && rule.type === 'numeric' && agentScores.hasOwnProperty(log.agentId)) {
+        const points = (log.value || 0) * (rule.points || 0);
+        agentScores[log.agentId] += points;
       }
     });
 
+    // Team scores
     const teamScores: Record<string, number> = {};
     teams.forEach(team => { teamScores[team.id] = 0; });
     podLogs.forEach(log => {
+      const rule = rulesMap.get(log.ruleId);
       const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-      if (agentTeam && rules.find(r => r.id === log.ruleId)?.type === 'numeric') {
-          teamScores[agentTeam.id] = (teamScores[agentTeam.id] || 0) + (log.points || 0);
+      if (agentTeam && rule && rule.type === 'numeric') {
+          const points = (log.value || 0) * (rule.points || 0);
+          teamScores[agentTeam.id] += points;
       }
     });
     podBonusLogs.forEach(log => { if(teamScores[log.teamId] !== undefined) teamScores[log.teamId] += log.points; });
-
-    // Correctly calculate total pod score
-    let podTotalScore = 0;
-    podLogs.forEach(log => {
-        if (log.podId === agentPodId && rules.find(r => r.id === log.ruleId)?.type === 'numeric') {
-            podTotalScore += (log.points || 0);
-        }
-    });
+    
+    // Pod score
+    const podTotalScore = Object.values(agentScores).reduce((sum, score) => sum + score, 0);
 
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         const sorted = [...items].sort((a,b) => (b.score || 0) - (a.score || 0));
@@ -291,6 +296,7 @@ export default function AgentDashboardPage() {
         id: agentPodData.id,
         name: agentPodData.name,
         score: podTotalScore,
+        avatarUrl: agentPodData.logoUrl,
         avatarInitials: agentPodData.logoInitials,
         avatarBgColor: agentPodData.logoBgColor,
     }] : [];
@@ -300,7 +306,7 @@ export default function AgentDashboardPage() {
       teamLeaderboard: assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') }))),
       podLeaderboard: assignDenseRanks(finalPodLeaderboard)
     };
-  }, [podLogs, podBonusLogs, podAgents, teams, rules, currentUser, agentPodId, agentPodData]);
+  }, [podLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, agentPodId, agentPodData]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
