@@ -86,9 +86,16 @@ export default function AgentDashboardPage() {
         case 'leaderboard-agent':
             return <AgentLeaderboardWidget currentUser={currentUser} />;
         case 'leaderboard-team':
-             return <TeamLeaderboardWidget currentUser={currentUser} />;
+            return <TeamLeaderboardWidget currentUser={currentUser} />;
         case 'leaderboard-pod':
-             return <PodLeaderboardWidget currentUser={currentUser} />;
+             return (
+                <Card>
+                    <CardHeader><CardTitle>Pod Leaderboard</CardTitle></CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground text-sm">This widget is coming soon.</p>
+                    </CardContent>
+                </Card>
+             );
         case 'achievements':
              return <TodaysAchievementsWidget currentUser={currentUser} />;
         case 'pod-targets':
