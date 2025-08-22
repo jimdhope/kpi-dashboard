@@ -29,7 +29,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { DashboardSettingsData, Row as LayoutRow, BaseWidget } from '@/app/(admin)/admin/message-of-the-day/page';
+import type { DashboardSettingsData, Row as LayoutRow, Widget, WidgetType } from '@/app/(admin)/admin/message-of-the-day/page';
 
 
 // Interfaces (most are the same)
@@ -69,7 +69,7 @@ interface PodTargetSummary {
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const AGENT_DASHBOARD_COMP_KEY = 'agentDashboard_selectedCompetitionId';
-const SETTINGS_DOC_ID = "agentDashboardSettings_v2"; // Ensure this matches the settings page
+const SETTINGS_DOC_ID = "agentDashboardSettings_v3"; // Ensure this matches the settings page
 
 export default function AgentDashboardPage() {
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +197,7 @@ export default function AgentDashboardPage() {
       return () => unsubscribeSettings();
   }, []);
 
-  const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
+  const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
     // ... same leaderboard logic as before
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
@@ -217,6 +217,14 @@ export default function AgentDashboardPage() {
     });
     podBonusLogs.forEach(log => { if(teamScores[log.teamId] !== undefined) teamScores[log.teamId] += log.points; });
 
+    const podScores: Record<string, number> = { [agentPodId || '']: 0 };
+    podLogs.forEach(log => {
+      if (podScores.hasOwnProperty(log.podId) && rules.find(r => r.id === log.ruleId)?.type === 'numeric') {
+        podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
+      }
+    });
+
+
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         const sorted = [...items].sort((a,b) => (b.score || 0) - (a.score || 0));
         const rankMap = new Map<number, number>();
@@ -227,26 +235,47 @@ export default function AgentDashboardPage() {
 
     return {
       agentLeaderboard: assignDenseRanks(podAgents.map(agent => ({ id: agent.id!, name: agent.name, score: agentScores[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isUser: agent.id === currentUser?.id }))),
-      teamLeaderboard: assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') })))
+      teamLeaderboard: assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') }))),
+      podLeaderboard: assignDenseRanks(Object.entries(podScores).map(([id, score]) => ({ id, name: podAgents.find(p => p.podId === id)?.name || 'My Pod', score })))
     };
-  }, [podLogs, podBonusLogs, podAgents, teams, rules, currentUser]);
+  }, [podLogs, podBonusLogs, podAgents, teams, rules, currentUser, agentPodId]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
-    // A map of widget types to their corresponding React components
-    const widgetComponentMap: Record<string, React.ReactNode> = {
-        motd: <MessageOfTheDayDisplay
-                emoji={dashboardSettings?.motd.emoji || null}
-                content={dashboardSettings?.motd.content || null}
-                isLoading={isLoadingSettings}
-              />,
-        achievements: <div>Today's Achievements Placeholder</div>,
-        'pod-targets': <div>Pod Targets Placeholder</div>,
-        leaderboards: <div className="grid md:grid-cols-2 gap-6 w-full">
-                          <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />
-                          <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} />
-                      </div>,
-        // Add other widget types here
+    const renderWidget = (widget: Widget) => {
+        if (!widget.isEnabled) return null;
+
+        switch (widget.widgetType) {
+            case 'motd':
+                return <MessageOfTheDayDisplay emoji={widget.emoji} content={widget.content} isLoading={isLoadingSettings} />;
+            case 'leaderboard-agent':
+                return <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />;
+            case 'leaderboard-team':
+                return <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} />;
+            case 'leaderboard-pod':
+                // For now, let's assume a single-pod view. This might need adjustment in a multi-pod context.
+                return <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} />;
+            case 'achievements':
+                return <div>Achievements Placeholder</div>; // Replace with actual component
+            case 'pod-targets':
+                 return <div>Pod Targets Placeholder</div>; // Replace with actual component
+            case 'links':
+                 // Render links if they exist
+                 return (
+                     <Card>
+                         <CardHeader><CardTitle>External Links</CardTitle></CardHeader>
+                         <CardContent className="flex flex-col gap-2">
+                             {widget.links.map(link => (
+                                <Button asChild key={link.id} variant="outline" className="justify-start">
+                                    <a href={link.url} target="_blank" rel="noopener noreferrer">{link.title}</a>
+                                </Button>
+                             ))}
+                         </CardContent>
+                     </Card>
+                 );
+            default:
+                return null; // Don't render unknown or disabled widgets
+        }
     };
 
   return (
@@ -262,7 +291,7 @@ export default function AgentDashboardPage() {
            <div key={row.id} className="flex flex-wrap gap-6">
                {row.widgets.map(widget => (
                    <div key={widget.id} className="flex-1 min-w-[300px]">
-                       {widgetComponentMap[widget.widgetType] || <Card><CardHeader><CardTitle>Unknown Widget</CardTitle></CardHeader><CardContent>{widget.widgetType}</CardContent></Card>}
+                       {renderWidget(widget as Widget)}
                    </div>
                ))}
            </div>

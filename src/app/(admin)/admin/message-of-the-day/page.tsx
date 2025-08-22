@@ -43,37 +43,63 @@ import { KpiQuestLexicalEditor } from '@/components/LexicalEditor';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Plus, Grip } from 'lucide-react';
+
 
 // --- Zod Schema Definitions ---
+export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod' | 'links' | 'rps-game' | 'agent-guide';
+
 
 const baseWidgetSchema = z.object({
-  id: z.string(), // Unique instance ID for the widget in the layout
-  widgetType: z.string(), // e.g., 'motd', 'leaderboards' - defines the component to render
+  id: z.string(),
+  name: z.string(),
+  widgetType: z.string(), // e.g., 'motd', 'leaderboard-agent'
+  isEnabled: z.boolean(),
 });
-export type BaseWidget = z.infer<typeof baseWidgetSchema>;
 
-const rowSchema = z.object({
+const motdWidgetSchema = baseWidgetSchema.extend({
+  widgetType: z.literal('motd'),
+  emoji: z.string().min(1, 'Emoji is required.').max(10, 'Emoji should be short.'),
+  content: z.string().min(1, 'Message content is required.'),
+});
+
+const linksWidgetSchema = baseWidgetSchema.extend({
+    widgetType: z.literal('links'),
+    links: z.array(z.object({
+        id: z.string(),
+        title: z.string().min(1, 'Link title is required.'),
+        url: z.string().url('Please enter a valid URL.'),
+    })),
+});
+
+const standardWidgetSchema = baseWidgetSchema.extend({
+    widgetType: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod', 'rps-game', 'agent-guide']),
+});
+
+
+// A discriminated union to handle different widget types
+const widgetSchema = z.discriminatedUnion('widgetType', [
+    motdWidgetSchema,
+    linksWidgetSchema,
+    standardWidgetSchema,
+]);
+
+export type Widget = z.infer<typeof widgetSchema>;
+
+export const rowSchema = z.object({
   id: z.string(), // Unique ID for the row
-  widgets: z.array(baseWidgetSchema),
+  widgets: z.array(widgetSchema),
 });
 export type Row = z.infer<typeof rowSchema>;
 
 const dashboardSettingsSchema = z.object({
-  // The main data structure is now an array of rows
   rows: z.array(rowSchema),
-
-  // We still need to store the configuration data for each widget type
-  // This data is separate from the layout structure
-  motd: z.object({
-    isEnabled: z.boolean(),
-    emoji: z.string().min(1, 'Emoji is required.').max(10, 'Emoji should be short.'),
-    content: z.string().min(1, 'Message content is required.'),
-  }),
-  leaderboards: z.object({
-    isEnabled: z.boolean(),
-  }),
-  // Add other widget configs here as they become configurable
-  // e.g. links, achievements, pod-targets
 });
 
 // Type for form data
@@ -85,15 +111,21 @@ export interface DashboardSettingsData extends DashboardSettingsFormData {
   updatedBy: string;
 }
 
-const SETTINGS_DOC_ID = "agentDashboardSettings_v2"; // Use a new doc ID for the new structure
+const SETTINGS_DOC_ID = "agentDashboardSettings_v3"; // Use a new doc ID for the new structure
 const SETTINGS_COLLECTION = "settings";
 
+
 // --- Available Widgets Toolbox ---
-const AVAILABLE_WIDGETS = [
+const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
   { id: 'motd', name: 'Message of the Day' },
   { id: 'achievements', name: 'Today\'s Achievements' },
   { id: 'pod-targets', name: 'Pod Targets' },
-  { id: 'leaderboards', name: 'Leaderboards' },
+  { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
+  { id: 'leaderboard-team', name: 'Team Leaderboard' },
+  { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
+  { id: 'links', name: 'External Links' },
+  { id: 'rps-game', name: 'Sidebar: RPS Game Page' },
+  { id: 'agent-guide', name: 'Sidebar: Agent Guide' },
 ];
 
 function DraggableWidget({ id, name }: { id: string; name: string }) {
@@ -109,7 +141,7 @@ function DraggableWidget({ id, name }: { id: string; name: string }) {
       {...attributes}
       variant="outline"
       size="sm"
-      className={cn("cursor-grab", isDragging && "opacity-50")}
+      className={cn("cursor-grab active:cursor-grabbing", isDragging && "opacity-50")}
     >
       <GripHorizontal className="mr-2 h-4 w-4" />
       {name}
@@ -119,7 +151,6 @@ function DraggableWidget({ id, name }: { id: string; name: string }) {
 
 
 export default function AgentDashboardSettingsPage() {
-    // ... main component state and effects
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
@@ -129,20 +160,33 @@ export default function AgentDashboardSettingsPage() {
 
      const form = useForm<DashboardSettingsFormData>({
         resolver: zodResolver(dashboardSettingsSchema),
-        defaultValues: {
-            rows: [],
-            motd: { isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' },
-            leaderboards: { isEnabled: true },
-        },
+        defaultValues: { rows: [] },
     });
 
-     const { fields: rowFields, append: appendRow, remove: removeRow, move: moveRow, update: updateRow } = useFieldArray({
+     const { fields: rowFields, append: appendRow, remove: removeRow, move: moveRow } = useFieldArray({
         control: form.control,
         name: "rows",
         keyName: "fieldId",
     });
 
-    // Fetch and set up form data
+    const getWidgetDefaultData = (widgetType: WidgetType): Omit<Widget, 'id' | 'name'> => {
+        switch (widgetType) {
+            case 'motd':
+                return { widgetType: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' };
+            case 'links':
+                return { widgetType: 'links', isEnabled: true, links: [] };
+            case 'leaderboard-agent':
+            case 'leaderboard-team':
+            case 'leaderboard-pod':
+            case 'achievements':
+            case 'pod-targets':
+            case 'rps-game':
+            case 'agent-guide':
+                return { widgetType: widgetType, isEnabled: true };
+        }
+    };
+
+
      useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(user => {
             setCurrentUserUid(user?.uid || null);
@@ -156,11 +200,8 @@ export default function AgentDashboardSettingsPage() {
                 if (docSnap.exists()) {
                     form.reset(docSnap.data() as DashboardSettingsData);
                 } else {
-                    // Initialize with one empty row if no settings exist
                     form.reset({
                         rows: [{ id: `row-${Date.now()}`, widgets: [] }],
-                        motd: { isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' },
-                        leaderboards: { isEnabled: true },
                     });
                 }
             } catch (error) {
@@ -181,63 +222,87 @@ export default function AgentDashboardSettingsPage() {
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    const findContainer = (id: UniqueIdentifier) => {
-        if (id === 'toolbox') {
-            return 'toolbox';
+    const findContainer = (id: UniqueIdentifier): string | null => {
+        if (id.toString().startsWith('toolbox-')) return 'toolbox';
+        for (const row of rowFields) {
+            if (row.id === id) return row.id;
+            if (row.widgets.some(w => w.id === id)) return row.id;
         }
-        return rowFields.find(row => row.id === id || row.widgets.some(w => w.id === id));
+        return null;
     };
-
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id);
     };
 
     const handleDragOver = (event: DragEndEvent) => {
-        const { active, over } = event;
-        const activeId = active.id;
+        const { active, over, activatorEvent } = event;
         const overId = over?.id;
+        if (!overId || active.id === overId) return;
 
-        if (!overId) return;
+        const activeContainerId = findContainer(active.id);
+        const overContainerId = findContainer(over?.id);
+        
+        if (!activeContainerId || !overContainerId) return;
 
-        const activeContainer = findContainer(activeId);
-        const overContainer = findContainer(overId);
+        if (activeContainerId !== overContainerId) {
+             const activeRowIndex = rowFields.findIndex(r => r.id === activeContainerId);
+             const overRowIndex = rowFields.findIndex(r => r.id === overContainerId);
+             const activeWidgetIndex = activeRowIndex > -1 ? rowFields[activeRowIndex].widgets.findIndex(w => w.id === active.id) : -1;
+             
+             const overWidgetIndex = overId.toString().startsWith('widget-')
+                ? rowFields[overRowIndex].widgets.findIndex(w => w.id === overId)
+                : rowFields[overRowIndex].widgets.length;
 
-        if (!activeContainer || !overContainer || activeContainer === overContainer) {
-            return;
-        }
 
-        // Dragging from toolbox to a row
-        if (active.id.toString().startsWith('toolbox-')) {
-             const overRowIndex = rowFields.findIndex(row => row.id === overId);
-             if (overRowIndex !== -1) {
-                 const newWidget: BaseWidget = {
-                    id: `widget-${Date.now()}`, // Unique instance ID
-                    widgetType: active.data.current?.widgetType,
-                 };
+             const newRows = [...form.getValues('rows')];
 
-                  const newRows = [...rowFields];
-                  newRows[overRowIndex].widgets.push(newWidget);
-                  form.setValue('rows', newRows, { shouldDirty: true });
-             }
-             return;
+             let newWidget: Widget;
+            // Dragging from toolbox
+            if (active.id.toString().startsWith('toolbox-')) {
+                 const widgetType = active.data.current?.widgetType as WidgetType;
+                 const name = active.data.current?.name;
+                 const defaultData = getWidgetDefaultData(widgetType);
+                 newWidget = {
+                     id: `widget-${Date.now()}`,
+                     name,
+                     ...defaultData,
+                 } as Widget;
+                 // Add new widget to the over container
+                 newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, newWidget);
+            } else { // Dragging existing widget between rows
+                 const [removed] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
+                 newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, removed);
+            }
+             form.setValue('rows', newRows, { shouldDirty: true });
         }
     };
 
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
-        if (!over) {
+        if (!over || active.id === over.id) {
             setActiveId(null);
             return;
         }
 
-        // Reordering rows
-        if (active.id.toString().startsWith('row-') && over.id.toString().startsWith('row-')) {
-             const oldIndex = rowFields.findIndex(row => row.id === active.id);
-             const newIndex = rowFields.findIndex(row => row.id === over.id);
-             if (oldIndex !== newIndex) {
-                 moveRow(oldIndex, newIndex);
+        const activeContainerId = findContainer(active.id);
+        const overContainerId = findContainer(over.id);
+
+        if(active.id.toString().startsWith('row-') && over.id.toString().startsWith('row-')){
+             const oldIndex = rowFields.findIndex(r => r.id === active.id);
+             const newIndex = rowFields.findIndex(r => r.id === over.id);
+             if(oldIndex !== newIndex) moveRow(oldIndex, newIndex);
+        } else if (activeContainerId === overContainerId && activeContainerId !== 'toolbox') {
+             const rowIndex = rowFields.findIndex(r => r.id === activeContainerId);
+             const oldIndex = rowFields[rowIndex].widgets.findIndex(w => w.id === active.id);
+             const newIndex = rowFields[rowIndex].widgets.findIndex(w => w.id === over.id);
+             if(oldIndex !== newIndex){
+                 const currentRows = form.getValues('rows');
+                 const updatedWidgets = arrayMove(currentRows[rowIndex].widgets, oldIndex, newIndex);
+                 const newRows = [...currentRows];
+                 newRows[rowIndex].widgets = updatedWidgets;
+                 form.setValue('rows', newRows);
              }
         }
         
@@ -308,7 +373,7 @@ export default function AgentDashboardSettingsPage() {
                         <div className="space-y-4">
                               <SortableContext items={rowFields.map(row => row.id)} strategy={verticalListSortingStrategy}>
                                  {rowFields.map((row, index) => (
-                                     <DroppableRow key={row.id} row={row} rowIndex={index} removeRow={removeRow} control={form.control} />
+                                     <DroppableRow key={row.id} row={row as Row} rowIndex={index} form={form} />
                                  ))}
                               </SortableContext>
                         </div>
@@ -325,20 +390,18 @@ export default function AgentDashboardSettingsPage() {
     );
 }
 
-
-function DroppableRow({ row, rowIndex, removeRow, control }: { row: Row; rowIndex: number; removeRow: (index: number) => void; control: any }) {
+function DroppableRow({ row, rowIndex, form }: { row: Row; rowIndex: number; form: any }) {
     const { setNodeRef, isOver } = useDroppable({ id: row.id });
+    const { control, getValues, setValue } = form;
+    const { fields, remove: removeRow, move: moveRow } = useFieldArray({ control, name: 'rows' });
+    const { fields: widgetFields, remove: removeWidget } = useFieldArray({ control, name: `rows.${rowIndex}.widgets` });
     const { attributes, listeners, setNodeRef: setSortableNodeRef, transform, transition } = useSortable({ id: row.id });
 
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-    };
+    const style = { transform: CSS.Transform.toString(transform), transition };
     
-    const { fields: widgetFields, remove: removeWidget, move: moveWidget } = useFieldArray({
-        control,
-        name: `rows.${rowIndex}.widgets`
-    });
+    const handleRemoveWidget = (widgetIndex: number) => {
+        removeWidget(widgetIndex);
+    };
 
     return (
         <div ref={setSortableNodeRef} style={style} className="p-4 border rounded-lg bg-background shadow-sm space-y-2">
@@ -358,7 +421,7 @@ function DroppableRow({ row, rowIndex, removeRow, control }: { row: Row; rowInde
             >
                  <SortableContext items={widgetFields.map(w => w.id)} strategy={horizontalListSortingStrategy}>
                     {widgetFields.map((widget, widgetIndex) => (
-                        <SortableWidget key={widget.id} widget={widget as BaseWidget} onRemove={() => removeWidget(widgetIndex)} />
+                        <SortableWidgetItem key={widget.id} widget={widget as Widget} widgetIndex={widgetIndex} rowIndex={rowIndex} onRemove={() => handleRemoveWidget(widgetIndex)} control={control} />
                     ))}
                  </SortableContext>
 
@@ -368,16 +431,73 @@ function DroppableRow({ row, rowIndex, removeRow, control }: { row: Row; rowInde
     )
 }
 
-function SortableWidget({ widget, onRemove }: { widget: BaseWidget, onRemove: () => void }) {
+function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }: { widget: Widget, rowIndex: number, widgetIndex: number, onRemove: () => void, control: any }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: widget.id });
     const style = { transform: CSS.Transform.toString(transform), transition, };
-    const widgetInfo = AVAILABLE_WIDGETS.find(w => w.id === widget.widgetType);
+    
+    const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray({
+        control,
+        name: `rows.${rowIndex}.widgets.${widgetIndex}.links`,
+    });
+
+    const isConfigurable = widget.widgetType === 'motd' || widget.widgetType === 'links';
 
     return (
-        <div ref={setNodeRef} style={style} className="relative p-2 border rounded-md bg-card shadow-sm flex-1 min-w-[200px]">
-            <Button {...attributes} {...listeners} variant="ghost" size="icon" className="absolute top-1 left-1 h-6 w-6 cursor-grab active:cursor-grabbing"><GripHorizontal className="h-4 w-4 text-muted-foreground" /></Button>
-            <Button onClick={onRemove} variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
-            <p className="text-center text-sm font-medium pt-6 pb-2">{widgetInfo?.name || 'Unknown Widget'}</p>
+        <div ref={setNodeRef} style={style} className="relative p-3 border rounded-md bg-card shadow-sm flex-1 min-w-[250px] flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Button type="button" variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing"><GripVertical className="h-5 w-5"/></Button>
+                    <Label htmlFor={`switch-${widget.id}`} className="font-medium">{widget.name}</Label>
+                </div>
+                 <div className="flex items-center gap-1">
+                    <FormField
+                        control={control}
+                        name={`rows.${rowIndex}.widgets.${widgetIndex}.isEnabled`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormControl>
+                                    <Switch
+                                        id={`switch-${widget.id}`}
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
+                    <Button onClick={onRemove} variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+                 </div>
+            </div>
+
+            {isConfigurable && (
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="settings" className="border-b-0">
+                        <AccordionTrigger className="text-sm py-1">Settings</AccordionTrigger>
+                        <AccordionContent className="pt-2 space-y-4">
+                             {widget.widgetType === 'motd' && (
+                                <>
+                                 <FormField control={control} name={`rows.${rowIndex}.widgets.${widgetIndex}.emoji`} render={({ field }) => (<FormItem><FormLabel>Emoji</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                 <FormField control={control} name={`rows.${rowIndex}.widgets.${widgetIndex}.content`} render={({ field }) => (<FormItem><FormLabel>Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
+                                </>
+                            )}
+                             {widget.widgetType === 'links' && (
+                                <div className="space-y-2">
+                                    {linkFields.map((link, linkIndex) => (
+                                        <div key={link.id} className="flex items-end gap-2 p-2 border rounded-md">
+                                            <div className="flex-1 space-y-2">
+                                                <FormField control={control} name={`rows.${rowIndex}.widgets.${widgetIndex}.links.${linkIndex}.title`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Title</FormLabel><FormControl><Input {...field} placeholder="Link Title" className="h-8"/></FormControl></FormItem>)} />
+                                                <FormField control={control} name={`rows.${rowIndex}.widgets.${widgetIndex}.links.${linkIndex}.url`} render={({ field }) => (<FormItem><FormLabel className="text-xs">URL</FormLabel><FormControl><Input {...field} placeholder="https://..." type="url" className="h-8"/></FormControl></FormItem>)} />
+                                            </div>
+                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeLink(linkIndex)}><Trash2 className="h-4 w-4"/></Button>
+                                        </div>
+                                    ))}
+                                    <Button type="button" variant="outline" size="sm" onClick={() => appendLink({id: `link-${Date.now()}`, title: '', url: ''})}><Plus className="h-4 w-4 mr-2"/>Add Link</Button>
+                                </div>
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            )}
         </div>
     )
 }
