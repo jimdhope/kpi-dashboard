@@ -552,11 +552,11 @@ export default function AgentDashboardPage() {
                     <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[120px] w-full" />))}</div>
+                    {isLoading ? <div className="flex flex-wrap gap-4">{Array.from({ length: 4 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[120px] w-full min-w-[200px] max-w-[250px] flex-1" />))}</div>
                     : !canLog && !error && !isLoadingUser && !agentPodId ? <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
                     : !canLog && !error && numericRules.length === 0 ? <p className="text-muted-foreground text-center py-6">No numerical achievements to log for your pod today.</p>
-                    : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {numericRules.map((rule) => rule.id ? <AchievementCard key={rule.id} rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /> : null)}
+                    : <div className="flex flex-wrap gap-4">
+                        {numericRules.map((rule) => rule.id ? <div key={rule.id} className="min-w-[200px] max-w-[250px] flex-1"><AchievementCard rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /></div> : null)}
                     </div>}
                 </CardContent>
             </Card>
