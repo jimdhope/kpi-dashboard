@@ -87,7 +87,7 @@ export default function AgentDashboardPage() {
   // User and Pod Data
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
-  const [agentPodData, setAgentPodData] = useState<Pod | null>(null); // New state for pod data
+  const [allPods, setAllPods] = useState<Pod[]>([]); // New state for ALL pods
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
 
   // Competition and Rules Data
@@ -98,7 +98,7 @@ export default function AgentDashboardPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   
   // Daily Dynamic Data
-  const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]);
+  const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]); // Will hold logs for ALL pods in comp
   const [podBonusLogs, setPodBonusLogs] = useState<TeamBonusLog[]>([]);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
@@ -149,21 +149,19 @@ export default function AgentDashboardPage() {
         }
     });
 
-    return () => cleanupListeners(['auth', 'userDoc']);
+    // Fetch all pods once for leaderboard display
+    const podsQuery = query(collection(db, 'pods'), orderBy('name'));
+    listenerRefs.current.allPods = onSnapshot(podsQuery, (snap) => {
+      setAllPods(snap.docs.map(d => ({id: d.id, ...d.data()} as Pod)));
+    });
+
+
+    return () => cleanupListeners(['auth', 'userDoc', 'allPods']);
   }, [cleanupListeners]);
 
   // Effect to fetch all competitions for the user's pod
   useEffect(() => {
       if (isLoadingUser || !agentPodId) return;
-
-      // Fetch pod data once when podId is known
-      const podDocRef = doc(db, 'pods', agentPodId);
-      getDoc(podDocRef).then(podSnap => {
-          if (podSnap.exists()) {
-              setAgentPodData({ id: podSnap.id, ...podSnap.data() } as Pod);
-          }
-      });
-
 
       const compQuery = query(collection(db, 'competitions'), where('podIds', 'array-contains', agentPodId), orderBy('startDate', 'desc'));
       const unsubscribeComps = onSnapshot(compQuery, (snapshot) => {
@@ -203,18 +201,21 @@ export default function AgentDashboardPage() {
                  setActiveCompetition(newActiveComp);
                  setRules(newActiveComp.rules || []);
                  setTeams(newActiveComp.teams || []);
+                 
+                 // Fetch logs for all pods in this competition
+                 if (newActiveComp.podIds && newActiveComp.podIds.length > 0) {
+                    const logsQuery = query(collection(db, 'dailyAchievements'), where('competitionId', '==', selectedCompetitionId));
+                    listenerRefs.current.competitionLogs = onSnapshot(logsQuery, (snap) => { if(isMounted) setCompetitionLogs(snap.docs.map(d => d.data() as DailyAchievementLog)); });
+
+                    const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('competitionId', '==', selectedCompetitionId));
+                    listenerRefs.current.competitionBonusLogs = onSnapshot(bonusLogsQuery, (snap) => { if(isMounted) setPodBonusLogs(snap.docs.map(d => d.data() as TeamBonusLog)); });
+                 }
              });
 
             const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId), orderBy('name'));
             listenerRefs.current.agents = onSnapshot(agentsQuery, (snap) => { if(isMounted) setPodAgents(snap.docs.map(d => d.data() as AppUser)); });
             
-            const logsQuery = query(collection(db, 'dailyAchievements'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
-            listenerRefs.current.podLogs = onSnapshot(logsQuery, (snap) => { if(isMounted) setPodLogs(snap.docs.map(d => d.data() as DailyAchievementLog)); });
-            
-            const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
-            listenerRefs.current.podBonusLogs = onSnapshot(bonusLogsQuery, (snap) => { if(isMounted) setPodBonusLogs(snap.docs.map(d => d.data() as TeamBonusLog)); });
-
-             const taskLogsQuery = query(collection(db, 'dailyTaskLogs'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId), where('date', '==', Timestamp.fromDate(todayStart)));
+             const taskLogsQuery = query(collection(db, 'dailyTaskLogs'), where('agentId', '==', currentUser.id), where('competitionId', '==', selectedCompetitionId), where('date', '==', Timestamp.fromDate(todayStart)));
              listenerRefs.current.taskLogs = onSnapshot(taskLogsQuery, (snap) => { if(isMounted) setDailyTaskLogs(snap.docs.map(d => d.data() as DailyTaskLog)); });
 
              const targetsDocId = `${selectedCompetitionId}_${agentPodId}`;
@@ -252,30 +253,39 @@ export default function AgentDashboardPage() {
   }, []);
 
   const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
-    if (!activeCompetition) return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
+    if (!activeCompetition || !allPods.length) return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
     
-    // Agent scores
+    const podsInComp = allPods.filter(p => activeCompetition.podIds?.includes(p.id));
+
+    // Agent scores (only for current pod)
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
-    podLogs.forEach(log => {
+    const agentPodLogs = competitionLogs.filter(log => log.podId === agentPodId);
+    agentPodLogs.forEach(log => {
       if (agentScores.hasOwnProperty(log.agentId)) {
         agentScores[log.agentId] += (log.points || 0);
       }
     });
 
-    // Team scores
+    // Team scores (only for current pod's teams)
     const teamScores: Record<string, number> = {};
     teams.forEach(team => { teamScores[team.id] = 0; });
-    podLogs.forEach(log => {
+    agentPodLogs.forEach(log => {
       const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
       if (agentTeam) {
         teamScores[agentTeam.id] += (log.points || 0);
       }
     });
-    podBonusLogs.forEach(log => { if(teamScores[log.teamId] !== undefined) teamScores[log.teamId] += (log.points || 0); });
+    podBonusLogs.filter(log => log.podId === agentPodId).forEach(log => { if(teamScores[log.teamId] !== undefined) teamScores[log.teamId] += (log.points || 0); });
     
-    // Pod score
-    const podTotalScore = podLogs.reduce((sum, log) => sum + (log.points || 0), 0);
+    // Pod scores (for ALL pods in competition)
+    const podScores: Record<string, number> = {};
+    podsInComp.forEach(pod => { podScores[pod.id] = 0 });
+    competitionLogs.forEach(log => {
+      if (podScores.hasOwnProperty(log.podId)) {
+        podScores[log.podId] += (log.points || 0);
+      }
+    });
 
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         const sorted = [...items].sort((a,b) => (b.score || 0) - (a.score || 0));
@@ -285,21 +295,12 @@ export default function AgentDashboardPage() {
         return sorted.map(item => ({...item, rank: rankMap.get(item.score)!}));
     };
 
-    const finalPodLeaderboard = agentPodData ? [{
-        id: agentPodData.id,
-        name: agentPodData.name,
-        score: podTotalScore,
-        avatarUrl: agentPodData.logoUrl,
-        avatarInitials: agentPodData.logoInitials,
-        avatarBgColor: agentPodData.logoBgColor,
-    }] : [];
-
     return {
       agentLeaderboard: assignDenseRanks(podAgents.map(agent => ({ id: agent.id!, name: agent.name, score: agentScores[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isUser: agent.id === currentUser?.id }))),
       teamLeaderboard: assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') }))),
-      podLeaderboard: assignDenseRanks(finalPodLeaderboard)
+      podLeaderboard: assignDenseRanks(podsInComp.map(pod => ({ id: pod.id, name: pod.name, score: podScores[pod.id] || 0, avatarUrl: pod.logoUrl, avatarInitials: pod.logoInitials, avatarBgColor: pod.logoBgColor }))),
     };
-  }, [podLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, agentPodId, agentPodData]);
+  }, [competitionLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods, agentPodId]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
@@ -314,18 +315,18 @@ export default function AgentDashboardPage() {
             case 'leaderboard-team':
                 return <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} />;
             case 'leaderboard-pod':
-                return <Leaderboard title="My Pod's Score" entries={podLeaderboard} />;
+                return <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} />;
             case 'achievements':
                  return <TodaysAchievementsWidget
                            rules={rules}
-                           podLogs={podLogs}
+                           podLogs={competitionLogs.filter(l => l.podId === agentPodId)}
                            dailyTaskLogs={dailyTaskLogs}
                            currentUser={currentUser}
                         />;
             case 'pod-targets':
                  return <PodTargetsWidget
                             rules={rules}
-                            podLogs={podLogs}
+                            podLogs={competitionLogs.filter(l => l.podId === agentPodId)}
                             dailyTargets={dailyTargets}
                             podAgents={podAgents}
                         />;
