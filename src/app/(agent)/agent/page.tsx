@@ -29,7 +29,7 @@ import { Label } from '@/components/ui/label'; // Import Label
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
-import type { DashboardSettingsData, Widget, ExternalLink } from '@/app/(admin)/admin/message-of-the-day/page';
+import type { DashboardSettingsData, Widget, ExternalLink, LeaderboardType } from '@/app/(admin)/admin/message-of-the-day/page';
 
 
 // Interfaces
@@ -534,6 +534,17 @@ export default function AgentDashboardPage() {
   const numericRules = useMemo(() => rules.filter(r => r.type === 'numeric'), [rules]);
   const canLog = !isLoading && currentUser && agentPodId && rules.length > 0 && activeCompetition;
   const competitionName = allCompetitions.find(c => c.id === selectedCompetitionId)?.name;
+  
+  const leaderboardsWidget = useMemo(() => {
+    return dashboardSettings?.widgets.find(w => w.id === 'leaderboards');
+  }, [dashboardSettings]);
+  
+  const orderedEnabledLeaderboards = useMemo(() => {
+    if (leaderboardsWidget?.type === 'leaderboards') {
+      return leaderboardsWidget.leaderboardTypes.filter(lt => lt.isEnabled);
+    }
+    return [];
+  }, [leaderboardsWidget]);
 
   const orderedWidgets = dashboardSettings?.widgets || [];
   
@@ -608,16 +619,15 @@ export default function AgentDashboardPage() {
                         <p className="text-muted-foreground text-center py-4">Please select a competition to view the leaderboards.</p>
                     ) : (
                         <div className="grid md:grid-cols-2 gap-6">
-                            <Leaderboard
-                                title="Agent Leaderboard"
-                                entries={agentLeaderboard}
-                                isStickyHeader={false}
-                            />
-                            <Leaderboard
-                                title="Team Leaderboard"
-                                entries={teamLeaderboard}
-                                isStickyHeader={false}
-                            />
+                          {orderedEnabledLeaderboards.map(lb => {
+                              if (lb.id === 'agent') {
+                                  return <Leaderboard key="agent" title="Agent Leaderboard" entries={agentLeaderboard} isStickyHeader={false} />;
+                              }
+                              if (lb.id === 'team') {
+                                  return <Leaderboard key="team" title="Team Leaderboard" entries={teamLeaderboard} isStickyHeader={false} />;
+                              }
+                              return null;
+                          })}
                         </div>
                     )}
                 </CardContent>
