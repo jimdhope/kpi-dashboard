@@ -10,16 +10,15 @@ body {
   font-family: 'Inter', Arial, Helvetica, sans-serif;
   overflow-x: hidden;
   background-color: hsl(var(--background));
-  /* The pattern is created by a repeating gradient. The second color is slightly different from the main background. */
+  /* The pattern is created by a repeating gradient. The border color provides subtle contrast. */
   background-image: repeating-radial-gradient(
-    circle at 0 0,
-    transparent 0,
-    hsl(var(--background)) 20px /* Match the background color for the circle edge */
-  ),
-  repeating-linear-gradient(
-    hsla(var(--primary-rgb), 0.05), /* Use a very transparent version of the primary color */
-    hsla(var(--primary-rgb), 0.05)
+    circle at center,
+    hsl(var(--border)) 0,
+    hsl(var(--border)) 1px,
+    transparent 1px,
+    transparent 20px
   );
+  background-size: 20px 20px;
 }
 
 
