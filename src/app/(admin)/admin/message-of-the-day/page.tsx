@@ -35,10 +35,10 @@ import {
 
 // --- Zod Schema Definitions ---
 
-export type WidgetType = 
-    | 'motd' 
-    | 'achievements' 
-    | 'pod-targets' 
+export type WidgetType =
+    | 'motd'
+    | 'achievements'
+    | 'pod-targets'
     | 'leaderboard-agent'
     | 'leaderboard-team'
     | 'leaderboard-pod'
@@ -77,10 +77,10 @@ const specificWidgetSchema = z.discriminatedUnion('type', [
 export type SpecificWidget = z.infer<typeof specificWidgetSchema>;
 
 
-// A column holds a single widget.
+// A column now holds multiple widgets.
 const columnSchema = z.object({
     id: z.string(),
-    widget: specificWidgetSchema.optional(),
+    widgets: z.array(specificWidgetSchema), // Changed from optional widget to array of widgets
 });
 export type Column = z.infer<typeof columnSchema>;
 
@@ -208,26 +208,33 @@ export default function AgentDashboardSettingsPage() {
 
 
     const handleAddNewRow = () => {
-        appendRow({ id: `row-${Date.now()}`, columns: [] });
+        // A new row now defaults to one column with an empty widgets array.
+        appendRow({ id: `row-${Date.now()}`, columns: [{ id: `col-${Date.now()}`, widgets: [] }] });
     };
 
      const handleAddNewColumn = (rowIndex: number) => {
         const rows = form.getValues('rows');
         const targetRow = rows[rowIndex];
         if (targetRow) {
-            const newColumn: Column = { id: `col-${Date.now()}` };
+            // New column has an empty widgets array
+            const newColumn: Column = { id: `col-${Date.now()}`, widgets: [] };
             const updatedColumns = [...targetRow.columns, newColumn];
             form.setValue(`rows.${rowIndex}.columns`, updatedColumns, { shouldDirty: true });
         }
     };
 
-    const handleSelectWidgetForColumn = (rowIndex: number, columnIndex: number, widgetType: WidgetType) => {
+    const handleAddWidgetToColumn = (rowIndex: number, columnIndex: number, widgetType: WidgetType) => {
         const newWidget = getWidgetDefaultData(widgetType);
-        form.setValue(`rows.${rowIndex}.columns.${columnIndex}.widget`, newWidget, { shouldDirty: true });
+        const columnPath = `rows.${rowIndex}.columns.${columnIndex}.widgets`;
+        const currentWidgets = form.getValues(columnPath) || [];
+        form.setValue(columnPath, [...currentWidgets, newWidget], { shouldDirty: true });
     };
 
-    const handleRemoveWidgetFromColumn = (rowIndex: number, columnIndex: number) => {
-         form.setValue(`rows.${rowIndex}.columns.${columnIndex}.widget`, undefined, { shouldDirty: true });
+    const handleRemoveWidgetFromColumn = (rowIndex: number, columnIndex: number, widgetIndex: number) => {
+         const columnPath = `rows.${rowIndex}.columns.${columnIndex}.widgets`;
+         const currentWidgets = form.getValues(columnPath) || [];
+         const updatedWidgets = currentWidgets.filter((_, idx) => idx !== widgetIndex);
+         form.setValue(columnPath, updatedWidgets, { shouldDirty: true });
     };
 
      const handleRemoveColumn = (rowIndex: number, columnIndex: number) => {
@@ -291,7 +298,7 @@ export default function AgentDashboardSettingsPage() {
                             </div>
                         ) : (
                             rowFields.map((row, rowIndex) => (
-                                <RowEditor key={row.id} rowIndex={rowIndex} removeRow={removeRow} form={form} onAddColumn={handleAddNewColumn} onRemoveColumn={handleRemoveColumn} onSelectWidget={handleSelectWidgetForColumn} onRemoveWidget={handleRemoveWidgetFromColumn} />
+                                <RowEditor key={row.id} rowIndex={rowIndex} removeRow={removeRow} form={form} onAddColumn={handleAddNewColumn} onRemoveColumn={handleRemoveColumn} onAddWidget={handleAddWidgetToColumn} onRemoveWidget={handleRemoveWidgetFromColumn} />
                             ))
                         )}
                     </CardContent>
@@ -338,16 +345,16 @@ export default function AgentDashboardSettingsPage() {
 interface RowEditorProps {
     rowIndex: number;
     removeRow: (index: number) => void;
-    form: any; // Simplified form prop for brevity
+    form: any;
     onAddColumn: (rowIndex: number) => void;
     onRemoveColumn: (rowIndex: number, colIndex: number) => void;
-    onSelectWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
-    onRemoveWidget: (rowIndex: number, colIndex: number) => void;
+    onAddWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
+    onRemoveWidget: (rowIndex: number, colIndex: number, widgetIndex: number) => void;
 }
 
-function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onSelectWidget, onRemoveWidget }: RowEditorProps) {
+function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onAddWidget, onRemoveWidget }: RowEditorProps) {
     const { fields: columnFields } = useFieldArray({ control: form.control, name: `rows.${rowIndex}.columns`, keyName: "colId" });
-    
+
     return (
         <div className="p-4 border rounded-lg bg-background shadow-sm space-y-3">
              <div className="flex items-center justify-between">
@@ -364,7 +371,7 @@ function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onS
                      <p className="text-sm text-muted-foreground">Add a column to this row.</p>
                  ) : (
                      columnFields.map((col, colIndex) => (
-                         <ColumnEditor key={col.id} rowIndex={rowIndex} colIndex={colIndex} onRemoveColumn={onRemoveColumn} onSelectWidget={onSelectWidget} onRemoveWidget={onRemoveWidget} form={form} />
+                         <ColumnEditor key={col.id} rowIndex={rowIndex} colIndex={colIndex} onRemoveColumn={onRemoveColumn} onAddWidget={onAddWidget} onRemoveWidget={onRemoveWidget} form={form} />
                      ))
                  )}
             </div>
@@ -376,69 +383,92 @@ interface ColumnEditorProps {
     rowIndex: number;
     colIndex: number;
     onRemoveColumn: (rowIndex: number, colIndex: number) => void;
-    onSelectWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
-    onRemoveWidget: (rowIndex: number, colIndex: number) => void;
+    onAddWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
+    onRemoveWidget: (rowIndex: number, colIndex: number, widgetIndex: number) => void;
     form: any;
 }
 
 
-function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onSelectWidget, onRemoveWidget, form }: ColumnEditorProps) {
-    const { control } = form;
-    const widget = form.watch(`rows.${rowIndex}.columns.${colIndex}.widget`);
-    
+function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onAddWidget, onRemoveWidget, form }: ColumnEditorProps) {
+    const columnPath = `rows.${rowIndex}.columns.${colIndex}.widgets`;
+    const { fields: widgetFields } = useFieldArray({ control: form.control, name: columnPath, keyName: "widgetId" });
+
     return (
-        <div className="relative p-3 border rounded-md bg-card shadow-sm flex-1 min-w-[250px] flex flex-col gap-2 group">
+        <div className="relative p-3 border rounded-md bg-card shadow-sm flex-1 min-w-[250px] flex flex-col gap-4 group">
             <Button onClick={() => onRemoveColumn(rowIndex, colIndex)} variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 text-destructive bg-card border rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4"/></Button>
 
-            {!widget ? (
-                <div className="flex flex-col items-center justify-center h-full min-h-[150px]">
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4"/> Select Widget</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                             <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                            {AVAILABLE_WIDGETS.map(w => (
-                                <DropdownMenuItem key={w.id} onSelect={() => onSelectWidget(rowIndex, colIndex, w.id)}>
-                                    {w.name}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            ) : (
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                         <Label className="font-medium">{widget.name}</Label>
-                         <div className="flex items-center gap-1">
-                             <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.isEnabled`} render={({ field }) => (<FormItem><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
-                             <Button onClick={() => onRemoveWidget(rowIndex, colIndex)} variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><Trash2 className="h-4 w-4"/></Button>
-                         </div>
-                    </div>
-                     <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="settings" className="border-b-0">
-                            <AccordionTrigger className="text-sm py-1">Settings</AccordionTrigger>
-                            <AccordionContent className="pt-2 space-y-4">
-                                {widget.type === 'motd' && (
-                                    <>
-                                        <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.emoji`} render={({ field }) => (<FormItem><FormLabel>Emoji</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.content`} render={({ field }) => (<FormItem><FormLabel>Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
-                                    </>
-                                )}
-                                {widget.type === 'custom-html' && (
-                                    <>
-                                        <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.content`} render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
-                                    </>
-                                )}
-                                {(widget.type === 'achievements' || widget.type === 'pod-targets' || (widget.type && widget.type.startsWith('leaderboard-'))) && (
-                                     <p className="text-sm text-muted-foreground">This widget has no additional settings.</p>
-                                )}
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                </div>
-            )}
+            <div className="space-y-3">
+                {widgetFields.map((widget, widgetIndex) => (
+                    <WidgetEditor key={widget.id} rowIndex={rowIndex} colIndex={colIndex} widgetIndex={widgetIndex} onRemoveWidget={onRemoveWidget} form={form} />
+                ))}
+            </div>
+
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="mt-auto w-full">
+                        <PlusCircle className="mr-2 h-4 w-4"/> Add Widget
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                     <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
+                     <DropdownMenuSeparator />
+                    {AVAILABLE_WIDGETS.map(w => (
+                        <DropdownMenuItem key={w.id} onSelect={() => onAddWidget(rowIndex, colIndex, w.id)}>
+                            {w.name}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     );
 }
+
+interface WidgetEditorProps {
+    rowIndex: number;
+    colIndex: number;
+    widgetIndex: number;
+    onRemoveWidget: (rowIndex: number, colIndex: number, widgetIndex: number) => void;
+    form: any;
+}
+
+function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }: WidgetEditorProps) {
+    const { control } = form;
+    const widgetPath = `rows.${rowIndex}.columns.${colIndex}.widgets.${widgetIndex}`;
+    const widget = form.watch(widgetPath);
+
+    if (!widget) return null; // Should not happen if key exists
+
+    return (
+         <div className="relative p-2 border rounded-md bg-background/50 shadow-sm flex flex-col gap-2 group/widget">
+             <div className="flex items-center justify-between">
+                 <Label className="font-medium text-sm truncate">{widget.name}</Label>
+                 <div className="flex items-center gap-1">
+                     <FormField control={control} name={`${widgetPath}.isEnabled`} render={({ field }) => (<FormItem><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                     <Button onClick={() => onRemoveWidget(rowIndex, colIndex, widgetIndex)} variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><Trash2 className="h-4 w-4"/></Button>
+                 </div>
+            </div>
+             <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="settings" className="border-b-0">
+                    <AccordionTrigger className="text-xs py-1">Settings</AccordionTrigger>
+                    <AccordionContent className="pt-2 space-y-4">
+                        {widget.type === 'motd' && (
+                            <>
+                                <FormField control={control} name={`${widgetPath}.emoji`} render={({ field }) => (<FormItem><FormLabel>Emoji</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={control} name={`${widgetPath}.content`} render={({ field }) => (<FormItem><FormLabel>Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
+                            </>
+                        )}
+                        {widget.type === 'custom-html' && (
+                            <>
+                                <FormField control={control} name={`${widgetPath}.content`} render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
+                            </>
+                        )}
+                        {(widget.type && (widget.type === 'achievements' || widget.type === 'pod-targets' || widget.type.startsWith('leaderboard-'))) && (
+                             <p className="text-sm text-muted-foreground">This widget has no additional settings.</p>
+                        )}
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+         </div>
+    );
+}
+
