@@ -10,6 +10,7 @@ import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert"
 import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, setDoc, addDoc, serverTimestamp, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
+import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog, DailyTaskLog, TeamBonusLog } from '@/app/(admin)/admin/log-achievements/page';
 import type { RuleFormData } from '@/models/types';
@@ -87,6 +88,7 @@ export default function AgentDashboardPage() {
   // User and Pod Data
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
+  const [agentPodData, setAgentPodData] = useState<Pod | null>(null); // New state for pod data
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
 
   // Competition and Rules Data
@@ -154,6 +156,15 @@ export default function AgentDashboardPage() {
   // Effect to fetch all competitions for the user's pod
   useEffect(() => {
       if (isLoadingUser || !agentPodId) return;
+
+      // Fetch pod data once when podId is known
+      const podDocRef = doc(db, 'pods', agentPodId);
+      getDoc(podDocRef).then(podSnap => {
+          if (podSnap.exists()) {
+              setAgentPodData({ id: podSnap.id, ...podSnap.data() } as Pod);
+          }
+      });
+
 
       const compQuery = query(collection(db, 'competitions'), where('podIds', 'array-contains', agentPodId), orderBy('startDate', 'desc'));
       const unsubscribeComps = onSnapshot(compQuery, (snapshot) => {
@@ -260,13 +271,13 @@ export default function AgentDashboardPage() {
     });
     podBonusLogs.forEach(log => { if(teamScores[log.teamId] !== undefined) teamScores[log.teamId] += log.points; });
 
-    const podScores: Record<string, number> = { [agentPodId || '']: 0 };
+    // Correctly calculate total pod score
+    let podTotalScore = 0;
     podLogs.forEach(log => {
-      if (podScores.hasOwnProperty(log.podId) && rules.find(r => r.id === log.ruleId)?.type === 'numeric') {
-        podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
-      }
+        if (log.podId === agentPodId && rules.find(r => r.id === log.ruleId)?.type === 'numeric') {
+            podTotalScore += (log.points || 0);
+        }
     });
-
 
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         const sorted = [...items].sort((a,b) => (b.score || 0) - (a.score || 0));
@@ -276,12 +287,20 @@ export default function AgentDashboardPage() {
         return sorted.map(item => ({...item, rank: rankMap.get(item.score)!}));
     };
 
+    const finalPodLeaderboard = agentPodData ? [{
+        id: agentPodData.id,
+        name: agentPodData.name,
+        score: podTotalScore,
+        avatarInitials: agentPodData.logoInitials,
+        avatarBgColor: agentPodData.logoBgColor,
+    }] : [];
+
     return {
       agentLeaderboard: assignDenseRanks(podAgents.map(agent => ({ id: agent.id!, name: agent.name, score: agentScores[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isUser: agent.id === currentUser?.id }))),
       teamLeaderboard: assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') }))),
-      podLeaderboard: assignDenseRanks(Object.entries(podScores).map(([id, score]) => ({ id, name: podAgents.find(p => p.podId === id)?.name || 'My Pod', score })))
+      podLeaderboard: assignDenseRanks(finalPodLeaderboard)
     };
-  }, [podLogs, podBonusLogs, podAgents, teams, rules, currentUser, agentPodId]);
+  }, [podLogs, podBonusLogs, podAgents, teams, rules, currentUser, agentPodId, agentPodData]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
