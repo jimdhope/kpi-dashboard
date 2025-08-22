@@ -74,7 +74,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     });
 
     return () => unsubscribe();
-  }, [agentPodId, selectedCompetitionId]);
+  }, [agentPodId]); // Removed selectedCompetitionId dependency
 
 
   // Effect 2: Fetch competition-specific data when selection changes
@@ -84,55 +84,50 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
       setCompetitionLogs([]);
       setBonusLogs([]);
       setIsLoading(false);
-      return;
+      return () => {}; // Return empty cleanup function
     }
 
     const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);
 
     if (!selectedCompetition) {
         setIsLoading(false);
-        return;
+        return () => {};
     }
 
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
 
-    const fetchCompetitionData = async () => {
-        try {
-            setTeams(selectedCompetition.teams || []);
+    // Set teams immediately from the selected competition data
+    setTeams(selectedCompetition.teams || []);
 
-            // Listen for all achievement logs for the competition for the correct date range
-            const logsQuery = query(
-                collection(db, 'dailyAchievements'),
-                where('competitionId', '==', selectedCompetitionId),
-                where('date', '>=', selectedCompetition.startDate),
-                where('date', '<=', selectedCompetition.endDate)
-            );
-            unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
-                setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
-            }));
+    // Listen for all achievement logs for the competition for the correct date range
+    const logsQuery = query(
+        collection(db, 'dailyAchievements'),
+        where('competitionId', '==', selectedCompetitionId),
+        where('date', '>=', selectedCompetition.startDate),
+        where('date', '<=', selectedCompetition.endDate)
+    );
+    unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
+        setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
+    }));
 
-            // Listen for all bonus logs for the competition
-            const bonusLogsQuery = query(
-                collection(db, 'teamBonusLogs'),
-                where('competitionId', '==', selectedCompetitionId),
-                where('date', '>=', selectedCompetition.startDate),
-                where('date', '<=', selectedCompetition.endDate)
-            );
-            unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
-                setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
-                setIsLoading(false); // Only set loading to false after the final fetch
-            }));
-        } catch (error) {
-            console.error("Error fetching competition data:", error);
-            setIsLoading(false);
-        }
-    };
-
-    fetchCompetitionData();
+    // Listen for all bonus logs for the competition
+    const bonusLogsQuery = query(
+        collection(db, 'teamBonusLogs'),
+        where('competitionId', '==', selectedCompetitionId),
+        where('date', '>=', selectedCompetition.startDate),
+        where('date', '<=', selectedCompetition.endDate)
+    );
+    unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
+        setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
+        setIsLoading(false); // Only set loading to false after the final fetch
+    }, (error) => {
+        console.error("Error fetching bonus logs:", error);
+        setIsLoading(false);
+    }));
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedCompetitionId, allCompetitions]);
+  }, [selectedCompetitionId, allCompetitions]); // Depend only on the ID and the list of all comps
 
 
   const teamLeaderboard = useMemo(() => {
@@ -147,11 +142,11 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
         .filter(log => teamAgentIds.has(log.agentId))
         .reduce((sum, log) => sum + (log.points || 0), 0);
       
-      const bonusPoints = bonusLogs
+      const teamBonusPoints = bonusLogs
         .filter(log => log.teamId === team.id)
         .reduce((sum, log) => sum + (log.points || 0), 0);
       
-      acc[team.id] = achievementPoints + bonusPoints;
+      acc[team.id] = achievementPoints + teamBonusPoints;
       return acc;
     }, {} as Record<string, number>);
 
