@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, orderBy, onSnapshot, Unsubscribe, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Unsubscribe, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -26,6 +25,7 @@ interface Team {
 
 interface CompetitionWithTeams extends Competition {
     teams?: Team[];
+    id: string; // Ensure ID is present
 }
 
 const TEAM_LEADERBOARD_COMP_KEY = 'teamLeaderboard_selectedCompId';
@@ -40,9 +40,11 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
   
   const agentPodId = currentUser?.podId;
 
-  // Fetch all possible competitions for the user's pod
+  // Effect 1: Fetch all possible competitions for the user's pod
   useEffect(() => {
     if (!agentPodId) return;
+
+    setIsLoading(true);
     const compQuery = query(
         collection(db, 'competitions'),
         where('podIds', 'array-contains', agentPodId),
@@ -51,65 +53,95 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     const unsubscribe = onSnapshot(compQuery, (snapshot) => {
         const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithTeams));
         setAllCompetitions(fetchedComps);
-        if (!selectedCompetitionId && fetchedComps.length > 0) {
+        
+        // Set default competition if not already set, or if current selection is invalid
+        if (!selectedCompetitionId || !fetchedComps.some(c => c.id === selectedCompetitionId)) {
             const savedCompId = localStorage.getItem(TEAM_LEADERBOARD_COMP_KEY);
             if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
                 setSelectedCompetitionId(savedCompId);
-            } else {
-                setSelectedCompetitionId(fetchedComps[0].id);
+            } else if (fetchedComps.length > 0) {
+                 setSelectedCompetitionId(fetchedComps[0].id);
             }
         }
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching competitions:", error);
+        setIsLoading(false);
     });
-    return () => unsubscribe();
-  }, [agentPodId, selectedCompetitionId]);
 
-  // Fetch logs and team data for the selected competition
+    return () => unsubscribe();
+  }, [agentPodId]);
+
+
+  // Effect 2: Fetch competition-specific data (logs, teams, bonuses) when selection changes
   useEffect(() => {
-    if (!selectedCompetitionId || !agentPodId) {
-      setIsLoading(false);
+    if (!selectedCompetitionId) {
+      setTeams([]);
+      setCompetitionLogs([]);
+      setBonusLogs([]);
       return;
     }
+
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
 
-    // Set teams from selected competition data
-    const competitionData = allCompetitions.find(c => c.id === selectedCompetitionId);
-    setTeams(competitionData?.teams?.filter(t => t.agentIds.some(agentId => currentUser?.podId && doc(db, 'users', agentId).parent.id === currentUser.podId)) || []);
+    const fetchCompetitionData = async () => {
+        try {
+            // Get Team definitions from the competition document
+            const compDocRef = doc(db, 'competitions', selectedCompetitionId);
+            const compDocSnap = await getDoc(compDocRef);
+            if (compDocSnap.exists()) {
+                const compData = compDocSnap.data() as CompetitionWithTeams;
+                setTeams(compData.teams || []);
+            }
 
+            // Listen for all achievement logs for the competition
+            const logsQuery = query(collection(db, 'dailyAchievements'), where('competitionId', '==', selectedCompetitionId));
+            unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
+                setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
+            }));
 
-    // Fetch logs for the pod within the competition
-    const logsQuery = query(
-      collection(db, 'dailyAchievements'),
-      where('competitionId', '==', selectedCompetitionId),
-      where('podId', '==', agentPodId)
-    );
-    unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
-      setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
-    }));
+            // Listen for all bonus logs for the competition
+            const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('competitionId', '==', selectedCompetitionId));
+            unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
+                setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
+                setIsLoading(false); // Mark loading as complete after the final fetch
+            }));
+        } catch (error) {
+            console.error("Error fetching competition data:", error);
+            setIsLoading(false);
+        }
+    };
 
-    // Fetch bonus logs for the pod within the competition
-    const bonusLogsQuery = query(
-      collection(db, 'teamBonusLogs'),
-      where('competitionId', '==', selectedCompetitionId),
-      where('podId', '==', agentPodId)
-    );
-    unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
-      setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
-      setIsLoading(false);
-    }));
+    fetchCompetitionData();
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedCompetitionId, agentPodId, allCompetitions, currentUser?.podId]);
+  }, [selectedCompetitionId]);
+
 
   const teamLeaderboard = useMemo(() => {
-    if (isLoading || teams.length === 0) return [];
+    const competition = allCompetitions.find(c => c.id === selectedCompetitionId);
+    if (isLoading || !competition || teams.length === 0) {
+        return [];
+    }
     
+    // Filter logs and bonus logs to only include those for teams in the current pod
+    const podTeams = teams.filter(team => team.agentIds.some(id => currentUser?.podId && doc(db, 'users', id).parent.id === currentUser.podId));
+    const podTeamIds = new Set(podTeams.map(t => t.id));
+    
+    const podLogs = competitionLogs.filter(log => log.podId === currentUser?.podId);
+    const podBonusLogs = bonusLogs.filter(log => log.podId === currentUser?.podId);
+
     const teamScores = teams.reduce((acc, team) => {
+      // Only calculate for teams in the current pod
+      if (!podTeamIds.has(team.id)) return acc;
+
       const teamAgentIds = new Set(team.agentIds);
-      const achievementPoints = competitionLogs
+      const achievementPoints = podLogs
         .filter(log => teamAgentIds.has(log.agentId))
         .reduce((sum, log) => sum + (log.points || 0), 0);
-      const bonusPoints = bonusLogs
+      
+      const bonusPoints = podBonusLogs
         .filter(log => log.teamId === team.id)
         .reduce((sum, log) => sum + (log.points || 0), 0);
       
@@ -117,14 +149,15 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
       return acc;
     }, {} as Record<string, number>);
 
-    return teams.map(team => ({
+    // Return only the teams that are in the current user's pod
+    return podTeams.map(team => ({
       id: team.id,
       name: team.name,
       score: teamScores[team.id] || 0,
       emoji: team.emoji,
       isUser: team.agentIds.includes(currentUser?.id || ''),
     }));
-  }, [isLoading, teams, competitionLogs, bonusLogs, currentUser?.id]);
+  }, [isLoading, teams, competitionLogs, bonusLogs, currentUser, allCompetitions, selectedCompetitionId]);
   
   const handleCompetitionChange = (value: string) => {
     setSelectedCompetitionId(value);
@@ -161,6 +194,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
       <CardContent>
         {isLoading ? (
           <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
           </div>
