@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -282,11 +283,12 @@ export default function AgentDashboardPage() {
                 <div className="grid md:grid-cols-2 gap-6"><Skeleton className="h-80 w-full" /><Skeleton className="h-80 w-full" /></div>
             </div>
        ) : dashboardSettings?.rows?.map(row => (
-           <div key={row.id} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+           <div key={row.id} className="flex flex-wrap md:flex-nowrap gap-6 items-start">
                {row.columns.map(column => {
                    if (!column.widget) return null;
+                    const flexBasis = `calc(${100 / row.columns.length}% - ${((row.columns.length - 1) / row.columns.length) * 1.5}rem)`;
                    return (
-                        <div key={column.id} className="w-full">
+                        <div key={column.id} className="w-full" style={{ flexBasis }}>
                            {renderWidget(column.widget)}
                         </div>
                    )
