@@ -11,6 +11,7 @@ import {
   SidebarFooter,
   SidebarContent,
   SidebarTrigger,
+  SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarGroup, // Added import
