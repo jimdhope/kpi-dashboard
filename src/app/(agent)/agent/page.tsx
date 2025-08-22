@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -76,19 +75,28 @@ export default function AgentDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // User and Pod Data
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
-  const [rules, setRules] = useState<RuleFormData[]>([]);
-  const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]);
-  const [podBonusLogs, setPodBonusLogs] = useState<TeamBonusLog[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Competition and Rules Data
   const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null);
   const [allCompetitions, setAllCompetitions] = useState<CompetitionWithRules[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
+  const [rules, setRules] = useState<RuleFormData[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  
+  // Daily Dynamic Data
+  const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]);
+  const [podBonusLogs, setPodBonusLogs] = useState<TeamBonusLog[]>([]);
+  const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
+  const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
 
+
+  // Loading and Settings States
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsData | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
@@ -164,25 +172,51 @@ export default function AgentDashboardPage() {
 
     setIsLoadingData(true);
     let isMounted = true;
-    
-    const compDocRef = doc(db, 'competitions', selectedCompetitionId);
-    listenerRefs.current.competition = onSnapshot(compDocRef, (compSnap) => {
-        if (!isMounted || !compSnap.exists()) return;
-        const newActiveComp = { id: compSnap.id, ...compSnap.data() } as CompetitionWithRules;
-        setActiveCompetition(newActiveComp);
-        setRules(newActiveComp.rules || []);
-        setTeams(newActiveComp.teams || []);
+    const todayStart = startOfDay(new Date());
 
-        // Listen to other data sources based on this competition
-        const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId), orderBy('name'));
-        listenerRefs.current.agents = onSnapshot(agentsQuery, (snap) => { if(isMounted) setPodAgents(snap.docs.map(d => d.data() as AppUser)); });
-        
-        const logsQuery = query(collection(db, 'dailyAchievements'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
-        listenerRefs.current.podLogs = onSnapshot(logsQuery, (snap) => { if(isMounted) setPodLogs(snap.docs.map(d => d.data() as DailyAchievementLog)); setIsLoadingData(false); });
-        
-        const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
-        listenerRefs.current.podBonusLogs = onSnapshot(bonusLogsQuery, (snap) => { if(isMounted) setPodBonusLogs(snap.docs.map(d => d.data() as TeamBonusLog)); });
-    }, (err) => { setError("Failed to load competition data."); setIsLoadingData(false); });
+    const setupListeners = async () => {
+        try {
+             cleanupListeners(); // Clean up previous listeners before setting up new ones
+             const compDocRef = doc(db, 'competitions', selectedCompetitionId);
+             listenerRefs.current.competition = onSnapshot(compDocRef, (compSnap) => {
+                 if (!isMounted || !compSnap.exists()) return;
+                 const newActiveComp = { id: compSnap.id, ...compSnap.data() } as CompetitionWithRules;
+                 setActiveCompetition(newActiveComp);
+                 setRules(newActiveComp.rules || []);
+                 setTeams(newActiveComp.teams || []);
+             });
+
+            const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId), orderBy('name'));
+            listenerRefs.current.agents = onSnapshot(agentsQuery, (snap) => { if(isMounted) setPodAgents(snap.docs.map(d => d.data() as AppUser)); });
+            
+            const logsQuery = query(collection(db, 'dailyAchievements'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
+            listenerRefs.current.podLogs = onSnapshot(logsQuery, (snap) => { if(isMounted) setPodLogs(snap.docs.map(d => d.data() as DailyAchievementLog)); });
+            
+            const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
+            listenerRefs.current.podBonusLogs = onSnapshot(bonusLogsQuery, (snap) => { if(isMounted) setPodBonusLogs(snap.docs.map(d => d.data() as TeamBonusLog)); });
+
+             const taskLogsQuery = query(collection(db, 'dailyTaskLogs'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId), where('date', '==', Timestamp.fromDate(todayStart)));
+             listenerRefs.current.taskLogs = onSnapshot(taskLogsQuery, (snap) => { if(isMounted) setDailyTaskLogs(snap.docs.map(d => d.data() as DailyTaskLog)); });
+
+             const targetsDocId = `${selectedCompetitionId}_${agentPodId}`;
+             const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
+             listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => {
+                 if (isMounted) {
+                    setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
+                    setIsLoadingData(false); // Mark loading as complete here
+                 }
+             });
+
+        } catch (error) {
+            console.error("Error setting up listeners:", error);
+            if(isMounted) {
+                setError("Failed to load dashboard data.");
+                setIsLoadingData(false);
+            }
+        }
+    };
+    
+    setupListeners();
     
     return () => { isMounted = false; cleanupListeners(); };
   }, [selectedCompetitionId, agentPodId, currentUser?.id, cleanupListeners]);
@@ -253,11 +287,22 @@ export default function AgentDashboardPage() {
             case 'leaderboard-team':
                 return <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} />;
             case 'leaderboard-pod':
-                return <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} />;
+                // Pod leaderboard might not be relevant for a single agent view, but can be shown.
+                 return <Leaderboard title="My Pod's Score" entries={podLeaderboard} />;
             case 'achievements':
-                return <div>Achievements Placeholder</div>; // Replace with actual component
+                 return <TodaysAchievementsWidget
+                           rules={rules}
+                           podLogs={podLogs}
+                           dailyTaskLogs={dailyTaskLogs}
+                           currentUser={currentUser}
+                        />;
             case 'pod-targets':
-                 return <div>Pod Targets Placeholder</div>; // Replace with actual component
+                 return <PodTargetsWidget
+                            rules={rules}
+                            podLogs={podLogs}
+                            dailyTargets={dailyTargets}
+                            podAgents={podAgents}
+                        />;
             case 'custom-html':
                  return (
                      <Card>
@@ -305,3 +350,143 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
+
+
+// --- WIDGET COMPONENTS ---
+
+interface TodaysAchievementsWidgetProps {
+    rules: RuleFormData[];
+    podLogs: DailyAchievementLog[];
+    dailyTaskLogs: DailyTaskLog[];
+    currentUser: AppUser | null;
+}
+
+const TodaysAchievementsWidget: React.FC<TodaysAchievementsWidgetProps> = ({ rules, podLogs, dailyTaskLogs, currentUser }) => {
+    const { dailyAchievements, completedTasks, totalPoints } = useMemo(() => {
+        const todayStart = startOfDay(new Date());
+        const agentLogsToday = podLogs.filter(log =>
+            log.agentId === currentUser?.id &&
+            log.date instanceof Timestamp &&
+            startOfDay(log.date.toDate()).getTime() === todayStart.getTime()
+        );
+
+        const agentTasksToday = dailyTaskLogs.filter(log => log.agentId === currentUser?.id);
+
+        const achievements: { name: string; emoji: string; value: number }[] = [];
+        let points = 0;
+
+        rules.forEach(rule => {
+            if (rule.type === 'numeric') {
+                const log = agentLogsToday.find(l => l.ruleId === rule.id);
+                if (log) {
+                    achievements.push({ name: rule.name, emoji: rule.emoji || '🎯', value: log.value });
+                    points += log.points || 0;
+                }
+            }
+        });
+
+        const tasks = agentTasksToday.map(taskLog => {
+            const rule = rules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
+            return { name: rule?.name || 'Task', emoji: rule?.emoji || '✅' };
+        });
+        
+        return { dailyAchievements: achievements, completedTasks: tasks, totalPoints: points };
+    }, [rules, podLogs, dailyTaskLogs, currentUser]);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5 text-primary" /> Today's Achievements</CardTitle>
+                <CardDescription>Your logged progress for today. Total points today: <strong className="text-primary">{totalPoints}</strong></CardDescription>
+            </CardHeader>
+            <CardContent>
+                {dailyAchievements.length === 0 && completedTasks.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No achievements logged yet today.</p>
+                ) : (
+                    <ul className="space-y-2 text-sm">
+                        {dailyAchievements.map((ach, i) => (
+                             <li key={`ach-${i}`} className="flex justify-between items-center">
+                               <span>{ach.emoji} {ach.name}</span>
+                               <span className="font-semibold">{ach.value}</span>
+                           </li>
+                        ))}
+                         {completedTasks.map((task, i) => (
+                             <li key={`task-${i}`} className="flex items-center gap-2 text-muted-foreground">
+                               <span>{task.emoji}</span>
+                               <span>{task.name}</span>
+                           </li>
+                        ))}
+                    </ul>
+                )}
+                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">
+                   <Link href="/agent/log-achievements">Log or Edit Achievements</Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+};
+
+
+interface PodTargetsWidgetProps {
+    rules: RuleFormData[];
+    podLogs: DailyAchievementLog[];
+    dailyTargets: DailyTargetData | null;
+    podAgents: AppUser[];
+}
+
+const PodTargetsWidget: React.FC<PodTargetsWidgetProps> = ({ rules, podLogs, dailyTargets, podAgents }) => {
+    const podTargetSummary = useMemo(() => {
+        const todayStart = startOfDay(new Date());
+        const dayOfWeek = daysOfWeek[getDay(todayStart)];
+        const numericRules = rules.filter(r => r.type === 'numeric' && r.id && dailyTargets?.[r.id]?.[dayOfWeek] !== undefined);
+        const dailyLogsForPod = podLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
+        const absentAgentIds = new Set(dailyLogsForPod.filter(log => log.status === 'absent').map(log => log.agentId));
+        const activeAgentCount = podAgents.filter(agent => !absentAgentIds.has(agent.id!)).length;
+
+        return numericRules.map(rule => {
+            const achieved = dailyLogsForPod.filter(l => l.ruleId === rule.id && l.status !== 'absent').reduce((sum, l) => sum + (l.value || 0), 0);
+            const individualTarget = dailyTargets?.[rule.id!]?.[dayOfWeek];
+            const podTarget = (individualTarget ?? 0) * activeAgentCount;
+            const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : (achieved > 0 ? 100 : 0);
+
+            return {
+                ruleId: rule.id!,
+                ruleName: rule.name,
+                ruleEmoji: rule.emoji || '🎯',
+                achieved,
+                podTarget,
+                progress
+            };
+        });
+    }, [rules, podLogs, dailyTargets, podAgents]);
+    
+    return (
+        <Card>
+            <CardHeader>
+                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary" /> Pod Targets Today</CardTitle>
+                <CardDescription>Your pod's collective progress towards daily goals.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {podTargetSummary.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No daily targets set for your pod today.</p>
+                ) : (
+                    <div className="space-y-4">
+                        {podTargetSummary.map(summary => (
+                            <div key={summary.ruleId}>
+                                <div className="flex items-center justify-between text-sm mb-1">
+                                    <span className="font-medium truncate" title={summary.ruleName}>
+                                        {summary.ruleEmoji} {summary.ruleName}
+                                    </span>
+                                    <span className={cn("font-semibold", summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>
+                                        {summary.achieved.toLocaleString()} / {summary.podTarget.toLocaleString()}
+                                    </span>
+                                </div>
+                                <Progress value={summary.progress} className="h-2" />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
