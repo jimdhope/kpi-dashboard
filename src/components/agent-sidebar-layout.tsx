@@ -1,3 +1,4 @@
+
 // src/components/agent-sidebar-layout.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
@@ -10,15 +11,13 @@ import {
   SidebarFooter,
   SidebarContent,
   SidebarTrigger,
-  SidebarInset,
-  SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarGroup, // Added import
   SidebarGroupLabel, // Added import
   SidebarSeparator, // Added import
 } from '@/components/ui/sidebar';
-import { Home, Settings, UserSquare, CheckSquare, Star, ClipboardList, Target, Swords, Trophy, UserCog } from 'lucide-react'; // Added UserCog
+import { Home, Settings, UserSquare, CheckSquare, Star, Swords, Trophy, UserCog, ExternalLink } from 'lucide-react'; // Added ExternalLink
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -28,9 +27,10 @@ import { app, db } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
 import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
+import type { DashboardSettingsData, Widget, ExternalLink as ExternalLinkType } from '@/app/(admin)/admin/message-of-the-day/page';
+
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
@@ -43,12 +43,9 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
   const currentPath = usePathname();
   const [currentUserData, setCurrentUserData] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsData | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const auth = getAuth(app);
-
-    useEffect(() => {
-        console.log("[AgentSidebarLayout] Received props:", { roles, currentLayout });
-    }, [roles, currentLayout]);
-
 
   useEffect(() => {
     setIsLoadingUser(true);
@@ -61,17 +58,7 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
             setCurrentUserData({ id: docSnap.id, ...docSnap.data() } as AppUser);
           } else {
             console.warn(`Firestore document for user ${user.uid} not found.`);
-            setCurrentUserData({
-                id: user.uid,
-                uid: user.uid,
-                name: user.displayName || user.email || 'User',
-                email: user.email || '',
-                roles: [],
-                podId: null,
-                 avatarUrl: '',
-                 avatarInitials: '',
-                 avatarBgColor: '',
-            });
+            setCurrentUserData(null);
           }
           setIsLoadingUser(false);
         }, (error) => {
@@ -92,14 +79,43 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
     return () => unsubscribeAuth();
   }, [auth]);
 
-   const getInitials = (name?: string | null) => generateInitials(name || '');
+  useEffect(() => {
+    setIsLoadingSettings(true);
+    const settingsDocRef = doc(db, "settings", "agentDashboardSettings");
+    const unsubscribeSettings = onSnapshot(settingsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setDashboardSettings(docSnap.data() as DashboardSettingsData);
+      } else {
+        setDashboardSettings(null); // No settings configured
+      }
+      setIsLoadingSettings(false);
+    }, (error) => {
+      console.error("Error fetching dashboard settings:", error);
+      setIsLoadingSettings(false);
+    });
+    return () => unsubscribeSettings();
+  }, []);
 
-    // Determine if the user has any admin-level roles
+   const getInitials = (name?: string | null) => generateInitials(name || '');
    const hasAdminPrivileges = roles.includes('admin') || roles.includes('podManager') || roles.includes('teamLeader');
+
+   // Memoize visible widgets and links
+   const { visibleSidebarPages, externalLinksWidget } = useMemo(() => {
+        if (!dashboardSettings) return { visibleSidebarPages: [], externalLinksWidget: null };
+        
+        const sidebarPages = dashboardSettings.widgets.filter(
+            (w): w is Widget & { type: 'sidebar' } => w.type === 'sidebar' && w.isEnabled
+        );
+
+        const linksWidget = dashboardSettings.widgets.find(
+            (w): w is Widget & { type: 'links' } => w.type === 'links' && w.isEnabled
+        );
+
+        return { visibleSidebarPages: sidebarPages, externalLinksWidget: linksWidget || null };
+    }, [dashboardSettings]);
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Container for Sidebar and Main Area (Header + Content) */}
       <div className="flex relative z-10 min-h-screen w-full">
         <Sidebar>
           <SidebarHeader className="p-4">
@@ -119,25 +135,44 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-               {/* Link to achievements page (removed from default view)
-               <SidebarMenuItem>
-                <Link href="/agent/achievements" passHref>
-                  <SidebarMenuButton tooltip="My Achievements" isActive={currentPath === '/agent/achievements'}>
-                    <CheckSquare />
-                    <span>My Achievements</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              */}
-              <SidebarMenuItem>
-                <Link href="/agent/rps-game" passHref>
-                  <SidebarMenuButton tooltip="Rock Paper Scissors" isActive={currentPath === '/agent/rps-game'}>
-                    <Swords />
-                    <span>RPS Game</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-                {/* Conditional Admin Dashboard Link */}
+              
+               {visibleSidebarPages.map(page => {
+                    const pageMap = {
+                        'rps-game': { href: '/agent/rps-game', icon: <Swords />, label: 'RPS Game' },
+                        'agent-guide': { href: '/guides/agent-guide', icon: <Star />, label: 'Agent Guide' },
+                    };
+                    const pageInfo = pageMap[page.id as keyof typeof pageMap];
+                    if (!pageInfo) return null;
+                    
+                    return (
+                         <SidebarMenuItem key={page.id}>
+                            <Link href={pageInfo.href} passHref>
+                            <SidebarMenuButton tooltip={pageInfo.label} isActive={currentPath === pageInfo.href}>
+                                {pageInfo.icon}
+                                <span>{pageInfo.label}</span>
+                            </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    );
+               })}
+
+                {externalLinksWidget && externalLinksWidget.links && externalLinksWidget.links.length > 0 && (
+                     <SidebarGroup>
+                        <SidebarGroupLabel>External Links</SidebarGroupLabel>
+                         {externalLinksWidget.links.map((link: ExternalLinkType) => (
+                              <SidebarMenuItem key={link.id}>
+                                <a href={link.url} target="_blank" rel="noopener noreferrer">
+                                  <SidebarMenuButton tooltip={link.title}>
+                                    <ExternalLink />
+                                    <span>{link.title}</span>
+                                  </SidebarMenuButton>
+                                </a>
+                              </SidebarMenuItem>
+                         ))}
+                    </SidebarGroup>
+                )}
+
+
                 {hasAdminPrivileges && (
                     <>
                         <SidebarSeparator />
@@ -191,7 +226,6 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
           </SidebarFooter>
         </Sidebar>
 
-        {/* Main Area: Header + Scrollable Content */}
         <div className="flex-1 flex flex-col min-h-screen">
           <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/90 backdrop-blur-sm md:px-6 w-full">
               <div className="flex items-center gap-2">
@@ -199,7 +233,7 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                 <h2 className="text-lg font-semibold hidden md:block">My Dashboard</h2>
               </div>
               <div className="flex items-center gap-4">
-                {onLayoutChange && roles && currentLayout && ( // Check if props are valid
+                {onLayoutChange && roles && currentLayout && (
                   <RoleSwitcher
                       availableRoles={roles}
                       currentLayout={currentLayout}
@@ -210,7 +244,6 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                 <Button variant="outline" size="sm" onClick={() => getAuth(app).signOut().then(() => window.location.href = '/login')}>Logout</Button>
               </div>
             </header>
-          {/* Scrollable Main Content */}
           <main className="flex-1 p-4 md:p-6 overflow-y-auto">
             {children}
           </main>

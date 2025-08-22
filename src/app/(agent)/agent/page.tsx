@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy } from 'lucide-react'; // Added Trophy
+import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy, Swords } from 'lucide-react'; // Added Swords
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
@@ -29,6 +29,8 @@ import { Label } from '@/components/ui/label'; // Import Label
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
+import type { DashboardSettingsData, Widget, ExternalLink } from '@/app/(admin)/admin/message-of-the-day/page';
+
 
 // Interfaces
 interface LeaderboardEntry {
@@ -91,16 +93,6 @@ interface AgentTaskInputState {
     }
 }
 
-// Message of the Day structure from DB
-interface MessageOfTheDayDB {
-  emoji: string;
-  content: string;
-  isEnabled: boolean;
-  updatedAt: Timestamp;
-  updatedBy: string;
-}
-
-
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const AGENT_DASHBOARD_COMP_KEY = 'agentDashboard_selectedCompetitionId';
 
@@ -129,8 +121,8 @@ export default function AgentDashboardPage() {
   const [taskInputs, setTaskInputs] = useState<AgentTaskInputState>({});
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
 
-  const [messageOfTheDay, setMessageOfTheDay] = useState<MessageOfTheDayDB | null>(null);
-  const [isLoadingMessage, setIsLoadingMessage] = useState(true);
+  const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsData | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
   const listenerRefs = React.useRef<{ [key: string]: Unsubscribe | undefined }>({});
 
@@ -199,22 +191,23 @@ export default function AgentDashboardPage() {
     };
   }, [cleanupListeners]);
 
-  useEffect(() => {
-    setIsLoadingMessage(true);
-    const messageDocRef = doc(db, "messageOfTheDay", "currentMessage");
-    const unsubscribeMessage = onSnapshot(messageDocRef, (docSnap) => {
+   useEffect(() => {
+    setIsLoadingSettings(true);
+    const settingsDocRef = doc(db, "settings", "agentDashboardSettings");
+    const unsubscribeSettings = onSnapshot(settingsDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setMessageOfTheDay(docSnap.data() as MessageOfTheDayDB);
+        setDashboardSettings(docSnap.data() as DashboardSettingsData);
       } else {
-        setMessageOfTheDay(null);
+        setDashboardSettings(null); // No settings configured
       }
-      setIsLoadingMessage(false);
+      setIsLoadingSettings(false);
     }, (error) => {
-      toast({ variant: "destructive", title: "Message Error", description: "Could not load message of the day." });
-      setIsLoadingMessage(false);
+      toast({ variant: "destructive", title: "Settings Error", description: "Could not load dashboard display settings." });
+      setIsLoadingSettings(false);
     });
-    return () => unsubscribeMessage();
+    return () => unsubscribeSettings();
   }, [toast]);
+
 
   useEffect(() => {
         let isMounted = true;
@@ -537,107 +530,113 @@ export default function AgentDashboardPage() {
     setIsSaving(prev => ({...prev, [savingKey]: false}));
   };
 
-  const isLoading = isLoadingUser || isLoadingData || isLoadingMessage;
+  const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
   const numericRules = useMemo(() => rules.filter(r => r.type === 'numeric'), [rules]);
   const canLog = !isLoading && currentUser && agentPodId && rules.length > 0 && activeCompetition;
   const competitionName = allCompetitions.find(c => c.id === selectedCompetitionId)?.name;
 
-  return (
-    <div className="space-y-6">
-        {error && !error.startsWith("No active competition") && (
-            <Alert variant="destructive" className="mb-6 frosted-glass"><AlertCircle className="h-4 w-4" /><UIDescription>{error}</UIDescription></Alert>
-        )}
-        <MessageOfTheDayDisplay emoji={messageOfTheDay?.emoji || null} content={messageOfTheDay?.isEnabled ? messageOfTheDay.content : null} isLoading={isLoadingMessage} />
-        
-        <Card className="w-full frosted-glass">
-             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div><CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today&apos;s Achievements</CardTitle></div>
-                <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[120px] w-full" />))}</div>
-                : !canLog && !error && !isLoadingUser && !agentPodId ? <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
-                : !canLog && !error && numericRules.length === 0 ? <p className="text-muted-foreground text-center py-6">No numerical achievements to log for your pod today.</p>
-                : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {numericRules.map((rule) => rule.id ? <AchievementCard key={rule.id} rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /> : null)}
-                </div>}
-            </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-6">
-                <Card className="frosted-glass shadow-md">
-                    <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="h-5 w-5"/>Your Scores</CardTitle><CardDescription>Your total scores for the currently selected competition.</CardDescription></CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-primary mb-2">{agentCompetitionAchievements?.totalPoints.toLocaleString() ?? 0} pts</div>
-                        {isLoading ? <div className="space-y-2"><Skeleton className="h-4 w-full rounded mb-1" /><Skeleton className="h-4 w-5/6 rounded mb-1" /><Skeleton className="h-4 w-3/4 rounded" /></div>
-                        : agentCompetitionAchievements?.achievements.length > 0 ? <div className="space-y-1 text-sm">{agentCompetitionAchievements.achievements.map(ach => <div key={ach.ruleId} className="flex items-center justify-between whitespace-nowrap"><span className="font-medium truncate" title={ach.ruleName}>{ach.ruleEmoji} {ach.ruleName}</span><span className="text-muted-foreground">{ach.value.toLocaleString()} ({ach.points.toLocaleString()} pts)</span></div>)}</div>
-                        : !error && !isLoading && activeCompetition ? <p className="text-sm text-muted-foreground text-center pt-4">No achievements logged yet for this competition.</p> : null }
-                    </CardContent>
-                </Card>
-            </div>
-            <div className="lg:col-span-2 space-y-6">
-                <Card className="frosted-glass shadow-md">
-                    <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle><CardDescription>Your pod&apos;s progress towards today&apos;s targets.</CardDescription></CardHeader>
+  const orderedWidgets = dashboardSettings?.widgets || [];
+  
+  const widgetMap: { [key: string]: React.ReactNode } = {
+        motd: (
+             <MessageOfTheDayDisplay
+                emoji={dashboardSettings?.widgets.find(w => w.id === 'motd' && w.type === 'motd')?.emoji || null}
+                content={(dashboardSettings?.widgets.find(w => w.id === 'motd' && w.type === 'motd') as any)?.content || null}
+                isLoading={isLoadingSettings}
+            />
+        ),
+        achievements: (
+            <Card className="w-full frosted-glass">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div><CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5"/>Today&apos;s Achievements</CardTitle></div>
+                    <div className="text-right">{isLoading ? <Skeleton className="h-6 w-16 rounded mt-1"/> : <p className="text-2xl font-bold text-primary">{agentDailyAchievements?.totalPoints.toLocaleString() ?? 0} pts</p>}</div>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, index) => (<Skeleton key={`log-skeleton-${index}`} className="h-[120px] w-full" />))}</div>
+                    : !canLog && !error && !isLoadingUser && !agentPodId ? <p className="text-muted-foreground text-center py-6">You are not assigned to a pod. Please contact your manager.</p>
+                    : !canLog && !error && numericRules.length === 0 ? <p className="text-muted-foreground text-center py-6">No numerical achievements to log for your pod today.</p>
+                    : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {numericRules.map((rule) => rule.id ? <AchievementCard key={rule.id} rule={rule} currentValue={achievementInputs[rule.id]?.value ?? 0} isSaving={isSaving[rule.id] || false} onIncrement={() => handleValueChange(rule.id!, 1)} onDecrement={() => handleValueChange(rule.id!, -1)} /> : null)}
+                    </div>}
+                </CardContent>
+            </Card>
+        ),
+        'pod-targets': (
+             <Card className="frosted-glass shadow-md">
+                    <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Pod Targets Today</CardTitle><CardDescription>Your pod&apos;s progress towards today&apos;s goals.</CardDescription></CardHeader>
                     <CardContent>
                         {isLoading ? <div className="space-y-3"><Skeleton className="h-6 w-full rounded mb-2" /><Skeleton className="h-6 w-5/6 rounded mb-2" /><Skeleton className="h-6 w-3/4 rounded" /></div>
                         : podTargetSummary.length > 0 ? <div className="space-y-3">{podTargetSummary.map(summary => <div key={summary.ruleId}><div className="flex items-center justify-between text-sm mb-1"><span className="font-medium truncate" title={summary.ruleName}>{summary.ruleEmoji} {summary.ruleName}</span><span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>{summary.achieved.toLocaleString()} / {summary.podTarget?.toLocaleString()}</span></div><Progress value={summary.progress ?? 0} className="h-2" /><p className="text-xs text-muted-foreground mt-1">Individual Target: {summary.individualTarget?.toLocaleString()}</p></div>)}</div>
                         : !error && !isLoading && activeCompetition ? <p className="text-muted-foreground text-sm text-center pt-4">No targets set for your pod today.</p> : null }
                     </CardContent>
                 </Card>
-            </div>
-        </div>
+        ),
+        leaderboards: (
+            <Card className="mt-6 frosted-glass">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5"/>Competition Leaderboards</CardTitle>
+                        <div className="grid gap-2 max-w-sm">
+                            <Select
+                            onValueChange={(value) => {
+                                setSelectedCompetitionId(value);
+                                localStorage.setItem(AGENT_DASHBOARD_COMP_KEY, value);
+                            }}
+                            value={selectedCompetitionId}
+                            disabled={isLoading || allCompetitions.length === 0}
+                            >
+                            <SelectTrigger id="competition-select" className="h-8 text-xs">
+                                <SelectValue placeholder={isLoading ? "Loading..." : "Select Competition"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allCompetitions.map(comp => (
+                                <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <CardDescription>{`Showing overall standings for competition: ${competitionName || '...'}`}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoadingData ? (
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <Skeleton className="h-[300px] w-full" />
+                            <Skeleton className="h-[300px] w-full" />
+                        </div>
+                    ) : !selectedCompetitionId ? (
+                        <p className="text-muted-foreground text-center py-4">Please select a competition to view the leaderboards.</p>
+                    ) : (
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <Leaderboard
+                                title="Agent Leaderboard"
+                                entries={agentLeaderboard}
+                                isStickyHeader={false}
+                            />
+                            <Leaderboard
+                                title="Team Leaderboard"
+                                entries={teamLeaderboard}
+                                isStickyHeader={false}
+                            />
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        ),
+  };
 
-        <Card className="mt-6 frosted-glass">
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5"/>Competition Leaderboards</CardTitle>
-                    <div className="grid gap-2 max-w-sm">
-                        <Select
-                        onValueChange={(value) => {
-                            setSelectedCompetitionId(value);
-                            localStorage.setItem(AGENT_DASHBOARD_COMP_KEY, value);
-                        }}
-                        value={selectedCompetitionId}
-                        disabled={isLoading || allCompetitions.length === 0}
-                        >
-                        <SelectTrigger id="competition-select" className="h-8 text-xs">
-                            <SelectValue placeholder={isLoading ? "Loading..." : "Select Competition"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {allCompetitions.map(comp => (
-                            <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                 <CardDescription>{`Showing overall standings for competition: ${competitionName || '...'}`}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 {isLoadingData ? (
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <Skeleton className="h-[300px] w-full" />
-                        <Skeleton className="h-[300px] w-full" />
-                    </div>
-                ) : !selectedCompetitionId ? (
-                    <p className="text-muted-foreground text-center py-4">Please select a competition to view the leaderboards.</p>
-                ) : (
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <Leaderboard
-                            title="Agent Leaderboard"
-                            entries={agentLeaderboard}
-                            isStickyHeader={false}
-                        />
-                        <Leaderboard
-                            title="Team Leaderboard"
-                            entries={teamLeaderboard}
-                            isStickyHeader={false}
-                        />
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+  return (
+    <div className="space-y-6">
+        {error && !error.startsWith("No active competition") && (
+            <Alert variant="destructive" className="mb-6 frosted-glass"><AlertCircle className="h-4 w-4" /><UIDescription>{error}</UIDescription></Alert>
+        )}
+       {orderedWidgets.map(widget => (
+          widget.isEnabled && widgetMap[widget.id] ? (
+              <div key={widget.id}>
+                  {widgetMap[widget.id]}
+              </div>
+          ) : null
+      ))}
     </div>
   );
 }
