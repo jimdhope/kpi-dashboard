@@ -230,8 +230,8 @@ export default function AdminRpsScoresPage() {
         }
 
         setIsAwardingPoints(true);
-        const topTeams = teamStats.filter(t => t.rank && t.rank <=3 && t.wins > 0);
-        if (topTeams.length === 0) {
+        const winners = teamStats.filter(t => t.rank && t.rank <=3 && t.wins > 0);
+        if (winners.length === 0) {
             toast({title: "No Winners", description: "No teams have wins to award points to."});
             setIsAwardingPoints(false);
             return;
@@ -242,7 +242,7 @@ export default function AdminRpsScoresPage() {
             const batch = writeBatch(db);
             const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
 
-            topTeams.forEach(team => {
+            winners.forEach(team => {
                 const points = pointsMap[team.rank!];
                 if (points) {
                      const bonusLog: Omit<TeamBonusLog, 'id'> = {
