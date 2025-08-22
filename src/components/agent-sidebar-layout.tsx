@@ -30,7 +30,7 @@ import type { AppUser, UserRole } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
-import type { DashboardSettingsData, Widget, ExternalLink as ExternalLinkType } from '@/app/(admin)/admin/message-of-the-day/page';
+import type { DashboardSettingsData, Widget, SidebarMenuItem as SidebarMenuItemType } from '@/app/(admin)/admin/message-of-the-day/page';
 
 
 interface AgentSidebarLayoutProps {
@@ -82,7 +82,7 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
 
   useEffect(() => {
     setIsLoadingSettings(true);
-    const settingsDocRef = doc(db, "settings", "agentDashboardSettings");
+    const settingsDocRef = doc(db, "settings", "agentDashboardSettings_v3");
     const unsubscribeSettings = onSnapshot(settingsDocRef, (docSnap) => {
       if (docSnap.exists()) {
         setDashboardSettings(docSnap.data() as DashboardSettingsData);
@@ -100,19 +100,12 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
    const getInitials = (name?: string | null) => generateInitials(name || '');
    const hasAdminPrivileges = roles.includes('admin') || roles.includes('podManager') || roles.includes('teamLeader');
 
-   // Memoize visible widgets and links
-   const { visibleSidebarPages, externalLinksWidget } = useMemo(() => {
-        if (!dashboardSettings) return { visibleSidebarPages: [], externalLinksWidget: null };
-        
-        const sidebarPages = dashboardSettings.widgets.filter(
-            (w): w is Widget & { type: 'sidebar' } => w.type === 'sidebar' && w.isEnabled
-        );
-
-        const linksWidget = dashboardSettings.widgets.find(
-            (w): w is Widget & { type: 'links' } => w.type === 'links' && w.isEnabled
-        );
-
-        return { visibleSidebarPages: sidebarPages, externalLinksWidget: linksWidget || null };
+   // Memoize visible sidebar menu items
+   const { visibleSidebarMenuItems } = useMemo(() => {
+        if (!dashboardSettings?.sidebarMenu) return { visibleSidebarMenuItems: [] };
+        return {
+            visibleSidebarMenuItems: dashboardSettings.sidebarMenu.filter(item => item.isEnabled),
+        };
     }, [dashboardSettings]);
 
   return (
@@ -137,8 +130,8 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                 </Link>
               </SidebarMenuItem>
               
-               {visibleSidebarPages.map(page => {
-                    const pageMap = {
+               {visibleSidebarMenuItems.map(page => {
+                    const pageMap: Record<string, { href: string; icon: React.ReactNode; label: string }> = {
                         'rps-game': { href: '/agent/rps-game', icon: <Swords />, label: 'RPS Game' },
                         'agent-guide': { href: '/agent/guide', icon: <Star />, label: 'Agent Guide' },
                     };
@@ -156,23 +149,6 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                         </SidebarMenuItem>
                     );
                })}
-
-                {externalLinksWidget && externalLinksWidget.links && externalLinksWidget.links.length > 0 && (
-                     <SidebarGroup>
-                        <SidebarGroupLabel>External Links</SidebarGroupLabel>
-                         {externalLinksWidget.links.map((link: ExternalLinkType) => (
-                              <SidebarMenuItem key={link.id}>
-                                <a href={link.url} target="_blank" rel="noopener noreferrer">
-                                  <SidebarMenuButton tooltip={link.title}>
-                                    <ExternalLink />
-                                    <span>{link.title}</span>
-                                  </SidebarMenuButton>
-                                </a>
-                              </SidebarMenuItem>
-                         ))}
-                    </SidebarGroup>
-                )}
-
 
                 {hasAdminPrivileges && (
                     <>

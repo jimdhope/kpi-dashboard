@@ -29,7 +29,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { DashboardSettingsData, Row as LayoutRow, Widget, WidgetType } from '@/app/(admin)/admin/message-of-the-day/page';
+import type { DashboardSettingsData, Row as LayoutRow, Widget as WidgetConfig } from '@/app/(admin)/admin/message-of-the-day/page';
 
 
 // Interfaces (most are the same)
@@ -198,7 +198,6 @@ export default function AgentDashboardPage() {
   }, []);
 
   const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
-    // ... same leaderboard logic as before
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
     podLogs.forEach(log => {
@@ -242,25 +241,31 @@ export default function AgentDashboardPage() {
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
-    const renderWidget = (widget: Widget) => {
+    const renderWidget = (widget: WidgetConfig) => {
         if (!widget.isEnabled) return null;
 
-        switch (widget.widgetType) {
+        switch (widget.type) {
             case 'motd':
                 return <MessageOfTheDayDisplay emoji={widget.emoji} content={widget.content} isLoading={isLoadingSettings} />;
-            case 'leaderboard-agent':
-                return <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />;
-            case 'leaderboard-team':
-                return <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} />;
-            case 'leaderboard-pod':
-                // For now, let's assume a single-pod view. This might need adjustment in a multi-pod context.
-                return <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} />;
+            case 'leaderboards':
+                 return (
+                    <Card>
+                        <CardHeader><CardTitle>Competition Leaderboards</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            {widget.leaderboardTypes?.filter(l => l.isEnabled).map(leaderboard => {
+                                if (leaderboard.id === 'agent') return <Leaderboard key="agent" title="Agent Leaderboard" entries={agentLeaderboard} />;
+                                if (leaderboard.id === 'team') return <Leaderboard key="team" title="Team Leaderboard" entries={teamLeaderboard} />;
+                                if (leaderboard.id === 'pod') return <Leaderboard key="pod" title="Pod Leaderboard" entries={podLeaderboard} />;
+                                return null;
+                            })}
+                        </CardContent>
+                    </Card>
+                 );
             case 'achievements':
                 return <div>Achievements Placeholder</div>; // Replace with actual component
             case 'pod-targets':
                  return <div>Pod Targets Placeholder</div>; // Replace with actual component
             case 'links':
-                 // Render links if they exist
                  return (
                      <Card>
                          <CardHeader><CardTitle>External Links</CardTitle></CardHeader>
@@ -274,7 +279,7 @@ export default function AgentDashboardPage() {
                      </Card>
                  );
             default:
-                return null; // Don't render unknown or disabled widgets
+                return null;
         }
     };
 
@@ -288,10 +293,10 @@ export default function AgentDashboardPage() {
                 <div className="grid md:grid-cols-2 gap-6"><Skeleton className="h-80 w-full" /><Skeleton className="h-80 w-full" /></div>
             </div>
        ) : dashboardSettings?.rows?.map(row => (
-           <div key={row.id} className="flex flex-wrap gap-6">
+           <div key={row.id} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
                {row.widgets.map(widget => (
-                   <div key={widget.id} className="flex-1 min-w-[300px]">
-                       {renderWidget(widget as Widget)}
+                   <div key={widget.id} className="w-full">
+                       {renderWidget(widget as WidgetConfig)}
                    </div>
                ))}
            </div>

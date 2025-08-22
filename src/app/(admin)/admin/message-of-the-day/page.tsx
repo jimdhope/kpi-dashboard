@@ -33,7 +33,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Loader2, Save, Settings, GripVertical, PlusCircle, Trash2, AlertCircle, Rows, GripHorizontal, Grip } from 'lucide-react';
+import { Loader2, Save, Settings, GripVertical, PlusCircle, Trash2, AlertCircle, Rows, GripHorizontal, Grip, MenuSquare } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from "@/components/ui/switch";
@@ -59,13 +59,13 @@ import { Plus } from 'lucide-react';
 
 
 // --- Zod Schema Definitions ---
-export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod' | 'links' | 'sidebar-rps-game' | 'sidebar-agent-guide';
+export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links';
 
 
 const baseWidgetSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.string(), // e.g., 'motd', 'leaderboard'
+  type: z.string(),
   isEnabled: z.boolean(),
 });
 
@@ -84,22 +84,17 @@ const linksWidgetSchema = baseWidgetSchema.extend({
     })),
 });
 
-const leaderboardWidgetSchema = baseWidgetSchema.extend({
-  type: z.literal('leaderboards'), // This is now legacy, prefer individual types
-  leaderboardTypes: z.array(z.object({
-      id: z.enum(['agent', 'team', 'pod']),
-      name: z.string(),
-      isEnabled: z.boolean(),
-  })),
+const leaderboardsWidgetSchema = baseWidgetSchema.extend({
+    type: z.literal('leaderboards'),
+    leaderboardTypes: z.array(z.object({
+        id: z.enum(['agent', 'team', 'pod']),
+        name: z.string(),
+        isEnabled: z.boolean(),
+    })).min(1, "At least one leaderboard type must be configured."),
 });
-
-const sidebarWidgetSchema = baseWidgetSchema.extend({
-    type: z.enum(['sidebar-rps-game', 'sidebar-agent-guide']),
-});
-
 
 const standardWidgetSchema = baseWidgetSchema.extend({
-    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod']),
+    type: z.enum(['achievements', 'pod-targets']),
 });
 
 
@@ -107,8 +102,7 @@ const standardWidgetSchema = baseWidgetSchema.extend({
 const widgetSchema = z.discriminatedUnion('type', [
     motdWidgetSchema,
     linksWidgetSchema,
-    leaderboardWidgetSchema,
-    sidebarWidgetSchema,
+    leaderboardsWidgetSchema,
     standardWidgetSchema,
 ]);
 
@@ -120,8 +114,17 @@ export const rowSchema = z.object({
 });
 export type Row = z.infer<typeof rowSchema>;
 
+// New schema for sidebar menu items
+const sidebarMenuItemSchema = z.object({
+    id: z.enum(['rps-game', 'agent-guide']), // Unique ID for the menu item
+    name: z.string(),
+    isEnabled: z.boolean(),
+});
+export type SidebarMenuItem = z.infer<typeof sidebarMenuItemSchema>;
+
 const dashboardSettingsSchema = z.object({
   rows: z.array(rowSchema),
+  sidebarMenu: z.array(sidebarMenuItemSchema), // Add sidebar menu settings
 });
 
 // Type for form data
@@ -133,7 +136,7 @@ export interface DashboardSettingsData extends DashboardSettingsFormData {
   updatedBy: string;
 }
 
-const SETTINGS_DOC_ID = "agentDashboardSettings_v3"; // Use a new doc ID for the new structure
+const SETTINGS_DOC_ID = "agentDashboardSettings_v3";
 const SETTINGS_COLLECTION = "settings";
 
 
@@ -142,14 +145,15 @@ const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'motd', name: 'Message of the Day' },
     { id: 'achievements', name: 'Today\'s Achievements' },
     { id: 'pod-targets', name: 'Pod Targets' },
-    { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
-    { id: 'leaderboard-team', name: 'Team Leaderboard' },
-    { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
+    { id: 'leaderboards', name: 'Competition Leaderboards' },
     { id: 'links', name: 'External Links' },
-    { id: 'sidebar-rps-game', name: 'Sidebar: RPS Game Page' },
-    { id: 'sidebar-agent-guide', name: 'Sidebar: Agent Guide' },
 ];
 
+// Available sidebar menu items
+const AVAILABLE_SIDEBAR_ITEMS: SidebarMenuItem[] = [
+    { id: 'rps-game', name: 'RPS Game Page', isEnabled: true },
+    { id: 'agent-guide', name: 'Agent Guide', isEnabled: true },
+];
 
 export default function AgentDashboardSettingsPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -161,7 +165,7 @@ export default function AgentDashboardSettingsPage() {
 
      const form = useForm<DashboardSettingsFormData>({
         resolver: zodResolver(dashboardSettingsSchema),
-        defaultValues: { rows: [] },
+        defaultValues: { rows: [], sidebarMenu: [] },
     });
 
      const { fields: rowFields, append: appendRow, remove: removeRow, move: moveRow } = useFieldArray({
@@ -170,32 +174,28 @@ export default function AgentDashboardSettingsPage() {
         keyName: "fieldId",
     });
 
+     const { fields: menuFields, replace: replaceMenu } = useFieldArray({
+        control: form.control,
+        name: "sidebarMenu",
+     });
+
     const getWidgetDefaultData = (widgetType: WidgetType, widgetName: string): Omit<Widget, 'id' | 'name'> => {
         switch (widgetType) {
             case 'motd':
                 return { type: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' };
             case 'links':
                 return { type: 'links', isEnabled: true, links: [] };
-             case 'leaderboards': // This is now legacy, but keep for safety. Use individual types below.
-                return {
-                    type: 'leaderboards',
-                    isEnabled: true,
-                    leaderboardTypes: [
-                        { id: 'agent', name: 'Agent Leaderboard', isEnabled: true },
-                        { id: 'team', name: 'Team Leaderboard', isEnabled: true },
-                    ],
-                };
-             case 'sidebar-rps-game':
-             case 'sidebar-agent-guide':
-                return { type: widgetType, isEnabled: true };
+            case 'leaderboards':
+                return { type: 'leaderboards', isEnabled: true, leaderboardTypes: [
+                    { id: 'agent', name: 'Agent Leaderboard', isEnabled: true },
+                    { id: 'team', name: 'Team Leaderboard', isEnabled: true },
+                    { id: 'pod', name: 'Pod Leaderboard', isEnabled: true },
+                ]};
             case 'achievements':
             case 'pod-targets':
-            case 'leaderboard-agent':
-            case 'leaderboard-team':
-            case 'leaderboard-pod':
                 return { type: widgetType, isEnabled: true };
-            default: // Fallback for any other standard type
-                 return { type: 'achievements', isEnabled: true }; // Fallback to a safe standard type
+            default:
+                 return { type: 'achievements', isEnabled: true };
         }
     };
 
@@ -211,10 +211,18 @@ export default function AgentDashboardSettingsPage() {
                 const settingsDocRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
                 const docSnap = await getDoc(settingsDocRef);
                 if (docSnap.exists()) {
-                    form.reset(docSnap.data() as DashboardSettingsData);
+                    const data = docSnap.data() as DashboardSettingsData;
+                    // Ensure sidebarMenu exists in fetched data, otherwise use default
+                    const sidebarMenuData = data.sidebarMenu && data.sidebarMenu.length > 0 ? data.sidebarMenu : AVAILABLE_SIDEBAR_ITEMS;
+                    form.reset({
+                        ...data,
+                        sidebarMenu: sidebarMenuData,
+                    });
                 } else {
+                    // Set default values for a new setup
                     form.reset({
                         rows: [{ id: `row-${Date.now()}`, widgets: [] }],
+                        sidebarMenu: AVAILABLE_SIDEBAR_ITEMS, // Default sidebar items
                     });
                 }
             } catch (error) {
@@ -236,6 +244,7 @@ export default function AgentDashboardSettingsPage() {
     );
 
     const findContainer = (id: UniqueIdentifier): string | null => {
+        if (id === 'toolbox') return 'toolbox';
         for (const row of rowFields) {
             if (row.id === id) return row.id;
             if (row.widgets.some(w => w.id === id)) return row.id;
@@ -247,78 +256,84 @@ export default function AgentDashboardSettingsPage() {
         setActiveId(event.active.id);
     };
 
-    const handleDragOver = (event: DragEndEvent) => {
-        const { active, over } = event;
-        const overId = over?.id;
-
-        if (!overId || active.id === overId) return;
-
-        const activeContainerId = findContainer(active.id);
-        const overContainerId = findContainer(over.id);
-        
-        if (!activeContainerId || !overContainerId || activeContainerId === overContainerId) {
-            return;
-        }
-
-        const newRows = form.getValues('rows');
-        const activeRowIndex = newRows.findIndex(r => r.id === activeContainerId);
-        const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
-
-        if (activeRowIndex === -1 || overRowIndex === -1) return;
-
-        const activeWidgetIndex = newRows[activeRowIndex].widgets.findIndex(w => w.id === active.id);
-        
-        if (activeWidgetIndex !== -1) {
-            const [movedWidget] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
-            
-            const overItems = newRows[overRowIndex].widgets;
-            const overWidgetIndex = overId.toString().startsWith('widget-')
-                ? overItems.findIndex(w => w.id === overId)
-                : (overId.toString().startsWith('row-') ? overItems.length : -1);
-
-            if (overWidgetIndex !== -1) {
-                newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, movedWidget);
-                form.setValue('rows', newRows, { shouldDirty: true });
-            }
-        }
-    };
-
-
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
+        const activeId = active.id;
         const overId = over?.id;
-
-        if (!overId) {
-            setActiveId(null);
+    
+        setActiveId(null);
+    
+        if (!overId || activeId === overId) {
             return;
         }
-        
-        const activeContainerId = findContainer(active.id);
-        const overContainerId = findContainer(over.id);
-        const newRows = form.getValues('rows');
-
-        if (activeContainerId && overContainerId && activeContainerId === overContainerId) {
-             const rowIndex = newRows.findIndex(r => r.id === activeContainerId);
-             const oldIndex = newRows[rowIndex].widgets.findIndex(w => w.id === active.id);
-             const newIndex = newRows[rowIndex].widgets.findIndex(w => w.id === over.id);
-             if(oldIndex !== newIndex){
-                 newRows[rowIndex].widgets = arrayMove(newRows[rowIndex].widgets, oldIndex, newIndex);
-                 form.setValue('rows', newRows, { shouldDirty: true });
-             }
-        } else if (activeContainerId && overContainerId && activeContainerId !== overContainerId) {
-            // Already handled by onDragOver
+    
+        const activeContainerId = findContainer(activeId);
+        const overContainerId = findContainer(overId);
+    
+        if (!activeContainerId || !overContainerId) {
+            return;
         }
-
-        if(active.id.toString().startsWith('row-') && over.id.toString().startsWith('row-')){
-             const oldIndex = newRows.findIndex(r => r.id === active.id);
-             const newIndex = newRows.findIndex(r => r.id === over.id);
-             if(oldIndex !== newIndex) {
-                const movedRows = arrayMove(newRows, oldIndex, newIndex);
-                form.setValue('rows', movedRows, { shouldDirty: true });
-             }
+    
+        let newRows = [...form.getValues('rows')];
+        const activeRowIndex = newRows.findIndex(r => r.id === activeContainerId);
+        const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
+    
+        // Case 1: Dragging from Toolbox to a Row
+        if (activeContainerId === 'toolbox' && overContainerId !== 'toolbox') {
+            const widgetType = active.id as WidgetType;
+            const widgetInfo = AVAILABLE_WIDGETS.find(w => w.id === widgetType);
+            if (widgetInfo) {
+                const newWidget: Widget = { 
+                    id: `widget-${Date.now()}`, 
+                    name: widgetInfo.name, 
+                    ...(getWidgetDefaultData(widgetType, widgetInfo.name) as any) 
+                };
+                
+                const targetRowIndex = newRows.findIndex(r => r.id === overContainerId);
+                if (targetRowIndex !== -1) {
+                    const targetWidgets = newRows[targetRowIndex].widgets;
+                    const overWidgetIndex = targetWidgets.findIndex(w => w.id === overId);
+                    if (overWidgetIndex !== -1) {
+                        targetWidgets.splice(overWidgetIndex, 0, newWidget);
+                    } else {
+                        targetWidgets.push(newWidget);
+                    }
+                }
+            }
+        } 
+        // Case 2: Reordering within the same row
+        else if (activeContainerId === overContainerId && activeContainerId !== 'toolbox') {
+            const rowIndex = activeRowIndex;
+            if (rowIndex !== -1) {
+                const oldIndex = newRows[rowIndex].widgets.findIndex(w => w.id === activeId);
+                const newIndex = newRows[rowIndex].widgets.findIndex(w => w.id === overId);
+                if (oldIndex !== -1 && newIndex !== -1) {
+                    newRows[rowIndex].widgets = arrayMove(newRows[rowIndex].widgets, oldIndex, newIndex);
+                }
+            }
+        } 
+        // Case 3: Moving a widget from one row to another
+        else if (activeContainerId !== overContainerId && activeContainerId !== 'toolbox') {
+            if (activeRowIndex !== -1 && overRowIndex !== -1) {
+                const [movedWidget] = newRows[activeRowIndex].widgets.splice(newRows[activeRowIndex].widgets.findIndex(w => w.id === activeId), 1);
+                const targetWidgets = newRows[overRowIndex].widgets;
+                const overWidgetIndex = targetWidgets.findIndex(w => w.id === overId);
+                if (overWidgetIndex !== -1) {
+                    targetWidgets.splice(overWidgetIndex, 0, movedWidget);
+                } else {
+                    targetWidgets.push(movedWidget);
+                }
+            }
         }
-
-        setActiveId(null);
+    
+        // Case 4: Reordering entire rows
+        if (activeId.toString().startsWith('row-') && overId.toString().startsWith('row-')) {
+            if (activeRowIndex !== -1 && overRowIndex !== -1) {
+                newRows = arrayMove(newRows, activeRowIndex, overRowIndex);
+            }
+        }
+    
+        form.setValue('rows', newRows, { shouldDirty: true });
     };
 
 
@@ -351,7 +366,7 @@ export default function AgentDashboardSettingsPage() {
     }
 
     return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSaveChanges)} className="space-y-8">
                 <Card className="frosted-glass">
@@ -367,38 +382,103 @@ export default function AgentDashboardSettingsPage() {
                         </Button>
                     </CardHeader>
                     <CardContent>
-                         <Separator className="my-6" />
-                        {/* Layout Editor */}
-                        <div className="space-y-4">
-                              <SortableContext items={rowFields.map(row => row.id)} strategy={verticalListSortingStrategy}>
-                                 {rowFields.map((row, index) => (
-                                     <DroppableRow
-                                         key={row.id}
-                                         row={row as Row}
-                                         rowIndex={index}
-                                         form={form}
-                                         getWidgetDefaultData={getWidgetDefaultData}
-                                      />
-                                 ))}
-                              </SortableContext>
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            {/* Layout Editor */}
+                            <div className="lg:col-span-3 space-y-4">
+                                <SortableContext items={rowFields.map(row => row.id)} strategy={verticalListSortingStrategy}>
+                                    {rowFields.map((row, index) => (
+                                        <DroppableRow
+                                            key={row.id}
+                                            row={row as Row}
+                                            rowIndex={index}
+                                            form={form}
+                                            getWidgetDefaultData={getWidgetDefaultData}
+                                        />
+                                    ))}
+                                </SortableContext>
+                                 <Button variant="outline" size="sm" type="button" onClick={handleAddNewRow} className="mt-6">
+                                    <Rows className="mr-2 h-4 w-4" /> Add Row
+                                 </Button>
+                            </div>
+                            {/* Widget Toolbox */}
+                            <div className="lg:col-span-1">
+                                <DroppableToolbox />
+                            </div>
                         </div>
-
-                         <Button variant="outline" size="sm" type="button" onClick={handleAddNewRow} className="mt-6">
-                            <Rows className="mr-2 h-4 w-4" /> Add Row
-                         </Button>
 
                     </CardContent>
                 </Card>
+
+                 {/* Sidebar Menu Settings Card */}
+                <Card className="frosted-glass">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><MenuSquare className="h-5 w-5 text-primary" /> Sidebar Menu Settings</CardTitle>
+                        <CardDescription>Enable or disable pages available in the agent's sidebar menu.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {menuFields.map((item, index) => (
+                             <FormField
+                                key={item.id}
+                                control={form.control}
+                                name={`sidebarMenu.${index}.isEnabled`}
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-card/50">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>{(item as any).name}</FormLabel>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                                disabled={isSaving}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        ))}
+                    </CardContent>
+                </Card>
+
             </form>
         </Form>
     </DndContext>
     );
 }
 
+function DroppableToolbox() {
+    const { setNodeRef } = useDroppable({ id: 'toolbox' });
+    return (
+        <Card ref={setNodeRef} className="lg:sticky lg:top-24">
+            <CardHeader>
+                <CardTitle className="text-base">Widget Toolbox</CardTitle>
+                <CardDescription className="text-xs">Drag a widget into a row on the left.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex flex-wrap gap-2">
+                {AVAILABLE_WIDGETS.map(widget => (
+                    <DraggableWidget key={widget.id} id={widget.id} name={widget.name} />
+                ))}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function DraggableWidget({ id, name }: { id: UniqueIdentifier; name: string }) {
+    const { attributes, listeners, setNodeRef } = useDraggable({ id });
+    return (
+         <div ref={setNodeRef} {...listeners} {...attributes} className="p-2 border rounded-md text-sm cursor-grab bg-card hover:bg-accent shadow-sm active:cursor-grabbing active:shadow-inner">
+            {name}
+         </div>
+    );
+}
+
+
 function DroppableRow({ row, rowIndex, form, getWidgetDefaultData }: { row: Row; rowIndex: number; form: any; getWidgetDefaultData: (type: WidgetType, name: string) => any; }) {
     const { setNodeRef, isOver } = useDroppable({ id: row.id });
     const { control, setValue } = form;
-    const { remove: removeRow, update: updateRow } = useFieldArray({ control, name: 'rows' });
+    const { remove: removeRow } = useFieldArray({ control, name: 'rows' });
     const { fields: widgetFields, remove: removeWidget, append: appendWidget } = useFieldArray({ control, name: `rows.${rowIndex}.widgets` });
     const { attributes, listeners, setNodeRef: setSortableNodeRef, transform, transition } = useSortable({ id: row.id });
 
@@ -468,9 +548,9 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
         name: `rows.${rowIndex}.widgets.${widgetIndex}.links`,
     });
 
-     const { fields: leaderboardFields, move: moveLeaderboard } = useFieldArray({
+    const { fields: leaderboardFields, move: moveLeaderboard } = useFieldArray({
         control,
-        name: `rows.${rowIndex}.widgets.${widgetIndex}.leaderboardTypes`
+        name: `rows.${rowIndex}.widgets.${widgetIndex}.leaderboardTypes`,
     });
 
     const isConfigurable = widget.type === 'motd' || widget.type === 'links' || widget.type === 'leaderboards';
@@ -529,33 +609,26 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
                             )}
                             {widget.type === 'leaderboards' && (
                                 <div className="space-y-2">
-                                    <FormDescription>Enable and reorder the leaderboards.</FormDescription>
-                                    <SortableContext items={leaderboardFields.map(l => l.id)} strategy={verticalListSortingStrategy}>
-                                         {leaderboardFields.map((lbField, lbIndex) => {
-                                             const SortableItem = ({ children }: { children: React.ReactNode }) => {
-                                                 const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: lbField.id });
-                                                 const style = { transform: CSS.Transform.toString(transform), transition };
-                                                 return <div ref={setNodeRef} style={style} {...attributes} {...listeners}>{children}</div>;
-                                             };
-                                             return (
-                                                  <SortableItem key={lbField.id}>
-                                                     <div className="flex items-center gap-2 p-2 border rounded-md bg-background">
-                                                         <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab"/>
-                                                         <FormField
-                                                             control={control}
-                                                             name={`rows.${rowIndex}.widgets.${widgetIndex}.leaderboardTypes.${lbIndex}.isEnabled`}
-                                                             render={({ field }) => (
-                                                                <FormItem className="flex-1 flex items-center gap-2 space-y-0">
-                                                                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                                                                     <FormLabel className="font-normal">{ (lbField as any).name }</FormLabel>
-                                                                </FormItem>
-                                                             )}
-                                                         />
-                                                     </div>
-                                                  </SortableItem>
-                                             );
-                                         })}
-                                     </SortableContext>
+                                    {leaderboardFields.map((item, leaderboardIndex) => (
+                                        <FormField
+                                            key={item.id}
+                                            control={control}
+                                            name={`rows.${rowIndex}.widgets.${widgetIndex}.leaderboardTypes.${leaderboardIndex}.isEnabled`}
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-2 bg-card/50">
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel className="text-sm">{(item as any).name}</FormLabel>
+                                                    </div>
+                                                    <FormControl>
+                                                        <Switch
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                        />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    ))}
                                 </div>
                             )}
                         </AccordionContent>
