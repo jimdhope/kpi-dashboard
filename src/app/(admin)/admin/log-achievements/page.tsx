@@ -294,7 +294,19 @@ export default function AdminLogAchievementsPage() {
             const bonusLogsRefComp = collection(db, 'teamBonusLogs');
             const bonusLogsQueryComp = query(bonusLogsRefComp, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id));
             unsubscribeCompBonusLogs = onSnapshot(bonusLogsQueryComp, (snapshot) => {
-                setCompetitionBonusLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog)));
+                const allBonusLogs = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog));
+                setCompetitionBonusLogs(allBonusLogs);
+                
+                // Populate bonus inputs with today's data
+                const todayStart = startOfDay(selectedDate).getTime();
+                const todayBonusLogs = allBonusLogs.filter(log => startOfDay(log.date.toDate()).getTime() === todayStart);
+                const initialBonusInputs: TeamBonusInputState = {};
+                (competitionForLogging?.teams || []).forEach(team => {
+                    const existingLog = todayBonusLogs.find(log => log.teamId === team.id);
+                    initialBonusInputs[team.id] = { points: existingLog ? String(existingLog.points) : '' };
+                });
+                setBonusInputs(initialBonusInputs);
+
             });
 
             // Listener for just today's logs (for form inputs)
@@ -312,9 +324,6 @@ export default function AdminLogAchievementsPage() {
                 where('date', '==', dateTimestamp),
                  where('competitionId', '==', competitionForLogging.id)
             );
-            
-            const bonusLogsRef = collection(db, 'teamBonusLogs');
-            const initialBonusLogsQuery = query(bonusLogsRef, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id), where('date', '==', dateTimestamp));
             
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
@@ -360,11 +369,6 @@ export default function AdminLogAchievementsPage() {
                     });
                 });
                 setTaskInputs(initialTaskInputs);
-            });
-            
-            unsubscribeBonusLogs = onSnapshot(initialBonusLogsQuery, (snapshot) => {
-                const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
-                 // setCompetitionBonusLogs(logs); This listener was for daily bonus logs, which we don't need a separate state for
             });
 
              // Fetch targets
@@ -645,10 +649,10 @@ export default function AdminLogAchievementsPage() {
     const logsToProcess = Object.entries(bonusInputs).map(([teamId, data]) => ({
         teamId,
         points: parseInt(data.points, 10) || 0,
-    })).filter(log => log.points !== 0);
+    }));
 
     if (logsToProcess.length === 0) {
-        toast({ title: "No bonus points to award." });
+        toast({ title: "No changes to save." });
         setIsSavingBonus(false);
         return;
     }
@@ -665,13 +669,19 @@ export default function AdminLogAchievementsPage() {
                 points, reason: "Manual Adjustment", date: dateTimestamp,
                 loggedAt: serverTimestamp() as Timestamp, loggedBy: currentUserUid,
             };
-            const docRef = existingLogId ? doc(bonusLogsRef, existingLogId) : doc(bonusLogsRef);
-            batch.set(docRef, logEntry);
+
+            if (points === 0 && existingLogId) {
+                // If points are set to 0, delete the existing log
+                batch.delete(doc(bonusLogsRef, existingLogId));
+            } else if (points !== 0) {
+                // If points are non-zero, create or update the log
+                const docRef = existingLogId ? doc(bonusLogsRef, existingLogId) : doc(bonusLogsRef);
+                batch.set(docRef, logEntry);
+            }
         }
 
         await batch.commit();
-        toast({ title: "Success", description: "Team bonus points have been awarded." });
-        setBonusInputs({}); 
+        toast({ title: "Success", description: "Team bonus points have been updated." });
     } catch (error) {
         console.error("Error saving bonus points:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not save bonus points." });
@@ -997,3 +1007,4 @@ export default function AdminLogAchievementsPage() {
 }
 
     
+
