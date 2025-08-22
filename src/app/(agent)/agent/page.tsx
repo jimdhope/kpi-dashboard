@@ -7,7 +7,7 @@ import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy, Sword
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
-import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, setDoc, addDoc, serverTimestamp, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, Unsubscribe, setDoc, addDoc, serverTimestamp, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
@@ -377,34 +377,6 @@ export default function AgentDashboardPage() {
     <div className="space-y-6">
       {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><UIDescription>{error}</UIDescription></Alert>}
       
-       {allCompetitions.length > 1 && !isLoading && (
-        <Card className="frosted-glass">
-            <CardContent className="p-4">
-                 <div className="grid gap-2 w-full max-w-xs">
-                    <Label htmlFor="competition-select">Viewing Competition</Label>
-                    <Select
-                        value={selectedCompetitionId}
-                        onValueChange={(value) => {
-                            setSelectedCompetitionId(value);
-                            localStorage.setItem(AGENT_DASHBOARD_COMP_KEY, value);
-                        }}
-                        disabled={isLoading}
-                    >
-                        <SelectTrigger id="competition-select">
-                            <SelectValue placeholder="Select Competition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {allCompetitions.map(comp => (
-                                <SelectItem key={comp.id} value={comp.id}>{comp.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardContent>
-        </Card>
-       )}
-
-
        {isLoading ? (
             <div className="space-y-6">
                 <Skeleton className="h-40 w-full" />
