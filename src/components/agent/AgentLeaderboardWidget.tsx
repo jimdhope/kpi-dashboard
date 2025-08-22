@@ -10,6 +10,7 @@ import {
   onSnapshot,
   Unsubscribe,
   getDocs,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
@@ -66,6 +67,10 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
         setIsLoading(false);
         return;
     }
+    
+    const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);
+    if (!selectedCompetition) return;
+
 
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
@@ -76,20 +81,25 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
         setPodAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
     }));
 
-    // Fetch all logs for the selected competition and pod
+    // Fetch all logs for the pod within the selected competition's date range
     const logsQuery = query(
         collection(db, 'dailyAchievements'),
         where('competitionId', '==', selectedCompetitionId),
-        where('podId', '==', currentUser.podId)
+        where('podId', '==', currentUser.podId),
+        where('date', '>=', selectedCompetition.startDate),
+        where('date', '<=', selectedCompetition.endDate)
     );
     unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
         setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching competition logs:", error);
         setIsLoading(false);
     }));
 
     return () => unsubscribes.forEach(unsub => unsub());
 
-  }, [selectedCompetitionId, currentUser?.podId]);
+  }, [selectedCompetitionId, currentUser?.podId, allCompetitions]);
 
   const handleCompetitionChange = (value: string) => {
     setSelectedCompetitionId(value);
