@@ -6,7 +6,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Target } from 'lucide-react';
-import { collection, query, where, Timestamp, doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, getDoc, onSnapshot, Unsubscribe, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { startOfDay, getDay, endOfDay } from 'date-fns';
 import type { AppUser } from '@/services/user';
