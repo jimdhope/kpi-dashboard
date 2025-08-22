@@ -28,7 +28,8 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
          <CardDescription className="text-xs">{rule.points} pts each</CardDescription>
        </CardHeader>
       <CardContent className="p-3 flex items-center justify-between flex-grow">
-        <div className="flex-grow flex items-center justify-center">
+        {/* The flex-grow class was removed from this div to make the card compact */}
+        <div className="flex items-center justify-center">
           <p className="text-2xl font-bold text-primary">{currentValue}</p>
         </div>
         <div className="flex flex-col border-l ml-3 pl-3">
