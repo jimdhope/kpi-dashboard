@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Loader2, Save, Settings, PlusCircle, Trash2, Rows, View, Columns, X } from 'lucide-react';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from "@/components/ui/switch";
 import { Input } from '@/components/ui/input';
@@ -66,8 +66,6 @@ const standardWidgetSchema = baseWidgetSchema.extend({
     type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod']),
 });
 
-
-// Discriminated union for specific widget types
 const specificWidgetSchema = z.discriminatedUnion('type', [
     motdWidgetSchema,
     customHtmlWidgetSchema,
@@ -76,11 +74,10 @@ const specificWidgetSchema = z.discriminatedUnion('type', [
 
 export type SpecificWidget = z.infer<typeof specificWidgetSchema>;
 
-
-// A column now holds multiple widgets.
 const columnSchema = z.object({
     id: z.string(),
-    widgets: z.array(specificWidgetSchema), // Changed from optional widget to array of widgets
+    width: z.number().min(10).max(100), // Width as a percentage
+    widgets: z.array(specificWidgetSchema),
 });
 export type Column = z.infer<typeof columnSchema>;
 
@@ -169,7 +166,6 @@ export default function AgentDashboardSettingsPage() {
             case 'custom-html':
                  return { ...base, type: 'custom-html', name: 'Custom HTML', content: '<p>Your custom content here.</p>' };
             default:
-                 // This ensures that all cases are handled. If a new WidgetType is added, TypeScript will error here.
                  const exhaustiveCheck: never = widgetType;
                  throw new Error(`Invalid widget type: ${exhaustiveCheck}`);
         }
@@ -208,18 +204,25 @@ export default function AgentDashboardSettingsPage() {
 
 
     const handleAddNewRow = () => {
-        // A new row now defaults to one column with an empty widgets array.
-        appendRow({ id: `row-${Date.now()}`, columns: [{ id: `col-${Date.now()}`, widgets: [] }] });
+        appendRow({ id: `row-${Date.now()}`, columns: [{ id: `col-${Date.now()}`, width: 100, widgets: [] }] });
     };
 
-     const handleAddNewColumn = (rowIndex: number) => {
+    const rebalanceColumnWidths = (columns: Column[]): Column[] => {
+        const totalWidth = 100;
+        const count = columns.length;
+        if (count === 0) return [];
+        const equalWidth = totalWidth / count;
+        return columns.map(col => ({ ...col, width: equalWidth }));
+    };
+
+    const handleAddNewColumn = (rowIndex: number) => {
         const rows = form.getValues('rows');
         const targetRow = rows[rowIndex];
         if (targetRow) {
-            // New column has an empty widgets array
-            const newColumn: Column = { id: `col-${Date.now()}`, widgets: [] };
+            const newColumn: Column = { id: `col-${Date.now()}`, width: 0, widgets: [] };
             const updatedColumns = [...targetRow.columns, newColumn];
-            form.setValue(`rows.${rowIndex}.columns`, updatedColumns, { shouldDirty: true });
+            const rebalancedColumns = rebalanceColumnWidths(updatedColumns);
+            form.setValue(`rows.${rowIndex}.columns`, rebalancedColumns, { shouldDirty: true });
         }
     };
 
@@ -237,11 +240,12 @@ export default function AgentDashboardSettingsPage() {
          form.setValue(columnPath, updatedWidgets, { shouldDirty: true });
     };
 
-     const handleRemoveColumn = (rowIndex: number, columnIndex: number) => {
+    const handleRemoveColumn = (rowIndex: number, columnIndex: number) => {
         const rows = form.getValues('rows');
         const targetRow = rows[rowIndex];
         if (targetRow) {
-            const updatedColumns = targetRow.columns.filter((_, idx) => idx !== columnIndex);
+            let updatedColumns = targetRow.columns.filter((_, idx) => idx !== columnIndex);
+            updatedColumns = rebalanceColumnWidths(updatedColumns);
             form.setValue(`rows.${rowIndex}.columns`, updatedColumns, { shouldDirty: true });
         }
     };
@@ -304,7 +308,6 @@ export default function AgentDashboardSettingsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Sidebar Menu Settings Card */}
                 <Card className="frosted-glass">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><View className="h-5 w-5 text-primary" /> Sidebar Menu Settings</CardTitle>
@@ -353,7 +356,48 @@ interface RowEditorProps {
 }
 
 function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onAddWidget, onRemoveWidget }: RowEditorProps) {
-    const { fields: columnFields } = useFieldArray({ control: form.control, name: `rows.${rowIndex}.columns`, keyName: "colId" });
+    const { control, setValue, getValues } = form;
+    const { fields: columnFields } = useFieldArray({ control, name: `rows.${rowIndex}.columns`, keyName: "colId" });
+    const rowRef = useRef<HTMLDivElement>(null);
+
+    const handleResize = (dividerIndex: number, event: React.PointerEvent<HTMLDivElement>) => {
+        const startX = event.clientX;
+        const rowWidth = rowRef.current?.offsetWidth || 0;
+        const initialColumns = getValues(`rows.${rowIndex}.columns`);
+        const leftColInitialWidth = initialColumns[dividerIndex].width;
+        const rightColInitialWidth = initialColumns[dividerIndex + 1].width;
+        const combinedWidth = leftColInitialWidth + rightColInitialWidth;
+
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+            const dx = moveEvent.clientX - startX;
+            const widthChangePercent = (dx / rowWidth) * 100;
+            
+            let newLeftWidth = leftColInitialWidth + widthChangePercent;
+            let newRightWidth = rightColInitialWidth - widthChangePercent;
+
+            if (newLeftWidth < 10) {
+                newLeftWidth = 10;
+                newRightWidth = combinedWidth - 10;
+            }
+            if (newRightWidth < 10) {
+                newRightWidth = 10;
+                newLeftWidth = combinedWidth - 10;
+            }
+
+            const newColumns = [...initialColumns];
+            newColumns[dividerIndex].width = newLeftWidth;
+            newColumns[dividerIndex + 1].width = newRightWidth;
+            setValue(`rows.${rowIndex}.columns`, newColumns, { shouldDirty: true });
+        };
+
+        const handlePointerUp = () => {
+            document.removeEventListener('pointermove', handlePointerMove);
+            document.removeEventListener('pointerup', handlePointerUp);
+        };
+
+        document.addEventListener('pointermove', handlePointerMove);
+        document.addEventListener('pointerup', handlePointerUp);
+    };
 
     return (
         <div className="p-4 border rounded-lg bg-background shadow-sm space-y-3">
@@ -366,12 +410,31 @@ function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onA
                     <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeRow(rowIndex)}><Trash2 className="h-4 w-4"/></Button>
                 </div>
             </div>
-             <div className={cn("min-h-[8rem] p-4 border-2 border-dashed rounded-md flex items-start gap-4", columnFields.length === 0 && "justify-center items-center")}>
+             <div ref={rowRef} className={cn("min-h-[8rem] p-4 border-2 border-dashed rounded-md flex items-start gap-0", columnFields.length === 0 && "justify-center items-center")}>
                  {columnFields.length === 0 ? (
                      <p className="text-sm text-muted-foreground">Add a column to this row.</p>
                  ) : (
                      columnFields.map((col, colIndex) => (
-                         <ColumnEditor key={col.id} rowIndex={rowIndex} colIndex={colIndex} onRemoveColumn={onRemoveColumn} onAddWidget={onAddWidget} onRemoveWidget={onRemoveWidget} form={form} />
+                        <React.Fragment key={col.id}>
+                             <ColumnEditor
+                                 key={col.id}
+                                 rowIndex={rowIndex}
+                                 colIndex={colIndex}
+                                 onRemoveColumn={onRemoveColumn}
+                                 onAddWidget={onAddWidget}
+                                 onRemoveWidget={onRemoveWidget}
+                                 form={form}
+                                 width={col.width}
+                             />
+                              {colIndex < columnFields.length - 1 && (
+                                <div
+                                    onPointerDown={(e) => handleResize(colIndex, e)}
+                                    className="w-2 h-full cursor-col-resize flex items-center justify-center group"
+                                >
+                                    <div className="w-0.5 h-1/2 bg-border group-hover:bg-primary transition-colors"></div>
+                                </div>
+                            )}
+                        </React.Fragment>
                      ))
                  )}
             </div>
@@ -386,15 +449,16 @@ interface ColumnEditorProps {
     onAddWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
     onRemoveWidget: (rowIndex: number, colIndex: number, widgetIndex: number) => void;
     form: any;
+    width: number;
 }
 
 
-function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onAddWidget, onRemoveWidget, form }: ColumnEditorProps) {
+function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onAddWidget, onRemoveWidget, form, width }: ColumnEditorProps) {
     const columnPath = `rows.${rowIndex}.columns.${colIndex}.widgets`;
     const { fields: widgetFields } = useFieldArray({ control: form.control, name: columnPath, keyName: "widgetId" });
 
     return (
-        <div className="relative p-3 border rounded-md bg-card shadow-sm flex-1 min-w-[250px] flex flex-col gap-4 group">
+        <div style={{ flexBasis: `${width}%` }} className="relative p-3 border rounded-md bg-card shadow-sm flex flex-col gap-4 group min-w-[200px]">
             <Button onClick={() => onRemoveColumn(rowIndex, colIndex)} variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 text-destructive bg-card border rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4"/></Button>
 
             <div className="space-y-3">
@@ -434,9 +498,9 @@ interface WidgetEditorProps {
 function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }: WidgetEditorProps) {
     const { control } = form;
     const widgetPath = `rows.${rowIndex}.columns.${colIndex}.widgets.${widgetIndex}`;
-    const widget = form.watch(widgetPath);
+    const widget: SpecificWidget | undefined = form.watch(widgetPath);
 
-    if (!widget) return null; // Should not happen if key exists
+    if (!widget) return null;
 
     return (
          <div className="relative p-2 border rounded-md bg-background/50 shadow-sm flex flex-col gap-2 group/widget">

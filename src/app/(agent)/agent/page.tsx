@@ -30,7 +30,6 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// Import the new types from the settings page
 import type { DashboardSettingsData, SpecificWidget, Row as LayoutRow, Column as LayoutColumn } from '@/app/(admin)/admin/message-of-the-day/page';
 
 
@@ -284,15 +283,15 @@ export default function AgentDashboardPage() {
             </div>
        ) : dashboardSettings?.rows?.map(row => (
            <div key={row.id} className="flex flex-wrap md:flex-nowrap gap-6 items-start">
-               {row.columns.map(column => {
-                   if (!column.widget) return null;
-                    const flexBasis = `calc(${100 / row.columns.length}% - ${((row.columns.length - 1) / row.columns.length) * 1.5}rem)`;
-                   return (
-                        <div key={column.id} className="w-full" style={{ flexBasis }}>
-                           {renderWidget(column.widget)}
-                        </div>
-                   )
-               })}
+               {row.columns.map(column => (
+                    <div key={column.id} className="w-full space-y-6" style={{ flexBasis: `${column.width}%` }}>
+                       {column.widgets.map(widget => (
+                           <div key={widget.id}>
+                            {renderWidget(widget)}
+                           </div>
+                       ))}
+                    </div>
+               ))}
            </div>
        ))}
 
@@ -303,3 +302,4 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
+
