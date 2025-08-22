@@ -113,7 +113,7 @@ body {
 /* Frosted Glass effect for cards */
 .frosted-glass {
   /* Decreased opacity and increased blur for a more pronounced effect */
-  @apply bg-card/85 backdrop-blur-md border border-border/50 shadow-lg;
+  @apply bg-card/85 backdrop-blur-sm border border-border/50 shadow-lg;
 }
 
 /* Remove fixed background container as it's no longer needed */
