@@ -386,11 +386,6 @@ function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onSelectWidget, onRe
     const { control } = form;
     const widget = form.watch(`rows.${rowIndex}.columns.${colIndex}.widget`);
     
-    const { fields: leaderboardFields } = useFieldArray({
-        control,
-        name: `rows.${rowIndex}.columns.${colIndex}.widget.leaderboardTypes`,
-    });
-
     return (
         <div className="relative p-3 border rounded-md bg-card shadow-sm flex-1 min-w-[250px] flex flex-col gap-2 group">
             <Button onClick={() => onRemoveColumn(rowIndex, colIndex)} variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 text-destructive bg-card border rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4"/></Button>
@@ -436,7 +431,7 @@ function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onSelectWidget, onRe
                                         <FormField control={control} name={`rows.${rowIndex}.columns.${colIndex}.widget.content`} render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
                                     </>
                                 )}
-                                {(widget.type === 'achievements' || widget.type === 'pod-targets' || widget.type.startsWith('leaderboard-')) && (
+                                {(widget.type === 'achievements' || widget.type === 'pod-targets' || (widget.type && widget.type.startsWith('leaderboard-'))) && (
                                      <p className="text-sm text-muted-foreground">This widget has no additional settings.</p>
                                 )}
                             </AccordionContent>
