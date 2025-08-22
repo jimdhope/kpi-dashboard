@@ -41,7 +41,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
   
   const agentPodId = currentUser?.podId;
 
-  // Effect 1: Fetch all possible competitions for the user's pod
+  // Effect 1: Fetch all possible competitions for the user's pod to populate the dropdown
   useEffect(() => {
     if (!agentPodId) {
         setIsLoading(false);
@@ -58,18 +58,15 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
         const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithTeams));
         setAllCompetitions(fetchedComps);
         
-        if (!selectedCompetitionId || !fetchedComps.some(c => c.id === selectedCompetitionId)) {
+        if (!selectedCompetitionId && fetchedComps.length > 0) {
             const savedCompId = localStorage.getItem(TEAM_LEADERBOARD_COMP_KEY);
             if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
                 setSelectedCompetitionId(savedCompId);
-            } else if (fetchedComps.length > 0) {
-                 setSelectedCompetitionId(fetchedComps[0].id);
             } else {
-                 setIsLoading(false); 
+                setSelectedCompetitionId(fetchedComps[0].id);
             }
-        } else {
-            setIsLoading(false);
         }
+        setIsLoading(false);
     }, (error) => {
         console.error("Error fetching competitions:", error);
         setIsLoading(false);
@@ -79,67 +76,80 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
   }, [agentPodId]);
 
 
-  // Effect 2: Fetch competition-specific data when selection changes
+  // Effect 2: Fetch competition-specific data (logs, bonuses, teams) when selection changes
   useEffect(() => {
     if (!selectedCompetitionId || !agentPodId) {
       setTeams([]);
       setCompetitionLogs([]);
       setBonusLogs([]);
-      setIsLoading(false);
-      return () => {}; // Return empty cleanup function
-    }
-
-    const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);
-
-    if (!selectedCompetition) {
-        setIsLoading(false);
-        return () => {};
+      return;
     }
 
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
+
+    const fetchCompetitionData = async () => {
+        try {
+            const compDocRef = doc(db, 'competitions', selectedCompetitionId);
+            const compDocSnap = await getDoc(compDocRef);
+
+            if (!compDocSnap.exists()) {
+                console.error("Selected competition not found");
+                setIsLoading(false);
+                return;
+            }
+
+            const selectedCompetition = { id: compDocSnap.id, ...compDocSnap.data() } as CompetitionWithTeams;
+            setTeams(selectedCompetition.teams || []);
+
+            // ** THE FIX: Correctly query with the full date range **
+            const logsQuery = query(
+                collection(db, 'dailyAchievements'),
+                where('competitionId', '==', selectedCompetitionId),
+                where('podId', '==', agentPodId),
+                where('date', '>=', selectedCompetition.startDate),
+                where('date', '<=', selectedCompetition.endDate)
+            );
+            unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
+                setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
+            }));
+
+            const bonusLogsQuery = query(
+                collection(db, 'teamBonusLogs'),
+                where('competitionId', '==', selectedCompetitionId),
+                where('podId', '==', agentPodId),
+                where('date', '>=', selectedCompetition.startDate),
+                where('date', '<=', selectedCompetition.endDate)
+            );
+            unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
+                setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
+            }));
+
+        } catch (error) {
+            console.error("Error fetching competition data:", error);
+        } finally {
+            // This might flicker, but it's safer to ensure it's always set
+             setTimeout(() => setIsLoading(false), 500); // Small delay to allow queries to return
+        }
+    };
+
+    fetchCompetitionData();
     
-    // Set teams from the already fetched competition data
-    setTeams(selectedCompetition.teams || []);
-
-    // Fetch all logs for the pod within the selected competition's date range
-    const logsQuery = query(
-        collection(db, 'dailyAchievements'),
-        where('competitionId', '==', selectedCompetitionId),
-        where('podId', '==', agentPodId)
-    );
-    unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
-        setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
-        setIsLoading(false); // Set loading to false after logs are fetched
-    }));
-
-    // Fetch bonus logs for the pod within the competition date range
-    const bonusLogsQuery = query(
-        collection(db, 'teamBonusLogs'),
-        where('competitionId', '==', selectedCompetitionId),
-        where('podId', '==', agentPodId)
-    );
-    unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
-        setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
-    }));
-
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedCompetitionId, agentPodId, allCompetitions]);
+  }, [selectedCompetitionId, agentPodId]);
 
 
  const teamLeaderboard = useMemo(() => {
-    if (isLoading || teams.length === 0) {
+    if (teams.length === 0) {
         return [];
     }
 
     const teamScores: Record<string, number> = {};
 
-    // Initialize scores for all teams
     teams.forEach(team => {
         teamScores[team.id] = 0;
     });
 
-    // Sum points from achievement logs
     competitionLogs.forEach(log => {
         const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
         if (agentTeam) {
@@ -147,13 +157,11 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
         }
     });
 
-    // Add bonus points
     bonusLogs.forEach(log => {
         if (teamScores.hasOwnProperty(log.teamId)) {
             teamScores[log.teamId] += log.points || 0;
         }
     });
-
 
     return teams.map(team => ({
       id: team.id,
@@ -162,7 +170,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
       emoji: team.emoji,
       isUser: team.agentIds.includes(currentUser?.id || ''),
     }));
-}, [isLoading, teams, competitionLogs, bonusLogs, currentUser]);
+}, [teams, competitionLogs, bonusLogs, currentUser]);
   
   const handleCompetitionChange = (value: string) => {
     setSelectedCompetitionId(value);
