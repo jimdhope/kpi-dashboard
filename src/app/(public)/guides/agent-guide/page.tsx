@@ -4,7 +4,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckSquare, Trophy, Users, ListChecks, Target, MessageSquare, User, Settings, BarChart, Zap } from 'lucide-react';
+import { CheckSquare, Trophy, Users, ListChecks, Target, MessageSquare, User, Settings, BarChart, Zap, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
 import { MockupProgressTracking } from '@/components/landing-mockup-progress';
 import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard';
