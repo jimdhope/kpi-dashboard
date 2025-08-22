@@ -3,7 +3,7 @@ import React from 'react';
 import { Header } from '@/components/landing-header';
 import { Footer } from '@/components/landing-footer';
 import { cn } from '@/lib/utils';
-import { AnimatedSvgBackground } from '@/components/animated-svg-background'; // Import the animated background
+import { StaticBackground } from '@/components/static-background'; // Import the new static background
 
 export default function PublicLayout({
   children,
@@ -16,7 +16,7 @@ export default function PublicLayout({
       <div
         className="fixed-background-container"
       >
-        <AnimatedSvgBackground /> {/* Render the animated SVG background */}
+        <StaticBackground /> {/* Render the static background */}
       </div>
 
       {/* Scrollable Content Container */}

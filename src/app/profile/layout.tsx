@@ -10,7 +10,7 @@ import { AgentSidebarLayout } from '@/components/agent-sidebar-layout'; // For A
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 import { Loader2 } from 'lucide-react'; // Import Loader2
 import type { AppUser, UserRole } from '@/services/user'; // Import types
-import { AnimatedSvgBackground } from '@/components/animated-svg-background'; // Import the animated background
+import { StaticBackground } from '@/components/static-background'; // Import the new background
 
 // Helper function to fetch user roles from Firestore
 async function fetchUserRoles(uid: string): Promise<UserRole[] | null> {
@@ -163,7 +163,7 @@ export default function ProfileLayout({
        <div className="relative min-h-screen">
          {/* Fixed Background Container */}
          <div className="fixed-background-container">
-           <AnimatedSvgBackground />
+           <StaticBackground />
          </div>
          {/* Loading Indicator Centered */}
          <div className="absolute inset-0 flex items-center justify-center">
@@ -180,7 +180,7 @@ export default function ProfileLayout({
     <div className="relative min-h-screen">
       {/* Fixed Background Container */}
       <div className="fixed-background-container">
-        <AnimatedSvgBackground />
+        <StaticBackground />
       </div>
        {/* Scrollable Content Container */}
       <div className="scrollable-content-container">

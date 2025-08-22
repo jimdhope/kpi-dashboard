@@ -32,7 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
-import { AnimatedSvgBackground } from './animated-svg-background'; // Import the animated background
+import { StaticBackground } from './static-background'; // Import the new background
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
@@ -103,7 +103,7 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
     <SidebarProvider defaultOpen={true}>
       {/* Fixed Background Container */}
       <div className="fixed-background-container">
-        <AnimatedSvgBackground />
+        <StaticBackground />
       </div>
 
       {/* Container for Sidebar and Main Area (Header + Content) */}

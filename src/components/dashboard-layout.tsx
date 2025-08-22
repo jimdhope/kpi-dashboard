@@ -32,7 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
-import { AnimatedSvgBackground } from './animated-svg-background';
+import { StaticBackground } from './static-background';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -99,7 +99,7 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="fixed-background-container">
-        <AnimatedSvgBackground />
+        <StaticBackground />
       </div>
       <div className="flex relative z-10 min-h-screen w-full">
         <Sidebar>

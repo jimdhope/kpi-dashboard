@@ -20,8 +20,8 @@ body {
   }
 
   :root {
-    /* Light Mode - Lighter version of #4281a4 for background blobs */
-    --background: 203 42% 94%; /* #e9f1f6 - Lighter version of #4281a4 (Used by layouts for scroll area) */
+    /* Light Mode */
+    --background: 203 42% 96%; /* #f2f7f9 - Very light grey-blue for main bg area */
     --foreground: 0 0% 10%; /* Dark Gray */
     --card: hsla(0, 0%, 100%, 0.85); /* White with 85% opacity */
     --card-foreground: 0 0% 10%;
@@ -54,18 +54,13 @@ body {
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 180 100% 25%;
 
-    /* Light Mode SVG Blob Colors */
-    /* Using softer, pastel-like versions based on #F5DFD1 (H:25 S:59% L:89%) */
-     /* Base HSL: H:203 S:42% L:94% */
-    --background-blob-1: 203 42% 94%; /* Original base #e9f1f6 */
-    --background-blob-2: 203 50% 92%; /* Slightly lighter/more saturated */
-    --background-blob-3: 198 60% 90%; /* Slightly greener/more saturated */
-    --background-blob-4: 208 55% 91%; /* Slightly purpler/desaturated */
+    /* Light Mode Gradient Start Color */
+    --background-gradient-start: 180 30% 95%; /* Very light teal */
   }
 
   .dark {
     /* Dark Mode */
-    --background: 0 0% 12%; /* #1e1e1e (Used by layouts for scroll area) */
+    --background: 210 10% 15%; /* #212429 - Dark cool grey for main bg area */
     --foreground: 0 0% 98%; /* White */
     --card: hsla(210, 10%, 18%, 0.85); /* Dark Blueish Gray with 85% opacity */
     --card-foreground: 0 0% 98%;
@@ -98,12 +93,8 @@ body {
     --sidebar-border: 210 10% 25%;
     --sidebar-ring: 180 80% 60%;
 
-    /* Dark Mode SVG Blob Colors - Using subtle dark greys/blues */
-    /* Base HSL: H:210 S:10% L:15% */
-    --background-blob-1: 210 10% 15%; /* #242629 - Original base */
-    --background-blob-2: 210 8% 18%; /* Slightly lighter grey-blue */
-    --background-blob-3: 205 12% 14%; /* Slightly darker/bluer */
-    --background-blob-4: 215 9% 16%; /* Slightly lighter/purplish */
+    /* Dark Mode Gradient Start Color */
+    --background-gradient-start: 180 25% 10%; /* Very dark teal */
   }
 }
 
