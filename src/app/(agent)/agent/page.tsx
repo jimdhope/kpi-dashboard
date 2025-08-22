@@ -32,6 +32,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { DashboardSettingsData, SpecificWidget, Row as LayoutRow, Column as LayoutColumn } from '@/app/(admin)/admin/message-of-the-day/page';
 import { AgentLeaderboardWidget } from '@/components/agent-leaderboard-widget';
+import { PodTargetsWidget } from '@/components/pod-targets-widget';
+import { TodaysAchievementsWidget } from '@/components/todays-achievements-widget';
 
 
 // Interfaces (most are the same)
@@ -227,6 +229,17 @@ export default function AgentDashboardPage() {
                 return <Card><CardHeader><CardTitle>Team Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
             case 'leaderboard-pod':
                 return <Card><CardHeader><CardTitle>Pod Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
+            case 'achievements':
+                 return <TodaysAchievementsWidget
+                            currentUser={currentUser}
+                            activeCompetitionId={activeCompetitionId}
+                        />;
+            case 'pod-targets':
+                return <PodTargetsWidget
+                            agentPodId={agentPodId}
+                            activeCompetitionId={activeCompetitionId}
+                            podAgents={podAgents}
+                        />;
             case 'log-achievements':
                 return <LogAchievementsWidget 
                             rules={rules}

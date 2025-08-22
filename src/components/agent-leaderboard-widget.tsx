@@ -50,6 +50,7 @@ export function AgentLeaderboardWidget({ allCompetitions, podId, currentUser }: 
     let agentsUnsubscribe: Unsubscribe | undefined;
 
     try {
+        // Query ALL logs for the competition, not just for one day
         const logsQuery = query(
             collection(db, 'dailyAchievements'),
             where('competitionId', '==', selectedCompetitionId),

@@ -1,0 +1,160 @@
+
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from '@/components/ui/skeleton';
+import { Target } from 'lucide-react';
+import { collection, query, where, Timestamp, doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { startOfDay, getDay } from 'date-fns';
+import type { AppUser } from '@/services/user';
+import type { CompetitionWithRules } from '@/app/(agent)/agent/page';
+import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
+import type { RuleFormData } from '@/models/types';
+import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
+import { cn } from '@/lib/utils';
+
+const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+interface PodTargetsWidgetProps {
+    agentPodId: string | null;
+    activeCompetitionId: string | null;
+    podAgents: AppUser[];
+}
+
+interface PodTargetSummary {
+    ruleId: string;
+    ruleName: string;
+    ruleEmoji: string;
+    achieved: number;
+    target: number | null;
+    progress?: number;
+}
+
+export function PodTargetsWidget({ agentPodId, activeCompetitionId, podAgents }: PodTargetsWidgetProps) {
+    const [rules, setRules] = useState<RuleFormData[]>([]);
+    const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
+    const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!agentPodId || !activeCompetitionId) {
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+        const unsubscribes: Unsubscribe[] = [];
+
+        // Fetch competition rules
+        const compDocRef = doc(db, 'competitions', activeCompetitionId);
+        unsubscribes.push(onSnapshot(compDocRef, (snap) => {
+            setRules(snap.exists() ? (snap.data() as CompetitionWithRules).rules || [] : []);
+        }));
+
+        // Fetch daily targets
+        const targetsDocId = `${activeCompetitionId}_${agentPodId}`;
+        const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
+        unsubscribes.push(onSnapshot(targetsDocRef, (snap) => {
+            setDailyTargets(snap.exists() ? snap.data() as DailyTargetData : null);
+        }));
+
+        // Fetch today's logs for the pod
+        const todayStart = startOfDay(new Date());
+        const todayEnd = endOfDay(new Date());
+        const logsQuery = query(
+            collection(db, 'dailyAchievements'),
+            where('podId', '==', agentPodId),
+            where('competitionId', '==', activeCompetitionId),
+            where('date', '>=', todayStart),
+            where('date', '<=', todayEnd)
+        );
+        unsubscribes.push(onSnapshot(logsQuery, (snap) => {
+            setDailyLogs(snap.docs.map(d => d.data() as DailyAchievementLog));
+            setIsLoading(false);
+        }));
+
+        return () => unsubscribes.forEach(unsub => unsub());
+    }, [agentPodId, activeCompetitionId]);
+
+    const podTargetSummary = useMemo((): PodTargetSummary[] => {
+        const numericRules = rules.filter(r => r.type === 'numeric');
+        const dayOfWeek = daysOfWeek[getDay(new Date())];
+        const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
+        const activeAgentsCount = podAgents.filter(agent => !absentAgentIds.has(agent.id!)).length;
+
+        if (numericRules.length === 0 || !dailyTargets) {
+            return [];
+        }
+
+        const podRuleTotalsToday: Record<string, number> = {};
+        numericRules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
+
+        dailyLogs.forEach(log => {
+            if (log.ruleId && podRuleTotalsToday.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
+                podRuleTotalsToday[log.ruleId] += (log.value || 0);
+            }
+        });
+
+        return numericRules.map(rule => {
+            if (!rule.id) return null;
+            const individualTarget = dailyTargets?.[rule.id]?.[dayOfWeek];
+            if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
+
+            const podTarget = individualTarget * activeAgentsCount;
+            const achieved = podRuleTotalsToday[rule.id] || 0;
+            const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : 0;
+
+            return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
+        }).filter((s): s is PodTargetSummary => s !== null);
+
+    }, [rules, dailyTargets, dailyLogs, podAgents]);
+
+
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (podTargetSummary.length === 0) {
+        return null; // Or a message saying no targets are set for today
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" /> Pod Targets Today
+                </CardTitle>
+                <CardDescription>Your pod's collective progress towards daily goals.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                {podTargetSummary.map(summary => (
+                    <div key={summary.ruleId}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="font-medium truncate" title={summary.ruleName}>
+                                {summary.ruleEmoji} {summary.ruleName}
+                            </span>
+                            <span className={cn("font-semibold", summary.progress !== undefined && summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>
+                                {summary.achieved.toLocaleString()} / {summary.target?.toLocaleString()}
+                            </span>
+                        </div>
+                        <Progress value={summary.progress ?? 0} className="h-2" />
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+    );
+}

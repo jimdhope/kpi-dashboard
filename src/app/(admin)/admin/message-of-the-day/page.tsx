@@ -45,7 +45,7 @@ export type WidgetType =
     | 'leaderboard-team'
     | 'leaderboard-pod'
     | 'custom-html'
-    | 'log-achievements'; // Added new widget type
+    | 'log-achievements';
 
 const baseWidgetSchema = z.object({
   id: z.string(),
@@ -123,7 +123,7 @@ const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
     { id: 'leaderboard-team', name: 'Team Leaderboard' },
     { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
-    { id: 'log-achievements', name: 'Log Achievements' }, // Added new widget
+    { id: 'log-achievements', name: 'Log Achievements' },
     { id: 'custom-html', name: 'Custom HTML' },
 ];
 
