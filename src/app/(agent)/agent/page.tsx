@@ -254,11 +254,13 @@ export default function AgentDashboardPage() {
   }, []);
 
   const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
-    if (!activeCompetition || !allPods.length) return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
-    
+    if (!activeCompetition || !allPods.length) {
+        return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
+    }
+
     const podsInComp = allPods.filter(p => activeCompetition.podIds?.includes(p.id));
 
-    // Agent scores (for current pod's agents)
+    // --- Agent Leaderboard (scoped to current user's pod) ---
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => {
         if (agent.id) {
@@ -266,37 +268,63 @@ export default function AgentDashboardPage() {
             agentScores[agent.id] = agentLogs.reduce((sum, log) => sum + (log.points || 0), 0);
         }
     });
+    const finalAgentLeaderboard = podAgents.map(agent => ({
+        id: agent.id!,
+        name: agent.name,
+        score: agentScores[agent.id!] || 0,
+        avatarUrl: agent.avatarUrl,
+        avatarInitials: agent.avatarInitials,
+        avatarBgColor: agent.avatarBgColor,
+        isUser: agent.id === currentUser?.id
+    }));
 
-    // Team scores (for current pod's teams)
+    // --- Team Leaderboard (scoped to current user's pod's teams) ---
     const teamScores: Record<string, number> = {};
     teams.forEach(team => {
-        const teamAgentLogs = competitionLogs.filter(log => team.agentIds.includes(log.agentId));
-        const achievementPoints = teamAgentLogs.reduce((sum, log) => sum + (log.points || 0), 0);
-        const bonusPoints = podBonusLogs.filter(log => log.teamId === team.id).reduce((sum, log) => sum + (log.points || 0), 0);
+        // Sum achievement points from all agents in the team
+        const achievementPoints = competitionLogs
+            .filter(log => team.agentIds.includes(log.agentId))
+            .reduce((sum, log) => sum + (log.points || 0), 0);
+        
+        // Sum bonus points awarded to the team
+        const bonusPoints = podBonusLogs
+            .filter(log => log.teamId === team.id)
+            .reduce((sum, log) => sum + (log.points || 0), 0);
+
         teamScores[team.id] = achievementPoints + bonusPoints;
     });
+    const finalTeamLeaderboard = teams.map(team => ({
+        id: team.id,
+        name: team.name,
+        score: teamScores[team.id] || 0,
+        emoji: team.emoji,
+        isUser: team.agentIds?.includes(currentUser?.id || '')
+    }));
 
-    // Pod scores (for ALL pods in competition)
+    // --- Pod Leaderboard (all pods in competition) ---
     const podScores: Record<string, number> = {};
     podsInComp.forEach(pod => {
-        const podLogs = competitionLogs.filter(log => log.podId === pod.id);
-        podScores[pod.id] = podLogs.reduce((sum, log) => sum + (log.points || 0), 0);
+        // Sum all points for logs associated with this pod's ID
+        podScores[pod.id] = competitionLogs
+            .filter(log => log.podId === pod.id)
+            .reduce((sum, log) => sum + (log.points || 0), 0);
     });
-
-    const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
-        const sorted = [...items].sort((a,b) => (b.score || 0) - (a.score || 0));
-        const rankMap = new Map<number, number>();
-        let rank = 1;
-        sorted.forEach(item => { if(!rankMap.has(item.score)) rankMap.set(item.score, rank++); });
-        return sorted.map(item => ({...item, rank: rankMap.get(item.score)!}));
-    };
+    const finalPodLeaderboard = podsInComp.map(pod => ({
+        id: pod.id,
+        name: pod.name,
+        score: podScores[pod.id] || 0,
+        avatarUrl: pod.logoUrl,
+        avatarInitials: pod.logoInitials,
+        avatarBgColor: pod.logoBgColor,
+        isUser: pod.id === agentPodId
+    }));
 
     return {
-      agentLeaderboard: assignDenseRanks(podAgents.map(agent => ({ id: agent.id!, name: agent.name, score: agentScores[agent.id!] || 0, avatarUrl: agent.avatarUrl, avatarInitials: agent.avatarInitials, avatarBgColor: agent.avatarBgColor, isUser: agent.id === currentUser?.id }))),
-      teamLeaderboard: assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') }))),
-      podLeaderboard: assignDenseRanks(podsInComp.map(pod => ({ id: pod.id, name: pod.name, score: podScores[pod.id] || 0, avatarUrl: pod.logoUrl, avatarInitials: pod.logoInitials, avatarBgColor: pod.logoBgColor }))),
+      agentLeaderboard: finalAgentLeaderboard,
+      teamLeaderboard: finalTeamLeaderboard,
+      podLeaderboard: finalPodLeaderboard,
     };
-  }, [competitionLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods]);
+  }, [competitionLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods, agentPodId]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
