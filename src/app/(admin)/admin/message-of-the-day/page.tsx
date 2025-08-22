@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,12 +13,18 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  useDraggable,
+  useDroppable,
+  UniqueIdentifier,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  horizontalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -27,80 +33,47 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Loader2, Save, Settings, GripVertical, PlusCircle, Trash2, AlertCircle } from 'lucide-react';
+import { Loader2, Save, Settings, GripVertical, PlusCircle, Trash2, AlertCircle, Rows, GripHorizontal } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from "@/components/ui/switch";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { KpiQuestLexicalEditor } from '@/components/LexicalEditor';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 // --- Zod Schema Definitions ---
 
-const externalLinkSchema = z.object({
-  id: z.string(),
-  title: z.string().min(1, 'Title is required.'),
-  url: z.string().url('Must be a valid URL.'),
-});
-export type ExternalLink = z.infer<typeof externalLinkSchema>;
-
-const leaderboardTypeSchema = z.object({
-    id: z.enum(['agent', 'team']),
-    name: z.string(),
-    isEnabled: z.boolean(),
-});
-export type LeaderboardType = z.infer<typeof leaderboardTypeSchema>;
-
-
-// Base for all widgets
 const baseWidgetSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  isEnabled: z.boolean(),
+  id: z.string(), // Unique instance ID for the widget in the layout
+  widgetType: z.string(), // e.g., 'motd', 'leaderboards' - defines the component to render
 });
+export type BaseWidget = z.infer<typeof baseWidgetSchema>;
 
-// Specific widget types for the discriminated union
-const standardWidgetSchema = baseWidgetSchema.extend({ type: z.literal('standard') });
-
-const leaderboardsWidgetSchema = baseWidgetSchema.extend({
-    type: z.literal('leaderboards'),
-    id: z.literal('leaderboards'),
-    leaderboardTypes: z.array(leaderboardTypeSchema),
+const rowSchema = z.object({
+  id: z.string(), // Unique ID for the row
+  widgets: z.array(baseWidgetSchema),
 });
-
-
-const motdWidgetSchema = baseWidgetSchema.extend({
-  type: z.literal('motd'),
-  id: z.literal('motd'),
-  emoji: z.string().min(1, 'Emoji is required.').max(10, 'Emoji should be short.'),
-  content: z.string().min(1, 'Message content is required.'),
-});
-const linksWidgetSchema = baseWidgetSchema.extend({
-  type: z.literal('links'),
-  id: z.literal('links'),
-  links: z.array(externalLinkSchema),
-});
-const sidebarWidgetSchema = baseWidgetSchema.extend({
-    type: z.literal('sidebar'),
-    id: z.string(), // e.g., rps-game, agent-guide
-});
-
-
-// The discriminated union
-const widgetSchema = z.discriminatedUnion("type", [
-  standardWidgetSchema,
-  motdWidgetSchema,
-  linksWidgetSchema,
-  sidebarWidgetSchema,
-  leaderboardsWidgetSchema,
-]);
-export type Widget = z.infer<typeof widgetSchema>;
+export type Row = z.infer<typeof rowSchema>;
 
 const dashboardSettingsSchema = z.object({
-  widgets: z.array(widgetSchema),
+  // The main data structure is now an array of rows
+  rows: z.array(rowSchema),
+
+  // We still need to store the configuration data for each widget type
+  // This data is separate from the layout structure
+  motd: z.object({
+    isEnabled: z.boolean(),
+    emoji: z.string().min(1, 'Emoji is required.').max(10, 'Emoji should be short.'),
+    content: z.string().min(1, 'Message content is required.'),
+  }),
+  leaderboards: z.object({
+    isEnabled: z.boolean(),
+  }),
+  // Add other widget configs here as they become configurable
+  // e.g. links, achievements, pod-targets
 });
 
 // Type for form data
@@ -112,346 +85,299 @@ export interface DashboardSettingsData extends DashboardSettingsFormData {
   updatedBy: string;
 }
 
-const SETTINGS_DOC_ID = "agentDashboardSettings";
+const SETTINGS_DOC_ID = "agentDashboardSettings_v2"; // Use a new doc ID for the new structure
 const SETTINGS_COLLECTION = "settings";
 
+// --- Available Widgets Toolbox ---
+const AVAILABLE_WIDGETS = [
+  { id: 'motd', name: 'Message of the Day' },
+  { id: 'achievements', name: 'Today\'s Achievements' },
+  { id: 'pod-targets', name: 'Pod Targets' },
+  { id: 'leaderboards', name: 'Leaderboards' },
+];
 
-// --- Sortable Item Components ---
+function DraggableWidget({ id, name }: { id: string; name: string }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `toolbox-${id}`,
+    data: { widgetType: id, name: name },
+  });
 
-// Sortable component for Links Editor
-function SortableLinkItem({ nestIndex, index, control, remove }: { nestIndex: number, index: number; remove: (index: number) => void; control: any }) {
-    const { fields: linkFields } = useFieldArray({ control, name: `widgets.${nestIndex}.links` });
-    const fieldId = (linkFields[index] as any).id; // Use the internal ID from useFieldArray
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: fieldId });
-    const style = { transform: CSS.Transform.toString(transform), transition };
-
-    return (
-        <div ref={setNodeRef} style={style} className="flex items-end gap-2 border p-3 rounded-md bg-background/50">
-            <Button type="button" variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing"><GripVertical className="h-5 w-5"/></Button>
-            <FormField control={control} name={`widgets.${nestIndex}.links.${index}.title`} render={({ field }) => (<FormItem className="flex-1"><FormLabel>Title</FormLabel><FormControl><Input {...field} placeholder="e.g., Company SharePoint" /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={control} name={`widgets.${nestIndex}.links.${index}.url`} render={({ field }) => (<FormItem className="flex-1"><FormLabel>URL</FormLabel><FormControl><Input {...field} placeholder="https://..." /></FormControl><FormMessage /></FormItem>)} />
-            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
-        </div>
-    );
+  return (
+    <Button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      variant="outline"
+      size="sm"
+      className={cn("cursor-grab", isDragging && "opacity-50")}
+    >
+      <GripHorizontal className="mr-2 h-4 w-4" />
+      {name}
+    </Button>
+  );
 }
 
 
-function LinksEditor({ nestIndex, control }: { nestIndex: number, control: any }) {
-    const { fields: linkFields, append: appendLink, remove: removeLink, move: moveLink } = useFieldArray({
-        control,
-        name: `widgets.${nestIndex}.links`,
-        keyName: 'fieldId', // use a unique key name
+export default function AgentDashboardSettingsPage() {
+    // ... main component state and effects
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+    const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+
+
+     const form = useForm<DashboardSettingsFormData>({
+        resolver: zodResolver(dashboardSettingsSchema),
+        defaultValues: {
+            rows: [],
+            motd: { isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' },
+            leaderboards: { isEnabled: true },
+        },
     });
+
+     const { fields: rowFields, append: appendRow, remove: removeRow, move: moveRow, update: updateRow } = useFieldArray({
+        control: form.control,
+        name: "rows",
+        keyName: "fieldId",
+    });
+
+    // Fetch and set up form data
+     useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(user => {
+            setCurrentUserUid(user?.uid || null);
+        });
+
+        const fetchSettings = async () => {
+            setIsLoading(true);
+            try {
+                const settingsDocRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
+                const docSnap = await getDoc(settingsDocRef);
+                if (docSnap.exists()) {
+                    form.reset(docSnap.data() as DashboardSettingsData);
+                } else {
+                    // Initialize with one empty row if no settings exist
+                    form.reset({
+                        rows: [{ id: `row-${Date.now()}`, widgets: [] }],
+                        motd: { isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' },
+                        leaderboards: { isEnabled: true },
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching settings:", error);
+                toast({ variant: "destructive", title: "Error", description: "Could not load settings." });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSettings();
+        return () => unsubscribe();
+    }, [form, toast]);
+
 
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    function handleDragEnd(event: DragEndEvent) {
-        const { active, over } = event;
-        if (over && active.id !== over.id) {
-          const oldIndex = linkFields.findIndex(f => (f as any).id === active.id);
-          const newIndex = linkFields.findIndex(f => (f as any).id === over.id);
-          moveLink(oldIndex, newIndex);
+    const findContainer = (id: UniqueIdentifier) => {
+        if (id === 'toolbox') {
+            return 'toolbox';
         }
-    }
+        return rowFields.find(row => row.id === id || row.widgets.some(w => w.id === id));
+    };
 
-    return (
-        <div className="space-y-4">
-            <FormDescription>Add and reorder external links for the agent sidebar.</FormDescription>
-            {linkFields.length === 0 && <div className="text-center text-muted-foreground py-4 border-dashed border-2 rounded-md"><AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2"/><p>No links added yet. Click below to add one.</p></div>}
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={linkFields.map(f => (f as any).id)} strategy={verticalListSortingStrategy}>
-                {linkFields.map((field, index) => (
-                    <SortableLinkItem key={(field as any).id} nestIndex={nestIndex} index={index} remove={removeLink} control={control}/>
-                ))}
-                </SortableContext>
-            </DndContext>
-            <Button type="button" variant="outline" size="sm" onClick={() => appendLink({ id: `new-${Date.now()}`, title: '', url: '' })}><PlusCircle className="mr-2 h-4 w-4"/>Add Link</Button>
-        </div>
-    );
-}
 
-// Sortable Component for Leaderboard Types
-function SortableLeaderboardTypeItem({ nestIndex, index, control }: { nestIndex: number; index: number; control: any }) {
-    const { fields } = useFieldArray({ control, name: `widgets.${nestIndex}.leaderboardTypes` });
-    const fieldData = fields[index] as LeaderboardType;
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: fieldData.id });
-    const style = { transform: CSS.Transform.toString(transform), transition };
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id);
+    };
 
-    return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-2 border p-3 rounded-md bg-background/50">
-            <Button type="button" variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing"><GripVertical className="h-5 w-5"/></Button>
-            <FormField
-                control={control}
-                name={`widgets.${nestIndex}.leaderboardTypes.${index}.isEnabled`}
-                render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                        <FormControl>
-                            <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                        <FormLabel className="font-normal">{fieldData.name}</FormLabel>
-                    </FormItem>
-                )}
-            />
-        </div>
-    );
-}
-
-// Editor for Leaderboard Types
-function LeaderboardTypesEditor({ nestIndex, control }: { nestIndex: number; control: any }) {
-    const { fields, move } = useFieldArray({
-        control,
-        name: `widgets.${nestIndex}.leaderboardTypes`,
-    });
-
-    const sensors = useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-    );
-
-    const handleDragEnd = (event: DragEndEvent) => {
+    const handleDragOver = (event: DragEndEvent) => {
         const { active, over } = event;
-        if (over && active.id !== over.id) {
-            const oldIndex = fields.findIndex(f => (f as any).id === active.id);
-            const newIndex = fields.findIndex(f => (f as any).id === over.id);
-            move(oldIndex, newIndex);
+        const activeId = active.id;
+        const overId = over?.id;
+
+        if (!overId) return;
+
+        const activeContainer = findContainer(activeId);
+        const overContainer = findContainer(overId);
+
+        if (!activeContainer || !overContainer || activeContainer === overContainer) {
+            return;
+        }
+
+        // Dragging from toolbox to a row
+        if (active.id.toString().startsWith('toolbox-')) {
+             const overRowIndex = rowFields.findIndex(row => row.id === overId);
+             if (overRowIndex !== -1) {
+                 const newWidget: BaseWidget = {
+                    id: `widget-${Date.now()}`, // Unique instance ID
+                    widgetType: active.data.current?.widgetType,
+                 };
+
+                  const newRows = [...rowFields];
+                  newRows[overRowIndex].widgets.push(newWidget);
+                  form.setValue('rows', newRows, { shouldDirty: true });
+             }
+             return;
         }
     };
 
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over) {
+            setActiveId(null);
+            return;
+        }
+
+        // Reordering rows
+        if (active.id.toString().startsWith('row-') && over.id.toString().startsWith('row-')) {
+             const oldIndex = rowFields.findIndex(row => row.id === active.id);
+             const newIndex = rowFields.findIndex(row => row.id === over.id);
+             if (oldIndex !== newIndex) {
+                 moveRow(oldIndex, newIndex);
+             }
+        }
+        
+        setActiveId(null);
+    };
+
+
+    const handleAddNewRow = () => {
+        appendRow({ id: `row-${Date.now()}`, widgets: [] });
+    };
+
+    const handleSaveChanges = async (data: DashboardSettingsFormData) => {
+         setIsSaving(true);
+         try {
+            const settingsDocRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
+            const dataToSave: DashboardSettingsData = {
+                ...data,
+                updatedAt: serverTimestamp() as Timestamp,
+                updatedBy: currentUserUid!,
+            };
+            await setDoc(settingsDocRef, dataToSave);
+            toast({ title: "Success", description: "Dashboard layout saved." });
+        } catch (error) {
+            console.error("Error saving settings:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not save settings." });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+
+    if (isLoading) {
+        return <Skeleton className="h-96 w-full" />;
+    }
+
     return (
-        <div className="space-y-4">
-            <FormDescription>Enable and reorder the leaderboards shown to agents.</FormDescription>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={fields.map(f => (f as any).id)} strategy={verticalListSortingStrategy}>
-                    {fields.map((field, index) => (
-                        <SortableLeaderboardTypeItem key={(field as any).id} nestIndex={nestIndex} index={index} control={control} />
-                    ))}
-                </SortableContext>
-            </DndContext>
-        </div>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSaveChanges)} className="space-y-8">
+                <Card className="frosted-glass">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                             <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5 text-primary" /> Agent Dashboard Layout</CardTitle>
+                             <CardDescription>Drag widgets from the toolbox into the rows below to build the agent dashboard.</CardDescription>
+                        </div>
+                        <Button type="submit" disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Save className="mr-2 h-4 w-4" />
+                            {isSaving ? 'Saving...' : 'Save Layout'}
+                        </Button>
+                    </CardHeader>
+                    <CardContent>
+                        {/* Widget Toolbox */}
+                        <div className="mb-6">
+                            <Label className="text-sm font-medium">Widget Toolbox</Label>
+                            <Card className="mt-2 p-3 bg-muted/50">
+                                <div className="flex flex-wrap gap-2">
+                                {AVAILABLE_WIDGETS.map(widget => (
+                                    <DraggableWidget key={widget.id} id={widget.id} name={widget.name} />
+                                ))}
+                                </div>
+                            </Card>
+                        </div>
+
+                         <Separator className="my-6" />
+
+                        {/* Layout Editor */}
+                        <div className="space-y-4">
+                              <SortableContext items={rowFields.map(row => row.id)} strategy={verticalListSortingStrategy}>
+                                 {rowFields.map((row, index) => (
+                                     <DroppableRow key={row.id} row={row} rowIndex={index} removeRow={removeRow} control={form.control} />
+                                 ))}
+                              </SortableContext>
+                        </div>
+
+                         <Button variant="outline" size="sm" type="button" onClick={handleAddNewRow} className="mt-6">
+                            <Rows className="mr-2 h-4 w-4" /> Add Row
+                         </Button>
+
+                    </CardContent>
+                </Card>
+            </form>
+        </Form>
+    </DndContext>
     );
 }
 
 
+function DroppableRow({ row, rowIndex, removeRow, control }: { row: Row; rowIndex: number; removeRow: (index: number) => void; control: any }) {
+    const { setNodeRef, isOver } = useDroppable({ id: row.id });
+    const { attributes, listeners, setNodeRef: setSortableNodeRef, transform, transition } = useSortable({ id: row.id });
 
-// Main Sortable Widget Item
-function SortableWidgetItem({ widget, index, control }: { widget: Widget; index: number; control: any }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: widget.id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+    
+    const { fields: widgetFields, remove: removeWidget, move: moveWidget } = useFieldArray({
+        control,
+        name: `rows.${rowIndex}.widgets`
+    });
 
-  return (
-    <div ref={setNodeRef} style={style} className="rounded-lg border bg-card/50 shadow-sm">
-      <div className="flex items-center justify-between p-3">
-        <div className="flex items-center gap-3">
-            <Button type="button" variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing"><GripVertical className="h-5 w-5"/></Button>
-            <Label htmlFor={`switch-${widget.id}`} className="font-medium">{widget.name}</Label>
+    return (
+        <div ref={setSortableNodeRef} style={style} className="p-4 border rounded-lg bg-background shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Button type="button" variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing"><GripVertical className="h-5 w-5"/></Button>
+                    <Label className="font-medium">Row {rowIndex + 1}</Label>
+                </div>
+                <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeRow(rowIndex)}><Trash2 className="h-4 w-4"/></Button>
+            </div>
+            <div
+                ref={setNodeRef}
+                className={cn(
+                    "min-h-[6rem] p-4 border-2 border-dashed rounded-md flex flex-wrap items-start gap-4",
+                    isOver ? 'border-primary bg-primary/10' : 'border-muted-foreground/30 bg-muted/20'
+                )}
+            >
+                 <SortableContext items={widgetFields.map(w => w.id)} strategy={horizontalListSortingStrategy}>
+                    {widgetFields.map((widget, widgetIndex) => (
+                        <SortableWidget key={widget.id} widget={widget as BaseWidget} onRemove={() => removeWidget(widgetIndex)} />
+                    ))}
+                 </SortableContext>
+
+                 {widgetFields.length === 0 && <p className="text-sm text-muted-foreground">Drop a widget here</p>}
+            </div>
         </div>
-         <FormField
-            control={control}
-            name={`widgets.${index}.isEnabled`}
-            render={({ field }) => (
-                <FormItem>
-                    <FormControl><Switch id={`switch-${widget.id}`} checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                </FormItem>
-            )}
-        />
-      </div>
-
-       {form.watch(`widgets.${index}.isEnabled`) && (widget.type === 'motd' || widget.type === 'links' || widget.type === 'leaderboards') && (
-        <div className="mt-2 pt-4 border-t px-4 pb-4 space-y-4">
-            {widget.type === 'motd' && (
-                <>
-                    <FormField control={control} name={`widgets.${index}.emoji`} render={({ field }) => (<FormItem><FormLabel>Emoji</FormLabel><FormControl><Input {...field} className="max-w-xs" /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name={`widgets.${index}.content`} render={({ field }) => (<FormItem><FormLabel>Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)}/>
-                </>
-            )}
-            {widget.type === 'links' && <LinksEditor nestIndex={index} control={control} />}
-            {widget.type === 'leaderboards' && <LeaderboardTypesEditor nestIndex={index} control={control} />}
-        </div>
-      )}
-    </div>
-  );
+    )
 }
 
+function SortableWidget({ widget, onRemove }: { widget: BaseWidget, onRemove: () => void }) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: widget.id });
+    const style = { transform: CSS.Transform.toString(transform), transition, };
+    const widgetInfo = AVAILABLE_WIDGETS.find(w => w.id === widget.widgetType);
 
-
-let form: any; // Define form at a higher scope to be accessible in SortableWidgetItem
-
-export default function AgentDashboardSettingsPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
-  const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
-
-  form = useForm<DashboardSettingsFormData>({
-    resolver: zodResolver(dashboardSettingsSchema),
-    defaultValues: {
-      widgets: [],
-    },
-  });
-
-  const { fields: widgetFields, move: moveWidget, replace: replaceWidgets } = useFieldArray({ control: form.control, name: "widgets", keyName: "fieldId" });
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      setCurrentUserUid(user?.uid || null);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const fetchSettings = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const settingsDocRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
-      const docSnap = await getDoc(settingsDocRef);
-      
-      const defaultLeaderboardTypes: LeaderboardType[] = [
-        { id: 'agent', name: "Agent Leaderboard", isEnabled: true },
-        { id: 'team', name: "Team Leaderboard", isEnabled: true },
-      ];
-
-      const defaultWidgets: Widget[] = [
-        { id: 'motd', name: "Message of the Day", type: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' },
-        { id: 'achievements', name: "Today's Achievements", type: 'standard', isEnabled: true },
-        { id: 'pod-targets', name: "Pod Targets", type: 'standard', isEnabled: true },
-        { id: 'leaderboards', name: "Competition Leaderboards", type: 'leaderboards', isEnabled: true, leaderboardTypes: defaultLeaderboardTypes },
-        { id: 'links', name: "External Links", type: 'links', isEnabled: false, links: [] },
-        { id: 'rps-game', name: "Sidebar: RPS Game Page", type: 'sidebar', isEnabled: true },
-        { id: 'agent-guide', name: "Sidebar: Agent Guide", type: 'sidebar', isEnabled: true },
-      ];
-
-      if (docSnap.exists()) {
-        const data = docSnap.data() as DashboardSettingsData;
-        const savedWidgets = Array.isArray(data.widgets) ? data.widgets : [];
-        
-        // Merge saved data with defaults, preserving order from saved data
-        const savedWidgetMap = new Map(savedWidgets.map(w => [w.id, w]));
-        
-        const finalWidgets = defaultWidgets.map(dw => {
-            if (savedWidgetMap.has(dw.id)) {
-                const savedWidget = savedWidgetMap.get(dw.id)!;
-                // Specifically merge leaderboardTypes to preserve order and state
-                if (dw.type === 'leaderboards' && savedWidget.type === 'leaderboards') {
-                    const savedTypesMap = new Map(savedWidget.leaderboardTypes.map(t => [t.id, t]));
-                    const mergedTypes = dw.leaderboardTypes.map(dwt => savedTypesMap.get(dwt.id) || dwt);
-                    return { ...dw, ...savedWidget, leaderboardTypes: mergedTypes };
-                }
-                return { ...dw, ...savedWidget };
-            }
-            return dw;
-        });
-
-        // Add any truly new widgets from default that weren't saved at all
-         defaultWidgets.forEach(dw => {
-             if (!finalWidgets.some(fw => fw.id === dw.id)) {
-                 finalWidgets.push(dw);
-             }
-         });
-
-
-        replaceWidgets(finalWidgets);
-      } else {
-        replaceWidgets(defaultWidgets);
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard settings:", error);
-      toast({ variant: "destructive", title: "Error", description: "Could not load settings." });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [replaceWidgets, toast]);
-
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
-
-  const handleSaveChanges = async (data: DashboardSettingsFormData) => {
-    if (!currentUserUid) {
-      toast({ variant: "destructive", title: "Error", description: "You must be logged in to save." });
-      return;
-    }
-    setIsSaving(true);
-    try {
-      const settingsDocRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
-      const dataToSave: DashboardSettingsData = {
-        ...data,
-        updatedAt: serverTimestamp() as Timestamp,
-        updatedBy: currentUserUid,
-      };
-      await setDoc(settingsDocRef, dataToSave);
-      toast({ title: "Success", description: "Agent dashboard settings have been updated." });
-    } catch (error) {
-      console.error("Error saving settings:", error);
-      toast({ variant: "destructive", title: "Error", description: "Could not save settings." });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  function handleDragEnd(event: DragEndEvent, moveFn: (from: number, to: number) => void) {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-        const oldIndex = widgetFields.findIndex(f => f.id === active.id);
-        const newIndex = widgetFields.findIndex(f => f.id === over.id);
-        moveFn(oldIndex, newIndex);
-    }
-  }
-
-
-  if (isLoading) {
-      return (
-          <div className="space-y-6">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-64 w-full" />
-              <Skeleton className="h-12 w-32 self-end" />
-          </div>
-      );
-  }
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSaveChanges)} className="space-y-8">
-        <Card className="frosted-glass">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5 text-primary" /> Agent Dashboard Settings</CardTitle>
-                <CardDescription>Control the components and links that appear on the agent dashboard. Drag and drop to reorder.</CardDescription>
-            </CardHeader>
-             <CardContent>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, moveWidget)}>
-                    <SortableContext items={widgetFields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-2">
-                        {widgetFields.map((field, index) => (
-                            <SortableWidgetItem
-                                key={field.id}
-                                widget={field as Widget}
-                                index={index}
-                                control={form.control}
-                            />
-                        ))}
-                        </div>
-                    </SortableContext>
-                </DndContext>
-            </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <Save className="mr-2 h-4 w-4" />
-            {isSaving ? 'Saving...' : 'Save All Settings'}
-          </Button>
+    return (
+        <div ref={setNodeRef} style={style} className="relative p-2 border rounded-md bg-card shadow-sm flex-1 min-w-[200px]">
+            <Button {...attributes} {...listeners} variant="ghost" size="icon" className="absolute top-1 left-1 h-6 w-6 cursor-grab active:cursor-grabbing"><GripHorizontal className="h-4 w-4 text-muted-foreground" /></Button>
+            <Button onClick={onRemove} variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+            <p className="text-center text-sm font-medium pt-6 pb-2">{widgetInfo?.name || 'Unknown Widget'}</p>
         </div>
-      </form>
-    </Form>
-  );
+    )
 }
