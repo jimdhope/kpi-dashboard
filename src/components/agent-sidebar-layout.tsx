@@ -140,7 +140,7 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                {visibleSidebarPages.map(page => {
                     const pageMap = {
                         'rps-game': { href: '/agent/rps-game', icon: <Swords />, label: 'RPS Game' },
-                        'agent-guide': { href: '/guides/agent-guide', icon: <Star />, label: 'Agent Guide' },
+                        'agent-guide': { href: '/agent/guide', icon: <Star />, label: 'Agent Guide' },
                     };
                     const pageInfo = pageMap[page.id as keyof typeof pageMap];
                     if (!pageInfo) return null;

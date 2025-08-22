@@ -90,9 +90,9 @@ export default function AgentGuidePage() {
   return (
     <div className="flex flex-col items-center w-full">
       {/* Hero Section */}
-      <section className="w-full py-20 md:py-28 text-center">
+      <section className="w-full py-12 md:py-16 text-center">
         <div className="container mx-auto px-4 md:px-6">
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl text-primary drop-shadow-lg">
+          <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary drop-shadow-lg">
             Agent Dashboard Guide
           </h1>
           <p className="mx-auto max-w-[700px] text-foreground/90 md:text-xl mt-4 drop-shadow-sm">
@@ -102,10 +102,10 @@ export default function AgentGuidePage() {
       </section>
 
       {/* Introduction Section */}
-      <section className="w-full py-12 md:py-16 lg:py-20 frosted-glass">
+      <section className="w-full py-8 md:py-12 lg:py-16">
         <div className="container mx-auto px-4 md:px-6 space-y-12">
           <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">Getting Started</h2>
+            <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl mb-4">Getting Started</h2>
             <p className="text-muted-foreground md:text-lg max-w-3xl mx-auto">
               Your dashboard is designed to help you track your performance, see how your pod is doing, and stay motivated!
             </p>
@@ -114,7 +114,7 @@ export default function AgentGuidePage() {
           {/* Section 1: Logging Achievements */}
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="order-2 md:order-1 space-y-4">
-              <h3 className="text-2xl font-semibold flex items-center gap-2"><CheckSquare className="h-6 w-6 text-primary" /> Log Your Daily Achievements</h3>
+              <h3 className="text-xl font-semibold flex items-center gap-2"><CheckSquare className="h-6 w-6 text-primary" /> Log Your Daily Achievements</h3>
               <p className="text-muted-foreground">
                 The "Today's Achievements" section is where you'll log your progress for each KPI.
                 Use the <Button size="sm" variant="ghost" className="p-1 h-auto inline-block"><Plus className="h-4 w-4"/></Button> button to increment your count for a specific achievement, and the <Button size="sm" variant="ghost" className="p-1 h-auto inline-block"><Minus className="h-4 w-4"/></Button> button to decrease it.
@@ -140,7 +140,7 @@ export default function AgentGuidePage() {
               </div>
             </div>
             <div className="space-y-4">
-              <h3 className="text-2xl font-semibold flex items-center gap-2"><BarChart className="h-6 w-6 text-primary" /> Understanding Your Dashboard</h3>
+              <h3 className="text-xl font-semibold flex items-center gap-2"><BarChart className="h-6 w-6 text-primary" /> Understanding Your Dashboard</h3>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
                 <li><strong>Message of the Day:</strong> Important updates or motivational messages from your admin/manager.</li>
                 <li><strong>Your Scores:</strong> Shows your total points for today and for the entire current competition, broken down by achievement.</li>
@@ -154,7 +154,7 @@ export default function AgentGuidePage() {
           {/* Section 3: Profile */}
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="order-2 md:order-1 space-y-4">
-              <h3 className="text-2xl font-semibold flex items-center gap-2"><User className="h-6 w-6 text-primary" /> Managing Your Profile</h3>
+              <h3 className="text-xl font-semibold flex items-center gap-2"><User className="h-6 w-6 text-primary" /> Managing Your Profile</h3>
               <p className="text-muted-foreground">
                 Click the <Button variant="ghost" size="icon" className="inline-flex align-middle h-7 w-7"><Settings className="h-4 w-4"/></Button> icon at the bottom of the sidebar to go to your profile.
                 Here you can update your name and customize your avatar's initials and background color.
@@ -167,24 +167,6 @@ export default function AgentGuidePage() {
 
         </div>
       </section>
-
-      {/* CTA Section */}
-      <section className="w-full py-16 md:py-24 text-center frosted-glass">
-        <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-            Ready to Conquer Your KPIs?
-          </h2>
-          <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl mt-4 mb-8">
-            Log in to your dashboard and start your quest!
-          </p>
-           <Link href="/agent" passHref>
-             <Button size="lg" variant="default">
-               Go to My Dashboard
-             </Button>
-            </Link>
-        </div>
-      </section>
     </div>
   );
 }
-    
