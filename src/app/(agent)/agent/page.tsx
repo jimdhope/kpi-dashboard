@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { DashboardSettingsData, SpecificWidget, Row as LayoutRow, Column as LayoutColumn } from '@/app/(admin)/admin/message-of-the-day/page';
+import { AgentLeaderboardWidget } from '@/components/agent-leaderboard-widget';
 
 
 // Interfaces (most are the same)
@@ -53,7 +54,7 @@ interface Team {
   emoji?: string;
 }
 
-interface CompetitionWithRules extends Competition {
+export interface CompetitionWithRules extends Competition {
     teams?: Team[];
     id: string;
 }
@@ -69,7 +70,6 @@ interface PodTargetSummary {
 }
 
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-const AGENT_DASHBOARD_COMP_KEY = 'agentDashboard_selectedCompetitionId';
 const SETTINGS_DOC_ID = "agentDashboardSettings_v3";
 
 // Debounce utility function
@@ -88,28 +88,19 @@ export default function AgentDashboardPage() {
   // User and Pod Data
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
-  const [allPods, setAllPods] = useState<Pod[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
 
   // Competition and Rules Data
-  const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null);
   const [allCompetitions, setAllCompetitions] = useState<CompetitionWithRules[]>([]);
-  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
-  const [rules, setRules] = useState<RuleFormData[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
   
-  // Daily Dynamic Data
-  const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]);
-  const [competitionBonusLogs, setCompetitionBonusLogs] = useState<TeamBonusLog[]>([]);
-  const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
-  const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
-
-
   // Loading and Settings States
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dashboardSettings, setDashboardSettings] = useState<DashboardSettingsData | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
+  const [rules, setRules] = useState<RuleFormData[]>([]);
+  const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
 
   const listenerRefs = React.useRef<{ [key: string]: Unsubscribe | undefined }>({});
 
@@ -149,18 +140,10 @@ export default function AgentDashboardPage() {
             setCurrentUser(null); setAgentPodId(null); setIsLoadingUser(false);
         }
     });
-
-    // Fetch all pods once for leaderboard display
-    const podsQuery = query(collection(db, 'pods'), orderBy('name'));
-    listenerRefs.current.allPods = onSnapshot(podsQuery, (snap) => {
-      setAllPods(snap.docs.map(d => ({id: d.id, ...d.data()} as Pod)));
-    });
-
-
-    return () => cleanupListeners(['auth', 'userDoc', 'allPods']);
+    return () => cleanupListeners(['auth', 'userDoc']);
   }, [cleanupListeners]);
 
-  // Effect to fetch all competitions for the user's pod and set the active one
+  // Effect to fetch all competitions for the user's pod
   useEffect(() => {
       if (isLoadingUser || !agentPodId) return;
 
@@ -168,79 +151,51 @@ export default function AgentDashboardPage() {
       const unsubscribeComps = onSnapshot(compQuery, (snapshot) => {
           const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithRules));
           setAllCompetitions(fetchedComps);
-          
-          const today = startOfDay(new Date());
-          const latestActiveComp = fetchedComps.find(c => c.startDate.toDate() <= today && c.endDate.toDate() >= today) || fetchedComps[0];
-          
-          if (latestActiveComp) {
-              setSelectedCompetitionId(latestActiveComp.id);
+          // Set active competition to the latest one
+          if (fetchedComps.length > 0) {
+            setActiveCompetitionId(fetchedComps[0].id);
           }
       });
-
       return () => unsubscribeComps();
   }, [isLoadingUser, agentPodId]);
 
 
-  // Main data loading effect based on selected competition
+  // Main data loading effect based on active competition
   useEffect(() => {
-    if (!selectedCompetitionId || !agentPodId || !currentUser?.id) {
+    if (!activeCompetitionId || !agentPodId || !currentUser?.id) {
         setIsLoadingData(false);
-        return () => cleanupListeners();
+        return;
     }
 
     setIsLoadingData(true);
-    let isMounted = true;
     const todayStart = startOfDay(new Date());
 
-    const setupListeners = async () => {
-        try {
-             cleanupListeners(); // Clean up previous listeners before setting up new ones
-             const compDocRef = doc(db, 'competitions', selectedCompetitionId);
-             listenerRefs.current.competition = onSnapshot(compDocRef, (compSnap) => {
-                 if (!isMounted || !compSnap.exists()) return;
-                 const newActiveComp = { id: compSnap.id, ...compSnap.data() } as CompetitionWithRules;
-                 setActiveCompetition(newActiveComp);
-                 setRules(newActiveComp.rules || []);
-                 setTeams(newActiveComp.teams || []);
-                 
-                 // Fetch logs for all pods in this competition
-                 if (newActiveComp.podIds && newActiveComp.podIds.length > 0) {
-                    const logsQuery = query(collection(db, 'dailyAchievements'), where('competitionId', '==', selectedCompetitionId));
-                    listenerRefs.current.competitionLogs = onSnapshot(logsQuery, (snap) => { if(isMounted) setCompetitionLogs(snap.docs.map(d => d.data() as DailyAchievementLog)); });
-
-                    const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('competitionId', '==', selectedCompetitionId));
-                    listenerRefs.current.competitionBonusLogs = onSnapshot(bonusLogsQuery, (snap) => { if(isMounted) setCompetitionBonusLogs(snap.docs.map(d => d.data() as TeamBonusLog)); });
-                 }
-             });
-
-            const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId), orderBy('name'));
-            listenerRefs.current.agents = onSnapshot(agentsQuery, (snap) => { if(isMounted) setPodAgents(snap.docs.map(d => d.data() as AppUser)); });
-            
-             const taskLogsQuery = query(collection(db, 'dailyTaskLogs'), where('agentId', '==', currentUser.id), where('competitionId', '==', selectedCompetitionId), where('date', '==', Timestamp.fromDate(todayStart)));
-             listenerRefs.current.taskLogs = onSnapshot(taskLogsQuery, (snap) => { if(isMounted) setDailyTaskLogs(snap.docs.map(d => d.data() as DailyTaskLog)); });
-
-             const targetsDocId = `${selectedCompetitionId}_${agentPodId}`;
-             const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
-             listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => {
-                 if (isMounted) {
-                    setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
-                    setIsLoadingData(false); // Mark loading as complete here
-                 }
-             });
-
-        } catch (error) {
-            console.error("Error setting up listeners:", error);
-            if(isMounted) {
-                setError("Failed to load dashboard data.");
-                setIsLoadingData(false);
-            }
+    const compDocRef = doc(db, 'competitions', activeCompetitionId);
+    const unsubscribeComp = onSnapshot(compDocRef, (compSnap) => {
+        if (compSnap.exists()) {
+            const compData = { id: compSnap.id, ...compSnap.data() } as CompetitionWithRules;
+            setRules(compData.rules || []);
         }
+    });
+
+    const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId), orderBy('name'));
+    const unsubscribeAgents = onSnapshot(agentsQuery, (snap) => {
+        setPodAgents(snap.docs.map(d => d.data() as AppUser));
+    });
+    
+    const taskLogsQuery = query(collection(db, 'dailyTaskLogs'), where('agentId', '==', currentUser.id), where('competitionId', '==', activeCompetitionId), where('date', '==', Timestamp.fromDate(todayStart)));
+    const unsubscribeTasks = onSnapshot(taskLogsQuery, (snap) => {
+        setDailyTaskLogs(snap.docs.map(d => d.data() as DailyTaskLog));
+        setIsLoadingData(false); // Mark loading as complete here
+    });
+
+    return () => {
+        unsubscribeComp();
+        unsubscribeAgents();
+        unsubscribeTasks();
     };
-    
-    setupListeners();
-    
-    return () => { isMounted = false; cleanupListeners(); };
-  }, [selectedCompetitionId, agentPodId, currentUser?.id, cleanupListeners]);
+  }, [activeCompetitionId, agentPodId, currentUser?.id]);
+
 
   // Settings fetcher
   useEffect(() => {
@@ -253,74 +208,6 @@ export default function AgentDashboardPage() {
       return () => unsubscribeSettings();
   }, []);
 
-    const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
-        if (isLoadingData || !activeCompetition || !currentUser?.id) {
-            return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
-        }
-
-        // AGENT LEADERBOARD (agents in current user's pod)
-        const agentScores = podAgents.reduce((acc, agent) => {
-            acc[agent.id!] = competitionLogs
-                .filter(log => log.agentId === agent.id)
-                .reduce((sum, log) => sum + (log.points || 0), 0);
-            return acc;
-        }, {} as Record<string, number>);
-
-        const finalAgentLeaderboard = podAgents.map(agent => ({
-            id: agent.id!,
-            name: agent.name,
-            score: agentScores[agent.id!] || 0,
-            avatarUrl: agent.avatarUrl,
-            avatarInitials: agent.avatarInitials,
-            avatarBgColor: agent.avatarBgColor,
-            isUser: agent.id === currentUser.id,
-        }));
-
-        // TEAM LEADERBOARD (teams in current user's pod)
-        const teamScores = teams.reduce((acc, team) => {
-            const achievementPoints = competitionLogs
-                .filter(log => team.agentIds.includes(log.agentId))
-                .reduce((sum, log) => sum + (log.points || 0), 0);
-            const bonusPoints = competitionBonusLogs
-                .filter(log => log.teamId === team.id)
-                .reduce((sum, log) => sum + (log.points || 0), 0);
-            acc[team.id] = achievementPoints + bonusPoints;
-            return acc;
-        }, {} as Record<string, number>);
-
-        const finalTeamLeaderboard = teams.map(team => ({
-            id: team.id,
-            name: team.name,
-            score: teamScores[team.id] || 0,
-            emoji: team.emoji,
-            isUser: team.agentIds.includes(currentUser.id!),
-        }));
-
-        // POD LEADERBOARD (all pods in the competition)
-        const podsInComp = allPods.filter(p => activeCompetition.podIds?.includes(p.id));
-        const podScores = podsInComp.reduce((acc, pod) => {
-            acc[pod.id] = competitionLogs
-                .filter(log => log.podId === pod.id)
-                .reduce((sum, log) => sum + (log.points || 0), 0);
-            return acc;
-        }, {} as Record<string, number>);
-
-        const finalPodLeaderboard = podsInComp.map(pod => ({
-            id: pod.id,
-            name: pod.name,
-            score: podScores[pod.id] || 0,
-            avatarUrl: pod.logoUrl,
-            avatarInitials: pod.logoInitials,
-            avatarBgColor: pod.logoBgColor,
-            isUser: pod.id === agentPodId,
-        }));
-
-        return {
-            agentLeaderboard: finalAgentLeaderboard,
-            teamLeaderboard: finalTeamLeaderboard,
-            podLeaderboard: finalPodLeaderboard,
-        };
-    }, [isLoadingData, activeCompetition, currentUser, competitionLogs, competitionBonusLogs, podAgents, teams, allPods, agentPodId]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
@@ -331,31 +218,21 @@ export default function AgentDashboardPage() {
             case 'motd':
                 return <MessageOfTheDayDisplay title={widget.title} emoji={widget.emoji} content={widget.content} isLoading={isLoadingSettings} />;
             case 'leaderboard-agent':
-                return <Card><CardHeader><CardTitle>Agent Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
+                return <AgentLeaderboardWidget
+                           allCompetitions={allCompetitions}
+                           podId={agentPodId}
+                           currentUser={currentUser}
+                       />;
             case 'leaderboard-team':
                 return <Card><CardHeader><CardTitle>Team Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
             case 'leaderboard-pod':
                 return <Card><CardHeader><CardTitle>Pod Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
-            case 'achievements':
-                 return <TodaysAchievementsWidget
-                           rules={rules}
-                           podLogs={competitionLogs.filter(l => l.podId === agentPodId)}
-                           dailyTaskLogs={dailyTaskLogs}
-                           currentUser={currentUser}
-                        />;
-            case 'pod-targets':
-                 return <PodTargetsWidget
-                            rules={rules}
-                            podLogs={competitionLogs.filter(l => l.podId === agentPodId)}
-                            dailyTargets={dailyTargets}
-                            podAgents={podAgents}
-                        />;
             case 'log-achievements':
                 return <LogAchievementsWidget 
                             rules={rules}
                             currentUser={currentUser}
                             agentPodId={agentPodId}
-                            activeCompetitionId={activeCompetition?.id}
+                            activeCompetitionId={activeCompetitionId}
                             toast={toast}
                        />;
             case 'custom-html':
@@ -409,140 +286,6 @@ export default function AgentDashboardPage() {
 
 // --- WIDGET COMPONENTS ---
 
-interface TodaysAchievementsWidgetProps {
-    rules: RuleFormData[];
-    podLogs: DailyAchievementLog[];
-    dailyTaskLogs: DailyTaskLog[];
-    currentUser: AppUser | null;
-}
-
-const TodaysAchievementsWidget: React.FC<TodaysAchievementsWidgetProps> = ({ rules, podLogs, dailyTaskLogs, currentUser }) => {
-    const { dailyAchievements, completedTasks, totalPoints } = useMemo(() => {
-        const todayStart = startOfDay(new Date());
-        const agentLogsToday = podLogs.filter(log =>
-            log.agentId === currentUser?.id &&
-            log.date instanceof Timestamp &&
-            startOfDay(log.date.toDate()).getTime() === todayStart.getTime()
-        );
-
-        const agentTasksToday = dailyTaskLogs.filter(log => log.agentId === currentUser?.id);
-
-        const achievements: { name: string; emoji: string; value: number }[] = [];
-        let points = 0;
-
-        rules.forEach(rule => {
-            if (rule.type === 'numeric') {
-                const log = agentLogsToday.find(l => l.ruleId === rule.id);
-                if (log) {
-                    achievements.push({ name: rule.name, emoji: rule.emoji || '🎯', value: log.value });
-                    points += log.points || 0;
-                }
-            }
-        });
-
-        const tasks = agentTasksToday.map(taskLog => {
-            const rule = rules.find(r => r.id === taskLog.taskId && r.type === 'checkbox');
-            return { name: rule?.name || 'Task', emoji: rule?.emoji || '✅' };
-        });
-        
-        return { dailyAchievements: achievements, completedTasks: tasks, totalPoints: points };
-    }, [rules, podLogs, dailyTaskLogs, currentUser]);
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5 text-primary" /> Today's Achievements</CardTitle>
-                <CardDescription>Your logged progress for today. Total points today: <strong className="text-primary">{totalPoints}</strong></CardDescription>
-            </CardHeader>
-            <CardContent>
-                {dailyAchievements.length === 0 && completedTasks.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">No achievements logged yet today.</p>
-                ) : (
-                    <ul className="space-y-2 text-sm">
-                        {dailyAchievements.map((ach, i) => (
-                             <li key={`ach-${i}`} className="flex justify-between items-center">
-                               <span>{ach.emoji} {ach.name}</span>
-                               <span className="font-semibold">{ach.value}</span>
-                           </li>
-                        ))}
-                         {completedTasks.map((task, i) => (
-                             <li key={`task-${i}`} className="flex items-center gap-2 text-muted-foreground">
-                               <span>{task.emoji}</span>
-                               <span>{task.name}</span>
-                           </li>
-                        ))}
-                    </ul>
-                )}
-            </CardContent>
-        </Card>
-    );
-};
-
-
-interface PodTargetsWidgetProps {
-    rules: RuleFormData[];
-    podLogs: DailyAchievementLog[];
-    dailyTargets: DailyTargetData | null;
-    podAgents: AppUser[];
-}
-
-const PodTargetsWidget: React.FC<PodTargetsWidgetProps> = ({ rules, podLogs, dailyTargets, podAgents }) => {
-    const podTargetSummary = useMemo(() => {
-        const todayStart = startOfDay(new Date());
-        const dayOfWeek = daysOfWeek[getDay(todayStart)];
-        const numericRules = rules.filter(r => r.type === 'numeric' && r.id && dailyTargets?.[r.id]?.[dayOfWeek] !== undefined);
-        const dailyLogsForPod = podLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
-        const absentAgentIds = new Set(dailyLogsForPod.filter(log => log.status === 'absent').map(log => log.agentId));
-        const activeAgentCount = podAgents.filter(agent => !absentAgentIds.has(agent.id!)).length;
-
-        return numericRules.map(rule => {
-            const achieved = dailyLogsForPod.filter(l => l.ruleId === rule.id && l.status !== 'absent').reduce((sum, l) => sum + (l.value || 0), 0);
-            const individualTarget = dailyTargets?.[rule.id!]?.[dayOfWeek];
-            const podTarget = (individualTarget ?? 0) * activeAgentCount;
-            const progress = podTarget > 0 ? Math.min(Math.round((achieved / podTarget) * 100), 100) : (achieved > 0 ? 100 : 0);
-
-            return {
-                ruleId: rule.id!,
-                ruleName: rule.name,
-                ruleEmoji: rule.emoji || '🎯',
-                achieved,
-                podTarget,
-                progress
-            };
-        });
-    }, [rules, podLogs, dailyTargets, podAgents]);
-    
-    return (
-        <Card>
-            <CardHeader>
-                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary" /> Pod Targets Today</CardTitle>
-                <CardDescription>Your pod's collective progress towards daily goals.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {podTargetSummary.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">No daily targets set for your pod today.</p>
-                ) : (
-                    <div className="space-y-4">
-                        {podTargetSummary.map(summary => (
-                            <div key={summary.ruleId}>
-                                <div className="flex items-center justify-between text-sm mb-1">
-                                    <span className="font-medium truncate" title={summary.ruleName}>
-                                        {summary.ruleEmoji} {summary.ruleName}
-                                    </span>
-                                    <span className={cn("font-semibold", summary.progress >= 100 ? "text-green-600" : "text-muted-foreground")}>
-                                        {summary.achieved.toLocaleString()} / {summary.podTarget.toLocaleString()}
-                                    </span>
-                                </div>
-                                <Progress value={summary.progress} className="h-2" />
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
-};
-
 // New Widget for Logging
 interface LogAchievementsWidgetProps {
     rules: RuleFormData[];
@@ -557,18 +300,15 @@ const LogAchievementsWidget: React.FC<LogAchievementsWidgetProps> = ({ rules, cu
     const [taskInputs, setTaskInputs] = useState<Record<string, { checked: boolean; logId?: string }>>({});
     const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
 
-    // Effect to populate initial state from Firestore (one-time fetch or could be listener)
+    // Effect to populate initial state from Firestore
     useEffect(() => {
         if (!currentUser?.id || !agentPodId || !activeCompetitionId) return;
 
         const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
-        const initialInputs: typeof achievementInputs = {};
-        const initialTaskInputs: typeof taskInputs = {};
-
+        
         const achievementsQuery = query(
             collection(db, 'dailyAchievements'),
             where('agentId', '==', currentUser.id),
-            where('podId', '==', agentPodId),
             where('date', '==', dateTimestamp),
             where('competitionId', '==', activeCompetitionId)
         );
@@ -576,12 +316,12 @@ const LogAchievementsWidget: React.FC<LogAchievementsWidgetProps> = ({ rules, cu
         const taskLogsQuery = query(
             collection(db, 'dailyTaskLogs'),
             where('agentId', '==', currentUser.id),
-            where('podId', '==', agentPodId),
             where('date', '==', dateTimestamp),
             where('competitionId', '==', activeCompetitionId)
         );
 
         const unsubAchievements = onSnapshot(achievementsQuery, (snapshot) => {
+            const initialInputs: typeof achievementInputs = {};
             snapshot.forEach(doc => {
                 const log = doc.data() as DailyAchievementLog;
                 initialInputs[log.ruleId] = { value: log.value, logId: doc.id };
@@ -590,6 +330,7 @@ const LogAchievementsWidget: React.FC<LogAchievementsWidgetProps> = ({ rules, cu
         });
 
          const unsubTasks = onSnapshot(taskLogsQuery, (snapshot) => {
+            const initialTaskInputs: typeof taskInputs = {};
             snapshot.forEach(doc => {
                 const log = doc.data() as DailyTaskLog;
                 initialTaskInputs[log.taskId] = { checked: true, logId: doc.id };
@@ -614,9 +355,10 @@ const LogAchievementsWidget: React.FC<LogAchievementsWidgetProps> = ({ rules, cu
          const dateTimestamp = Timestamp.fromDate(startOfDay(new Date()));
          
          try {
+             const points = (rule.points || 0) * value;
              if (logId) { // Update or delete existing
                  if (value > 0) {
-                     await setDoc(doc(db, 'dailyAchievements', logId), { value, points: (rule.points || 0) * value }, { merge: true });
+                     await setDoc(doc(db, 'dailyAchievements', logId), { value, points }, { merge: true });
                  } else {
                      await deleteDoc(doc(db, 'dailyAchievements', logId));
                      setAchievementInputs(prev => { const newState = {...prev}; delete newState[ruleId]; return newState; });
@@ -624,7 +366,7 @@ const LogAchievementsWidget: React.FC<LogAchievementsWidgetProps> = ({ rules, cu
              } else if (value > 0) { // Create new
                  const newDocRef = await addDoc(collection(db, 'dailyAchievements'), {
                      agentId: currentUser.id, podId: agentPodId, competitionId: activeCompetitionId,
-                     ruleId, ruleName: rule.name, date: dateTimestamp, value, points: (rule.points || 0) * value,
+                     ruleId, ruleName: rule.name, date: dateTimestamp, value, points,
                      loggedAt: serverTimestamp(), loggedBy: currentUser.uid
                  });
                  setAchievementInputs(prev => ({...prev, [ruleId]: { ...prev[ruleId], logId: newDocRef.id }}));
