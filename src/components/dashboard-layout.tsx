@@ -217,9 +217,9 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <Link href="/admin/message-of-the-day" passHref>
-                    <SidebarMenuButton tooltip="Message of the Day" isActive={currentPath === '/admin/message-of-the-day'}>
-                      <MessageSquare />
-                      <span>Message of the Day</span>
+                    <SidebarMenuButton tooltip="Dashboard Settings" isActive={currentPath === '/admin/message-of-the-day'}>
+                      <Settings />
+                      <span>Dashboard Settings</span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
