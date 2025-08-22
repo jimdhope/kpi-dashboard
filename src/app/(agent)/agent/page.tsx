@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Leaderboard } from '@/components/leaderboard';
-import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy, Swords, Edit, Trash2, Plus, Minus, Loader2 } from 'lucide-react';
+import { Target, CheckSquare, ListChecks, MessageSquare, ListTodo, Trophy, Swords, Edit, Trash2, Plus, Minus, Loader2, Filter } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert";
@@ -88,7 +88,7 @@ export default function AgentDashboardPage() {
   // User and Pod Data
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [agentPodId, setAgentPodId] = useState<string | null>(null);
-  const [allPods, setAllPods] = useState<Pod[]>([]); // New state for ALL pods
+  const [allPods, setAllPods] = useState<Pod[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
 
   // Competition and Rules Data
@@ -99,8 +99,8 @@ export default function AgentDashboardPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   
   // Daily Dynamic Data
-  const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]); // Will hold logs for ALL pods in comp
-  const [podBonusLogs, setPodBonusLogs] = useState<TeamBonusLog[]>([]);
+  const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]);
+  const [competitionBonusLogs, setCompetitionBonusLogs] = useState<TeamBonusLog[]>([]);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
   const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
 
@@ -209,7 +209,7 @@ export default function AgentDashboardPage() {
                     listenerRefs.current.competitionLogs = onSnapshot(logsQuery, (snap) => { if(isMounted) setCompetitionLogs(snap.docs.map(d => d.data() as DailyAchievementLog)); });
 
                     const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('competitionId', '==', selectedCompetitionId));
-                    listenerRefs.current.competitionBonusLogs = onSnapshot(bonusLogsQuery, (snap) => { if(isMounted) setPodBonusLogs(snap.docs.map(d => d.data() as TeamBonusLog)); });
+                    listenerRefs.current.competitionBonusLogs = onSnapshot(bonusLogsQuery, (snap) => { if(isMounted) setCompetitionBonusLogs(snap.docs.map(d => d.data() as TeamBonusLog)); });
                  }
              });
 
@@ -253,7 +253,7 @@ export default function AgentDashboardPage() {
       return () => unsubscribeSettings();
   }, []);
 
-  const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
+ const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
     if (!activeCompetition || !allPods.length) {
         return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
     }
@@ -281,13 +281,11 @@ export default function AgentDashboardPage() {
     // --- Team Leaderboard (scoped to current user's pod's teams) ---
     const teamScores: Record<string, number> = {};
     teams.forEach(team => {
-        // Sum achievement points from all agents in the team
         const achievementPoints = competitionLogs
             .filter(log => team.agentIds.includes(log.agentId))
             .reduce((sum, log) => sum + (log.points || 0), 0);
         
-        // Sum bonus points awarded to the team
-        const bonusPoints = podBonusLogs
+        const bonusPoints = competitionBonusLogs
             .filter(log => log.teamId === team.id)
             .reduce((sum, log) => sum + (log.points || 0), 0);
 
@@ -304,7 +302,6 @@ export default function AgentDashboardPage() {
     // --- Pod Leaderboard (all pods in competition) ---
     const podScores: Record<string, number> = {};
     podsInComp.forEach(pod => {
-        // Sum all points for logs associated with this pod's ID
         podScores[pod.id] = competitionLogs
             .filter(log => log.podId === pod.id)
             .reduce((sum, log) => sum + (log.points || 0), 0);
@@ -324,7 +321,7 @@ export default function AgentDashboardPage() {
       teamLeaderboard: finalTeamLeaderboard,
       podLeaderboard: finalPodLeaderboard,
     };
-  }, [competitionLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods, agentPodId]);
+}, [competitionLogs, competitionBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods, agentPodId]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
