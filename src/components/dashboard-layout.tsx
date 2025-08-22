@@ -1,4 +1,3 @@
-
 // src/components/dashboard-layout.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
@@ -32,7 +31,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
-import { StaticBackground } from './static-background';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -98,9 +96,6 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="fixed-background-container">
-        <StaticBackground />
-      </div>
       <div className="flex relative z-10 min-h-screen w-full">
         <Sidebar>
           <SidebarHeader className="p-4">

@@ -3,7 +3,6 @@ import React from 'react';
 import { Header } from '@/components/landing-header';
 import { Footer } from '@/components/landing-footer';
 import { cn } from '@/lib/utils';
-import { StaticBackground } from '@/components/static-background'; // Import the new static background
 
 export default function PublicLayout({
   children,
@@ -11,22 +10,14 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen">
-      {/* Fixed Background Container */}
-      <div
-        className="fixed-background-container"
-      >
-        <StaticBackground /> {/* Render the static background */}
-      </div>
-
-      {/* Scrollable Content Container */}
-      <div className="scrollable-content-container">
-        <Header />
-        <main className="w-full">
-          {children}
-        </main>
-        <Footer />
-      </div>
+    // The main div no longer needs relative positioning if the background is on the body
+    <div className="flex flex-col min-h-screen">
+      {/* The background is now handled globally in globals.css */}
+      <Header />
+      <main className="flex-1 w-full">
+        {children}
+      </main>
+      <Footer />
     </div>
   );
 }

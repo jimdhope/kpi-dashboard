@@ -141,8 +141,7 @@ const SidebarProvider = React.forwardRef<
               } as React.CSSProperties
             }
             className={cn(
-              // Remove bg-sidebar from wrapper, apply to sidebar itself
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-transparent",
+              "group/sidebar-wrapper flex min-h-screen w-full bg-transparent", // Changed to min-h-screen and bg-transparent
               className
             )}
             ref={ref}
@@ -182,9 +181,10 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            // Apply frosted glass effect for non-collapsible sidebar
-            // Adjusted opacity to 90%
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar/90 backdrop-blur-sm text-sidebar-foreground",
+            // Apply frosted glass effect directly here
+            "flex h-full w-[--sidebar-width] flex-col bg-sidebar/80 backdrop-blur-md border-sidebar-border text-sidebar-foreground",
+            side === "left" && "border-r",
+            side === "right" && "border-l",
             className
           )}
           ref={ref}
@@ -201,11 +201,9 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            // Apply frosted glass effect for mobile sheet
-            // Adjusted opacity to 90%
             className={cn(
-                "w-[--sidebar-width] bg-sidebar/90 backdrop-blur-sm p-0 text-sidebar-foreground [&>button]:hidden",
-                className // Allow overriding classes
+                "w-[--sidebar-width] bg-sidebar/80 backdrop-blur-md p-0 text-sidebar-foreground [&>button]:hidden",
+                className
             )}
             style={
               {
@@ -232,7 +230,7 @@ const Sidebar = React.forwardRef<
         {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
-            "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
+            "duration-200 relative h-full w-[--sidebar-width] bg-transparent transition-[width] ease-linear", // h-full instead of h-svh
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
@@ -242,7 +240,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
+            "duration-200 fixed inset-y-0 z-10 hidden h-full w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex", // h-full instead of h-svh
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -256,12 +254,10 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            // Apply frosted glass effect
-            // Adjusted opacity to 90%
             className={cn(
-                "flex h-full w-full flex-col bg-sidebar/90 backdrop-blur-sm",
-                "group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border/60 group-data-[variant=floating]:shadow", // Adjusted border opacity
-                "group-data-[variant=inset]:rounded-none group-data-[variant=inset]:border-none group-data-[variant=inset]:shadow-none" // No styling needed for inset
+                "flex h-full w-full flex-col bg-sidebar/80 backdrop-blur-md border-sidebar-border",
+                "group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow",
+                "group-data-[variant=inset]:rounded-none group-data-[variant=inset]:border-none group-data-[variant=inset]:shadow-none"
             )}
           >
             {children}
@@ -336,7 +332,7 @@ const SidebarInset = React.forwardRef<
     <main
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-transparent", // Set main area background to transparent
+        "relative flex min-h-screen flex-1 flex-col bg-transparent", // Set main area background to transparent
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
         className
       )}

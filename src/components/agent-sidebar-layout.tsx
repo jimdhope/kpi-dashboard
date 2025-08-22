@@ -1,4 +1,3 @@
-
 // src/components/agent-sidebar-layout.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
@@ -32,7 +31,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
-import { StaticBackground } from './static-background'; // Import the new background
 
 interface AgentSidebarLayoutProps {
   children: React.ReactNode;
@@ -101,11 +99,6 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Fixed Background Container */}
-      <div className="fixed-background-container">
-        <StaticBackground />
-      </div>
-
       {/* Container for Sidebar and Main Area (Header + Content) */}
       <div className="flex relative z-10 min-h-screen w-full">
         <Sidebar>

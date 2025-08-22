@@ -5,13 +5,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Remove background properties from body, ensure it allows transparency */
+/* Apply a subtle, theme-aware repeating background pattern to the body */
 body {
-  /* Use the Inter font family */
   font-family: 'Inter', Arial, Helvetica, sans-serif;
-  overflow-x: hidden; /* Keep this */
-  background-color: transparent; /* Ensure body itself is transparent */
+  overflow-x: hidden;
+  background-color: hsl(var(--background));
+  background-image: repeating-radial-gradient(circle at 0 0, transparent 0, hsl(var(--background)) 40px),
+                    repeating-linear-gradient(hsla(var(--primary-rgb), 0.1), hsla(var(--primary-rgb), 0.1));
 }
+
 
 @layer base {
   body {
@@ -23,7 +25,7 @@ body {
     /* Light Mode */
     --background: 203 42% 96%; /* #f2f7f9 - Very light grey-blue for main bg area */
     --foreground: 0 0% 10%; /* Dark Gray */
-    --card: hsla(0, 0%, 100%, 0.85); /* White with 85% opacity */
+    --card: hsla(0, 0%, 100%, 0.65); /* White with 65% opacity for stronger frost */
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
@@ -55,15 +57,13 @@ body {
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 180 100% 25%;
 
-    /* Light Mode Gradient Start Color */
-    --background-gradient-start: 180 30% 95%; /* Very light teal */
   }
 
   .dark {
     /* Dark Mode */
     --background: 210 10% 15%; /* #212429 - Dark cool grey for main bg area */
     --foreground: 0 0% 98%; /* White */
-    --card: hsla(210, 10%, 18%, 0.85); /* Dark Blueish Gray with 85% opacity */
+    --card: hsla(210, 10%, 20%, 0.65); /* Dark Blueish Gray with 65% opacity for stronger frost */
     --card-foreground: 0 0% 98%;
     --popover: 210 10% 20%;
     --popover-foreground: 0 0% 98%;
@@ -94,9 +94,6 @@ body {
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 210 10% 25%;
     --sidebar-ring: 180 80% 60%;
-
-    /* Dark Mode Gradient Start Color */
-    --background-gradient-start: 180 25% 10%; /* Very dark teal */
   }
 }
 
@@ -108,27 +105,23 @@ body {
 
 /* Frosted Glass effect for cards */
 .frosted-glass {
-  @apply bg-card/85 backdrop-blur-md border border-border/50 shadow-sm;
+  /* Decreased opacity and increased blur for a more pronounced effect */
+  @apply bg-card/65 backdrop-blur-lg border border-border/50 shadow-lg;
 }
 
+/* Remove fixed background container as it's no longer needed */
 .fixed-background-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1; /* Ensures background is behind everything */
-  overflow: hidden; /* Prevent scrollbars on the background itself */
+  display: none;
 }
 
-/* This container holds the scrollable content (layouts, main area) */
+/* The scrollable container now just needs to be a basic block element */
 .scrollable-content-container {
-  position: relative; /* Needed for z-index stacking */
-  z-index: 1; /* Place above the fixed background */
-  min-height: 100vh; /* Ensure it covers the viewport height */
-  overflow-y: auto; /* Enable scrolling only for this container */
-   background-color: transparent; /* Make scrollable container transparent */
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  background-color: transparent;
 }
+
 
 /* Style for SVG certificate container */
 .certificate-svg-container svg {

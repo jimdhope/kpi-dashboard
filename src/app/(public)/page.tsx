@@ -8,7 +8,6 @@ import { CheckCircle, Trophy, Users, BarChart, Zap, Target } from 'lucide-react'
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress'; // Import Progress
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
-// Removed: import AnimatedIconBackground from '@/components/animated-icon-background'; // Import the component
 import { MockupKpiDefinition } from '@/components/landing-mockup-kpi'; // Import KPI Definition Mockup
 import { MockupProgressTracking } from '@/components/landing-mockup-progress'; // Import Progress Tracking Mockup
 import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard'; // Import Leaderboard Mockup
@@ -51,11 +50,10 @@ const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, 
 export default function LandingPage() {
   return (
     <div className="flex flex-col items-center w-full">
-      {/* Hero Section - Remove frosted-glass, ensure background is transparent */}
+      {/* Hero Section */}
       <section
-        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden" // Removed frosted-glass
+        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden"
       >
-        {/* Removed: <AnimatedIconBackground /> */} {/* This will be behind the content due to z-index */}
         <div className="container mx-auto px-4 md:px-6 relative z-10">
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg">
             Welcome to KPI Quest
@@ -139,8 +137,8 @@ export default function LandingPage() {
          </div>
        </section>
 
-       {/* How it Works - Remove frosted-glass from section, ensure cards inside keep it */}
-       <section className="w-full py-16 md:py-24 lg:py-32"> {/* Removed frosted-glass */}
+       {/* How it Works */}
+       <section className="w-full py-16 md:py-24 lg:py-32">
         <div className="container mx-auto px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
               Simple Steps to Success

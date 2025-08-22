@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,7 +9,6 @@ import { AgentSidebarLayout } from '@/components/agent-sidebar-layout'; // For A
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 import { Loader2 } from 'lucide-react'; // Import Loader2
 import type { AppUser, UserRole } from '@/services/user'; // Import types
-import { StaticBackground } from '@/components/static-background'; // Import the new background
 
 // Helper function to fetch user roles from Firestore
 async function fetchUserRoles(uid: string): Promise<UserRole[] | null> {
@@ -160,43 +158,28 @@ export default function ProfileLayout({
    if (isLoading || !authChecked || (firebaseAuth.currentUser && !layoutType && roles.length === 0)) { // Add roles check
     console.log(`[ProfileLayout] Rendering Loading State: isLoading=${isLoading}, authChecked=${authChecked}, layoutType=${layoutType}, rolesLength=${roles.length}`);
     return (
-       <div className="relative min-h-screen">
-         {/* Fixed Background Container */}
-         <div className="fixed-background-container">
-           <StaticBackground />
-         </div>
-         {/* Loading Indicator Centered */}
-         <div className="absolute inset-0 flex items-center justify-center">
-           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-         </div>
+       <div className="relative flex items-center justify-center min-h-screen">
+         <Loader2 className="h-8 w-8 animate-spin text-primary" />
        </div>
     );
   }
 
 
   // Render based on layoutType
-   // Add the background and scrollable container structure here
    return (
-    <div className="relative min-h-screen">
-      {/* Fixed Background Container */}
-      <div className="fixed-background-container">
-        <StaticBackground />
-      </div>
-       {/* Scrollable Content Container */}
-      <div className="scrollable-content-container">
-        {layoutType === 'admin' && (
-          <DashboardLayout {...layoutProps}>
-            {children}
-          </DashboardLayout>
-        )}
-        {layoutType === 'agent' && (
-          <AgentSidebarLayout {...layoutProps}>
-            {children}
-          </AgentSidebarLayout>
-        )}
-         {/* Render null or a redirect/error component if layoutType is null */}
-         {!layoutType && null}
-      </div>
-    </div>
+    <>
+      {layoutType === 'admin' && (
+        <DashboardLayout {...layoutProps}>
+          {children}
+        </DashboardLayout>
+      )}
+      {layoutType === 'agent' && (
+        <AgentSidebarLayout {...layoutProps}>
+          {children}
+        </AgentSidebarLayout>
+      )}
+      {/* Render null or a redirect/error component if layoutType is null */}
+      {!layoutType && null}
+    </>
    );
 }
