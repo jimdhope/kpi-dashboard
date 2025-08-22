@@ -49,11 +49,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Plus } from 'lucide-react';
 
 
 // --- Zod Schema Definitions ---
-export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links' | 'sidebar-rps-game' | 'sidebar-agent-guide' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod';
+export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod' | 'links' | 'sidebar-rps-game' | 'sidebar-agent-guide';
 
 
 const baseWidgetSchema = z.object({
@@ -79,7 +85,7 @@ const linksWidgetSchema = baseWidgetSchema.extend({
 });
 
 const leaderboardWidgetSchema = baseWidgetSchema.extend({
-  type: z.literal('leaderboards'),
+  type: z.literal('leaderboards'), // This is now legacy, prefer individual types
   leaderboardTypes: z.array(z.object({
       id: z.enum(['agent', 'team', 'pod']),
       name: z.string(),
@@ -143,27 +149,6 @@ const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'sidebar-rps-game', name: 'Sidebar: RPS Game Page' },
     { id: 'sidebar-agent-guide', name: 'Sidebar: Agent Guide' },
 ];
-
-function DraggableWidget({ id, name }: { id: string; name: string }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `toolbox-${id}`,
-    data: { widgetType: id, name: name },
-  });
-
-  return (
-    <Button
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      variant="outline"
-      size="sm"
-      className={cn("cursor-grab active:cursor-grabbing", isDragging && "opacity-50")}
-    >
-      <GripHorizontal className="mr-2 h-4 w-4" />
-      {name}
-    </Button>
-  );
-}
 
 
 export default function AgentDashboardSettingsPage() {
@@ -251,7 +236,6 @@ export default function AgentDashboardSettingsPage() {
     );
 
     const findContainer = (id: UniqueIdentifier): string | null => {
-        if (id.toString().startsWith('toolbox-')) return 'toolbox';
         for (const row of rowFields) {
             if (row.id === id) return row.id;
             if (row.widgets.some(w => w.id === id)) return row.id;
@@ -313,27 +297,7 @@ export default function AgentDashboardSettingsPage() {
         const overContainerId = findContainer(over.id);
         const newRows = form.getValues('rows');
 
-        if (active.id.toString().startsWith('toolbox-')) {
-            const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
-            if (overRowIndex !== -1) {
-                const widgetType = active.data.current?.widgetType as WidgetType;
-                const name = active.data.current?.name;
-                const defaultData = getWidgetDefaultData(widgetType, name);
-                const newWidget = {
-                    id: `widget-${Date.now()}`,
-                    name,
-                    ...defaultData,
-                } as Widget;
-
-                const overItems = newRows[overRowIndex].widgets;
-                const overWidgetIndex = over.id.toString().startsWith('widget-')
-                    ? overItems.findIndex(w => w.id === over.id)
-                    : overItems.length;
-
-                newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, newWidget);
-                form.setValue('rows', newRows, { shouldDirty: true });
-            }
-        } else if (activeContainerId && overContainerId && activeContainerId === overContainerId) {
+        if (activeContainerId && overContainerId && activeContainerId === overContainerId) {
              const rowIndex = newRows.findIndex(r => r.id === activeContainerId);
              const oldIndex = newRows[rowIndex].widgets.findIndex(w => w.id === active.id);
              const newIndex = newRows[rowIndex].widgets.findIndex(w => w.id === over.id);
@@ -394,7 +358,7 @@ export default function AgentDashboardSettingsPage() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                              <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5 text-primary" /> Agent Dashboard Layout</CardTitle>
-                             <CardDescription>Drag widgets from the toolbox into the rows below to build the agent dashboard.</CardDescription>
+                             <CardDescription>Drag and drop widgets to arrange the agent dashboard.</CardDescription>
                         </div>
                         <Button type="submit" disabled={isSaving}>
                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -403,25 +367,18 @@ export default function AgentDashboardSettingsPage() {
                         </Button>
                     </CardHeader>
                     <CardContent>
-                        {/* Widget Toolbox */}
-                        <div className="mb-6">
-                            <Label className="text-sm font-medium">Widget Toolbox</Label>
-                            <Card className="mt-2 p-3 bg-muted/50">
-                                <div className="flex flex-wrap gap-2">
-                                {AVAILABLE_WIDGETS.map(widget => (
-                                    <DraggableWidget key={widget.id} id={widget.id} name={widget.name} />
-                                ))}
-                                </div>
-                            </Card>
-                        </div>
-
                          <Separator className="my-6" />
-
                         {/* Layout Editor */}
                         <div className="space-y-4">
                               <SortableContext items={rowFields.map(row => row.id)} strategy={verticalListSortingStrategy}>
                                  {rowFields.map((row, index) => (
-                                     <DroppableRow key={row.id} row={row as Row} rowIndex={index} form={form} />
+                                     <DroppableRow
+                                         key={row.id}
+                                         row={row as Row}
+                                         rowIndex={index}
+                                         form={form}
+                                         getWidgetDefaultData={getWidgetDefaultData}
+                                      />
                                  ))}
                               </SortableContext>
                         </div>
@@ -438,17 +395,26 @@ export default function AgentDashboardSettingsPage() {
     );
 }
 
-function DroppableRow({ row, rowIndex, form }: { row: Row; rowIndex: number; form: any }) {
+function DroppableRow({ row, rowIndex, form, getWidgetDefaultData }: { row: Row; rowIndex: number; form: any; getWidgetDefaultData: (type: WidgetType, name: string) => any; }) {
     const { setNodeRef, isOver } = useDroppable({ id: row.id });
-    const { control } = form;
-    const { remove: removeRow } = useFieldArray({ control, name: 'rows' });
-    const { fields: widgetFields, remove: removeWidget } = useFieldArray({ control, name: `rows.${rowIndex}.widgets` });
+    const { control, setValue } = form;
+    const { remove: removeRow, update: updateRow } = useFieldArray({ control, name: 'rows' });
+    const { fields: widgetFields, remove: removeWidget, append: appendWidget } = useFieldArray({ control, name: `rows.${rowIndex}.widgets` });
     const { attributes, listeners, setNodeRef: setSortableNodeRef, transform, transition } = useSortable({ id: row.id });
 
     const style = { transform: CSS.Transform.toString(transform), transition };
     
-    const handleRemoveWidget = (widgetIndex: number) => {
-        removeWidget(widgetIndex);
+    const handleAddWidget = (widgetType: WidgetType) => {
+        const widgetInfo = AVAILABLE_WIDGETS.find(w => w.id === widgetType);
+        if (widgetInfo) {
+            const defaultData = getWidgetDefaultData(widgetType, widgetInfo.name);
+            const newWidget: Widget = {
+                id: `widget-${Date.now()}`,
+                name: widgetInfo.name,
+                ...defaultData,
+            } as Widget;
+            appendWidget(newWidget);
+        }
     };
 
     return (
@@ -458,7 +424,21 @@ function DroppableRow({ row, rowIndex, form }: { row: Row; rowIndex: number; for
                     <Button type="button" variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing"><GripVertical className="h-5 w-5"/></Button>
                     <Label className="font-medium">Row {rowIndex + 1}</Label>
                 </div>
-                <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeRow(rowIndex)}><Trash2 className="h-4 w-4"/></Button>
+                <div className="flex items-center gap-2">
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4"/> Add Widget</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            {AVAILABLE_WIDGETS.map(widget => (
+                                <DropdownMenuItem key={widget.id} onSelect={() => handleAddWidget(widget.id)}>
+                                    {widget.name}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeRow(rowIndex)}><Trash2 className="h-4 w-4"/></Button>
+                </div>
             </div>
             <div
                 ref={setNodeRef}
@@ -469,11 +449,11 @@ function DroppableRow({ row, rowIndex, form }: { row: Row; rowIndex: number; for
             >
                  <SortableContext items={widgetFields.map(w => w.id)} strategy={horizontalListSortingStrategy}>
                     {widgetFields.map((widget, widgetIndex) => (
-                        <SortableWidgetItem key={widget.id} widget={widget as Widget} widgetIndex={widgetIndex} rowIndex={rowIndex} onRemove={() => handleRemoveWidget(widgetIndex)} control={control} />
+                        <SortableWidgetItem key={widget.id} widget={widget as Widget} widgetIndex={widgetIndex} rowIndex={rowIndex} onRemove={() => removeWidget(widgetIndex)} control={control} />
                     ))}
                  </SortableContext>
 
-                 {widgetFields.length === 0 && <p className="text-sm text-muted-foreground">Drop a widget here</p>}
+                 {widgetFields.length === 0 && <p className="text-sm text-muted-foreground">Add a widget to this row</p>}
             </div>
         </div>
     )
