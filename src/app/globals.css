@@ -10,8 +10,16 @@ body {
   font-family: 'Inter', Arial, Helvetica, sans-serif;
   overflow-x: hidden;
   background-color: hsl(var(--background));
-  background-image: repeating-radial-gradient(circle at 0 0, transparent 0, hsl(var(--background)) 40px),
-                    repeating-linear-gradient(hsla(var(--primary-rgb), 0.1), hsla(var(--primary-rgb), 0.1));
+  /* The pattern is created by a repeating gradient. The second color is slightly different from the main background. */
+  background-image: repeating-radial-gradient(
+    circle at 0 0,
+    transparent 0,
+    hsl(var(--background)) 20px /* Match the background color for the circle edge */
+  ),
+  repeating-linear-gradient(
+    hsla(var(--primary-rgb), 0.05), /* Use a very transparent version of the primary color */
+    hsla(var(--primary-rgb), 0.05)
+  );
 }
 
 
@@ -25,7 +33,7 @@ body {
     /* Light Mode */
     --background: 203 42% 96%; /* #f2f7f9 - Very light grey-blue for main bg area */
     --foreground: 0 0% 10%; /* Dark Gray */
-    --card: hsla(0, 0%, 100%, 0.65); /* White with 65% opacity for stronger frost */
+    --card: hsla(0, 0%, 100%, 0.85); /* White with 85% opacity for stronger frost */
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
@@ -63,7 +71,7 @@ body {
     /* Dark Mode */
     --background: 210 10% 15%; /* #212429 - Dark cool grey for main bg area */
     --foreground: 0 0% 98%; /* White */
-    --card: hsla(210, 10%, 20%, 0.65); /* Dark Blueish Gray with 65% opacity for stronger frost */
+    --card: hsla(210, 10%, 20%, 0.85); /* Dark Blueish Gray with 85% opacity */
     --card-foreground: 0 0% 98%;
     --popover: 210 10% 20%;
     --popover-foreground: 0 0% 98%;
@@ -106,7 +114,7 @@ body {
 /* Frosted Glass effect for cards */
 .frosted-glass {
   /* Decreased opacity and increased blur for a more pronounced effect */
-  @apply bg-card/65 backdrop-blur-lg border border-border/50 shadow-lg;
+  @apply bg-card/85 backdrop-blur-lg border border-border/50 shadow-lg;
 }
 
 /* Remove fixed background container as it's no longer needed */
