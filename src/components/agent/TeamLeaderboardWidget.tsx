@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -25,7 +26,7 @@ interface Team {
 
 interface CompetitionWithTeams extends Competition {
     teams?: Team[];
-    id: string; // Ensure ID is present
+    id: string;
 }
 
 const TEAM_LEADERBOARD_COMP_KEY = 'teamLeaderboard_selectedCompId';
@@ -42,7 +43,10 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
 
   // Effect 1: Fetch all possible competitions for the user's pod
   useEffect(() => {
-    if (!agentPodId) return;
+    if (!agentPodId) {
+        setIsLoading(false);
+        return;
+    }
 
     setIsLoading(true);
     const compQuery = query(
@@ -54,16 +58,16 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
         const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithTeams));
         setAllCompetitions(fetchedComps);
         
-        // Set default competition if not already set, or if current selection is invalid
         if (!selectedCompetitionId || !fetchedComps.some(c => c.id === selectedCompetitionId)) {
             const savedCompId = localStorage.getItem(TEAM_LEADERBOARD_COMP_KEY);
             if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
                 setSelectedCompetitionId(savedCompId);
             } else if (fetchedComps.length > 0) {
                  setSelectedCompetitionId(fetchedComps[0].id);
+            } else {
+                 setIsLoading(false); // No competitions, stop loading
             }
         }
-        setIsLoading(false);
     }, (error) => {
         console.error("Error fetching competitions:", error);
         setIsLoading(false);
@@ -73,12 +77,13 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
   }, [agentPodId]);
 
 
-  // Effect 2: Fetch competition-specific data (logs, teams, bonuses) when selection changes
+  // Effect 2: Fetch competition-specific data when selection changes
   useEffect(() => {
     if (!selectedCompetitionId) {
       setTeams([]);
       setCompetitionLogs([]);
       setBonusLogs([]);
+      setIsLoading(false);
       return;
     }
 
@@ -93,6 +98,8 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
             if (compDocSnap.exists()) {
                 const compData = compDocSnap.data() as CompetitionWithTeams;
                 setTeams(compData.teams || []);
+            } else {
+                 setTeams([]);
             }
 
             // Listen for all achievement logs for the competition
@@ -105,7 +112,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
             const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('competitionId', '==', selectedCompetitionId));
             unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
                 setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
-                setIsLoading(false); // Mark loading as complete after the final fetch
+                setIsLoading(false);
             }));
         } catch (error) {
             console.error("Error fetching competition data:", error);
@@ -125,23 +132,15 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
         return [];
     }
     
-    // Filter logs and bonus logs to only include those for teams in the current pod
-    const podTeams = teams.filter(team => team.agentIds.some(id => currentUser?.podId && doc(db, 'users', id).parent.id === currentUser.podId));
-    const podTeamIds = new Set(podTeams.map(t => t.id));
+    const podTeams = teams.filter(team => team.agentIds.some(agentId => (currentUser?.podId && agentId) && doc(db, 'users', agentId).path.includes(currentUser.podId)));
     
-    const podLogs = competitionLogs.filter(log => log.podId === currentUser?.podId);
-    const podBonusLogs = bonusLogs.filter(log => log.podId === currentUser?.podId);
-
     const teamScores = teams.reduce((acc, team) => {
-      // Only calculate for teams in the current pod
-      if (!podTeamIds.has(team.id)) return acc;
-
       const teamAgentIds = new Set(team.agentIds);
-      const achievementPoints = podLogs
+      const achievementPoints = competitionLogs
         .filter(log => teamAgentIds.has(log.agentId))
         .reduce((sum, log) => sum + (log.points || 0), 0);
       
-      const bonusPoints = podBonusLogs
+      const bonusPoints = bonusLogs
         .filter(log => log.teamId === team.id)
         .reduce((sum, log) => sum + (log.points || 0), 0);
       
@@ -149,8 +148,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
       return acc;
     }, {} as Record<string, number>);
 
-    // Return only the teams that are in the current user's pod
-    return podTeams.map(team => ({
+    return teams.map(team => ({
       id: team.id,
       name: team.name,
       score: teamScores[team.id] || 0,
@@ -177,7 +175,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
           <Select
             value={selectedCompetitionId}
             onValueChange={handleCompetitionChange}
-            disabled={allCompetitions.length === 0}
+            disabled={allCompetitions.length === 0 || isLoading}
           >
             <SelectTrigger className="w-[180px] h-8 text-xs">
               <SelectValue placeholder="Select Competition" />
@@ -198,6 +196,8 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
           </div>
+        ) : teamLeaderboard.length === 0 ? (
+           <p className="text-muted-foreground text-sm text-center py-4">No team data available for this competition.</p>
         ) : (
           <Leaderboard entries={teamLeaderboard} />
         )}
