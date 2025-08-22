@@ -88,7 +88,7 @@ export function Leaderboard({ title, description, entries, isStickyHeader = true
           <TableBody>
             {rankedEntries.map((entry) => (
               <TableRow
-                key={entry.id}
+                key={`${entry.id}-${entry.name}`}
                 style={getRankHighlightStyle(entry.rank ?? 0)}
                 className={cn(
                     entry.isUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
