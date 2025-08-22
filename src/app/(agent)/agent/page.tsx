@@ -160,7 +160,7 @@ export default function AgentDashboardPage() {
     return () => cleanupListeners(['auth', 'userDoc', 'allPods']);
   }, [cleanupListeners]);
 
-  // Effect to fetch all competitions for the user's pod
+  // Effect to fetch all competitions for the user's pod and set the active one
   useEffect(() => {
       if (isLoadingUser || !agentPodId) return;
 
@@ -168,11 +168,11 @@ export default function AgentDashboardPage() {
       const unsubscribeComps = onSnapshot(compQuery, (snapshot) => {
           const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithRules));
           setAllCompetitions(fetchedComps);
-          const savedCompId = localStorage.getItem(AGENT_DASHBOARD_COMP_KEY);
-          if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
-              setSelectedCompetitionId(savedCompId);
-          } else if (fetchedComps.length > 0) {
-              const latestActiveComp = fetchedComps.find(c => c.endDate.toDate() >= startOfDay(new Date())) || fetchedComps[0];
+          
+          const today = startOfDay(new Date());
+          const latestActiveComp = fetchedComps.find(c => c.startDate.toDate() <= today && c.endDate.toDate() >= today) || fetchedComps[0];
+          
+          if (latestActiveComp) {
               setSelectedCompetitionId(latestActiveComp.id);
           }
       });
@@ -253,75 +253,74 @@ export default function AgentDashboardPage() {
       return () => unsubscribeSettings();
   }, []);
 
-  const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
-    if (!activeCompetition || !allPods.length) {
-        return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
-    }
-
-    const podsInComp = allPods.filter(p => activeCompetition.podIds?.includes(p.id));
-
-    // --- Agent Leaderboard (scoped to current user's pod) ---
-    const agentScores: Record<string, number> = {};
-    podAgents.forEach(agent => {
-        if (agent.id) {
-            const agentLogs = competitionLogs.filter(log => log.agentId === agent.id);
-            agentScores[agent.id] = agentLogs.reduce((sum, log) => sum + (log.points || 0), 0);
+    const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
+        if (isLoadingData || !activeCompetition || !currentUser?.id) {
+            return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
         }
-    });
-    const finalAgentLeaderboard = podAgents.map(agent => ({
-        id: agent.id!,
-        name: agent.name,
-        score: agentScores[agent.id!] || 0,
-        avatarUrl: agent.avatarUrl,
-        avatarInitials: agent.avatarInitials,
-        avatarBgColor: agent.avatarBgColor,
-        isUser: agent.id === currentUser?.id
-    }));
 
-    // --- Team Leaderboard (scoped to current user's pod's teams) ---
-    const teamScores: Record<string, number> = {};
-    teams.forEach(team => {
-        const achievementPoints = competitionLogs
-            .filter(log => team.agentIds.includes(log.agentId))
-            .reduce((sum, log) => sum + (log.points || 0), 0);
-        
-        const bonusPoints = competitionBonusLogs
-            .filter(log => log.teamId === team.id)
-            .reduce((sum, log) => sum + (log.points || 0), 0);
+        // AGENT LEADERBOARD (agents in current user's pod)
+        const agentScores = podAgents.reduce((acc, agent) => {
+            acc[agent.id!] = competitionLogs
+                .filter(log => log.agentId === agent.id)
+                .reduce((sum, log) => sum + (log.points || 0), 0);
+            return acc;
+        }, {} as Record<string, number>);
 
-        teamScores[team.id] = achievementPoints + bonusPoints;
-    });
-    const finalTeamLeaderboard = teams.map(team => ({
-        id: team.id,
-        name: team.name,
-        score: teamScores[team.id] || 0,
-        emoji: team.emoji,
-        isUser: team.agentIds?.includes(currentUser?.id || '')
-    }));
+        const finalAgentLeaderboard = podAgents.map(agent => ({
+            id: agent.id!,
+            name: agent.name,
+            score: agentScores[agent.id!] || 0,
+            avatarUrl: agent.avatarUrl,
+            avatarInitials: agent.avatarInitials,
+            avatarBgColor: agent.avatarBgColor,
+            isUser: agent.id === currentUser.id,
+        }));
 
-    // --- Pod Leaderboard (all pods in competition) ---
-    const podScores: Record<string, number> = {};
-    podsInComp.forEach(pod => {
-        podScores[pod.id] = competitionLogs
-            .filter(log => log.podId === pod.id)
-            .reduce((sum, log) => sum + (log.points || 0), 0);
-    });
-    const finalPodLeaderboard = podsInComp.map(pod => ({
-        id: pod.id,
-        name: pod.name,
-        score: podScores[pod.id] || 0,
-        avatarUrl: pod.logoUrl,
-        avatarInitials: pod.logoInitials,
-        avatarBgColor: pod.logoBgColor,
-        isUser: pod.id === agentPodId
-    }));
+        // TEAM LEADERBOARD (teams in current user's pod)
+        const teamScores = teams.reduce((acc, team) => {
+            const achievementPoints = competitionLogs
+                .filter(log => team.agentIds.includes(log.agentId))
+                .reduce((sum, log) => sum + (log.points || 0), 0);
+            const bonusPoints = competitionBonusLogs
+                .filter(log => log.teamId === team.id)
+                .reduce((sum, log) => sum + (log.points || 0), 0);
+            acc[team.id] = achievementPoints + bonusPoints;
+            return acc;
+        }, {} as Record<string, number>);
 
-    return {
-      agentLeaderboard: finalAgentLeaderboard,
-      teamLeaderboard: finalTeamLeaderboard,
-      podLeaderboard: finalPodLeaderboard,
-    };
-}, [competitionLogs, competitionBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods, agentPodId]);
+        const finalTeamLeaderboard = teams.map(team => ({
+            id: team.id,
+            name: team.name,
+            score: teamScores[team.id] || 0,
+            emoji: team.emoji,
+            isUser: team.agentIds.includes(currentUser.id!),
+        }));
+
+        // POD LEADERBOARD (all pods in the competition)
+        const podsInComp = allPods.filter(p => activeCompetition.podIds?.includes(p.id));
+        const podScores = podsInComp.reduce((acc, pod) => {
+            acc[pod.id] = competitionLogs
+                .filter(log => log.podId === pod.id)
+                .reduce((sum, log) => sum + (log.points || 0), 0);
+            return acc;
+        }, {} as Record<string, number>);
+
+        const finalPodLeaderboard = podsInComp.map(pod => ({
+            id: pod.id,
+            name: pod.name,
+            score: podScores[pod.id] || 0,
+            avatarUrl: pod.logoUrl,
+            avatarInitials: pod.logoInitials,
+            avatarBgColor: pod.logoBgColor,
+            isUser: pod.id === agentPodId,
+        }));
+
+        return {
+            agentLeaderboard: finalAgentLeaderboard,
+            teamLeaderboard: finalTeamLeaderboard,
+            podLeaderboard: finalPodLeaderboard,
+        };
+    }, [isLoadingData, activeCompetition, currentUser, competitionLogs, competitionBonusLogs, podAgents, teams, allPods, agentPodId]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
@@ -332,11 +331,11 @@ export default function AgentDashboardPage() {
             case 'motd':
                 return <MessageOfTheDayDisplay title={widget.title} emoji={widget.emoji} content={widget.content} isLoading={isLoadingSettings} />;
             case 'leaderboard-agent':
-                return <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />;
+                return <Card><CardHeader><CardTitle>Agent Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
             case 'leaderboard-team':
-                return <Leaderboard title="Team Leaderboard" entries={teamLeaderboard} />;
+                return <Card><CardHeader><CardTitle>Team Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
             case 'leaderboard-pod':
-                return <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} />;
+                return <Card><CardHeader><CardTitle>Pod Leaderboard</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">This leaderboard is temporarily unavailable.</p></CardContent></Card>;
             case 'achievements':
                  return <TodaysAchievementsWidget
                            rules={rules}
