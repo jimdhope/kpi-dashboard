@@ -648,16 +648,17 @@ const LogAchievementsWidget: React.FC<LogAchievementsWidgetProps> = ({ rules, cu
             </CardHeader>
             <CardContent className="space-y-4">
                 {numericRules.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-wrap gap-4">
                         {numericRules.map(rule => (
-                            <AchievementCard
-                                key={rule.id}
-                                rule={rule}
-                                currentValue={achievementInputs[rule.id!]?.value ?? 0}
-                                isSaving={isSaving[rule.id!] || false}
-                                onIncrement={() => handleValueChange(rule.id!, 1)}
-                                onDecrement={() => handleValueChange(rule.id!, -1)}
-                            />
+                            <div key={rule.id} className="flex-auto min-w-[200px]">
+                                <AchievementCard
+                                    rule={rule}
+                                    currentValue={achievementInputs[rule.id!]?.value ?? 0}
+                                    isSaving={isSaving[rule.id!] || false}
+                                    onIncrement={() => handleValueChange(rule.id!, 1)}
+                                    onDecrement={() => handleValueChange(rule.id!, -1)}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}

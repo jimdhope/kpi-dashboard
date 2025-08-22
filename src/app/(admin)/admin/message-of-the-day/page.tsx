@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -11,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Loader2, Save, Settings, PlusCircle, Trash2, Rows, View, Columns, X, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, Save, Settings, PlusCircle, Trash2, Rows, View, Columns, X, ArrowLeft, ArrowRight, ArrowDown, ArrowUp } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from "@/components/ui/switch";
@@ -145,7 +144,7 @@ export default function AgentDashboardSettingsPage() {
         defaultValues: { rows: [], sidebarMenu: [] },
     });
 
-     const { fields: rowFields, append: appendRow, remove: removeRow } = useFieldArray({
+     const { fields: rowFields, append: appendRow, remove: removeRow, move: moveRow } = useFieldArray({
         control: form.control,
         name: "rows",
         keyName: "fieldId",
@@ -215,6 +214,10 @@ export default function AgentDashboardSettingsPage() {
 
     const handleAddNewRow = () => {
         appendRow({ id: `row-${Date.now()}`, columns: [{ id: `col-${Date.now()}`, width: 100, widgets: [], name: '', showName: false }] });
+    };
+
+    const handleMoveRow = (fromIndex: number, toIndex: number) => {
+        moveRow(fromIndex, toIndex);
     };
 
     const rebalanceColumnWidths = (columns: Column[]): Column[] => {
@@ -330,7 +333,7 @@ export default function AgentDashboardSettingsPage() {
                             </div>
                         ) : (
                             rowFields.map((row, rowIndex) => (
-                                <RowEditor key={row.id} rowIndex={rowIndex} removeRow={removeRow} form={form} onAddColumn={handleAddNewColumn} onRemoveColumn={handleRemoveColumn} onAddWidget={handleAddWidgetToColumn} onRemoveWidget={handleRemoveWidgetFromColumn} onMoveColumn={handleMoveColumn} />
+                                <RowEditor key={row.id} rowIndex={rowIndex} removeRow={removeRow} form={form} onAddColumn={handleAddNewColumn} onRemoveColumn={handleRemoveColumn} onAddWidget={handleAddWidgetToColumn} onRemoveWidget={handleRemoveWidgetFromColumn} onMoveColumn={handleMoveColumn} onMoveRow={handleMoveRow} isFirstRow={rowIndex === 0} isLastRow={rowIndex === rowFields.length - 1}/>
                             ))
                         )}
                     </CardContent>
@@ -382,9 +385,12 @@ interface RowEditorProps {
     onAddWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
     onRemoveWidget: (rowIndex: number, colIndex: number, widgetIndex: number) => void;
     onMoveColumn: (rowIndex: number, colIndex: number, direction: 'left' | 'right') => void;
+    onMoveRow: (fromIndex: number, toIndex: number) => void;
+    isFirstRow: boolean;
+    isLastRow: boolean;
 }
 
-function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onAddWidget, onRemoveWidget, onMoveColumn }: RowEditorProps) {
+function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onAddWidget, onRemoveWidget, onMoveColumn, onMoveRow, isFirstRow, isLastRow }: RowEditorProps) {
     const { control, setValue, getValues } = form;
     const { fields: columnFields } = useFieldArray({ control, name: `rows.${rowIndex}.columns`, keyName: "colId" });
     const rowRef = useRef<HTMLDivElement>(null);
@@ -431,7 +437,11 @@ function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onA
     return (
         <div className="p-4 border rounded-lg bg-background shadow-sm space-y-3">
              <div className="flex items-center justify-between">
-                <Label className="font-medium text-muted-foreground">Row {rowIndex + 1}</Label>
+                <div className="flex items-center gap-2">
+                    <Label className="font-medium text-muted-foreground">Row {rowIndex + 1}</Label>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onMoveRow(rowIndex, rowIndex - 1)} disabled={isFirstRow}><ArrowUp className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onMoveRow(rowIndex, rowIndex + 1)} disabled={isLastRow}><ArrowDown className="h-4 w-4" /></Button>
+                </div>
                  <div className="flex items-center gap-2">
                      <Button variant="outline" size="sm" type="button" onClick={() => onAddColumn(rowIndex)}>
                         <Columns className="mr-2 h-4 w-4"/> Add Column
@@ -612,4 +622,3 @@ function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }:
          </div>
     );
 }
-
