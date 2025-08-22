@@ -53,24 +53,24 @@ import { Plus, Grip } from 'lucide-react';
 
 
 // --- Zod Schema Definitions ---
-export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod' | 'links' | 'rps-game' | 'agent-guide';
+export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links' | 'sidebar';
 
 
 const baseWidgetSchema = z.object({
   id: z.string(),
   name: z.string(),
-  widgetType: z.string(), // e.g., 'motd', 'leaderboard-agent'
+  type: z.string(), // e.g., 'motd', 'leaderboard'
   isEnabled: z.boolean(),
 });
 
 const motdWidgetSchema = baseWidgetSchema.extend({
-  widgetType: z.literal('motd'),
+  type: z.literal('motd'),
   emoji: z.string().min(1, 'Emoji is required.').max(10, 'Emoji should be short.'),
   content: z.string().min(1, 'Message content is required.'),
 });
 
 const linksWidgetSchema = baseWidgetSchema.extend({
-    widgetType: z.literal('links'),
+    type: z.literal('links'),
     links: z.array(z.object({
         id: z.string(),
         title: z.string().min(1, 'Link title is required.'),
@@ -78,15 +78,31 @@ const linksWidgetSchema = baseWidgetSchema.extend({
     })),
 });
 
+const leaderboardWidgetSchema = baseWidgetSchema.extend({
+  type: z.literal('leaderboards'),
+  leaderboardTypes: z.array(z.object({
+      id: z.enum(['agent', 'team', 'pod']),
+      name: z.string(),
+      isEnabled: z.boolean(),
+  })),
+});
+
+const sidebarWidgetSchema = baseWidgetSchema.extend({
+    type: z.literal('sidebar'),
+});
+
+
 const standardWidgetSchema = baseWidgetSchema.extend({
-    widgetType: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod', 'rps-game', 'agent-guide']),
+    type: z.enum(['achievements', 'pod-targets']),
 });
 
 
 // A discriminated union to handle different widget types
-const widgetSchema = z.discriminatedUnion('widgetType', [
+const widgetSchema = z.discriminatedUnion('type', [
     motdWidgetSchema,
     linksWidgetSchema,
+    leaderboardWidgetSchema,
+    sidebarWidgetSchema,
     standardWidgetSchema,
 ]);
 
@@ -120,12 +136,10 @@ const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
   { id: 'motd', name: 'Message of the Day' },
   { id: 'achievements', name: 'Today\'s Achievements' },
   { id: 'pod-targets', name: 'Pod Targets' },
-  { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
-  { id: 'leaderboard-team', name: 'Team Leaderboard' },
-  { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
+  { id: 'leaderboards', name: 'Competition Leaderboards' },
   { id: 'links', name: 'External Links' },
-  { id: 'rps-game', name: 'Sidebar: RPS Game Page' },
-  { id: 'agent-guide', name: 'Sidebar: Agent Guide' },
+  { id: 'sidebar', name: 'Sidebar: RPS Game Page' },
+  { id: 'sidebar', name: 'Sidebar: Agent Guide' },
 ];
 
 function DraggableWidget({ id, name }: { id: string; name: string }) {
@@ -169,20 +183,30 @@ export default function AgentDashboardSettingsPage() {
         keyName: "fieldId",
     });
 
-    const getWidgetDefaultData = (widgetType: WidgetType): Omit<Widget, 'id' | 'name'> => {
+    const getWidgetDefaultData = (widgetType: WidgetType | string, widgetName: string): Omit<Widget, 'id' | 'name'> => {
         switch (widgetType) {
             case 'motd':
-                return { widgetType: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' };
+                return { type: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' };
             case 'links':
-                return { widgetType: 'links', isEnabled: true, links: [] };
-            case 'leaderboard-agent':
-            case 'leaderboard-team':
-            case 'leaderboard-pod':
+                return { type: 'links', isEnabled: true, links: [] };
+             case 'leaderboards':
+                return {
+                    type: 'leaderboards',
+                    isEnabled: true,
+                    leaderboardTypes: [
+                        { id: 'agent', name: 'Agent Leaderboard', isEnabled: true },
+                        { id: 'team', name: 'Team Leaderboard', isEnabled: true },
+                    ],
+                };
+             case 'sidebar':
+                 // This needs to be more specific if we have multiple sidebar types
+                 // For now, let's assume the name differentiates them enough
+                return { type: 'sidebar', isEnabled: true };
             case 'achievements':
             case 'pod-targets':
-            case 'rps-game':
-            case 'agent-guide':
-                return { widgetType: widgetType, isEnabled: true };
+                return { type: widgetType, isEnabled: true };
+            default: // Fallback for any other standard type
+                 return { type: 'standard', isEnabled: true };
         }
     };
 
@@ -236,44 +260,52 @@ export default function AgentDashboardSettingsPage() {
     };
 
     const handleDragOver = (event: DragEndEvent) => {
-        const { active, over, activatorEvent } = event;
+        const { active, over } = event;
         const overId = over?.id;
+
         if (!overId || active.id === overId) return;
 
         const activeContainerId = findContainer(active.id);
-        const overContainerId = findContainer(over?.id);
+        const overContainerId = findContainer(over.id);
+
+        if (!activeContainerId || !overContainerId || activeContainerId === overContainerId) {
+            return;
+        }
         
-        if (!activeContainerId || !overContainerId) return;
-
-        if (activeContainerId !== overContainerId) {
-             const activeRowIndex = rowFields.findIndex(r => r.id === activeContainerId);
-             const overRowIndex = rowFields.findIndex(r => r.id === overContainerId);
-             const activeWidgetIndex = activeRowIndex > -1 ? rowFields[activeRowIndex].widgets.findIndex(w => w.id === active.id) : -1;
-             
+        const activeRowIndex = rowFields.findIndex(r => r.id === activeContainerId);
+        const overRowIndex = rowFields.findIndex(r => r.id === overContainerId);
+        
+        if (active.id.toString().startsWith('toolbox-')) {
+             const overItems = form.getValues(`rows.${overRowIndex}.widgets`);
              const overWidgetIndex = overId.toString().startsWith('widget-')
-                ? rowFields[overRowIndex].widgets.findIndex(w => w.id === overId)
-                : rowFields[overRowIndex].widgets.length;
+                ? overItems.findIndex(w => w.id === overId)
+                : overItems.length;
 
+            const newRows = [...form.getValues('rows')];
+            const widgetType = active.data.current?.widgetType as WidgetType;
+            const name = active.data.current?.name;
+            const defaultData = getWidgetDefaultData(widgetType, name);
+            const newWidget = {
+                id: `widget-${Date.now()}`,
+                name,
+                ...defaultData,
+            } as Widget;
 
-             const newRows = [...form.getValues('rows')];
-
-             let newWidget: Widget;
-            // Dragging from toolbox
-            if (active.id.toString().startsWith('toolbox-')) {
-                 const widgetType = active.data.current?.widgetType as WidgetType;
-                 const name = active.data.current?.name;
-                 const defaultData = getWidgetDefaultData(widgetType);
-                 newWidget = {
-                     id: `widget-${Date.now()}`,
-                     name,
-                     ...defaultData,
-                 } as Widget;
-                 // Add new widget to the over container
+            if (!newRows[overRowIndex].widgets.some(w => w.id === active.id)) {
                  newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, newWidget);
-            } else { // Dragging existing widget between rows
-                 const [removed] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
-                 newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, removed);
+                 form.setValue('rows', newRows, { shouldDirty: true });
+                 setActiveId(newWidget.id); // Update activeId to the new widget's ID
             }
+        } else if (activeContainerId !== overContainerId) {
+             const activeWidgetIndex = rowFields[activeRowIndex].widgets.findIndex(w => w.id === active.id);
+             const overItems = form.getValues(`rows.${overRowIndex}.widgets`);
+             const overWidgetIndex = overId.toString().startsWith('widget-')
+                ? overItems.findIndex(w => w.id === overId)
+                : overItems.length;
+            
+             const newRows = [...form.getValues('rows')];
+             const [removed] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
+             newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, removed);
              form.setValue('rows', newRows, { shouldDirty: true });
         }
     };
@@ -281,9 +313,17 @@ export default function AgentDashboardSettingsPage() {
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
-        if (!over || active.id === over.id) {
-            setActiveId(null);
-            return;
+        if (!over) {
+             setActiveId(null);
+             // If from toolbox and dropped outside, remove temporary widget
+             if (active.id.toString().startsWith('toolbox-')) {
+                 const newRows = form.getValues('rows').map(row => ({
+                     ...row,
+                     widgets: row.widgets.filter(w => w.id !== activeId)
+                 }));
+                 form.setValue('rows', newRows);
+             }
+             return;
         }
 
         const activeContainerId = findContainer(active.id);
@@ -392,8 +432,8 @@ export default function AgentDashboardSettingsPage() {
 
 function DroppableRow({ row, rowIndex, form }: { row: Row; rowIndex: number; form: any }) {
     const { setNodeRef, isOver } = useDroppable({ id: row.id });
-    const { control, getValues, setValue } = form;
-    const { fields, remove: removeRow, move: moveRow } = useFieldArray({ control, name: 'rows' });
+    const { control } = form;
+    const { remove: removeRow } = useFieldArray({ control, name: 'rows' });
     const { fields: widgetFields, remove: removeWidget } = useFieldArray({ control, name: `rows.${rowIndex}.widgets` });
     const { attributes, listeners, setNodeRef: setSortableNodeRef, transform, transition } = useSortable({ id: row.id });
 
@@ -440,7 +480,12 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
         name: `rows.${rowIndex}.widgets.${widgetIndex}.links`,
     });
 
-    const isConfigurable = widget.widgetType === 'motd' || widget.widgetType === 'links';
+     const { fields: leaderboardFields, move: moveLeaderboard } = useFieldArray({
+        control,
+        name: `rows.${rowIndex}.widgets.${widgetIndex}.leaderboardTypes`
+    });
+
+    const isConfigurable = widget.type === 'motd' || widget.type === 'links' || widget.type === 'leaderboards';
 
     return (
         <div ref={setNodeRef} style={style} className="relative p-3 border rounded-md bg-card shadow-sm flex-1 min-w-[250px] flex flex-col gap-2">
@@ -474,13 +519,13 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
                     <AccordionItem value="settings" className="border-b-0">
                         <AccordionTrigger className="text-sm py-1">Settings</AccordionTrigger>
                         <AccordionContent className="pt-2 space-y-4">
-                             {widget.widgetType === 'motd' && (
+                             {widget.type === 'motd' && (
                                 <>
                                  <FormField control={control} name={`rows.${rowIndex}.widgets.${widgetIndex}.emoji`} render={({ field }) => (<FormItem><FormLabel>Emoji</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                                  <FormField control={control} name={`rows.${rowIndex}.widgets.${widgetIndex}.content`} render={({ field }) => (<FormItem><FormLabel>Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
                                 </>
                             )}
-                             {widget.widgetType === 'links' && (
+                             {widget.type === 'links' && (
                                 <div className="space-y-2">
                                     {linkFields.map((link, linkIndex) => (
                                         <div key={link.id} className="flex items-end gap-2 p-2 border rounded-md">
@@ -494,6 +539,38 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
                                     <Button type="button" variant="outline" size="sm" onClick={() => appendLink({id: `link-${Date.now()}`, title: '', url: ''})}><Plus className="h-4 w-4 mr-2"/>Add Link</Button>
                                 </div>
                             )}
+                            {widget.type === 'leaderboards' && (
+                                <div className="space-y-2">
+                                    <FormDescription>Enable and reorder the leaderboards.</FormDescription>
+                                    <SortableContext items={leaderboardFields.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                                         {leaderboardFields.map((lbField, lbIndex) => {
+                                            // This is a bit of a workaround because useSortable needs a stable ID
+                                             const SortableItem = ({ children }: { children: React.ReactNode }) => {
+                                                 const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: lbField.id });
+                                                 const style = { transform: CSS.Transform.toString(transform), transition };
+                                                 return <div ref={setNodeRef} style={style} {...attributes} {...listeners}>{children}</div>;
+                                             };
+                                             return (
+                                                  <SortableItem key={lbField.id}>
+                                                     <div className="flex items-center gap-2 p-2 border rounded-md bg-background">
+                                                         <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab"/>
+                                                         <FormField
+                                                             control={control}
+                                                             name={`rows.${rowIndex}.widgets.${widgetIndex}.leaderboardTypes.${lbIndex}.isEnabled`}
+                                                             render={({ field }) => (
+                                                                <FormItem className="flex-1 flex items-center gap-2 space-y-0">
+                                                                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                                                     <FormLabel className="font-normal">{ (lbField as any).name }</FormLabel>
+                                                                </FormItem>
+                                                             )}
+                                                         />
+                                                     </div>
+                                                  </SortableItem>
+                                             );
+                                         })}
+                                     </SortableContext>
+                                </div>
+                            )}
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
@@ -501,3 +578,5 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
         </div>
     )
 }
+
+    
