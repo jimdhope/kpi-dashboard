@@ -205,7 +205,7 @@ export default function AgentDashboardSettingsPage() {
             case 'pod-targets':
                 return { type: widgetType as 'achievements' | 'pod-targets', isEnabled: true };
             default: // Fallback for any other standard type
-                 return { type: 'standard', isEnabled: true };
+                 return { type: 'achievements', isEnabled: true }; // Fallback to a safe standard type
         }
     };
 
@@ -281,19 +281,20 @@ export default function AgentDashboardSettingsPage() {
                 : overItems.length;
 
             const newRows = [...form.getValues('rows')];
-            const widgetType = active.data.current?.widgetType as WidgetType;
+            const widgetType = active.data.current?.widgetType as string; // Changed to string
             const name = active.data.current?.name;
             const defaultData = getWidgetDefaultData(widgetType, name);
             const newWidget = {
-                id: `widget-${Date.now()}`,
+                id: active.id, // Keep the toolbox ID temporarily
                 name,
                 ...defaultData,
             } as Widget;
 
             if (!newRows[overRowIndex].widgets.some(w => w.id === active.id)) {
+                 newRows[activeRowIndex]?.widgets.splice(0,1);
                  newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, newWidget);
                  form.setValue('rows', newRows, { shouldDirty: true });
-                 setActiveId(newWidget.id); // Update activeId to the new widget's ID
+                 // NOTE: We don't update activeId here, as the original active.id is what we track.
             }
         } else if (activeContainerId !== overContainerId) {
              const activeWidgetIndex = rowFields[activeRowIndex].widgets.findIndex(w => w.id === active.id);
@@ -312,39 +313,73 @@ export default function AgentDashboardSettingsPage() {
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
+
+        // Clean up any temporary widgets from toolbox drags that were cancelled
+        let newRows = form.getValues('rows').map(row => ({
+            ...row,
+            widgets: row.widgets.filter(w => !w.id.toString().startsWith('toolbox-'))
+        }));
+        
         if (!over) {
-             setActiveId(null);
-             // If from toolbox and dropped outside, remove temporary widget
-             if (active.id.toString().startsWith('toolbox-')) {
-                 const newRows = form.getValues('rows').map(row => ({
-                     ...row,
-                     widgets: row.widgets.filter(w => w.id !== activeId)
-                 }));
-                 form.setValue('rows', newRows);
-             }
-             return;
+            setActiveId(null);
+            form.setValue('rows', newRows); // Set the cleaned rows and stop
+            return;
         }
 
         const activeContainerId = findContainer(active.id);
         const overContainerId = findContainer(over.id);
 
-        if(active.id.toString().startsWith('row-') && over.id.toString().startsWith('row-')){
-             const oldIndex = rowFields.findIndex(r => r.id === active.id);
-             const newIndex = rowFields.findIndex(r => r.id === over.id);
-             if(oldIndex !== newIndex) moveRow(oldIndex, newIndex);
-        } else if (activeContainerId === overContainerId && activeContainerId !== 'toolbox') {
-             const rowIndex = rowFields.findIndex(r => r.id === activeContainerId);
-             const oldIndex = rowFields[rowIndex].widgets.findIndex(w => w.id === active.id);
-             const newIndex = rowFields[rowIndex].widgets.findIndex(w => w.id === over.id);
+        if (active.id.toString().startsWith('toolbox-')) {
+            const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
+            if (overRowIndex !== -1) {
+                const overItems = newRows[overRowIndex].widgets;
+                const overWidgetIndex = overId.toString().startsWith('widget-')
+                    ? overItems.findIndex(w => w.id === overId)
+                    : overItems.length;
+
+                const widgetType = active.data.current?.widgetType as string;
+                const name = active.data.current?.name;
+                const defaultData = getWidgetDefaultData(widgetType, name);
+                const newWidget = {
+                    id: `widget-${Date.now()}`,
+                    name,
+                    ...defaultData,
+                } as Widget;
+                
+                newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, newWidget);
+            }
+        } else if (activeContainerId && overContainerId && activeContainerId === overContainerId) {
+             // Handle reordering within the same row
+             const rowIndex = newRows.findIndex(r => r.id === activeContainerId);
+             const oldIndex = newRows[rowIndex].widgets.findIndex(w => w.id === active.id);
+             const newIndex = newRows[rowIndex].widgets.findIndex(w => w.id === over.id);
              if(oldIndex !== newIndex){
-                 const currentRows = form.getValues('rows');
-                 const updatedWidgets = arrayMove(currentRows[rowIndex].widgets, oldIndex, newIndex);
-                 const newRows = [...currentRows];
-                 newRows[rowIndex].widgets = updatedWidgets;
-                 form.setValue('rows', newRows);
+                 newRows[rowIndex].widgets = arrayMove(newRows[rowIndex].widgets, oldIndex, newIndex);
              }
+        } else if (activeContainerId && overContainerId && activeContainerId !== overContainerId) {
+            // This case is now handled by onDragOver, but we re-set state to be safe.
+            const activeRowIndex = newRows.findIndex(r => r.id === activeContainerId);
+            const activeWidgetIndex = newRows[activeRowIndex]?.widgets.findIndex(w => w.id === active.id);
+
+            if (activeWidgetIndex !== -1 && activeWidgetIndex !== undefined) {
+                 const [movedWidget] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
+                 const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
+                 const overWidgetIndex = newRows[overRowIndex]?.widgets.findIndex(w => w.id === over.id);
+                 if (overWidgetIndex !== -1 && overWidgetIndex !== undefined) {
+                     newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, movedWidget);
+                 } else {
+                     newRows[overRowIndex].widgets.push(movedWidget);
+                 }
+            }
         }
-        
+
+        if(active.id.toString().startsWith('row-') && over.id.toString().startsWith('row-')){
+             const oldIndex = newRows.findIndex(r => r.id === active.id);
+             const newIndex = newRows.findIndex(r => r.id === over.id);
+             if(oldIndex !== newIndex) newRows = arrayMove(newRows, oldIndex, newIndex);
+        }
+
+        form.setValue('rows', newRows, { shouldDirty: true });
         setActiveId(null);
     };
 
@@ -577,5 +612,3 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
         </div>
     )
 }
-
-    
