@@ -11,7 +11,9 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Leaderboard } from '@/components/leaderboard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield } from 'lucide-react';
+import { Shield, Bug } from 'lucide-react';
+import { Separator } from '../ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 interface TeamLeaderboardWidgetProps {
   currentUser: AppUser | null;
@@ -38,6 +40,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
   const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]);
   const [bonusLogs, setBonusLogs] = useState<TeamBonusLog[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [podAgents, setPodAgents] = useState<AppUser[]>([]);
   
   const agentPodId = currentUser?.podId;
 
@@ -81,10 +84,11 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
 
   // Effect 2: Fetch competition-specific data when selection changes
   useEffect(() => {
-    if (!selectedCompetitionId) {
+    if (!selectedCompetitionId || !agentPodId) {
       setTeams([]);
       setCompetitionLogs([]);
       setBonusLogs([]);
+      setPodAgents([]);
       setIsLoading(false);
       return () => {}; // Return empty cleanup function
     }
@@ -98,12 +102,21 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
 
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
-
+    
+    // Set teams from the already fetched competition data
     setTeams(selectedCompetition.teams || []);
 
+    // Fetch agents for the current user's pod
+    const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId));
+    unsubscribes.push(onSnapshot(agentsQuery, (snapshot) => {
+        setPodAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
+    }));
+
+    // Fetch all logs for the pod within the selected competition's date range
     const logsQuery = query(
         collection(db, 'dailyAchievements'),
         where('competitionId', '==', selectedCompetitionId),
+        where('podId', '==', agentPodId),
         where('date', '>=', selectedCompetition.startDate),
         where('date', '<=', selectedCompetition.endDate)
     );
@@ -111,9 +124,11 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
         setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
     }));
 
+    // Fetch bonus logs for the pod within the competition date range
     const bonusLogsQuery = query(
         collection(db, 'teamBonusLogs'),
         where('competitionId', '==', selectedCompetitionId),
+        where('podId', '==', agentPodId),
         where('date', '>=', selectedCompetition.startDate),
         where('date', '<=', selectedCompetition.endDate)
     );
@@ -126,41 +141,63 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     }));
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedCompetitionId, allCompetitions]);
+  }, [selectedCompetitionId, agentPodId, allCompetitions]);
 
 
-  const teamLeaderboard = useMemo(() => {
-    const competition = allCompetitions.find(c => c.id === selectedCompetitionId);
-    if (isLoading || !competition || teams.length === 0) {
-        return [];
+ const { teamLeaderboard, debugData } = useMemo(() => {
+    if (isLoading || teams.length === 0) {
+        return { teamLeaderboard: [], debugData: { agentTotals: [], teamTotals: [] } };
     }
-    
-    const teamScores = teams.reduce((acc, team) => {
-      const teamAgentIds = new Set(team.agentIds);
 
-      // Sum points directly from achievement logs for the team's agents
-      const achievementPoints = competitionLogs
-        .filter(log => teamAgentIds.has(log.agentId))
-        .reduce((sum, log) => sum + (log.points || 0), 0);
-      
-      // Sum points directly from bonus logs for the team
-      const teamBonusPoints = bonusLogs
-        .filter(log => log.teamId === team.id)
-        .reduce((sum, log) => sum + (log.points || 0), 0);
-      
-      // The total score is the sum of achievements and bonuses
-      acc[team.id] = achievementPoints + teamBonusPoints;
-      return acc;
+    // 1. Calculate total points for each agent
+    const agentScores = podAgents.reduce((acc, agent) => {
+        const agentLogs = competitionLogs.filter(log => log.agentId === agent.id);
+        const totalPoints = agentLogs.reduce((sum, log) => sum + (log.points || 0), 0);
+        acc[agent.id!] = totalPoints;
+        return acc;
     }, {} as Record<string, number>);
 
-    return teams.map(team => ({
+    // 2. Calculate total points for each team
+    const teamScores = teams.reduce((acc, team) => {
+        // Sum points from all agents in the team
+        const membersPoints = team.agentIds.reduce((sum, agentId) => sum + (agentScores[agentId] || 0), 0);
+        
+        // Sum bonus points for the team
+        const teamBonusPoints = bonusLogs
+            .filter(log => log.teamId === team.id)
+            .reduce((sum, log) => sum + (log.points || 0), 0);
+            
+        acc[team.id] = membersPoints + teamBonusPoints;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const finalLeaderboard = teams.map(team => ({
       id: team.id,
       name: team.name,
       score: teamScores[team.id] || 0,
       emoji: team.emoji,
       isUser: team.agentIds.includes(currentUser?.id || ''),
     }));
-  }, [isLoading, teams, competitionLogs, bonusLogs, currentUser, allCompetitions, selectedCompetitionId]);
+
+    // Prepare data for the debug section
+    const debugAgentTotals = podAgents.map(agent => ({
+        name: agent.name,
+        totalScore: agentScores[agent.id!] || 0,
+    })).sort((a,b) => b.totalScore - a.totalScore);
+
+    const debugTeamTotals = teams.map(team => ({
+        name: team.name,
+        totalScore: teamScores[team.id] || 0,
+    })).sort((a,b) => b.totalScore - a.totalScore);
+
+    return {
+        teamLeaderboard: finalLeaderboard,
+        debugData: {
+            agentTotals: debugAgentTotals,
+            teamTotals: debugTeamTotals,
+        }
+    };
+}, [isLoading, teams, podAgents, competitionLogs, bonusLogs, currentUser]);
   
   const handleCompetitionChange = (value: string) => {
     setSelectedCompetitionId(value);
@@ -207,6 +244,54 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
           <Leaderboard entries={teamLeaderboard} />
         )}
       </CardContent>
+
+       {/* Debug Section */}
+       <CardContent className="mt-4">
+           <Separator />
+           <div className="pt-4">
+              <h4 className="font-semibold text-sm flex items-center gap-2 mb-2"><Bug className="h-4 w-4"/>Debug Info: Score Calculation</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Total Agent Scores (Competition)</p>
+                   <Table>
+                      <TableHeader>
+                         <TableRow>
+                           <TableHead className="text-xs h-8">Agent</TableHead>
+                           <TableHead className="text-right text-xs h-8">Total Points</TableHead>
+                         </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {debugData.agentTotals.map(agent => (
+                            <TableRow key={agent.name}>
+                               <TableCell className="text-xs py-1">{agent.name}</TableCell>
+                               <TableCell className="text-right text-xs py-1 font-mono">{agent.totalScore}</TableCell>
+                            </TableRow>
+                        ))}
+                      </TableBody>
+                   </Table>
+                </div>
+                 <div>
+                   <p className="text-xs text-muted-foreground mb-1">Final Team Scores (Competition)</p>
+                   <Table>
+                      <TableHeader>
+                         <TableRow>
+                           <TableHead className="text-xs h-8">Team</TableHead>
+                           <TableHead className="text-right text-xs h-8">Total Points</TableHead>
+                         </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {debugData.teamTotals.map(team => (
+                            <TableRow key={team.name}>
+                               <TableCell className="text-xs py-1">{team.name}</TableCell>
+                               <TableCell className="text-right text-xs py-1 font-mono">{team.totalScore}</TableCell>
+                            </TableRow>
+                        ))}
+                      </TableBody>
+                   </Table>
+                </div>
+              </div>
+           </div>
+       </CardContent>
     </Card>
   );
 }
