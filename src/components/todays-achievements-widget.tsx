@@ -5,16 +5,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
 import { CheckSquare } from 'lucide-react';
-import { collection, query, where, Timestamp, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { collection, query, where, Timestamp, onSnapshot, Unsubscribe, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { startOfDay, endOfDay } from 'date-fns';
 import type { AppUser } from '@/services/user';
-import type { CompetitionWithRules } from '@/app/(agent)/agent/page';
+import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 
 interface TodaysAchievementsWidgetProps {
     currentUser: AppUser | null;
-    activeCompetitionId: string | null;
 }
 
 interface AchievementSummary {
@@ -22,10 +21,44 @@ interface AchievementSummary {
     points: number;
 }
 
-export function TodaysAchievementsWidget({ currentUser, activeCompetitionId }: TodaysAchievementsWidgetProps) {
+interface CompetitionWithId extends Competition {
+    id: string;
+}
+
+export function TodaysAchievementsWidget({ currentUser }: TodaysAchievementsWidgetProps) {
     const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
+    const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Effect to find the active competition
+    useEffect(() => {
+        if (!currentUser?.podId) {
+            setIsLoading(false);
+            return;
+        }
+        const today = new Date();
+        const compQuery = query(
+            collection(db, 'competitions'),
+            where('podIds', 'array-contains', currentUser.podId),
+            orderBy('startDate', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(compQuery, (snapshot) => {
+            let foundCompetition: CompetitionWithId | null = null;
+            for (const docSnap of snapshot.docs) {
+                const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithId;
+                if (comp.startDate.toDate() <= today && comp.endDate.toDate() >= today) {
+                    foundCompetition = comp;
+                    break;
+                }
+            }
+            setActiveCompetitionId(foundCompetition?.id || null);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser?.podId]);
+
+    // Effect to fetch logs once active competition is known
     useEffect(() => {
         if (!currentUser?.id || !activeCompetitionId) {
             setIsLoading(false);
@@ -104,6 +137,9 @@ export function TodaysAchievementsWidget({ currentUser, activeCompetitionId }: T
                             </div>
                         ))}
                     </div>
+                )}
+                 {achievements.length === 0 && !isLoading && (
+                    <p className="text-xs text-muted-foreground mt-3">No achievements logged yet today.</p>
                 )}
             </CardContent>
         </Card>

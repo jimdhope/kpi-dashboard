@@ -9,10 +9,11 @@ import {
   orderBy,
   onSnapshot,
   Unsubscribe,
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
-import type { CompetitionWithRules } from '@/app/(agent)/agent/page';
+import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Leaderboard } from '@/components/leaderboard';
@@ -21,69 +22,85 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy } from 'lucide-react';
 
 interface AgentLeaderboardWidgetProps {
-  allCompetitions: CompetitionWithRules[];
-  podId: string | null;
   currentUser: AppUser | null;
 }
 
-export function AgentLeaderboardWidget({ allCompetitions, podId, currentUser }: AgentLeaderboardWidgetProps) {
+const AGENT_LEADERBOARD_COMP_KEY = 'agentLeaderboard_selectedCompId';
+
+export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetProps) {
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
+  const [allCompetitions, setAllCompetitions] = useState<Competition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
 
+  // Fetch all possible competitions for the user's pod
   useEffect(() => {
-    // Set default competition to the most recent one when the component mounts or competitions change
-    if (allCompetitions.length > 0 && !selectedCompetitionId) {
-      setSelectedCompetitionId(allCompetitions[0].id);
-    }
-  }, [allCompetitions, selectedCompetitionId]);
+    if (!currentUser?.podId) return;
 
+    const compQuery = query(
+        collection(db, 'competitions'),
+        where('podIds', 'array-contains', currentUser.podId),
+        orderBy('startDate', 'desc')
+    );
+    const unsubscribe = onSnapshot(compQuery, (snapshot) => {
+        const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
+        setAllCompetitions(fetchedComps);
+        // Set default competition if not already set
+        if (!selectedCompetitionId && fetchedComps.length > 0) {
+            const savedCompId = localStorage.getItem(AGENT_LEADERBOARD_COMP_KEY);
+            if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
+                setSelectedCompetitionId(savedCompId);
+            } else {
+                 setSelectedCompetitionId(fetchedComps[0].id);
+            }
+        }
+    });
+    return () => unsubscribe();
+  }, [currentUser?.podId, selectedCompetitionId]);
+
+
+  // Fetch agents and logs based on selected competition
   useEffect(() => {
-    if (!selectedCompetitionId || !podId) {
+    if (!selectedCompetitionId || !currentUser?.podId) {
         setIsLoading(false);
         return;
     }
 
     setIsLoading(true);
-    let logsUnsubscribe: Unsubscribe | undefined;
-    let agentsUnsubscribe: Unsubscribe | undefined;
+    const unsubscribes: Unsubscribe[] = [];
 
-    try {
-        // Query ALL logs for the competition, not just for one day
-        const logsQuery = query(
-            collection(db, 'dailyAchievements'),
-            where('competitionId', '==', selectedCompetitionId),
-            where('podId', '==', podId)
-        );
-        logsUnsubscribe = onSnapshot(logsQuery, (snapshot) => {
-            setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
-            setIsLoading(false); // Set loading false after logs are fetched
-        });
+    // Fetch agents for the pod
+    const agentsQuery = query(collection(db, 'users'), where('podId', '==', currentUser.podId));
+    unsubscribes.push(onSnapshot(agentsQuery, (snapshot) => {
+        setPodAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
+    }));
 
-        const agentsQuery = query(collection(db, 'users'), where('podId', '==', podId));
-        agentsUnsubscribe = onSnapshot(agentsQuery, (snapshot) => {
-            setPodAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
-        });
-
-    } catch (error) {
-        console.error("Error fetching leaderboard data:", error);
+    // Fetch all logs for the selected competition and pod
+    const logsQuery = query(
+        collection(db, 'dailyAchievements'),
+        where('competitionId', '==', selectedCompetitionId),
+        where('podId', '==', currentUser.podId)
+    );
+    unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
+        setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
         setIsLoading(false);
-    }
+    }));
 
-    return () => {
-        if (logsUnsubscribe) logsUnsubscribe();
-        if (agentsUnsubscribe) agentsUnsubscribe();
-    };
+    return () => unsubscribes.forEach(unsub => unsub());
 
-  }, [selectedCompetitionId, podId]);
+  }, [selectedCompetitionId, currentUser?.podId]);
 
+  const handleCompetitionChange = (value: string) => {
+    setSelectedCompetitionId(value);
+    localStorage.setItem(AGENT_LEADERBOARD_COMP_KEY, value);
+  };
 
   const agentLeaderboard = useMemo(() => {
     if (isLoading || podAgents.length === 0) {
       return [];
     }
-
+    // Correctly calculate score from `points` field in each log
     const agentScores = podAgents.reduce((acc, agent) => {
       acc[agent.id!] = competitionLogs
         .filter(log => log.agentId === agent.id)
@@ -115,7 +132,7 @@ export function AgentLeaderboardWidget({ allCompetitions, podId, currentUser }: 
             </div>
             <Select
                 value={selectedCompetitionId}
-                onValueChange={setSelectedCompetitionId}
+                onValueChange={handleCompetitionChange}
                 disabled={allCompetitions.length === 0}
             >
                 <SelectTrigger className="w-[180px] h-8 text-xs">

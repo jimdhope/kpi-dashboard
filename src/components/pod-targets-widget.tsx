@@ -10,7 +10,7 @@ import { collection, query, where, Timestamp, doc, getDoc, onSnapshot, Unsubscri
 import { db } from '@/lib/firebase';
 import { startOfDay, getDay, endOfDay } from 'date-fns';
 import type { AppUser } from '@/services/user';
-import type { CompetitionWithRules } from '@/app/(agent)/agent/page';
+import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import type { RuleFormData } from '@/models/types';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
@@ -19,9 +19,7 @@ import { cn } from '@/lib/utils';
 const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 interface PodTargetsWidgetProps {
-    agentPodId: string | null;
-    activeCompetitionId: string | null;
-    podAgents: AppUser[];
+  currentUser: AppUser | null;
 }
 
 interface PodTargetSummary {
@@ -33,12 +31,49 @@ interface PodTargetSummary {
     progress?: number;
 }
 
-export function PodTargetsWidget({ agentPodId, activeCompetitionId, podAgents }: PodTargetsWidgetProps) {
+interface CompetitionWithRules extends Competition {
+    id: string;
+}
+
+
+export function PodTargetsWidget({ currentUser }: PodTargetsWidgetProps) {
     const [rules, setRules] = useState<RuleFormData[]>([]);
     const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
     const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
+    const [podAgents, setPodAgents] = useState<AppUser[]>([]);
+    const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const agentPodId = currentUser?.podId;
+
+    // Effect to find the active competition
+    useEffect(() => {
+        if (!agentPodId) return;
+        const today = new Date();
+        const compQuery = query(
+            collection(db, 'competitions'),
+            where('podIds', 'array-contains', agentPodId),
+            orderBy('startDate', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(compQuery, (snapshot) => {
+            let foundCompetition: CompetitionWithRules | null = null;
+            for (const docSnap of snapshot.docs) {
+                const comp = { id: docSnap.id, ...docSnap.data() } as CompetitionWithRules;
+                if (comp.startDate.toDate() <= today && comp.endDate.toDate() >= today) {
+                    foundCompetition = comp;
+                    break;
+                }
+            }
+            setActiveCompetitionId(foundCompetition?.id || null);
+            setRules(foundCompetition?.rules || []);
+        });
+
+        return () => unsubscribe();
+    }, [agentPodId]);
+
+
+    // Effect to fetch all data needed for the widget
     useEffect(() => {
         if (!agentPodId || !activeCompetitionId) {
             setIsLoading(false);
@@ -48,10 +83,10 @@ export function PodTargetsWidget({ agentPodId, activeCompetitionId, podAgents }:
         setIsLoading(true);
         const unsubscribes: Unsubscribe[] = [];
 
-        // Fetch competition rules
-        const compDocRef = doc(db, 'competitions', activeCompetitionId);
-        unsubscribes.push(onSnapshot(compDocRef, (snap) => {
-            setRules(snap.exists() ? (snap.data() as CompetitionWithRules).rules || [] : []);
+        // Fetch agents in the pod
+        const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId));
+        unsubscribes.push(onSnapshot(agentsQuery, (snap) => {
+            setPodAgents(snap.docs.map(d => d.data() as AppUser));
         }));
 
         // Fetch daily targets
@@ -73,7 +108,7 @@ export function PodTargetsWidget({ agentPodId, activeCompetitionId, podAgents }:
         );
         unsubscribes.push(onSnapshot(logsQuery, (snap) => {
             setDailyLogs(snap.docs.map(d => d.data() as DailyAchievementLog));
-            setIsLoading(false);
+            setIsLoading(false); // Mark loading as complete after the last fetch
         }));
 
         return () => unsubscribes.forEach(unsub => unsub());
@@ -129,7 +164,19 @@ export function PodTargetsWidget({ agentPodId, activeCompetitionId, podAgents }:
     }
 
     if (podTargetSummary.length === 0) {
-        return null; // Or a message saying no targets are set for today
+        return (
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-primary" /> Pod Targets Today
+                    </CardTitle>
+                    <CardDescription>Your pod's collective progress towards daily goals.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground text-center py-4">No targets set for today.</p>
+                </CardContent>
+            </Card>
+        );
     }
 
     return (
