@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -255,16 +254,12 @@ export default function AgentDashboardPage() {
   const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
     if (!activeCompetition) return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
     
-    const rulesMap = new Map((activeCompetition.rules || []).map(rule => [rule.id, rule]));
-
     // Agent scores
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
     podLogs.forEach(log => {
-      const rule = rulesMap.get(log.ruleId);
-      if (rule && rule.type === 'numeric' && agentScores.hasOwnProperty(log.agentId)) {
-        const points = (log.value || 0) * (rule.points || 0);
-        agentScores[log.agentId] += points;
+      if (agentScores.hasOwnProperty(log.agentId)) {
+        agentScores[log.agentId] += (log.points || 0);
       }
     });
 
@@ -272,17 +267,15 @@ export default function AgentDashboardPage() {
     const teamScores: Record<string, number> = {};
     teams.forEach(team => { teamScores[team.id] = 0; });
     podLogs.forEach(log => {
-      const rule = rulesMap.get(log.ruleId);
       const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
-      if (agentTeam && rule && rule.type === 'numeric') {
-          const points = (log.value || 0) * (rule.points || 0);
-          teamScores[agentTeam.id] += points;
+      if (agentTeam) {
+        teamScores[agentTeam.id] += (log.points || 0);
       }
     });
-    podBonusLogs.forEach(log => { if(teamScores[log.teamId] !== undefined) teamScores[log.teamId] += log.points; });
+    podBonusLogs.forEach(log => { if(teamScores[log.teamId] !== undefined) teamScores[log.teamId] += (log.points || 0); });
     
     // Pod score
-    const podTotalScore = Object.values(agentScores).reduce((sum, score) => sum + score, 0);
+    const podTotalScore = podLogs.reduce((sum, log) => sum + (log.points || 0), 0);
 
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         const sorted = [...items].sort((a,b) => (b.score || 0) - (a.score || 0));
