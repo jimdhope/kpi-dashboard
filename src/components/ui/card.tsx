@@ -11,8 +11,8 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       // Apply frosted glass effect: background opacity and backdrop blur
-      // Increased opacity from 85 to 90 for slightly less transparency
-      "rounded-lg border border-border/60 bg-card/90 backdrop-blur-sm text-card-foreground shadow-lg", // Added shadow-lg for more depth
+      // Decreased opacity from 90 to 85 to let more background color through
+      "rounded-lg border border-border/60 bg-card/85 backdrop-blur-sm text-card-foreground shadow-lg", // Added shadow-lg for more depth
       className
     )}
     {...props}
