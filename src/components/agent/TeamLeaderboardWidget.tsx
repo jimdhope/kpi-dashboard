@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -67,6 +66,9 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
             } else {
                  setIsLoading(false); // No competitions, stop loading
             }
+        } else {
+            // This handles the case where competitions update but the selected one is still valid
+            setIsLoading(false);
         }
     }, (error) => {
         console.error("Error fetching competitions:", error);
@@ -74,7 +76,7 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     });
 
     return () => unsubscribe();
-  }, [agentPodId]); // Removed selectedCompetitionId dependency
+  }, [agentPodId]);
 
 
   // Effect 2: Fetch competition-specific data when selection changes
