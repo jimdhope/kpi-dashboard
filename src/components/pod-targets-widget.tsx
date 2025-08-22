@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Target } from 'lucide-react';
 import { collection, query, where, Timestamp, doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfDay, getDay } from 'date-fns';
+import { startOfDay, getDay, endOfDay } from 'date-fns';
 import type { AppUser } from '@/services/user';
 import type { CompetitionWithRules } from '@/app/(agent)/agent/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
