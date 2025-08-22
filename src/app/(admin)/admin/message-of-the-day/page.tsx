@@ -33,7 +33,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Loader2, Save, Settings, GripVertical, PlusCircle, Trash2, AlertCircle, Rows, GripHorizontal } from 'lucide-react';
+import { Loader2, Save, Settings, GripVertical, PlusCircle, Trash2, AlertCircle, Rows, GripHorizontal, Grip } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from "@/components/ui/switch";
@@ -49,11 +49,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Plus, Grip } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 
 // --- Zod Schema Definitions ---
-export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links' | 'sidebar' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod';
+export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links' | 'sidebar-rps-game' | 'sidebar-agent-guide' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod';
 
 
 const baseWidgetSchema = z.object({
@@ -88,7 +88,7 @@ const leaderboardWidgetSchema = baseWidgetSchema.extend({
 });
 
 const sidebarWidgetSchema = baseWidgetSchema.extend({
-    type: z.literal('sidebar'),
+    type: z.enum(['sidebar-rps-game', 'sidebar-agent-guide']),
 });
 
 
@@ -191,7 +191,7 @@ export default function AgentDashboardSettingsPage() {
                 return { type: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' };
             case 'links':
                 return { type: 'links', isEnabled: true, links: [] };
-             case 'leaderboards':
+             case 'leaderboards': // This is now legacy, but keep for safety. Use individual types below.
                 return {
                     type: 'leaderboards',
                     isEnabled: true,
@@ -202,13 +202,13 @@ export default function AgentDashboardSettingsPage() {
                 };
              case 'sidebar-rps-game':
              case 'sidebar-agent-guide':
-                return { type: 'sidebar', isEnabled: true };
+                return { type: widgetType, isEnabled: true };
             case 'achievements':
             case 'pod-targets':
             case 'leaderboard-agent':
             case 'leaderboard-team':
             case 'leaderboard-pod':
-                return { type: widgetType as 'achievements' | 'pod-targets' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod', isEnabled: true };
+                return { type: widgetType, isEnabled: true };
             default: // Fallback for any other standard type
                  return { type: 'achievements', isEnabled: true }; // Fallback to a safe standard type
         }
@@ -271,47 +271,31 @@ export default function AgentDashboardSettingsPage() {
 
         const activeContainerId = findContainer(active.id);
         const overContainerId = findContainer(over.id);
-
+        
         if (!activeContainerId || !overContainerId || activeContainerId === overContainerId) {
             return;
         }
-        
-        const activeRowIndex = rowFields.findIndex(r => r.id === activeContainerId);
-        const overRowIndex = rowFields.findIndex(r => r.id === overContainerId);
-        
-        if (active.id.toString().startsWith('toolbox-')) {
-             const overItems = form.getValues(`rows.${overRowIndex}.widgets`);
-             const overWidgetIndex = overId.toString().startsWith('widget-')
-                ? overItems.findIndex(w => w.id === overId)
-                : overItems.length;
 
-            const newRows = [...form.getValues('rows')];
-            const widgetType = active.data.current?.widgetType as WidgetType;
-            const name = active.data.current?.name;
-            const defaultData = getWidgetDefaultData(widgetType, name);
-            const newWidget = {
-                id: active.id, // Keep the toolbox ID temporarily
-                name,
-                ...defaultData,
-            } as Widget;
+        const newRows = form.getValues('rows');
+        const activeRowIndex = newRows.findIndex(r => r.id === activeContainerId);
+        const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
 
-            if (!newRows[overRowIndex].widgets.some(w => w.id === active.id)) {
-                 newRows[activeRowIndex]?.widgets.splice(0,1);
-                 newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, newWidget);
-                 form.setValue('rows', newRows, { shouldDirty: true });
-                 // NOTE: We don't update activeId here, as the original active.id is what we track.
-            }
-        } else if (activeContainerId !== overContainerId) {
-             const activeWidgetIndex = rowFields[activeRowIndex].widgets.findIndex(w => w.id === active.id);
-             const overItems = form.getValues(`rows.${overRowIndex}.widgets`);
-             const overWidgetIndex = overId.toString().startsWith('widget-')
-                ? overItems.findIndex(w => w.id === overId)
-                : overItems.length;
+        if (activeRowIndex === -1 || overRowIndex === -1) return;
+
+        const activeWidgetIndex = newRows[activeRowIndex].widgets.findIndex(w => w.id === active.id);
+        
+        if (activeWidgetIndex !== -1) {
+            const [movedWidget] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
             
-             const newRows = [...form.getValues('rows')];
-             const [removed] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
-             newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, removed);
-             form.setValue('rows', newRows, { shouldDirty: true });
+            const overItems = newRows[overRowIndex].widgets;
+            const overWidgetIndex = overId.toString().startsWith('widget-')
+                ? overItems.findIndex(w => w.id === overId)
+                : (overId.toString().startsWith('row-') ? overItems.length : -1);
+
+            if (overWidgetIndex !== -1) {
+                newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, movedWidget);
+                form.setValue('rows', newRows, { shouldDirty: true });
+            }
         }
     };
 
@@ -320,29 +304,18 @@ export default function AgentDashboardSettingsPage() {
         const { active, over } = event;
         const overId = over?.id;
 
-        // Clean up any temporary widgets from toolbox drags that were cancelled
-        let newRows = form.getValues('rows').map(row => ({
-            ...row,
-            widgets: row.widgets.filter(w => !w.id.toString().startsWith('toolbox-'))
-        }));
-        
         if (!overId) {
             setActiveId(null);
-            form.setValue('rows', newRows); // Set the cleaned rows and stop
             return;
         }
-
+        
         const activeContainerId = findContainer(active.id);
         const overContainerId = findContainer(over.id);
+        const newRows = form.getValues('rows');
 
         if (active.id.toString().startsWith('toolbox-')) {
             const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
             if (overRowIndex !== -1) {
-                const overItems = newRows[overRowIndex].widgets;
-                const overWidgetIndex = overId.toString().startsWith('widget-')
-                    ? overItems.findIndex(w => w.id === overId)
-                    : overItems.length;
-
                 const widgetType = active.data.current?.widgetType as WidgetType;
                 const name = active.data.current?.name;
                 const defaultData = getWidgetDefaultData(widgetType, name);
@@ -351,41 +324,36 @@ export default function AgentDashboardSettingsPage() {
                     name,
                     ...defaultData,
                 } as Widget;
-                
+
+                const overItems = newRows[overRowIndex].widgets;
+                const overWidgetIndex = over.id.toString().startsWith('widget-')
+                    ? overItems.findIndex(w => w.id === over.id)
+                    : overItems.length;
+
                 newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, newWidget);
+                form.setValue('rows', newRows, { shouldDirty: true });
             }
         } else if (activeContainerId && overContainerId && activeContainerId === overContainerId) {
-             // Handle reordering within the same row
              const rowIndex = newRows.findIndex(r => r.id === activeContainerId);
              const oldIndex = newRows[rowIndex].widgets.findIndex(w => w.id === active.id);
              const newIndex = newRows[rowIndex].widgets.findIndex(w => w.id === over.id);
              if(oldIndex !== newIndex){
                  newRows[rowIndex].widgets = arrayMove(newRows[rowIndex].widgets, oldIndex, newIndex);
+                 form.setValue('rows', newRows, { shouldDirty: true });
              }
         } else if (activeContainerId && overContainerId && activeContainerId !== overContainerId) {
-            // This case is now handled by onDragOver, but we re-set state to be safe.
-            const activeRowIndex = newRows.findIndex(r => r.id === activeContainerId);
-            const activeWidgetIndex = newRows[activeRowIndex]?.widgets.findIndex(w => w.id === active.id);
-
-            if (activeWidgetIndex !== -1 && activeWidgetIndex !== undefined) {
-                 const [movedWidget] = newRows[activeRowIndex].widgets.splice(activeWidgetIndex, 1);
-                 const overRowIndex = newRows.findIndex(r => r.id === overContainerId);
-                 const overWidgetIndex = newRows[overRowIndex]?.widgets.findIndex(w => w.id === over.id);
-                 if (overWidgetIndex !== -1 && overWidgetIndex !== undefined) {
-                     newRows[overRowIndex].widgets.splice(overWidgetIndex, 0, movedWidget);
-                 } else {
-                     newRows[overRowIndex].widgets.push(movedWidget);
-                 }
-            }
+            // Already handled by onDragOver
         }
 
         if(active.id.toString().startsWith('row-') && over.id.toString().startsWith('row-')){
              const oldIndex = newRows.findIndex(r => r.id === active.id);
              const newIndex = newRows.findIndex(r => r.id === over.id);
-             if(oldIndex !== newIndex) newRows = arrayMove(newRows, oldIndex, newIndex);
+             if(oldIndex !== newIndex) {
+                const movedRows = arrayMove(newRows, oldIndex, newIndex);
+                form.setValue('rows', movedRows, { shouldDirty: true });
+             }
         }
 
-        form.setValue('rows', newRows, { shouldDirty: true });
         setActiveId(null);
     };
 
@@ -584,7 +552,6 @@ function SortableWidgetItem({ widget, rowIndex, widgetIndex, onRemove, control }
                                     <FormDescription>Enable and reorder the leaderboards.</FormDescription>
                                     <SortableContext items={leaderboardFields.map(l => l.id)} strategy={verticalListSortingStrategy}>
                                          {leaderboardFields.map((lbField, lbIndex) => {
-                                            // This is a bit of a workaround because useSortable needs a stable ID
                                              const SortableItem = ({ children }: { children: React.ReactNode }) => {
                                                  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: lbField.id });
                                                  const style = { transform: CSS.Transform.toString(transform), transition };
