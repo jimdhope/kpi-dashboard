@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -64,10 +65,9 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
             } else if (fetchedComps.length > 0) {
                  setSelectedCompetitionId(fetchedComps[0].id);
             } else {
-                 setIsLoading(false); // No competitions, stop loading
+                 setIsLoading(false); 
             }
         } else {
-            // This handles the case where competitions update but the selected one is still valid
             setIsLoading(false);
         }
     }, (error) => {
@@ -99,10 +99,8 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
 
-    // Set teams immediately from the selected competition data
     setTeams(selectedCompetition.teams || []);
 
-    // Listen for all achievement logs for the competition for the correct date range
     const logsQuery = query(
         collection(db, 'dailyAchievements'),
         where('competitionId', '==', selectedCompetitionId),
@@ -113,7 +111,6 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
         setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
     }));
 
-    // Listen for all bonus logs for the competition
     const bonusLogsQuery = query(
         collection(db, 'teamBonusLogs'),
         where('competitionId', '==', selectedCompetitionId),
@@ -122,14 +119,14 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     );
     unsubscribes.push(onSnapshot(bonusLogsQuery, (snapshot) => {
         setBonusLogs(snapshot.docs.map(doc => doc.data() as TeamBonusLog));
-        setIsLoading(false); // Only set loading to false after the final fetch
+        setIsLoading(false); 
     }, (error) => {
         console.error("Error fetching bonus logs:", error);
         setIsLoading(false);
     }));
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedCompetitionId, allCompetitions]); // Depend only on the ID and the list of all comps
+  }, [selectedCompetitionId, allCompetitions]);
 
 
   const teamLeaderboard = useMemo(() => {
@@ -140,14 +137,18 @@ export function TeamLeaderboardWidget({ currentUser }: TeamLeaderboardWidgetProp
     
     const teamScores = teams.reduce((acc, team) => {
       const teamAgentIds = new Set(team.agentIds);
+
+      // Sum points directly from achievement logs for the team's agents
       const achievementPoints = competitionLogs
         .filter(log => teamAgentIds.has(log.agentId))
         .reduce((sum, log) => sum + (log.points || 0), 0);
       
+      // Sum points directly from bonus logs for the team
       const teamBonusPoints = bonusLogs
         .filter(log => log.teamId === team.id)
         .reduce((sum, log) => sum + (log.points || 0), 0);
       
+      // The total score is the sum of achievements and bonuses
       acc[team.id] = achievementPoints + teamBonusPoints;
       return acc;
     }, {} as Record<string, number>);
