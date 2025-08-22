@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -165,7 +166,7 @@ export default function AgentDashboardPage() {
 
       const compQuery = query(collection(db, 'competitions'), where('podIds', 'array-contains', agentPodId), orderBy('startDate', 'desc'));
       const unsubscribeComps = onSnapshot(compQuery, (snapshot) => {
-          const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithRules));
+          const fetchedComps = snapshot.docs.map(doc => ({ id: docSnap.id, ...docSnap.data() } as CompetitionWithRules));
           setAllCompetitions(fetchedComps);
           const savedCompId = localStorage.getItem(AGENT_DASHBOARD_COMP_KEY);
           if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
