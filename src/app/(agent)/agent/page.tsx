@@ -253,7 +253,7 @@ export default function AgentDashboardPage() {
       return () => unsubscribeSettings();
   }, []);
 
- const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
+  const { agentLeaderboard, teamLeaderboard, podLeaderboard } = useMemo(() => {
     if (!activeCompetition || !allPods.length) {
         return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
     }
