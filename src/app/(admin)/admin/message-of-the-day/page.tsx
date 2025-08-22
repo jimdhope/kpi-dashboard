@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Loader2, Save, Settings, PlusCircle, Trash2, Rows, View, Columns, X } from 'lucide-react';
+import { Loader2, Save, Settings, PlusCircle, Trash2, Rows, View, Columns, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from "@/components/ui/switch";
@@ -250,6 +250,24 @@ export default function AgentDashboardSettingsPage() {
         }
     };
 
+    const handleMoveColumn = (rowIndex: number, colIndex: number, direction: 'left' | 'right') => {
+        const rows = form.getValues('rows');
+        const targetRow = rows[rowIndex];
+        if (!targetRow) return;
+
+        const columns = [...targetRow.columns];
+        const targetColumn = columns[colIndex];
+        const swapIndex = direction === 'left' ? colIndex - 1 : colIndex + 1;
+
+        if (swapIndex < 0 || swapIndex >= columns.length) return; // Out of bounds
+
+        // Simple swap
+        columns[colIndex] = columns[swapIndex];
+        columns[swapIndex] = targetColumn;
+
+        form.setValue(`rows.${rowIndex}.columns`, columns, { shouldDirty: true });
+    };
+
 
     const handleSaveChanges = async (data: DashboardSettingsFormData) => {
          setIsSaving(true);
@@ -302,7 +320,7 @@ export default function AgentDashboardSettingsPage() {
                             </div>
                         ) : (
                             rowFields.map((row, rowIndex) => (
-                                <RowEditor key={row.id} rowIndex={rowIndex} removeRow={removeRow} form={form} onAddColumn={handleAddNewColumn} onRemoveColumn={handleRemoveColumn} onAddWidget={handleAddWidgetToColumn} onRemoveWidget={handleRemoveWidgetFromColumn} />
+                                <RowEditor key={row.id} rowIndex={rowIndex} removeRow={removeRow} form={form} onAddColumn={handleAddNewColumn} onRemoveColumn={handleRemoveColumn} onAddWidget={handleAddWidgetToColumn} onRemoveWidget={handleRemoveWidgetFromColumn} onMoveColumn={handleMoveColumn} />
                             ))
                         )}
                     </CardContent>
@@ -353,9 +371,10 @@ interface RowEditorProps {
     onRemoveColumn: (rowIndex: number, colIndex: number) => void;
     onAddWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
     onRemoveWidget: (rowIndex: number, colIndex: number, widgetIndex: number) => void;
+    onMoveColumn: (rowIndex: number, colIndex: number, direction: 'left' | 'right') => void;
 }
 
-function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onAddWidget, onRemoveWidget }: RowEditorProps) {
+function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onAddWidget, onRemoveWidget, onMoveColumn }: RowEditorProps) {
     const { control, setValue, getValues } = form;
     const { fields: columnFields } = useFieldArray({ control, name: `rows.${rowIndex}.columns`, keyName: "colId" });
     const rowRef = useRef<HTMLDivElement>(null);
@@ -410,7 +429,7 @@ function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onA
                     <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeRow(rowIndex)}><Trash2 className="h-4 w-4"/></Button>
                 </div>
             </div>
-             <div ref={rowRef} className={cn("min-h-[8rem] p-4 border-2 border-dashed rounded-md flex items-start gap-0", columnFields.length === 0 && "justify-center items-center")}>
+             <div ref={rowRef} className={cn("min-h-[8rem] p-4 border-2 border-dashed rounded-md flex items-stretch gap-0", columnFields.length === 0 && "justify-center items-center")}>
                  {columnFields.length === 0 ? (
                      <p className="text-sm text-muted-foreground">Add a column to this row.</p>
                  ) : (
@@ -423,13 +442,16 @@ function RowEditor({ rowIndex, removeRow, form, onAddColumn, onRemoveColumn, onA
                                  onRemoveColumn={onRemoveColumn}
                                  onAddWidget={onAddWidget}
                                  onRemoveWidget={onRemoveWidget}
+                                 onMoveColumn={onMoveColumn}
                                  form={form}
                                  width={col.width}
+                                 isFirst={colIndex === 0}
+                                 isLast={colIndex === columnFields.length - 1}
                              />
                               {colIndex < columnFields.length - 1 && (
                                 <div
                                     onPointerDown={(e) => handleResize(colIndex, e)}
-                                    className="w-2 h-full cursor-col-resize flex items-center justify-center group"
+                                    className="w-2 h-auto cursor-col-resize flex items-center justify-center group bg-transparent"
                                 >
                                     <div className="w-0.5 h-1/2 bg-border group-hover:bg-primary transition-colors"></div>
                                 </div>
@@ -448,20 +470,34 @@ interface ColumnEditorProps {
     onRemoveColumn: (rowIndex: number, colIndex: number) => void;
     onAddWidget: (rowIndex: number, colIndex: number, widgetType: WidgetType) => void;
     onRemoveWidget: (rowIndex: number, colIndex: number, widgetIndex: number) => void;
+    onMoveColumn: (rowIndex: number, colIndex: number, direction: 'left' | 'right') => void;
     form: any;
     width: number;
+    isFirst: boolean;
+    isLast: boolean;
 }
 
 
-function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onAddWidget, onRemoveWidget, form, width }: ColumnEditorProps) {
+function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onAddWidget, onRemoveWidget, onMoveColumn, form, width, isFirst, isLast }: ColumnEditorProps) {
     const columnPath = `rows.${rowIndex}.columns.${colIndex}.widgets`;
     const { fields: widgetFields } = useFieldArray({ control: form.control, name: columnPath, keyName: "widgetId" });
 
     return (
-        <div style={{ flexBasis: `${width}%` }} className="relative p-3 border rounded-md bg-card shadow-sm flex flex-col gap-4 group min-w-[200px]">
-            <Button onClick={() => onRemoveColumn(rowIndex, colIndex)} variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 text-destructive bg-card border rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4"/></Button>
+        <div style={{ flexBasis: `${width}%` }} className="relative p-1 border rounded-md bg-card shadow-sm flex flex-col gap-4 group min-w-[200px]">
+             {/* Column Header */}
+            <div className="flex items-center justify-end h-8 px-2 border-b bg-muted/30">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onMoveColumn(rowIndex, colIndex, 'left')} disabled={isFirst} title="Move Left">
+                    <ArrowLeft className="h-4 w-4"/>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onMoveColumn(rowIndex, colIndex, 'right')} disabled={isLast} title="Move Right">
+                    <ArrowRight className="h-4 w-4"/>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onRemoveColumn(rowIndex, colIndex)} title="Delete Column">
+                    <Trash2 className="h-4 w-4"/>
+                </Button>
+            </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 p-2 flex-grow">
                 {widgetFields.map((widget, widgetIndex) => (
                     <WidgetEditor key={widget.id} rowIndex={rowIndex} colIndex={colIndex} widgetIndex={widgetIndex} onRemoveWidget={onRemoveWidget} form={form} />
                 ))}
@@ -469,7 +505,7 @@ function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onAddWidget, onRemov
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="mt-auto w-full">
+                    <Button variant="outline" size="sm" className="mt-auto w-full mx-2 mb-2 self-center" style={{maxWidth: 'calc(100% - 1rem)'}}>
                         <PlusCircle className="mr-2 h-4 w-4"/> Add Widget
                     </Button>
                 </DropdownMenuTrigger>
@@ -526,7 +562,7 @@ function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }:
                                 <FormField control={control} name={`${widgetPath}.content`} render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
                             </>
                         )}
-                        {(widget.type && (widget.type === 'achievements' || widget.type === 'pod-targets' || widget.type.startsWith('leaderboard-'))) && (
+                        {(widget.type && widget.type !== 'motd' && widget.type !== 'custom-html') && (
                              <p className="text-sm text-muted-foreground">This widget has no additional settings.</p>
                         )}
                     </AccordionContent>
@@ -535,4 +571,3 @@ function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }:
          </div>
     );
 }
-
