@@ -247,7 +247,7 @@ export default function AgentDashboardPage() {
 
         switch (widget.type) {
             case 'motd':
-                return <MessageOfTheDayDisplay emoji={widget.emoji} content={widget.content} isLoading={isLoadingSettings} />;
+                return <MessageOfTheDayDisplay title={widget.title} emoji={widget.emoji} content={widget.content} isLoading={isLoadingSettings} />;
             case 'leaderboard-agent':
                 return <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />;
             case 'leaderboard-team':

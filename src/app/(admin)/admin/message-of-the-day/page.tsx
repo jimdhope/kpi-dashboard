@@ -55,6 +55,7 @@ const baseWidgetSchema = z.object({
 
 const motdWidgetSchema = baseWidgetSchema.extend({
   type: z.literal('motd'),
+  title: z.string().min(1, 'Title is required.'),
   emoji: z.string().min(1, 'Emoji is required.').max(10, 'Emoji should be short.'),
   content: z.string().min(1, 'Message content is required.'),
 });
@@ -156,7 +157,7 @@ export default function AgentDashboardSettingsPage() {
         const base = { id: `widget-${Date.now()}`, isEnabled: true };
         switch (widgetType) {
             case 'motd':
-                return { ...base, type: 'motd', name: 'Message of the Day', emoji: '🎉', content: '<p>Welcome!</p>' };
+                return { ...base, type: 'motd', name: 'Message of the Day', title: 'Message of the Day', emoji: '🎉', content: '<p>Welcome!</p>' };
             case 'achievements':
                 return { ...base, type: 'achievements', name: 'Today\'s Achievements' };
             case 'pod-targets':
@@ -587,6 +588,7 @@ function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }:
                     <AccordionContent className="pt-2 space-y-4">
                         {widget.type === 'motd' && (
                             <>
+                                <FormField control={control} name={`${widgetPath}.title`} render={({ field }) => (<FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={control} name={`${widgetPath}.emoji`} render={({ field }) => (<FormItem><FormLabel>Emoji</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={control} name={`${widgetPath}.content`} render={({ field }) => (<FormItem><FormLabel>Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
                             </>

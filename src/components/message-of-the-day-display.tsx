@@ -2,17 +2,18 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Info, PartyPopper } from 'lucide-react'; // Example icons
 import { Skeleton } from './ui/skeleton'; // Import Skeleton
 
 interface MessageOfTheDayDisplayProps {
+  title?: string | null;
   emoji: string | null;
   content: string | null;
   isLoading?: boolean;
 }
 
-export function MessageOfTheDayDisplay({ emoji, content, isLoading }: MessageOfTheDayDisplayProps) {
+export function MessageOfTheDayDisplay({ title, emoji, content, isLoading }: MessageOfTheDayDisplayProps) {
   if (isLoading) {
     return (
       <Card className="w-full p-4 frosted-glass mb-6 shadow-lg">
@@ -36,21 +37,24 @@ export function MessageOfTheDayDisplay({ emoji, content, isLoading }: MessageOfT
 
   return (
     <Card className="w-full p-4 frosted-glass mb-6 shadow-lg">
-      <div className="flex items-start gap-4">
-        <div className="text-4xl flex-shrink-0 mt-1">
-          {typeof displayEmoji === 'string' ? (
-            <span>{displayEmoji}</span>
-          ) : (
-            displayEmoji
-          )}
-        </div>
+       <CardHeader className="p-0 pb-3 flex flex-row items-center space-y-0">
+           <div className="text-4xl flex-shrink-0">
+              {typeof displayEmoji === 'string' ? (
+                <span>{displayEmoji}</span>
+              ) : (
+                displayEmoji
+              )}
+            </div>
+           {title && <CardTitle className="ml-3 text-xl">{title}</CardTitle>}
+       </CardHeader>
+       <CardContent className="p-0">
         {/* Use dangerouslySetInnerHTML to render HTML content */}
         {/* Added prose classes for better default styling of HTML from Lexical */}
         <div
           className="flex-1 message-content break-words prose prose-sm dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: content }}
         />
-      </div>
+       </CardContent>
     </Card>
   );
 }
