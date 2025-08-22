@@ -91,7 +91,7 @@ interface AchievementInputState {
       value: number; // Changed to number
       existingLogId?: string;
     };
-    isNA?: boolean;
+    isPresent?: boolean; // Changed from isNA to isPresent
     naLogId?: string;
   };
 }
@@ -341,7 +341,7 @@ export default function AdminLogAchievementsPage() {
                     initialInputs[agent.id] = {};
                     const agentLogs = logs.filter(log => log.agentId === agent.id);
                     const naLog = agentLogs.find(log => log.status === 'absent');
-                    initialInputs[agent.id].isNA = !!naLog;
+                    initialInputs[agent.id].isPresent = !naLog; // isPresent is true if there is NO absent log
                     initialInputs[agent.id].naLogId = naLog?.id;
 
                     (competitionForLogging?.rules || []).forEach(rule => {
@@ -526,9 +526,9 @@ export default function AdminLogAchievementsPage() {
   }, [achievementInputs, debouncedSave]);
 
 
-  const handleNaChange = async (agentId: string, isChecked: boolean) => {
+  const handlePresenceChange = async (agentId: string, isPresent: boolean) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
-        toast({ variant: 'destructive', title: 'Cannot set N/A status', description: 'Missing required context (pod, user, or competition).' });
+        toast({ variant: 'destructive', title: 'Cannot set presence status', description: 'Missing required context (pod, user, or competition).' });
         return;
     }
 
@@ -538,7 +538,10 @@ export default function AdminLogAchievementsPage() {
 
     try {
         const batch = writeBatch(db);
-        if (isChecked) {
+        const naLogId = achievementInputs[agentId]?.naLogId;
+
+        if (!isPresent) { // Agent is being marked as ABSENT
+            // Delete all existing numeric and task logs for this agent today
             const initialLogsQuery = query(
                 achievementsRef,
                 where('agentId', '==', agentId),
@@ -549,6 +552,7 @@ export default function AdminLogAchievementsPage() {
             const logsToDeleteSnap = await getDocs(initialLogsQuery);
             logsToDeleteSnap.forEach(doc => batch.delete(doc.ref));
 
+            // Create a single "absent" log
             const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
             const naLogEntry: DailyAchievementLog = {
                 agentId, podId: selectedPodId, competitionId: activeCompetitionId,
@@ -562,23 +566,24 @@ export default function AdminLogAchievementsPage() {
             const newNaLogRef = doc(collection(db, 'dailyAchievements'));
             batch.set(newNaLogRef, naLogEntry);
 
-        } else {
-            const naLogId = achievementInputs[agentId]?.naLogId;
+        } else { // Agent is being marked as PRESENT
+            // Delete the "absent" log if it exists
             if (naLogId) {
                 batch.delete(doc(achievementsRef, naLogId));
             }
         }
         await batch.commit();
 
+        // Optimistically update UI state
         setAchievementInputs(prev => ({
             ...prev,
-            [agentId]: { ...prev[agentId], isNA: isChecked, naLogId: isChecked ? (achievementInputs[agentId]?.naLogId || 'temp-id') : undefined }
+            [agentId]: { ...(prev[agentId] || {}), isPresent: isPresent, naLogId: !isPresent ? (naLogId || 'temp-id') : undefined }
         }));
 
 
     } catch (error) {
-         console.error("Error changing N/A status:", error);
-         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update the N/A status.' });
+         console.error("Error changing presence status:", error);
+         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update the presence status.' });
     } finally {
         setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
@@ -667,7 +672,7 @@ export default function AdminLogAchievementsPage() {
                     await deleteDoc(docRef);
                     setBonusInputs(prev => ({ ...prev, [teamId]: { ...prev[teamId], existingLogId: undefined } }));
                 } else {
-                    await updateDoc(docRef, { points: newPoints, loggedAt: serverTimestamp() });
+                    await setDoc(docRef, { points: newPoints, loggedAt: serverTimestamp() }, { merge: true });
                 }
             } else if (newPoints !== 0) {
                 const newDocRef = await addDoc(bonusLogsRef, logEntry);
@@ -865,13 +870,6 @@ export default function AdminLogAchievementsPage() {
                 <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
             ) : isLoading ? (
                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background">
-                        <TableRow>
-                            <TableHead className="w-[200px]">Agent</TableHead>
-                            <TableHead><Skeleton className="h-4 w-20" /></TableHead>
-                            <TableHead><Skeleton className="h-4 w-20" /></TableHead>
-                        </TableRow>
-                    </TableHeader>
                     <TableBody>
                     {Array.from({ length: 3 }).map((_, i) => (
                         <TableRow key={i}>
@@ -894,62 +892,59 @@ export default function AdminLogAchievementsPage() {
                 ) : (
                 <div className="overflow-x-auto">
                     <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background">
-                        <TableRow>
-                        <TableHead className="w-[250px]">Agent</TableHead>
-                        {competitionRules.map(rule => (
-                            <TableHead key={rule.id} className="w-[120px] text-center">
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                    <span className="text-lg" title={rule.name}>{(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}</span>
-                                    <span className="text-xs font-normal truncate max-w-[100px]">{rule.name}</span>
-                                </div>
-                            </TableHead>
-                        ))}
-                        </TableRow>
-                    </TableHeader>
                     <TableBody>
                         {agents.map((agent) => (
                         agent.id ? (
                             <TableRow key={agent.id}>
-                                <TableCell className="font-medium">
+                                <TableCell className="font-medium w-[250px]">
                                     <div className="flex items-center gap-2">
                                         <Checkbox
-                                            id={`na-checkbox-${agent.id}`}
-                                            checked={achievementInputs[agent.id]?.isNA || false}
-                                            onCheckedChange={(checked) => handleNaChange(agent.id!, !!checked)}
+                                            id={`present-checkbox-${agent.id}`}
+                                            checked={achievementInputs[agent.id]?.isPresent || false}
+                                            onCheckedChange={(checked) => handlePresenceChange(agent.id!, !!checked)}
                                             disabled={isSaving[`${agent.id}-na`]}
-                                            aria-label={`Mark ${agent.name} as N/A`}
+                                            aria-label={`Mark ${agent.name} as present`}
                                         />
-                                        <Label htmlFor={`na-checkbox-${agent.id}`} className={cn(achievementInputs[agent.id]?.isNA && "text-muted-foreground")}>
+                                        <Label htmlFor={`present-checkbox-${agent.id}`} className={cn(!achievementInputs[agent.id]?.isPresent && "text-muted-foreground line-through")}>
                                             {agent.name}
                                         </Label>
                                         {isSaving[`${agent.id}-na`] && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                                     </div>
                                 </TableCell>
-                                {competitionRules.map(rule => (
-                                rule.id ? (
-                                    <TableCell key={rule.id} className="text-center">
-                                        {rule.type === 'numeric' ? (
-                                            <AchievementCard
-                                                rule={rule}
-                                                currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
-                                                isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
-                                                onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
-                                                onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
-                                                disabled={achievementInputs[agent.id!]?.isNA}
-                                            />
-                                        ) : (
-                                            <Checkbox
-                                                id={`task-checkbox-${agent.id}-${rule.id}`}
-                                                checked={taskInputs[agent.id!]?.[rule.id!]?.checked || false}
-                                                onCheckedChange={(checked) => handleTaskChange(agent.id!, rule.id!, !!checked)}
-                                                disabled={isSaving[`task-${agent.id!}-${rule.id!}`] || achievementInputs[agent.id!]?.isNA}
-                                                aria-label={`Task ${rule.name} for ${agent.name}`}
-                                            />
-                                        )}
-                                    </TableCell>
-                                ) : null
-                                ))}
+                                <TableCell>
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        {competitionRules.map(rule => (
+                                        rule.id ? (
+                                             <div key={rule.id} className="text-center">
+                                                {rule.type === 'numeric' ? (
+                                                    <AchievementCard
+                                                        rule={rule}
+                                                        currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
+                                                        isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
+                                                        onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
+                                                        onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
+                                                        disabled={!achievementInputs[agent.id!]?.isPresent}
+                                                    />
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-2 p-3 border rounded-md h-full justify-center bg-card">
+                                                        <Label htmlFor={`task-checkbox-${agent.id}-${rule.id}`} className="text-sm font-medium truncate flex items-center gap-2">
+                                                             <span className="text-lg">{rule.emoji || '❓'}</span>
+                                                             <span className="truncate" title={rule.name}>{rule.name}</span>
+                                                        </Label>
+                                                        <Checkbox
+                                                            id={`task-checkbox-${agent.id}-${rule.id}`}
+                                                            checked={taskInputs[agent.id!]?.[rule.id!]?.checked || false}
+                                                            onCheckedChange={(checked) => handleTaskChange(agent.id!, rule.id!, !!checked)}
+                                                            disabled={isSaving[`task-${agent.id!}-${rule.id!}`] || !achievementInputs[agent.id!]?.isPresent}
+                                                            aria-label={`Task ${rule.name} for ${agent.name}`}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null
+                                        ))}
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ) : null
                         ))}
