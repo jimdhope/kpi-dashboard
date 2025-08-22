@@ -107,7 +107,8 @@ interface TaskInputState {
 
 interface TeamBonusInputState {
     [teamId: string]: {
-        points: string; // Use string for input
+        points: number; // Use number for input
+        existingLogId?: string; // To track existing log
     };
 }
 
@@ -291,22 +292,12 @@ export default function AdminLogAchievementsPage() {
                 setCompetitionLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as DailyAchievementLog)));
             });
 
+            // Listener for all bonus logs for the competition
             const bonusLogsRefComp = collection(db, 'teamBonusLogs');
             const bonusLogsQueryComp = query(bonusLogsRefComp, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id));
             unsubscribeCompBonusLogs = onSnapshot(bonusLogsQueryComp, (snapshot) => {
                 const allBonusLogs = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog));
                 setCompetitionBonusLogs(allBonusLogs);
-                
-                // Populate bonus inputs with today's data
-                const todayStart = startOfDay(selectedDate).getTime();
-                const todayBonusLogs = allBonusLogs.filter(log => startOfDay(log.date.toDate()).getTime() === todayStart);
-                const initialBonusInputs: TeamBonusInputState = {};
-                (competitionForLogging?.teams || []).forEach(team => {
-                    const existingLog = todayBonusLogs.find(log => log.teamId === team.id);
-                    initialBonusInputs[team.id] = { points: existingLog ? String(existingLog.points) : '' };
-                });
-                setBonusInputs(initialBonusInputs);
-
             });
 
             // Listener for just today's logs (for form inputs)
@@ -324,6 +315,22 @@ export default function AdminLogAchievementsPage() {
                 where('date', '==', dateTimestamp),
                  where('competitionId', '==', competitionForLogging.id)
             );
+
+            // Listener for today's bonus logs to populate inputs
+            const bonusLogsRef = collection(db, 'teamBonusLogs');
+            const todayBonusLogsQuery = query(bonusLogsRef, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id), where('date', '==', dateTimestamp));
+            unsubscribeBonusLogs = onSnapshot(todayBonusLogsQuery, (snapshot) => {
+                const todayBonusLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
+                const initialBonusInputs: TeamBonusInputState = {};
+                (competitionForLogging?.teams || []).forEach(team => {
+                    const existingLog = todayBonusLogs.find(log => log.teamId === team.id);
+                    initialBonusInputs[team.id] = {
+                        points: existingLog ? existingLog.points : 0,
+                        existingLogId: existingLog?.id,
+                    };
+                });
+                setBonusInputs(initialBonusInputs);
+            });
             
             unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
                 const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
@@ -631,64 +638,52 @@ export default function AdminLogAchievementsPage() {
     }
   };
 
-  const handleBonusInputChange = (teamId: string, value: string) => {
-    setBonusInputs(prev => ({...prev, [teamId]: {...prev[teamId], points: value}}));
-  };
-  
-  const handleSaveBonusPoints = async () => {
-    if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
-        toast({ variant: "destructive", title: "Cannot Award Points", description: "Missing required context." });
-        return;
-    }
+    const handleBonusPointsChange = useCallback(async (teamId: string, change: number) => {
+        if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
+            toast({ variant: "destructive", title: "Cannot Award Points", description: "Missing required context." });
+            return;
+        }
 
-    setIsSavingBonus(true);
-    const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-    const bonusLogsRef = collection(db, 'teamBonusLogs');
-    const batch = writeBatch(db);
+        const currentPoints = bonusInputs[teamId]?.points ?? 0;
+        const newPoints = currentPoints + change; // Can be negative
+        const existingLogId = bonusInputs[teamId]?.existingLogId;
 
-    const logsToProcess = Object.entries(bonusInputs).map(([teamId, data]) => ({
-        teamId,
-        points: parseInt(data.points, 10) || 0,
-    }));
+        setIsSavingBonus(true);
+        setBonusInputs(prev => ({ ...prev, [teamId]: { ...prev[teamId], points: newPoints } }));
 
-    if (logsToProcess.length === 0) {
-        toast({ title: "No changes to save." });
-        setIsSavingBonus(false);
-        return;
-    }
+        const bonusLogsRef = collection(db, 'teamBonusLogs');
+        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
 
-    try {
-        const q = query(bonusLogsRef, where('podId', '==', selectedPodId), where('competitionId', '==', activeCompetitionId), where('date', '==', dateTimestamp));
-        const snapshot = await getDocs(q);
-        const existingLogsMap = new Map(snapshot.docs.map(doc => [doc.data().teamId, doc.id]));
-
-        for (const { teamId, points } of logsToProcess) {
-            const existingLogId = existingLogsMap.get(teamId);
+        try {
             const logEntry: Omit<TeamBonusLog, 'id'> = {
                 teamId, podId: selectedPodId, competitionId: activeCompetitionId,
-                points, reason: "Manual Adjustment", date: dateTimestamp,
+                points: newPoints, reason: "Manual Adjustment", date: dateTimestamp,
                 loggedAt: serverTimestamp() as Timestamp, loggedBy: currentUserUid,
             };
 
-            if (points === 0 && existingLogId) {
-                // If points are set to 0, delete the existing log
-                batch.delete(doc(bonusLogsRef, existingLogId));
-            } else if (points !== 0) {
-                // If points are non-zero, create or update the log
-                const docRef = existingLogId ? doc(bonusLogsRef, existingLogId) : doc(bonusLogsRef);
-                batch.set(docRef, logEntry);
+            if (existingLogId) {
+                const docRef = doc(bonusLogsRef, existingLogId);
+                if (newPoints === 0) {
+                    await deleteDoc(docRef);
+                    setBonusInputs(prev => ({ ...prev, [teamId]: { ...prev[teamId], existingLogId: undefined } }));
+                } else {
+                    await updateDoc(docRef, { points: newPoints, loggedAt: serverTimestamp() });
+                }
+            } else if (newPoints !== 0) {
+                const newDocRef = await addDoc(bonusLogsRef, logEntry);
+                setBonusInputs(prev => ({ ...prev, [teamId]: { ...prev[teamId], existingLogId: newDocRef.id } }));
             }
+             toast({ title: "Bonus Points Updated", description: "Changes saved successfully." });
+        } catch (error) {
+            console.error("Error saving bonus points:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not save bonus points." });
+             // Revert optimistic update on error
+             setBonusInputs(prev => ({ ...prev, [teamId]: { ...prev[teamId], points: currentPoints } }));
+        } finally {
+            setIsSavingBonus(false);
         }
+    }, [bonusInputs, selectedPodId, currentUserUid, activeCompetitionId, selectedDate, toast]);
 
-        await batch.commit();
-        toast({ title: "Success", description: "Team bonus points have been updated." });
-    } catch (error) {
-        console.error("Error saving bonus points:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not save bonus points." });
-    } finally {
-        setIsSavingBonus(false);
-    }
-  };
 
     const handleSendToTeams = async () => {
         const currentPod = pods.find(p => p.id === selectedPodId);
@@ -970,32 +965,44 @@ export default function AdminLogAchievementsPage() {
                     <CardDescription>Award or deduct points from teams for the selected day. This affects team leaderboards only.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                           {teams.map(team => (
-                               <div key={team.id} className="flex items-center gap-3">
-                                   <Label htmlFor={`bonus-${team.id}`} className="flex-1 text-sm font-medium">
-                                       <span className="text-lg mr-2">{team.emoji || '🏆'}</span>
-                                       {team.name}
-                                   </Label>
-                                   <Input
-                                       id={`bonus-${team.id}`}
-                                       type="number"
-                                       placeholder="0"
-                                       className="w-24"
-                                       value={bonusInputs[team.id]?.points ?? ''}
-                                       onChange={(e) => handleBonusInputChange(team.id, e.target.value)}
-                                       disabled={isSavingBonus}
-                                   />
-                               </div>
-                           ))}
-                        </div>
-                         <div className="flex justify-end">
-                            <Button onClick={handleSaveBonusPoints} disabled={isSavingBonus}>
-                                {isSavingBonus ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Award className="mr-2 h-4 w-4"/>}
-                                Award Bonus Points
-                            </Button>
-                         </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {teams.map(team => (
+                            <Card key={team.id} className="shadow-sm overflow-hidden flex flex-col h-full frosted-glass">
+                                <CardHeader className="p-3 pb-0">
+                                    <CardTitle className="text-sm font-medium truncate flex items-center gap-2">
+                                        <span className="text-lg">{team.emoji || '🏆'}</span>
+                                        <span className="truncate" title={team.name}>{team.name}</span>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 flex items-center justify-between flex-grow">
+                                    <div className="flex-grow flex items-center justify-center">
+                                        <p className="text-2xl font-bold text-primary">{bonusInputs[team.id]?.points ?? 0}</p>
+                                    </div>
+                                    <div className="flex flex-col border-l ml-3 pl-3">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-9 w-9 rounded-md border-b"
+                                            onClick={() => handleBonusPointsChange(team.id, 1)}
+                                            disabled={isSavingBonus}
+                                            aria-label={`Increase points for ${team.name}`}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-9 w-9 rounded-md"
+                                            onClick={() => handleBonusPointsChange(team.id, -1)}
+                                            disabled={isSavingBonus}
+                                            aria-label={`Decrease points for ${team.name}`}
+                                        >
+                                            <Minus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
                     </div>
                 </CardContent>
             </Card>
@@ -1008,3 +1015,6 @@ export default function AdminLogAchievementsPage() {
 
     
 
+
+
+    
