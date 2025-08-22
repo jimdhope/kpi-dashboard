@@ -32,6 +32,8 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
 
 // --- Zod Schema Definitions ---
 
@@ -77,6 +79,8 @@ export type SpecificWidget = z.infer<typeof specificWidgetSchema>;
 const columnSchema = z.object({
     id: z.string(),
     width: z.number().min(10).max(100), // Width as a percentage
+    name: z.string().optional(), // Optional column name/title
+    showName: z.boolean().optional(), // Option to show the name on the dashboard
     widgets: z.array(specificWidgetSchema),
 });
 export type Column = z.infer<typeof columnSchema>;
@@ -204,7 +208,7 @@ export default function AgentDashboardSettingsPage() {
 
 
     const handleAddNewRow = () => {
-        appendRow({ id: `row-${Date.now()}`, columns: [{ id: `col-${Date.now()}`, width: 100, widgets: [] }] });
+        appendRow({ id: `row-${Date.now()}`, columns: [{ id: `col-${Date.now()}`, width: 100, widgets: [], name: '', showName: false }] });
     };
 
     const rebalanceColumnWidths = (columns: Column[]): Column[] => {
@@ -219,7 +223,7 @@ export default function AgentDashboardSettingsPage() {
         const rows = form.getValues('rows');
         const targetRow = rows[rowIndex];
         if (targetRow) {
-            const newColumn: Column = { id: `col-${Date.now()}`, width: 0, widgets: [] };
+            const newColumn: Column = { id: `col-${Date.now()}`, width: 0, widgets: [], name: '', showName: false };
             const updatedColumns = [...targetRow.columns, newColumn];
             const rebalancedColumns = rebalanceColumnWidths(updatedColumns);
             form.setValue(`rows.${rowIndex}.columns`, rebalancedColumns, { shouldDirty: true });
@@ -479,13 +483,43 @@ interface ColumnEditorProps {
 
 
 function ColumnEditor({ rowIndex, colIndex, onRemoveColumn, onAddWidget, onRemoveWidget, onMoveColumn, form, width, isFirst, isLast }: ColumnEditorProps) {
-    const columnPath = `rows.${rowIndex}.columns.${colIndex}.widgets`;
-    const { fields: widgetFields } = useFieldArray({ control: form.control, name: columnPath, keyName: "widgetId" });
+    const columnPath = `rows.${rowIndex}.columns.${colIndex}`;
+    const { fields: widgetFields } = useFieldArray({ control: form.control, name: `${columnPath}.widgets`, keyName: "widgetId" });
 
     return (
         <div style={{ flexBasis: `${width}%` }} className="relative p-1 border rounded-md bg-card shadow-sm flex flex-col gap-4 group min-w-[200px]">
              {/* Column Header */}
             <div className="flex items-center justify-end h-8 px-2 border-b bg-muted/30">
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" title="Column Settings">
+                            <Settings className="h-4 w-4"/>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-4 space-y-4">
+                        <FormField
+                            control={form.control}
+                            name={`${columnPath}.name`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Column Title (Optional)</FormLabel>
+                                    <FormControl><Input placeholder="e.g., Leaderboards" {...field} /></FormControl>
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`${columnPath}.showName`}
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                     <FormLabel>Show Title</FormLabel>
+                                     <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                </FormItem>
+                            )}
+                        />
+                    </PopoverContent>
+                </Popover>
+
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onMoveColumn(rowIndex, colIndex, 'left')} disabled={isFirst} title="Move Left">
                     <ArrowLeft className="h-4 w-4"/>
                 </Button>

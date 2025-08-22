@@ -285,6 +285,9 @@ export default function AgentDashboardPage() {
            <div key={row.id} className="flex flex-wrap md:flex-nowrap gap-6 items-start">
                {row.columns.map(column => (
                     <div key={column.id} className="w-full space-y-6" style={{ flexBasis: `${column.width}%` }}>
+                        {column.showName && column.name && (
+                            <h3 className="text-lg font-semibold tracking-tight">{column.name}</h3>
+                        )}
                        {column.widgets.map(widget => (
                            <div key={widget.id}>
                             {renderWidget(widget)}
@@ -302,4 +305,3 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
-
