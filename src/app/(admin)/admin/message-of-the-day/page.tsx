@@ -53,7 +53,7 @@ import { Plus, Grip } from 'lucide-react';
 
 
 // --- Zod Schema Definitions ---
-export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links' | 'sidebar';
+export type WidgetType = 'motd' | 'achievements' | 'pod-targets' | 'leaderboards' | 'links' | 'sidebar' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod';
 
 
 const baseWidgetSchema = z.object({
@@ -93,7 +93,7 @@ const sidebarWidgetSchema = baseWidgetSchema.extend({
 
 
 const standardWidgetSchema = baseWidgetSchema.extend({
-    type: z.enum(['achievements', 'pod-targets']),
+    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod']),
 });
 
 
@@ -132,11 +132,13 @@ const SETTINGS_COLLECTION = "settings";
 
 
 // --- Available Widgets Toolbox ---
-const AVAILABLE_WIDGETS: { id: string; name: string }[] = [
+const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'motd', name: 'Message of the Day' },
     { id: 'achievements', name: 'Today\'s Achievements' },
     { id: 'pod-targets', name: 'Pod Targets' },
-    { id: 'leaderboards', name: 'Competition Leaderboards' },
+    { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
+    { id: 'leaderboard-team', name: 'Team Leaderboard' },
+    { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
     { id: 'links', name: 'External Links' },
     { id: 'sidebar-rps-game', name: 'Sidebar: RPS Game Page' },
     { id: 'sidebar-agent-guide', name: 'Sidebar: Agent Guide' },
@@ -183,7 +185,7 @@ export default function AgentDashboardSettingsPage() {
         keyName: "fieldId",
     });
 
-    const getWidgetDefaultData = (widgetType: string, widgetName: string): Omit<Widget, 'id' | 'name'> => {
+    const getWidgetDefaultData = (widgetType: WidgetType, widgetName: string): Omit<Widget, 'id' | 'name'> => {
         switch (widgetType) {
             case 'motd':
                 return { type: 'motd', isEnabled: true, emoji: '🎉', content: '<p>Welcome!</p>' };
@@ -203,7 +205,10 @@ export default function AgentDashboardSettingsPage() {
                 return { type: 'sidebar', isEnabled: true };
             case 'achievements':
             case 'pod-targets':
-                return { type: widgetType as 'achievements' | 'pod-targets', isEnabled: true };
+            case 'leaderboard-agent':
+            case 'leaderboard-team':
+            case 'leaderboard-pod':
+                return { type: widgetType as 'achievements' | 'pod-targets' | 'leaderboard-agent' | 'leaderboard-team' | 'leaderboard-pod', isEnabled: true };
             default: // Fallback for any other standard type
                  return { type: 'achievements', isEnabled: true }; // Fallback to a safe standard type
         }
@@ -281,7 +286,7 @@ export default function AgentDashboardSettingsPage() {
                 : overItems.length;
 
             const newRows = [...form.getValues('rows')];
-            const widgetType = active.data.current?.widgetType as string; // Changed to string
+            const widgetType = active.data.current?.widgetType as WidgetType;
             const name = active.data.current?.name;
             const defaultData = getWidgetDefaultData(widgetType, name);
             const newWidget = {
@@ -313,6 +318,7 @@ export default function AgentDashboardSettingsPage() {
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
+        const overId = over?.id;
 
         // Clean up any temporary widgets from toolbox drags that were cancelled
         let newRows = form.getValues('rows').map(row => ({
@@ -320,7 +326,7 @@ export default function AgentDashboardSettingsPage() {
             widgets: row.widgets.filter(w => !w.id.toString().startsWith('toolbox-'))
         }));
         
-        if (!over) {
+        if (!overId) {
             setActiveId(null);
             form.setValue('rows', newRows); // Set the cleaned rows and stop
             return;
@@ -337,7 +343,7 @@ export default function AgentDashboardSettingsPage() {
                     ? overItems.findIndex(w => w.id === overId)
                     : overItems.length;
 
-                const widgetType = active.data.current?.widgetType as string;
+                const widgetType = active.data.current?.widgetType as WidgetType;
                 const name = active.data.current?.name;
                 const defaultData = getWidgetDefaultData(widgetType, name);
                 const newWidget = {
