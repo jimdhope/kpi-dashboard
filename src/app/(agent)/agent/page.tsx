@@ -11,7 +11,7 @@ import { collection, query, where, Timestamp, doc, getDoc, orderBy, onSnapshot, 
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
-import type { DailyAchievementLog, DailyTaskLog } from '@/app/(admin)/admin/log-achievements/page'; // Import DailyTaskLog
+import type { DailyAchievementLog, DailyTaskLog, TeamBonusLog } from '@/app/(admin)/admin/log-achievements/page'; // Import DailyTaskLog & TeamBonusLog
 import type { RuleFormData } from '@/models/types';
 import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { format, startOfDay, endOfDay, getDay } from 'date-fns';
@@ -113,6 +113,7 @@ export default function AgentDashboardPage() {
   const [rules, setRules] = useState<RuleFormData[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyAchievementLog[]>([]);
   const [podLogs, setPodLogs] = useState<DailyAchievementLog[]>([]);
+  const [podBonusLogs, setPodBonusLogs] = useState<TeamBonusLog[]>([]);
   const [dailyTaskLogs, setDailyTaskLogs] = useState<DailyTaskLog[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -188,7 +189,7 @@ export default function AgentDashboardPage() {
             setCurrentUser(null); setAgentPodId(null); setIsLoadingUser(false);
             cleanupListeners();
             setActiveCompetition(null); setRules([]); setTeams([]); setPodAgents([]);
-            setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
+            setDailyLogs([]); setPodLogs([]); setPodBonusLogs([]); setDailyTargets(null); setAchievementInputs({});
             setDailyTaskLogs([]); setTaskInputs({});
             setIsLoadingData(false);
         }
@@ -249,7 +250,7 @@ export default function AgentDashboardPage() {
     if (isLoadingUser || !agentPodId || !currentUser?.id || !selectedCompetitionId ) {
         if (!isLoadingUser) setIsLoadingData(false);
         setActiveCompetition(null); setRules([]); setTeams([]); setPodAgents([]);
-        setDailyLogs([]); setPodLogs([]); setDailyTargets(null); setAchievementInputs({});
+        setDailyLogs([]); setPodLogs([]); setPodBonusLogs([]); setDailyTargets(null); setAchievementInputs({});
         setDailyTaskLogs([]); setTaskInputs({});
         return () => { isMounted = false; cleanupListeners(); };
     }
@@ -270,7 +271,7 @@ export default function AgentDashboardPage() {
         setRules(newActiveComp.rules || []);
         setTeams(newActiveComp.teams || []);
 
-        cleanupListeners(['agents', 'userLogs', 'podLogs', 'targets', 'dailyAchievements', 'userTaskLogs']);
+        cleanupListeners(['agents', 'userLogs', 'podLogs', 'podBonusLogs', 'targets', 'dailyAchievements', 'userTaskLogs']);
         const usersRef = collection(db, 'users');
         const agentsQuery = query(usersRef, where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
         listenerRefs.current.agents = onSnapshot(agentsQuery, (agentsSnapshot) => { if(isMounted) setPodAgents(agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser))); });
@@ -281,6 +282,9 @@ export default function AgentDashboardPage() {
 
         const podLogsQuery = query(achievementsRef, where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
         listenerRefs.current.podLogs = onSnapshot(podLogsQuery, (snapshot) => { if (isMounted) setPodLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog))); });
+        
+        const bonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', agentPodId), where('competitionId', '==', selectedCompetitionId));
+        listenerRefs.current.podBonusLogs = onSnapshot(bonusLogsQuery, (snapshot) => { if (isMounted) setPodBonusLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TeamBonusLog))); });
 
         const targetsDocRef = doc(db, 'dailyPodTargets', `${selectedCompetitionId}_${agentPodId}`);
         listenerRefs.current.targets = onSnapshot(targetsDocRef, (docSnap) => { if (isMounted) setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null); });
@@ -433,6 +437,12 @@ export default function AgentDashboardPage() {
         }
      });
 
+     podBonusLogs.forEach(log => {
+        if (teamScores.hasOwnProperty(log.teamId)) {
+            teamScores[log.teamId] += log.points || 0;
+        }
+     });
+
     const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
         if (items.length === 0) return [];
         const sortedItems = [...items].sort((a, b) => b.score - a.score);
@@ -450,7 +460,7 @@ export default function AgentDashboardPage() {
     const finalTeamLeaderboard = assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') })));
 
     return { agentDailyAchievements: finalAgentDailyAchievements, agentCompetitionAchievements: finalAgentCompetitionAchievements, podTargetSummary: finalPodTargetSummary, agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-  }, [isLoadingUser, isLoadingData, currentUser, agentPodId, activeCompetition, dailyLogs, podLogs, rules, dailyTargets, podAgents, teams]);
+  }, [isLoadingUser, isLoadingData, currentUser, agentPodId, activeCompetition, dailyLogs, podLogs, podBonusLogs, rules, dailyTargets, podAgents, teams]);
 
 
   const debounce = useCallback((func: Function, delay: number) => {
@@ -631,4 +641,3 @@ export default function AgentDashboardPage() {
     </div>
   );
 }
-

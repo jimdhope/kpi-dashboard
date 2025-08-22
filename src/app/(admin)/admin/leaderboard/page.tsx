@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Leaderboard } from '@/components/leaderboard';
+import type { TeamBonusLog } from '@/app/(admin)/admin/log-achievements/page';
 
 
 // Interface for daily achievement logs (same as before)
@@ -102,6 +103,8 @@ const podsCollectionRef = collection(db, 'pods');
 const usersCollectionRef = collection(db, 'users');
 const competitionsCollectionRef = collection(db, 'competitions');
 const dailyAchievementsCollectionRef = collection(db, 'dailyAchievements');
+const teamBonusLogsCollectionRef = collection(db, 'teamBonusLogs');
+
 
 const LEADERBOARD_COMPETITION_KEY = 'leaderboardPage_selectedCompetitionId';
 const LEADERBOARD_POD_KEY = 'leaderboardPage_selectedPodId';
@@ -115,6 +118,7 @@ export default function AdminLeaderboardPage() {
   const [agents, setAgents] = useState<AppUser[]>([]); // All users, will filter by pod if needed
   const [teams, setTeams] = useState<Team[]>([]); // Teams for the selected competition
   const [allLogs, setAllLogs] = useState<DailyAchievementLog[]>([]);
+  const [bonusLogs, setBonusLogs] = useState<TeamBonusLog[]>([]);
   const [isLoadingBase, setIsLoadingBase] = useState(true); // Loading pods, users, competitions
   const [isLoadingData, setIsLoadingData] = useState(false); // Loading logs, teams
   const [error, setError] = useState<string | null>(null);
@@ -182,72 +186,76 @@ export default function AdminLeaderboardPage() {
   }, []);
 
 
-   // 4. Fetch Competition-Specific Data (Logs, Teams) and Listen to Logs
-  useEffect(() => {
-    if (!selectedCompetitionId) {
-        setTeams([]);
-        setAllLogs([]);
-        setIsLoadingData(false); // Not loading if no competition selected
-        return () => {}; // Return empty cleanup
-    }
-
-    setIsLoadingData(true);
-    setError(null);
-    let unsubscribeLogs: Unsubscribe = () => {};
-
-    const fetchCompetitionDataAndListen = async () => {
-        try {
-            // Fetch Teams for the selected competition
-            const compDocRef = doc(competitionsCollectionRef, selectedCompetitionId);
-            const compDocSnap = await getDoc(compDocRef);
-            if (compDocSnap.exists()) {
-                 const compData = compDocSnap.data() as Competition & { teams?: Team[] };
-                 setTeams(compData.teams || []);
-            } else {
-                setError("Selected competition data not found.");
-                 setTeams([]);
-                 setAllLogs([]);
-                 setIsLoadingData(false);
-                 return;
-            }
-
-            // Listen to Logs for the specific competition
-            let logsQuery = query(dailyAchievementsCollectionRef, where('competitionId', '==', selectedCompetitionId));
-
-            // Apply pod filter if selected
-            if (selectedPodId) {
-                logsQuery = query(logsQuery, where('podId', '==', selectedPodId));
-            }
-
-            unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-                const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-                setAllLogs(fetchedLogs);
-                setIsLoadingData(false); // Data loaded
-                setError(null);
-            }, (err) => {
-                console.error("Error listening to achievement logs for competition:", err);
-                setError("Failed to load real-time leaderboard data.");
-                setAllLogs([]);
-                setIsLoadingData(false);
-            });
-
-        } catch (err) {
-            console.error("Error fetching competition data:", err);
-            setError("Failed to load competition-specific data.");
+   // 4. Fetch Competition-Specific Data (Logs, Teams, Bonus Logs) and Listen
+    useEffect(() => {
+        if (!selectedCompetitionId) {
             setTeams([]);
             setAllLogs([]);
+            setBonusLogs([]);
             setIsLoadingData(false);
+            return () => {};
         }
-    };
 
-    fetchCompetitionDataAndListen();
+        setIsLoadingData(true);
+        setError(null);
+        let unsubscribeLogs: Unsubscribe = () => {};
+        let unsubscribeBonusLogs: Unsubscribe = () => {};
 
-    // Cleanup function for the logs listener
-    return () => {
-        console.log("Unsubscribing from competition leaderboard logs listener");
-        unsubscribeLogs();
-    };
-  }, [selectedCompetitionId, selectedPodId]);
+        const fetchCompetitionDataAndListen = async () => {
+            try {
+                const compDocRef = doc(competitionsCollectionRef, selectedCompetitionId);
+                const compDocSnap = await getDoc(compDocRef);
+                if (compDocSnap.exists()) {
+                    const compData = compDocSnap.data() as Competition & { teams?: Team[] };
+                    setTeams(compData.teams || []);
+                } else {
+                    setError("Selected competition data not found.");
+                    setTeams([]);
+                    setAllLogs([]);
+                    setBonusLogs([]);
+                    setIsLoadingData(false);
+                    return;
+                }
+
+                let logsQuery = query(dailyAchievementsCollectionRef, where('competitionId', '==', selectedCompetitionId));
+                let bonusLogsQuery = query(teamBonusLogsCollectionRef, where('competitionId', '==', selectedCompetitionId));
+
+                if (selectedPodId) {
+                    logsQuery = query(logsQuery, where('podId', '==', selectedPodId));
+                    bonusLogsQuery = query(bonusLogsQuery, where('podId', '==', selectedPodId));
+                }
+
+                unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+                    setAllLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog)));
+                    setIsLoadingData(false);
+                }, (err) => {
+                    console.error("Error listening to achievement logs:", err);
+                    setError("Failed to load real-time leaderboard data.");
+                    setIsLoadingData(false);
+                });
+
+                unsubscribeBonusLogs = onSnapshot(bonusLogsQuery, (snapshot) => {
+                    setBonusLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog)));
+                }, (err) => {
+                    console.error("Error listening to bonus logs:", err);
+                    setError("Failed to load bonus points data.");
+                });
+
+            } catch (err) {
+                console.error("Error fetching competition data:", err);
+                setError("Failed to load competition-specific data.");
+                setTeams([]); setAllLogs([]); setBonusLogs([]);
+                setIsLoadingData(false);
+            }
+        };
+
+        fetchCompetitionDataAndListen();
+
+        return () => {
+            unsubscribeLogs();
+            unsubscribeBonusLogs();
+        };
+    }, [selectedCompetitionId, selectedPodId]);
 
    // --- Memoized Derived Data ---
 
@@ -260,26 +268,21 @@ export default function AdminLeaderboardPage() {
     }, [competitions, pods, selectedCompetitionId]);
 
 
-    // 5. Calculate Leaderboard Scores (useMemo)
+    // 5. Calculate Leaderboard Scores (useMemo) - Updated to include bonusLogs
     const { agentLeaderboard, teamLeaderboard } = useMemo(() => {
         const competition = competitions.find(c => c.id === selectedCompetitionId);
         if (!competition) return { agentLeaderboard: [], teamLeaderboard: [] };
 
         const rulesMap = new Map((competition.rules || []).map(rule => [rule.id, rule]));
 
-        // Filter agents based on selectedPodId if necessary
         const relevantAgents = selectedPodId
             ? agents.filter(agent => agent.podId === selectedPodId && agent.roles?.includes('agent'))
-            : // If no pod filter, include agents from *all* pods participating in the competition
-            agents.filter(agent => agent.roles?.includes('agent') && participatingPods.some(p => p.id === agent.podId));
+            : agents.filter(agent => agent.roles?.includes('agent') && participatingPods.some(p => p.id === agent.podId));
 
-        // Agent calculations
         const agentScores: Record<string, number> = {};
-        // Initialize scores for ALL relevant agents, even if they have 0 points
         relevantAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
 
         allLogs.forEach(log => {
-            // Use log.points directly if available, otherwise calculate
             const points = log.points ?? (log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0);
             if (agentScores.hasOwnProperty(log.agentId)) {
                 agentScores[log.agentId] += points;
@@ -297,7 +300,6 @@ export default function AdminLeaderboardPage() {
                 isUser: agent.id === auth.currentUser?.uid,
             }));
 
-        // Team calculations
         const teamScores: Record<string, number> = {};
         teams.forEach(team => { teamScores[team.id] = 0; });
 
@@ -306,6 +308,13 @@ export default function AdminLeaderboardPage() {
             const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
             if (agentTeam && teamScores.hasOwnProperty(agentTeam.id)) {
                 teamScores[agentTeam.id] += points;
+            }
+        });
+
+        // Add bonus points to team scores
+        bonusLogs.forEach(log => {
+            if (teamScores.hasOwnProperty(log.teamId)) {
+                teamScores[log.teamId] += log.points || 0;
             }
         });
 
@@ -321,13 +330,13 @@ export default function AdminLeaderboardPage() {
                     name: team.name,
                     score: teamScores[team.id] || 0,
                     agentFirstNames: agentFirstNames,
-                    emoji: team.emoji, // Pass emoji
+                    emoji: team.emoji,
                     isUser: team.agentIds?.includes(auth.currentUser?.uid || ''),
                 };
             });
 
         return { agentLeaderboard: finalAgentLeaderboard, teamLeaderboard: finalTeamLeaderboard };
-    }, [allLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid, competitions, selectedCompetitionId]);
+    }, [allLogs, bonusLogs, agents, participatingPods, teams, selectedPodId, auth.currentUser?.uid, competitions, selectedCompetitionId]);
 
 
   const isLoading = isLoadingBase || isLoadingData;

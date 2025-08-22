@@ -408,10 +408,12 @@ export default function AdminDailyScoresPage() {
         }).filter((s): s is PodTargetSummary => s !== null);
 
     // --- Team & Rule Key Calculations (Unaffected, but kept for context) ---
-    const teamBonusSummary = teams.map(team => {
-        const bonus = dailyBonusLogs.filter(log => log.teamId === team.id).reduce((acc, log) => acc + log.points, 0);
-        return { teamName: team.name, teamEmoji: team.emoji, bonusPoints: bonus };
-    }).filter(summary => summary.bonusPoints > 0);
+    const teamBonusSummary = dailyBonusLogs.map(log => ({
+        teamName: teams.find(t => t.id === log.teamId)?.name || 'Unknown',
+        teamEmoji: teams.find(t => t.id === log.teamId)?.emoji,
+        bonusPoints: log.points
+    })).filter(summary => summary.bonusPoints !== 0);
+
 
     const teamTotalScoresMap: { [teamId: string]: number } = {};
     teams.forEach(team => teamTotalScoresMap[team.id] = 0);
