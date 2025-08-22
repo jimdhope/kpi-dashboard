@@ -859,7 +859,7 @@ export default function AdminLogAchievementsPage() {
             <CardTitle>Log Daily Achievements</CardTitle>
             <CardDescription>Select a pod and date, then enter the achievements for each agent based on the active competition rules.</CardDescription>
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[calc(100vh-450px)]">
+            <CardContent>
             {error && <p className="text-destructive mb-4">{error}</p>}
             {!selectedPodId ? (
                 <p className="text-muted-foreground text-center">Please select a pod to log achievements.</p>
@@ -892,68 +892,70 @@ export default function AdminLogAchievementsPage() {
                     {agents.length === 0 ? "No agents found in this pod." : "No competition rules or daily tasks found."}
                 </p>
                 ) : (
-                <Table>
-                <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow>
-                    <TableHead className="w-[250px]">Agent</TableHead>
-                    {competitionRules.map(rule => (
-                        <TableHead key={rule.id} className="w-[120px] text-center">
-                            <div className="flex flex-col items-center justify-center gap-1">
-                                <span className="text-lg" title={rule.name}>{(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}</span>
-                                <span className="text-xs font-normal truncate max-w-[100px]">{rule.name}</span>
-                            </div>
-                        </TableHead>
-                    ))}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {agents.map((agent) => (
-                    agent.id ? (
-                        <TableRow key={agent.id}>
-                            <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id={`na-checkbox-${agent.id}`}
-                                        checked={achievementInputs[agent.id]?.isNA || false}
-                                        onCheckedChange={(checked) => handleNaChange(agent.id!, !!checked)}
-                                        disabled={isSaving[`${agent.id}-na`]}
-                                        aria-label={`Mark ${agent.name} as N/A`}
-                                    />
-                                    <Label htmlFor={`na-checkbox-${agent.id}`} className={cn(achievementInputs[agent.id]?.isNA && "text-muted-foreground")}>
-                                        {agent.name}
-                                    </Label>
-                                    {isSaving[`${agent.id}-na`] && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                <div className="overflow-x-auto">
+                    <Table>
+                    <TableHeader className="sticky top-0 z-10 bg-background">
+                        <TableRow>
+                        <TableHead className="w-[250px]">Agent</TableHead>
+                        {competitionRules.map(rule => (
+                            <TableHead key={rule.id} className="w-[120px] text-center">
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                    <span className="text-lg" title={rule.name}>{(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}</span>
+                                    <span className="text-xs font-normal truncate max-w-[100px]">{rule.name}</span>
                                 </div>
-                            </TableCell>
-                            {competitionRules.map(rule => (
-                            rule.id ? (
-                                <TableCell key={rule.id} className="text-center">
-                                    {rule.type === 'numeric' ? (
-                                        <AchievementCard
-                                            rule={rule}
-                                            currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
-                                            isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
-                                            onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
-                                            onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
-                                            disabled={achievementInputs[agent.id!]?.isNA}
-                                        />
-                                    ) : (
-                                        <Checkbox
-                                            id={`task-checkbox-${agent.id}-${rule.id}`}
-                                            checked={taskInputs[agent.id!]?.[rule.id!]?.checked || false}
-                                            onCheckedChange={(checked) => handleTaskChange(agent.id!, rule.id!, !!checked)}
-                                            disabled={isSaving[`task-${agent.id!}-${rule.id!}`] || achievementInputs[agent.id!]?.isNA}
-                                            aria-label={`Task ${rule.name} for ${agent.name}`}
-                                        />
-                                    )}
-                                </TableCell>
-                            ) : null
-                            ))}
+                            </TableHead>
+                        ))}
                         </TableRow>
-                    ) : null
-                    ))}
-                </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {agents.map((agent) => (
+                        agent.id ? (
+                            <TableRow key={agent.id}>
+                                <TableCell className="font-medium">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id={`na-checkbox-${agent.id}`}
+                                            checked={achievementInputs[agent.id]?.isNA || false}
+                                            onCheckedChange={(checked) => handleNaChange(agent.id!, !!checked)}
+                                            disabled={isSaving[`${agent.id}-na`]}
+                                            aria-label={`Mark ${agent.name} as N/A`}
+                                        />
+                                        <Label htmlFor={`na-checkbox-${agent.id}`} className={cn(achievementInputs[agent.id]?.isNA && "text-muted-foreground")}>
+                                            {agent.name}
+                                        </Label>
+                                        {isSaving[`${agent.id}-na`] && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                    </div>
+                                </TableCell>
+                                {competitionRules.map(rule => (
+                                rule.id ? (
+                                    <TableCell key={rule.id} className="text-center">
+                                        {rule.type === 'numeric' ? (
+                                            <AchievementCard
+                                                rule={rule}
+                                                currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
+                                                isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
+                                                onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
+                                                onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
+                                                disabled={achievementInputs[agent.id!]?.isNA}
+                                            />
+                                        ) : (
+                                            <Checkbox
+                                                id={`task-checkbox-${agent.id}-${rule.id}`}
+                                                checked={taskInputs[agent.id!]?.[rule.id!]?.checked || false}
+                                                onCheckedChange={(checked) => handleTaskChange(agent.id!, rule.id!, !!checked)}
+                                                disabled={isSaving[`task-${agent.id!}-${rule.id!}`] || achievementInputs[agent.id!]?.isNA}
+                                                aria-label={`Task ${rule.name} for ${agent.name}`}
+                                            />
+                                        )}
+                                    </TableCell>
+                                ) : null
+                                ))}
+                            </TableRow>
+                        ) : null
+                        ))}
+                    </TableBody>
+                    </Table>
+                </div>
                 )}
             </CardContent>
         </Card>
@@ -1012,9 +1014,3 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
-
-    
-
-
-
-    
