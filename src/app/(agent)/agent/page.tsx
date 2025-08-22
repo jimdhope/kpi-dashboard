@@ -166,7 +166,7 @@ export default function AgentDashboardPage() {
 
       const compQuery = query(collection(db, 'competitions'), where('podIds', 'array-contains', agentPodId), orderBy('startDate', 'desc'));
       const unsubscribeComps = onSnapshot(compQuery, (snapshot) => {
-          const fetchedComps = snapshot.docs.map(doc => ({ id: docSnap.id, ...docSnap.data() } as CompetitionWithRules));
+          const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithRules));
           setAllCompetitions(fetchedComps);
           const savedCompId = localStorage.getItem(AGENT_DASHBOARD_COMP_KEY);
           if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
@@ -257,12 +257,12 @@ export default function AgentDashboardPage() {
     if (!activeCompetition || !allPods.length) return { agentLeaderboard: [], teamLeaderboard: [], podLeaderboard: [] };
     
     const podsInComp = allPods.filter(p => activeCompetition.podIds?.includes(p.id));
+    const rulesMap = new Map(rules.map(rule => [rule.id, rule]));
 
     // Agent scores (only for current pod)
     const agentScores: Record<string, number> = {};
     podAgents.forEach(agent => { if(agent.id) agentScores[agent.id] = 0; });
-    const agentPodLogs = competitionLogs.filter(log => log.podId === agentPodId);
-    agentPodLogs.forEach(log => {
+    competitionLogs.filter(log => log.podId === agentPodId).forEach(log => {
       if (agentScores.hasOwnProperty(log.agentId)) {
         agentScores[log.agentId] += (log.points || 0);
       }
@@ -271,7 +271,7 @@ export default function AgentDashboardPage() {
     // Team scores (only for current pod's teams)
     const teamScores: Record<string, number> = {};
     teams.forEach(team => { teamScores[team.id] = 0; });
-    agentPodLogs.forEach(log => {
+    competitionLogs.filter(log => log.podId === agentPodId).forEach(log => {
       const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
       if (agentTeam) {
         teamScores[agentTeam.id] += (log.points || 0);
@@ -301,7 +301,7 @@ export default function AgentDashboardPage() {
       teamLeaderboard: assignDenseRanks(teams.map(team => ({ id: team.id, name: team.name, score: teamScores[team.id] || 0, emoji: team.emoji, isUser: team.agentIds?.includes(currentUser?.id || '') }))),
       podLeaderboard: assignDenseRanks(podsInComp.map(pod => ({ id: pod.id, name: pod.name, score: podScores[pod.id] || 0, avatarUrl: pod.logoUrl, avatarInitials: pod.logoInitials, avatarBgColor: pod.logoBgColor }))),
     };
-  }, [competitionLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods, agentPodId]);
+  }, [competitionLogs, podBonusLogs, podAgents, teams, activeCompetition, currentUser, allPods, agentPodId, rules]);
 
   const isLoading = isLoadingUser || isLoadingData || isLoadingSettings;
 
