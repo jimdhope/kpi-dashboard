@@ -17,8 +17,8 @@ import { PodTargetsWidget } from '@/components/agent/PodTargetsWidget';
 import { TodaysAchievementsWidget } from '@/components/agent/TodaysAchievementsWidget';
 import { LogAchievementsWidget } from '@/components/agent/LogAchievementsWidget';
 import { MessageOfTheDayWidget } from '@/components/agent/MessageOfTheDayWidget';
-import { TeamLeaderboardWidget } from '@/components/agent/TeamLeaderboardWidget';
-import { PodLeaderboardWidget } from '@/components/agent/PodLeaderboardWidget';
+// import { TeamLeaderboardWidget } from '@/components/agent/TeamLeaderboardWidget';
+// import { PodLeaderboardWidget } from '@/components/agent/PodLeaderboardWidget';
 
 
 const SETTINGS_DOC_ID = "agentDashboardSettings_v3";
@@ -86,16 +86,10 @@ export default function AgentDashboardPage() {
         case 'leaderboard-agent':
             return <AgentLeaderboardWidget currentUser={currentUser} />;
         case 'leaderboard-team':
-            return <TeamLeaderboardWidget currentUser={currentUser} />;
+            // return <TeamLeaderboardWidget currentUser={currentUser} />;
+             return null;
         case 'leaderboard-pod':
-             return (
-                <Card>
-                    <CardHeader><CardTitle>Pod Leaderboard</CardTitle></CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground text-sm">This widget is coming soon.</p>
-                    </CardContent>
-                </Card>
-             );
+             return null;
         case 'achievements':
              return <TodaysAchievementsWidget currentUser={currentUser} />;
         case 'pod-targets':

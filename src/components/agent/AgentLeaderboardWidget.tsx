@@ -20,6 +20,7 @@ import { Leaderboard } from '@/components/leaderboard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy } from 'lucide-react';
+import type { RuleFormData } from '@/models/types';
 
 interface AgentLeaderboardWidgetProps {
   currentUser: AppUser | null;
@@ -27,9 +28,14 @@ interface AgentLeaderboardWidgetProps {
 
 const AGENT_LEADERBOARD_COMP_KEY = 'agentLeaderboard_selectedCompId';
 
+interface CompetitionWithRules extends Competition {
+  rules: RuleFormData[];
+  id: string;
+}
+
 export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetProps) {
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
-  const [allCompetitions, setAllCompetitions] = useState<Competition[]>([]);
+  const [allCompetitions, setAllCompetitions] = useState<CompetitionWithRules[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]);
   const [podAgents, setPodAgents] = useState<AppUser[]>([]);
@@ -44,7 +50,7 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
         orderBy('startDate', 'desc')
     );
     const unsubscribe = onSnapshot(compQuery, (snapshot) => {
-        const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
+        const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithRules));
         setAllCompetitions(fetchedComps);
         
         // Set default competition if not already set, or if current selection is invalid
@@ -56,6 +62,7 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
                  setSelectedCompetitionId(fetchedComps[0].id);
             }
         }
+        setIsLoading(false); // Initial load of competitions is done
     });
     return () => unsubscribe();
   }, [currentUser?.podId]);
@@ -64,7 +71,6 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
   // Effect 2: Fetch agents and competition-specific logs when selection changes
   useEffect(() => {
     if (!selectedCompetitionId || !currentUser?.podId) {
-        setIsLoading(false);
         setPodAgents([]);
         setCompetitionLogs([]);
         return;
@@ -72,10 +78,8 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
     
     const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);
     if (!selectedCompetition) {
-        setIsLoading(false);
         return;
     }
-
 
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
@@ -90,7 +94,9 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
     const logsQuery = query(
         collection(db, 'dailyAchievements'),
         where('competitionId', '==', selectedCompetitionId),
-        where('podId', '==', currentUser.podId)
+        where('podId', '==', currentUser.podId),
+        where('date', '>=', selectedCompetition.startDate),
+        where('date', '<=', selectedCompetition.endDate)
     );
     unsubscribes.push(onSnapshot(logsQuery, (snapshot) => {
         setCompetitionLogs(snapshot.docs.map(doc => doc.data() as DailyAchievementLog));
@@ -110,19 +116,15 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
   };
 
   const agentLeaderboard = useMemo(() => {
-    const competition = allCompetitions.find(c => c.id === selectedCompetitionId);
-    if (isLoading || podAgents.length === 0 || !competition) {
+    if (isLoading || podAgents.length === 0) {
       return [];
     }
-
-    const rulesMap = new Map((competition.rules || []).map(rule => [rule.id, rule]));
 
     const agentScores = podAgents.reduce((acc, agent) => {
       acc[agent.id!] = competitionLogs
         .filter(log => log.agentId === agent.id)
         .reduce((sum, log) => {
-            const rule = rulesMap.get(log.ruleId);
-            const points = log.points ?? ((log.value || 0) * (rule?.points || 0));
+            const points = log.points ?? 0;
             return sum + points;
         }, 0);
       return acc;
@@ -137,7 +139,7 @@ export function AgentLeaderboardWidget({ currentUser }: AgentLeaderboardWidgetPr
       avatarBgColor: agent.avatarBgColor,
       isUser: agent.id === currentUser?.id,
     }));
-  }, [isLoading, competitionLogs, podAgents, currentUser, allCompetitions, selectedCompetitionId]);
+  }, [isLoading, competitionLogs, podAgents, currentUser]);
 
 
   const selectedCompetition = allCompetitions.find(c => c.id === selectedCompetitionId);

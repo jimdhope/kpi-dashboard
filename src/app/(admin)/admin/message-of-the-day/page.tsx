@@ -120,9 +120,9 @@ const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'motd', name: 'Message of the Day' },
     { id: 'achievements', name: 'Today\'s Achievements' },
     { id: 'pod-targets', name: 'Pod Targets Today' },
-    { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
-    { id: 'leaderboard-team', name: 'Team Leaderboard' },
-    { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
+    // { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
+    // { id: 'leaderboard-team', name: 'Team Leaderboard' },
+    // { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
     { id: 'log-achievements', name: 'Log Achievements' },
     { id: 'custom-html', name: 'Custom HTML' },
 ];
