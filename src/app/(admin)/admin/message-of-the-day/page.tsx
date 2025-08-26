@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Loader2, Save, Settings, PlusCircle, Trash2, Rows, View, Columns, X, ArrowLeft, ArrowRight, ArrowDown, ArrowUp } from 'lucide-react';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from "@/components/ui/switch";
 import { Input } from '@/components/ui/input';
@@ -45,7 +45,8 @@ export type WidgetType =
     | 'leaderboard-team'
     | 'leaderboard-pod'
     | 'custom-html'
-    | 'log-achievements';
+    | 'log-achievements'
+    | 'readonly-achievements';
 
 const baseWidgetSchema = z.object({
   id: z.string(),
@@ -67,7 +68,7 @@ const customHtmlWidgetSchema = baseWidgetSchema.extend({
 });
 
 const standardWidgetSchema = baseWidgetSchema.extend({
-    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod', 'log-achievements']),
+    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod', 'log-achievements', 'readonly-achievements']),
 });
 
 const specificWidgetSchema = z.discriminatedUnion('type', [
@@ -118,11 +119,8 @@ const SETTINGS_COLLECTION = "settings";
 
 const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'motd', name: 'Message of the Day' },
-    { id: 'achievements', name: 'Today\'s Achievements' },
+    { id: 'readonly-achievements', name: 'Read-Only Achievements' },
     { id: 'pod-targets', name: 'Pod Targets Today' },
-    // { id: 'leaderboard-agent', name: 'Agent Leaderboard' },
-    // { id: 'leaderboard-team', name: 'Team Leaderboard' },
-    // { id: 'leaderboard-pod', name: 'Pod Leaderboard' },
     { id: 'log-achievements', name: 'Log Achievements' },
     { id: 'custom-html', name: 'Custom HTML' },
 ];
@@ -172,6 +170,8 @@ export default function AgentDashboardSettingsPage() {
                 return { ...base, type: 'leaderboard-pod', name: 'Pod Leaderboard' };
             case 'log-achievements':
                 return { ...base, type: 'log-achievements', name: 'Log Achievements' };
+             case 'readonly-achievements':
+                return { ...base, type: 'readonly-achievements', name: 'Read-Only Achievements' };
             case 'custom-html':
                  return { ...base, type: 'custom-html', name: 'Custom HTML', content: '<p>Your custom content here.</p>' };
             default:

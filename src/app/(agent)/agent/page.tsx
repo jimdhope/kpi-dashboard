@@ -17,6 +17,7 @@ import { PodTargetsWidget } from '@/components/agent/PodTargetsWidget';
 import { TodaysAchievementsWidget } from '@/components/agent/TodaysAchievementsWidget';
 import { LogAchievementsWidget } from '@/components/agent/LogAchievementsWidget';
 import { MessageOfTheDayWidget } from '@/components/agent/MessageOfTheDayWidget';
+import { ReadOnlyAchievementsWidget } from '@/components/agent/ReadOnlyAchievementsWidget';
 // import { TeamLeaderboardWidget } from '@/components/agent/TeamLeaderboardWidget';
 // import { PodLeaderboardWidget } from '@/components/agent/PodLeaderboardWidget';
 
@@ -96,6 +97,8 @@ export default function AgentDashboardPage() {
             return <PodTargetsWidget currentUser={currentUser} />;
         case 'log-achievements':
             return <LogAchievementsWidget currentUser={currentUser} />;
+        case 'readonly-achievements':
+            return <ReadOnlyAchievementsWidget currentUser={currentUser} />;
         case 'custom-html':
              return (
                  <Card>
