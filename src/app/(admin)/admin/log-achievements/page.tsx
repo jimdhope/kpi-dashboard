@@ -200,44 +200,41 @@ export default function AdminLogAchievementsPage() {
     return () => unsubscribe();
   }, [toast]);
 
+  // Combined effect for fetching data and setting up listeners
   useEffect(() => {
     if (!selectedPodId) {
+      // Reset all states if no pod is selected
       setAgents([]);
       setTeams([]);
       setCompetitionRules([]);
+      setActiveCompetitionId(null);
+      setCompetitionLogs([]);
+      setCompetitionBonusLogs([]);
+      setDailyTaskLogs([]);
       setAchievementInputs({});
       setTaskInputs({});
       setBonusInputs({});
-      setActiveCompetitionId(null);
+      setDailyTargets(null);
       setIsLoadingAgents(false);
       setIsLoadingRules(false);
       setIsLoadingInitialData(false);
       return;
     }
 
-    let unsubscribeLogs: Unsubscribe = () => {};
-    let unsubscribeTaskLogs: Unsubscribe = () => {};
-    let unsubscribeBonusLogs: Unsubscribe = () => {};
-    let unsubscribeCompLogs: Unsubscribe = () => {};
-    let unsubscribeCompBonusLogs: Unsubscribe = () => {};
+    // Set loading states
+    setIsLoadingAgents(true);
+    setIsLoadingRules(true);
+    setIsLoadingInitialData(true);
+    setError(null);
 
-    const fetchPodDataAndListen = async () => {
-      setIsLoadingAgents(true);
-      setIsLoadingRules(true);
-      setIsLoadingInitialData(true);
-      setError(null);
-      setAgents([]);
-      setTeams([]);
-      setCompetitionRules([]);
-      setAchievementInputs({});
-      setTaskInputs({});
-      setBonusInputs({});
-      setActiveCompetitionId(null);
+    // Unsubscribe array
+    const unsubscribes: Unsubscribe[] = [];
 
+    const fetchPodData = async () => {
       try {
-        const usersRef = collection(db, 'users');
+        // Fetch Agents for the pod
         const agentsQuery = query(
-            usersRef,
+            collection(db, 'users'),
             where('podId', '==', selectedPodId),
             where('roles', 'array-contains', 'agent'),
             orderBy('name')
@@ -252,11 +249,14 @@ export default function AdminLogAchievementsPage() {
             setIsLoadingRules(false);
             setIsLoadingInitialData(false);
             setActiveCompetitionId(null);
+            setCompetitionRules([]);
+            setTeams([]);
             return;
         }
 
+        // Find active competition based on selectedDate
         const competitionsRef = collection(db, 'competitions');
-        const dateForQuery = startOfDay(selectedDate); // Use start of day for comparison
+        const dateForQuery = startOfDay(selectedDate);
         const competitionQuery = query(
             competitionsRef,
             where('podIds', 'array-contains', selectedPodId),
@@ -265,7 +265,6 @@ export default function AdminLogAchievementsPage() {
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         let competitionForLogging: (Competition & { id: string; teams?: Team[] }) | null = null;
-
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] };
             const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
@@ -276,148 +275,144 @@ export default function AdminLogAchievementsPage() {
                  break;
              }
         }
+        
+        setActiveCompetitionId(competitionForLogging?.id || null);
+        setCompetitionRules(competitionForLogging?.rules || []);
+        setTeams(competitionForLogging?.teams?.filter(team => team.agentIds.some(agentId => fetchedAgents.some(agent => agent.id === agentId))) || []);
+        setIsLoadingRules(false);
 
+        // If a competition is active, set up listeners
         if (competitionForLogging) {
-            setActiveCompetitionId(competitionForLogging.id);
-            setCompetitionRules(competitionForLogging.rules || []);
-            setTeams(competitionForLogging.teams?.filter(team => team.agentIds.some(agentId => fetchedAgents.some(agent => agent.id === agentId))) || []);
-             setIsLoadingRules(false);
+            const compId = competitionForLogging.id;
 
-            const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-            const achievementsRef = collection(db, 'dailyAchievements');
-            
-            // Listener for all logs for the entire competition (for totals)
-            const allLogsQuery = query(achievementsRef, where('competitionId', '==', competitionForLogging.id), where('podId', '==', selectedPodId));
-            unsubscribeCompLogs = onSnapshot(allLogsQuery, (snapshot) => {
+            // Listener for all competition-wide achievement logs
+            const allLogsQuery = query(collection(db, 'dailyAchievements'), where('competitionId', '==', compId), where('podId', '==', selectedPodId));
+            unsubscribes.push(onSnapshot(allLogsQuery, (snapshot) => {
                 setCompetitionLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as DailyAchievementLog)));
-            });
+            }));
 
-            // Listener for all bonus logs for the competition
-            const bonusLogsRefComp = collection(db, 'teamBonusLogs');
-            const bonusLogsQueryComp = query(bonusLogsRefComp, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id));
-            unsubscribeCompBonusLogs = onSnapshot(bonusLogsQueryComp, (snapshot) => {
-                const allBonusLogs = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog));
-                setCompetitionBonusLogs(allBonusLogs);
-            });
+            // Listener for all competition-wide bonus logs
+            const bonusLogsQueryComp = query(collection(db, 'teamBonusLogs'), where('podId', '==', selectedPodId), where('competitionId', '==', compId));
+            unsubscribes.push(onSnapshot(bonusLogsQueryComp, (snapshot) => {
+                setCompetitionBonusLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog)));
+            }));
 
-            // Listener for just today's logs (for form inputs)
-            const initialAchievementsQuery = query(
-                achievementsRef,
-                where('podId', '==', selectedPodId),
-                where('date', '==', dateTimestamp),
-                where('competitionId', '==', competitionForLogging.id)
-            );
-            
-            const taskLogsRef = collection(db, 'dailyTaskLogs');
-            const initialTaskLogsQuery = query(
-                taskLogsRef,
-                where('podId', '==', selectedPodId),
-                where('date', '==', dateTimestamp),
-                 where('competitionId', '==', competitionForLogging.id)
-            );
-
-            // Listener for today's bonus logs to populate inputs
-            const bonusLogsRef = collection(db, 'teamBonusLogs');
-            const todayBonusLogsQuery = query(bonusLogsRef, where('podId', '==', selectedPodId), where('competitionId', '==', competitionForLogging.id), where('date', '==', dateTimestamp));
-            unsubscribeBonusLogs = onSnapshot(todayBonusLogsQuery, (snapshot) => {
-                const todayBonusLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
-                const initialBonusInputs: TeamBonusInputState = {};
-                (competitionForLogging?.teams || []).forEach(team => {
-                    const existingLog = todayBonusLogs.find(log => log.teamId === team.id);
-                    initialBonusInputs[team.id] = {
-                        points: existingLog ? existingLog.points : 0,
-                        existingLogId: existingLog?.id,
-                    };
-                });
-                setBonusInputs(initialBonusInputs);
-            });
-            
-            unsubscribeLogs = onSnapshot(initialAchievementsQuery, (snapshot) => {
-                const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-
-                const initialInputs: AchievementInputState = {};
-                fetchedAgents.forEach(agent => {
-                    if (!agent.id) return;
-                    initialInputs[agent.id] = {};
-                    const agentLogs = logs.filter(log => log.agentId === agent.id);
-                    const naLog = agentLogs.find(log => log.status === 'absent');
-                    initialInputs[agent.id].isPresent = !naLog; // isPresent is true if there is NO absent log
-                    initialInputs[agent.id].naLogId = naLog?.id;
-
-                    (competitionForLogging?.rules || []).forEach(rule => {
-                        if (!rule.id || rule.type === 'checkbox') return;
-                        const existingLog = agentLogs.find(log => log.ruleId === rule.id && log.status !== 'absent');
-                        initialInputs[agent.id!][rule.id] = {
-                            value: existingLog ? existingLog.value : 0,
-                            existingLogId: existingLog?.id,
-                        };
-                    });
-                });
-                setAchievementInputs(initialInputs);
-            }, (err) => {
-                console.error("Error listening to daily logs:", err);
-                setError("Failed to load real-time achievement data.");
-            });
-
-            unsubscribeTaskLogs = onSnapshot(initialTaskLogsQuery, (snapshot) => {
-                const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyTaskLog));
-                setDailyTaskLogs(logs);
-                const initialTaskInputs: TaskInputState = {};
-                fetchedAgents.forEach(agent => {
-                    if (!agent.id) return;
-                    initialTaskInputs[agent.id] = {};
-                     (competitionForLogging?.rules || []).forEach(rule => {
-                        if (!rule.id || rule.type !== 'checkbox') return;
-                        const existingLog = logs.find(log => log.agentId === agent.id && log.taskId === rule.id);
-                        initialTaskInputs[agent.id!][rule.id] = {
-                            checked: !!existingLog,
-                            existingLogId: existingLog?.id,
-                        };
-                    });
-                });
-                setTaskInputs(initialTaskInputs);
-            });
-
-             // Fetch targets
-             const targetsDocId = `${competitionForLogging.id}_${selectedPodId}`;
-             const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
-             const targetsDocSnap = await getDoc(targetsDocRef);
-             if (targetsDocSnap.exists()) {
-                 setDailyTargets(targetsDocSnap.data() as DailyTargetData);
-             } else {
-                 setDailyTargets(null);
-             }
-
-
-             setIsLoadingInitialData(false);
+            // Fetch daily targets (snapshot is fine, they don't change often)
+            const targetsDocId = `${compId}_${selectedPodId}`;
+            const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
+            const targetsDocSnap = await getDoc(targetsDocRef);
+            setDailyTargets(targetsDocSnap.exists() ? targetsDocSnap.data() as DailyTargetData : null);
 
         } else {
-            setActiveCompetitionId(null);
-            setCompetitionRules([]);
-            toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod on this date. Cannot log achievements.` });
-            setIsLoadingRules(false);
-            setIsLoadingInitialData(false);
+             // No active competition, clear competition-related data
+            setCompetitionLogs([]);
+            setCompetitionBonusLogs([]);
+            setDailyTargets(null);
+            toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod on this date.` });
         }
+        setIsLoadingInitialData(false);
+
       } catch (err) {
         console.error("Error fetching pod data:", err);
         setError("Failed to load data for the selected pod/date.");
-        toast({ variant: "destructive", title: "Error", description: "Could not load agent or competition data." });
-        setAgents([]); setCompetitionRules([]); setAchievementInputs({}); setActiveCompetitionId(null);
         setIsLoadingAgents(false);
         setIsLoadingRules(false);
         setIsLoadingInitialData(false);
       }
     };
 
-    fetchPodDataAndListen();
+    fetchPodData();
+
+    // Cleanup function
     return () => {
-      unsubscribeLogs();
-      unsubscribeTaskLogs();
-      unsubscribeBonusLogs();
-      unsubscribeCompLogs();
-      unsubscribeCompBonusLogs();
+      unsubscribes.forEach(unsub => unsub());
     };
   }, [selectedPodId, selectedDate, toast]);
+
+
+  // Effect for DAILY listeners - depends on activeCompetitionId
+  useEffect(() => {
+    if (!activeCompetitionId || !selectedPodId || !currentUserUid) {
+        setAchievementInputs({});
+        setTaskInputs({});
+        setBonusInputs({});
+        return;
+    }
+
+    const unsubscribes: Unsubscribe[] = [];
+    const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+    const fetchedAgents = agents; // Agents are already fetched by the time this runs
+    
+    // Listener for today's achievement logs
+    const dailyAchievementsQuery = query(
+        collection(db, 'dailyAchievements'),
+        where('podId', '==', selectedPodId),
+        where('date', '==', dateTimestamp),
+        where('competitionId', '==', activeCompetitionId)
+    );
+    unsubscribes.push(onSnapshot(dailyAchievementsQuery, (snapshot) => {
+        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
+        const initialInputs: AchievementInputState = {};
+        fetchedAgents.forEach(agent => {
+            if (!agent.id) return;
+            initialInputs[agent.id] = {};
+            const agentLogs = logs.filter(log => log.agentId === agent.id);
+            const naLog = agentLogs.find(log => log.status === 'absent');
+            initialInputs[agent.id].isPresent = !naLog;
+            initialInputs[agent.id].naLogId = naLog?.id;
+            competitionRules.forEach(rule => {
+                if (!rule.id || rule.type === 'checkbox') return;
+                const existingLog = agentLogs.find(log => log.ruleId === rule.id && log.status !== 'absent');
+                initialInputs[agent.id!][rule.id] = { value: existingLog ? existingLog.value : 0, existingLogId: existingLog?.id };
+            });
+        });
+        setAchievementInputs(initialInputs);
+    }));
+
+    // Listener for today's task logs
+    const dailyTaskLogsQuery = query(
+        collection(db, 'dailyTaskLogs'),
+        where('podId', '==', selectedPodId),
+        where('date', '==', dateTimestamp),
+        where('competitionId', '==', activeCompetitionId)
+    );
+    unsubscribes.push(onSnapshot(dailyTaskLogsQuery, (snapshot) => {
+        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyTaskLog));
+        setDailyTaskLogs(logs);
+        const initialTaskInputs: TaskInputState = {};
+        fetchedAgents.forEach(agent => {
+            if (!agent.id) return;
+            initialTaskInputs[agent.id] = {};
+            competitionRules.forEach(rule => {
+                if (!rule.id || rule.type !== 'checkbox') return;
+                const existingLog = logs.find(log => log.agentId === agent.id && log.taskId === rule.id);
+                initialTaskInputs[agent.id!][rule.id] = { checked: !!existingLog, existingLogId: existingLog?.id };
+            });
+        });
+        setTaskInputs(initialTaskInputs);
+    }));
+
+    // Listener for today's bonus logs
+    const todayBonusLogsQuery = query(
+        collection(db, 'teamBonusLogs'),
+        where('podId', '==', selectedPodId),
+        where('competitionId', '==', activeCompetitionId),
+        where('date', '==', dateTimestamp)
+    );
+    unsubscribes.push(onSnapshot(todayBonusLogsQuery, (snapshot) => {
+        const todayBonusLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
+        const initialBonusInputs: TeamBonusInputState = {};
+        teams.forEach(team => {
+            const existingLog = todayBonusLogs.find(log => log.teamId === team.id);
+            initialBonusInputs[team.id] = { points: existingLog ? existingLog.points : 0, existingLogId: existingLog?.id };
+        });
+        setBonusInputs(initialBonusInputs);
+    }));
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, [activeCompetitionId, selectedPodId, selectedDate, currentUserUid, agents, competitionRules, teams]);
 
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
