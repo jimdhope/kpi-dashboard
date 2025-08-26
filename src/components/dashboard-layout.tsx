@@ -217,14 +217,6 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                   </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <Link href="/admin/data" passHref>
-                      <SidebarMenuButton tooltip="Data Management" isActive={currentPath === '/admin/data'}>
-                        <Database />
-                        <span>Data Management</span>
-                      </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                   <Link href="/admin/message-of-the-day" passHref>
                     <SidebarMenuButton tooltip="Dashboard Settings" isActive={currentPath === '/admin/message-of-the-day'}>
                       <Settings />
