@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -143,7 +142,7 @@ export default function AdminLogAchievementsPage() {
   const [achievementInputs, setAchievementInputs] = useState<AchievementInputState>({});
   const [taskInputs, setTaskInputs] = useState<TaskInputState>({});
   const [bonusInputs, setBonusInputs] = useState<TeamBonusInputState>({}); // Added bonus points state
-  
+
   const [competitionLogs, setCompetitionLogs] = useState<DailyAchievementLog[]>([]);
   const [competitionBonusLogs, setCompetitionBonusLogs] = useState<TeamBonusLog[]>([]);
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
@@ -151,7 +150,7 @@ export default function AdminLogAchievementsPage() {
   const [isLoadingPods, setIsLoadingPods] = useState(true);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingRules, setIsLoadingRules] = useState(false);
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false); // Used for daily data
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
   const [isSavingBonus, setIsSavingBonus] = useState(false);
   const [isSendingToTeams, setIsSendingToTeams] = useState(false);
@@ -256,7 +255,7 @@ export default function AdminLogAchievementsPage() {
                  break;
              }
         }
-        
+
         setActiveCompetitionId(competitionForLogging?.id || null);
         setCompetitionRules(competitionForLogging?.rules || []);
         setTeams(competitionForLogging?.teams?.filter(team => team.agentIds.some(agentId => fetchedAgents.some(agent => agent.id === agentId))) || []);
@@ -278,9 +277,10 @@ export default function AdminLogAchievementsPage() {
   }, [selectedPodId, selectedDate, toast]);
 
 
-  // Effect for setting up listeners that depend on activeCompetitionId
+  // Effect for setting up LISTENERS. Separated for clarity.
   useEffect(() => {
     if (!activeCompetitionId || !selectedPodId || !currentUserUid) {
+        // Clear all data if context is lost
         setAchievementInputs({});
         setTaskInputs({});
         setBonusInputs({});
@@ -294,35 +294,23 @@ export default function AdminLogAchievementsPage() {
     setIsLoadingInitialData(true);
     const unsubscribes: Unsubscribe[] = [];
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-    const fetchedAgents = agents;
+    const fetchedAgents = agents; // Use agents from state which is stable within this effect run
 
-    // Listener for ALL competition logs (for total score calculation)
+    // --- Competition-wide Listeners ---
+    // These listeners fetch data for the entire competition and should NOT trigger UI state updates for daily inputs.
     const allLogsQuery = query(collection(db, 'dailyAchievements'), where('competitionId', '==', activeCompetitionId), where('podId', '==', selectedPodId));
     unsubscribes.push(onSnapshot(allLogsQuery, (snapshot) => {
         setCompetitionLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as DailyAchievementLog)));
     }));
 
-    // Listener for ALL bonus logs (for total score calculation)
     const allBonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', selectedPodId), where('competitionId', '==', activeCompetitionId));
     unsubscribes.push(onSnapshot(allBonusLogsQuery, (snapshot) => {
         setCompetitionBonusLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog)));
     }));
 
-    // Fetch daily targets (snapshot is fine, they don't change often)
-    const targetsDocId = `${activeCompetitionId}_${selectedPodId}`;
-    const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
-    unsubscribes.push(onSnapshot(targetsDocRef, (docSnap) => {
-        setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
-    }));
-
-    // --- DAILY LISTENERS ---
-    // Listener for today's achievement logs
-    const dailyAchievementsQuery = query(
-        collection(db, 'dailyAchievements'),
-        where('podId', '==', selectedPodId),
-        where('date', '==', dateTimestamp),
-        where('competitionId', '==', activeCompetitionId)
-    );
+    // --- Daily Data Listeners ---
+    // These listeners are specific to the selected day and pod, and are responsible for populating the input form state.
+    const dailyAchievementsQuery = query(collection(db, 'dailyAchievements'), where('podId', '==', selectedPodId), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompetitionId));
     unsubscribes.push(onSnapshot(dailyAchievementsQuery, (snapshot) => {
         const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
         const initialInputs: AchievementInputState = {};
@@ -340,15 +328,10 @@ export default function AdminLogAchievementsPage() {
             });
         });
         setAchievementInputs(initialInputs);
+        setIsLoadingInitialData(false); // Daily data loaded
     }));
 
-    // Listener for today's task logs
-    const dailyTaskLogsQuery = query(
-        collection(db, 'dailyTaskLogs'),
-        where('podId', '==', selectedPodId),
-        where('date', '==', dateTimestamp),
-        where('competitionId', '==', activeCompetitionId)
-    );
+    const dailyTaskLogsQuery = query(collection(db, 'dailyTaskLogs'), where('podId', '==', selectedPodId), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompetitionId));
     unsubscribes.push(onSnapshot(dailyTaskLogsQuery, (snapshot) => {
         const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyTaskLog));
         const initialTaskInputs: TaskInputState = {};
@@ -364,13 +347,7 @@ export default function AdminLogAchievementsPage() {
         setTaskInputs(initialTaskInputs);
     }));
 
-    // Listener for today's bonus logs
-    const todayBonusLogsQuery = query(
-        collection(db, 'teamBonusLogs'),
-        where('podId', '==', selectedPodId),
-        where('competitionId', '==', activeCompetitionId),
-        where('date', '==', dateTimestamp)
-    );
+    const todayBonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', selectedPodId), where('competitionId', '==', activeCompetitionId), where('date', '==', dateTimestamp));
     unsubscribes.push(onSnapshot(todayBonusLogsQuery, (snapshot) => {
         const todayBonusLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
         const initialBonusInputs: TeamBonusInputState = {};
@@ -380,10 +357,12 @@ export default function AdminLogAchievementsPage() {
         });
         setBonusInputs(initialBonusInputs);
     }));
-    
-    // Set loading to false once all listeners are attached.
-    // The individual state updates will handle the UI changes from here.
-    setIsLoadingInitialData(false);
+
+    // --- Daily Targets (Snapshot is sufficient) ---
+    const targetsDocId = `${activeCompetitionId}_${selectedPodId}`;
+    unsubscribes.push(onSnapshot(doc(db, 'dailyPodTargets', targetsDocId), (docSnap) => {
+        setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
+    }));
 
     return () => {
       unsubscribes.forEach(unsub => unsub());
@@ -423,7 +402,6 @@ export default function AdminLogAchievementsPage() {
        };
 
        const achievementsRef = collection(db, 'dailyAchievements');
-       // Use a function form of setState to get the latest achievementInputs
        let existingLogId: string | undefined;
        setAchievementInputs(currentInputs => {
            existingLogId = currentInputs[agentId]?.[ruleId]?.existingLogId;
@@ -696,7 +674,7 @@ export default function AdminLogAchievementsPage() {
 
             const absentAgentIds = new Set(dailyLogsForPod.filter(log => log.status === 'absent').map(log => log.agentId));
             const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
-            
+
             // 1. Calculate Agent Daily Scores (using fresh dailyLogsForPod)
             const agentScores: AgentScoreForTeams[] = agents.map(agent => {
                 if (!agent.id) return null;
@@ -737,7 +715,7 @@ export default function AdminLogAchievementsPage() {
                 const totalBonusPoints = competitionBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
                 return { teamName: team.name, teamEmoji: team.emoji, totalPoints: totalPoints + totalBonusPoints };
             }).sort((a,b) => b.totalPoints - a.totalPoints);
-            
+
             // 4. Correctly filter for Today's bonus logs only (using competitionBonusLogs from state)
             const dailyBonusLogsForPod = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
             const teamBonusSummary: TeamBonusSummary[] = dailyBonusLogsForPod.map(log => ({ teamName: teams.find(t => t.id === log.teamId)?.name || 'Unknown', teamEmoji: teams.find(t => t.id === log.teamId)?.emoji, bonusPoints: log.points }));
@@ -925,7 +903,7 @@ export default function AdminLogAchievementsPage() {
                 )}
             </CardContent>
         </Card>
-        
+
         {canLog && teams.length > 0 && (
             <Card className="frosted-glass">
                 <CardHeader>
