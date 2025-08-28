@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -148,9 +149,8 @@ export default function AdminLogAchievementsPage() {
   const [dailyTargets, setDailyTargets] = useState<DailyTargetData | null>(null);
 
   const [isLoadingPods, setIsLoadingPods] = useState(true);
-  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
-  const [isLoadingRules, setIsLoadingRules] = useState(false);
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false); // Used for daily data
+  const [isLoadingAgentsAndComp, setIsLoadingAgentsAndComp] = useState(false);
+  const [isLoadingDailyData, setIsLoadingDailyData] = useState(false); // Used for daily data
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
   const [isSavingBonus, setIsSavingBonus] = useState(false);
   const [isSendingToTeams, setIsSendingToTeams] = useState(false);
@@ -159,7 +159,7 @@ export default function AdminLogAchievementsPage() {
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
 
-  const isLoading = isLoadingPods || isLoadingAgents || isLoadingRules || isLoadingInitialData;
+  const isLoading = isLoadingPods || isLoadingAgentsAndComp || isLoadingDailyData;
 
   React.useEffect(() => {
     const savedPodId = localStorage.getItem(LOG_ACHIEVEMENTS_POD_KEY);
@@ -198,20 +198,18 @@ export default function AdminLogAchievementsPage() {
     return () => unsubscribe();
   }, [toast]);
 
-  // Combined effect for fetching data that depends on selectedPodId and selectedDate
+  // Effect 1: Fetch Agents and Active Competition when pod/date changes
   useEffect(() => {
     if (!selectedPodId) {
       setAgents([]);
       setTeams([]);
       setCompetitionRules([]);
       setActiveCompetitionId(null);
-      setIsLoadingAgents(false);
-      setIsLoadingRules(false);
+      setIsLoadingAgentsAndComp(false);
       return;
     }
 
-    setIsLoadingAgents(true);
-    setIsLoadingRules(true);
+    setIsLoadingAgentsAndComp(true);
     setError(null);
 
     const fetchPodData = async () => {
@@ -225,15 +223,9 @@ export default function AdminLogAchievementsPage() {
         const agentsSnapshot = await getDocs(agentsQuery);
         const fetchedAgents = agentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
         setAgents(fetchedAgents);
-        setIsLoadingAgents(false);
 
         if (fetchedAgents.length === 0) {
             toast({ variant: "default", title: "No Agents", description: "No users with 'agent' role found in this pod." });
-            setCompetitionRules([]);
-            setTeams([]);
-            setActiveCompetitionId(null);
-            setIsLoadingRules(false);
-            return;
         }
 
         const dateForQuery = startOfDay(selectedDate);
@@ -255,11 +247,10 @@ export default function AdminLogAchievementsPage() {
                  break;
              }
         }
-
+        
         setActiveCompetitionId(competitionForLogging?.id || null);
         setCompetitionRules(competitionForLogging?.rules || []);
         setTeams(competitionForLogging?.teams?.filter(team => team.agentIds.some(agentId => fetchedAgents.some(agent => agent.id === agentId))) || []);
-        setIsLoadingRules(false);
 
         if (!competitionForLogging) {
             toast({ variant: "default", title: "No Competition Found", description: `No competition found for this pod on this date.` });
@@ -268,8 +259,8 @@ export default function AdminLogAchievementsPage() {
       } catch (err) {
         console.error("Error fetching pod data:", err);
         setError("Failed to load data for the selected pod/date.");
-        setIsLoadingAgents(false);
-        setIsLoadingRules(false);
+      } finally {
+        setIsLoadingAgentsAndComp(false);
       }
     };
 
@@ -277,44 +268,41 @@ export default function AdminLogAchievementsPage() {
   }, [selectedPodId, selectedDate, toast]);
 
 
-  // Effect for setting up LISTENERS. Separated for clarity.
+  // Effect 2: Set up listeners for all data, depends on activeCompetitionId.
   useEffect(() => {
     if (!activeCompetitionId || !selectedPodId || !currentUserUid) {
-        // Clear all data if context is lost
-        setAchievementInputs({});
-        setTaskInputs({});
-        setBonusInputs({});
         setCompetitionLogs([]);
         setCompetitionBonusLogs([]);
         setDailyTargets(null);
-        setIsLoadingInitialData(false);
-        return;
+        setAchievementInputs({});
+        setTaskInputs({});
+        setBonusInputs({});
+        setIsLoadingDailyData(false);
+        return () => {};
     }
 
-    setIsLoadingInitialData(true);
+    setIsLoadingDailyData(true);
     const unsubscribes: Unsubscribe[] = [];
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-    const fetchedAgents = agents; // Use agents from state which is stable within this effect run
-
-    // --- Competition-wide Listeners ---
-    // These listeners fetch data for the entire competition and should NOT trigger UI state updates for daily inputs.
+    
+    // Listen to ALL logs for the competition (for total scores)
     const allLogsQuery = query(collection(db, 'dailyAchievements'), where('competitionId', '==', activeCompetitionId), where('podId', '==', selectedPodId));
     unsubscribes.push(onSnapshot(allLogsQuery, (snapshot) => {
         setCompetitionLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as DailyAchievementLog)));
     }));
 
+    // Listen to ALL bonus logs for the competition
     const allBonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', selectedPodId), where('competitionId', '==', activeCompetitionId));
     unsubscribes.push(onSnapshot(allBonusLogsQuery, (snapshot) => {
         setCompetitionBonusLogs(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TeamBonusLog)));
     }));
-
-    // --- Daily Data Listeners ---
-    // These listeners are specific to the selected day and pod, and are responsible for populating the input form state.
+    
+    // Listen ONLY to today's achievements to populate the form
     const dailyAchievementsQuery = query(collection(db, 'dailyAchievements'), where('podId', '==', selectedPodId), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompetitionId));
     unsubscribes.push(onSnapshot(dailyAchievementsQuery, (snapshot) => {
         const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
         const initialInputs: AchievementInputState = {};
-        fetchedAgents.forEach(agent => {
+        agents.forEach(agent => {
             if (!agent.id) return;
             initialInputs[agent.id] = {};
             const agentLogs = logs.filter(log => log.agentId === agent.id);
@@ -328,14 +316,15 @@ export default function AdminLogAchievementsPage() {
             });
         });
         setAchievementInputs(initialInputs);
-        setIsLoadingInitialData(false); // Daily data loaded
+        setIsLoadingDailyData(false); 
     }));
 
+    // Listen ONLY to today's tasks to populate the form
     const dailyTaskLogsQuery = query(collection(db, 'dailyTaskLogs'), where('podId', '==', selectedPodId), where('date', '==', dateTimestamp), where('competitionId', '==', activeCompetitionId));
     unsubscribes.push(onSnapshot(dailyTaskLogsQuery, (snapshot) => {
         const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyTaskLog));
         const initialTaskInputs: TaskInputState = {};
-        fetchedAgents.forEach(agent => {
+        agents.forEach(agent => {
             if (!agent.id) return;
             initialTaskInputs[agent.id] = {};
             competitionRules.forEach(rule => {
@@ -347,6 +336,7 @@ export default function AdminLogAchievementsPage() {
         setTaskInputs(initialTaskInputs);
     }));
 
+    // Listen ONLY to today's bonuses to populate the form
     const todayBonusLogsQuery = query(collection(db, 'teamBonusLogs'), where('podId', '==', selectedPodId), where('competitionId', '==', activeCompetitionId), where('date', '==', dateTimestamp));
     unsubscribes.push(onSnapshot(todayBonusLogsQuery, (snapshot) => {
         const todayBonusLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
@@ -358,7 +348,7 @@ export default function AdminLogAchievementsPage() {
         setBonusInputs(initialBonusInputs);
     }));
 
-    // --- Daily Targets (Snapshot is sufficient) ---
+    // Listen to daily targets (document, not collection)
     const targetsDocId = `${activeCompetitionId}_${selectedPodId}`;
     unsubscribes.push(onSnapshot(doc(db, 'dailyPodTargets', targetsDocId), (docSnap) => {
         setDailyTargets(docSnap.exists() ? docSnap.data() as DailyTargetData : null);
@@ -958,3 +948,4 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
+
