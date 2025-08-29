@@ -231,18 +231,22 @@ export default function AdminLogAchievementsPage() {
         const dateForQuery = startOfDay(selectedDate);
         const competitionQuery = query(
             collection(db, 'competitions'),
-            where('podIds', 'array-contains', selectedPodId),
-            orderBy('startDate', 'desc'),
-            limit(20)
+            where('podIds', 'array-contains', selectedPodId)
+            // REMOVED: orderBy('startDate', 'desc') - This was causing the Firestore index error.
         );
         const competitionSnapshot = await getDocs(competitionQuery);
-        let competitionForLogging: (Competition & { id: string; teams?: Team[] }) | null = null;
-        for (const docSnap of competitionSnapshot.docs) {
-            const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string; teams?: Team[] };
-            const startDate = comp.startDate instanceof Timestamp ? comp.startDate.toDate() : null;
-            const endDate = comp.endDate instanceof Timestamp ? comp.endDate.toDate() : null;
+        
+        let allPodCompetitions = competitionSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as (Competition & { id: string; teams?: Team[] })));
+        
+        // Manual sorting and filtering on the client
+        allPodCompetitions.sort((a, b) => b.startDate.toDate().getTime() - a.startDate.toDate().getTime());
 
-            if (startDate && endDate && dateForQuery >= startDate && dateForQuery <= endDate) {
+        let competitionForLogging: (Competition & { id: string; teams?: Team[] }) | null = null;
+        for (const comp of allPodCompetitions) {
+            const startDate = comp.startDate.toDate();
+            const endDate = comp.endDate.toDate();
+
+            if (dateForQuery >= startDate && dateForQuery <= endDate) {
                  competitionForLogging = comp;
                  break;
              }
@@ -948,4 +952,3 @@ export default function AdminLogAchievementsPage() {
     </div>
   );
 }
-
