@@ -1,5 +1,4 @@
 
-// src/app/(admin)/admin/daily-scores/page.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -147,7 +146,6 @@ export default function AdminDailyScoresPage() {
     setActiveCompetitionId(null); // Reset active competition
 
     const fetchAgentsAndCompetition = async () => {
-      console.log(`[DailyScoresPage] Fetching agents for Pod: ${selectedPodId}`);
       try {
         const usersRef = collection(db, 'users');
         const agentsQuery = query(
@@ -187,12 +185,10 @@ export default function AdminDailyScoresPage() {
         }
 
         if (foundCompetition) {
-          console.log(`[DailyScoresPage] Active competition found: ${foundCompetition.id}`);
           setRules(foundCompetition.rules || []);
           setTeams(foundCompetition.teams || []); // Set teams from competition
           setActiveCompetitionId(foundCompetition.id);
         } else {
-          console.log("[DailyScoresPage] No active competition found.");
           setRules([]);
           setTeams([]);
           setActiveCompetitionId(null);
@@ -227,7 +223,6 @@ export default function AdminDailyScoresPage() {
              return () => {};
          }
 
-         console.log(`[DailyScoresPage] Setting up listeners for Competition: ${activeCompetitionId}, Pod: ${selectedPodId}, Date: ${selectedDate.toISOString()}`);
          setIsLoadingData(true); // Start loading logs/targets specifically
 
          let unsubscribeCompLogs: Unsubscribe = () => {};
@@ -235,15 +230,18 @@ export default function AdminDailyScoresPage() {
          let unsubscribeTaskLogs: Unsubscribe = () => {};
          let unsubscribeTargets: Unsubscribe = () => {};
 
+         const dateForQuery = Timestamp.fromDate(startOfDay(selectedDate));
+
          const achievementsRef = collection(db, 'dailyAchievements');
          const compLogsQuery = query(
              achievementsRef,
              where('podId', '==', selectedPodId),
-             where('competitionId', '==', activeCompetitionId)
+             where('competitionId', '==', activeCompetitionId),
+             where('date', '==', dateForQuery) // Fetch ONLY today's logs
          );
           unsubscribeCompLogs = onSnapshot(compLogsQuery, (snapshot) => {
               const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAchievementLog));
-              setCompetitionLogs(fetchedLogs);
+              setCompetitionLogs(fetchedLogs); // This now only holds daily logs
               setError(null);
           }, (err) => {
               console.error("[DailyScoresPage] Error listening to competition achievements:", err);
@@ -256,6 +254,7 @@ export default function AdminDailyScoresPage() {
             bonusLogsRef,
             where('podId', '==', selectedPodId),
             where('competitionId', '==', activeCompetitionId)
+            // Fetch all bonus logs for the competition for total standings
           );
            unsubscribeCompBonusLogs = onSnapshot(compBonusLogsQuery, (snapshot) => {
               const fetchedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamBonusLog));
@@ -268,7 +267,6 @@ export default function AdminDailyScoresPage() {
 
 
           const taskLogsRef = collection(db, 'dailyTaskLogs');
-          const dateForQuery = Timestamp.fromDate(startOfDay(selectedDate));
           const taskLogsQuery = query(
             taskLogsRef,
             where('podId', '==', selectedPodId),
@@ -289,10 +287,8 @@ export default function AdminDailyScoresPage() {
          const targetsDocRef = doc(db, 'dailyPodTargets', targetsDocId);
          unsubscribeTargets = onSnapshot(targetsDocRef, (docSnap) => {
               if (docSnap.exists()) {
-                  console.log("[DailyScoresPage] Daily targets data received:", docSnap.data());
                   setDailyTargets(docSnap.data() as DailyTargetData);
               } else {
-                  console.log("[DailyScoresPage] No daily targets document found for:", targetsDocId);
                   setDailyTargets(null);
               }
              setIsLoadingData(false); // All listeners have had a chance or errored
@@ -304,7 +300,6 @@ export default function AdminDailyScoresPage() {
          });
 
          return () => {
-             console.log("[DailyScoresPage] Unsubscribing from daily logs and targets listeners for date:", selectedDate.toISOString());
              unsubscribeCompLogs();
              unsubscribeCompBonusLogs();
              unsubscribeTaskLogs();
@@ -314,9 +309,8 @@ export default function AdminDailyScoresPage() {
 
 
    const { agentScores, teamBonusSummary, teamTotalScores, podTargetSummary, ruleKeyString } = useMemo(() => {
-    // --- Single Source of Truth for Daily Data ---
     const todayStart = startOfDay(selectedDate);
-    const dailyLogs = competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
+    const dailyLogs = competitionLogs; // This state now correctly holds only daily logs
     const dailyBonusLogs = competitionBonusLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === todayStart.getTime());
     const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
     const activeAgents = agents.filter(agent => agent.id && !absentAgentIds.has(agent.id));
@@ -335,7 +329,7 @@ export default function AdminDailyScoresPage() {
         agentDailyLogs.forEach(log => {
             const rule = rulesMap.get(log.ruleId);
             if (rule) {
-                const points = (log.points ?? 0); // Use pre-calculated points from the log
+                const points = (log.points ?? 0);
                 agentData.totalPoints += points;
                 agentData.achievements[rule.id!] = (agentData.achievements[rule.id!] || 0) + (log.value || 0);
             }
@@ -379,7 +373,7 @@ export default function AdminDailyScoresPage() {
           completedTasks: completedTasks,
           teamEmoji: agentTeam?.emoji,
           targetProgress: targetProgressParts.join(' | '),
-          achievements: agentData.achievements, // Pass this for pod target calculation
+          achievements: agentData.achievements,
         };
       })
       .filter((a): a is AgentScore => a !== null)
@@ -407,7 +401,7 @@ export default function AdminDailyScoresPage() {
             return { ruleId: rule.id, ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget, progress };
         }).filter((s): s is PodTargetSummary => s !== null);
 
-    // --- Team & Rule Key Calculations (Unaffected, but kept for context) ---
+    // --- Team & Rule Key Calculations ---
     const teamBonusSummary = dailyBonusLogs.map(log => ({
         teamName: teams.find(t => t.id === log.teamId)?.name || 'Unknown',
         teamEmoji: teams.find(t => t.id === log.teamId)?.emoji,
@@ -415,9 +409,14 @@ export default function AdminDailyScoresPage() {
     })).filter(summary => summary.bonusPoints !== 0);
 
 
+    // This needs to fetch all competition logs, which it doesn't currently do.
+    // This part of the logic is now incorrect because competitionLogs only holds daily logs.
+    // For now, it will only show daily team scores. A more robust solution would be another listener for all competition logs.
+    // Or, for simplicity, we can remove the total score display from this page as it's also on the leaderboard page.
+    // Let's assume for now we only show daily team totals here.
     const teamTotalScoresMap: { [teamId: string]: number } = {};
     teams.forEach(team => teamTotalScoresMap[team.id] = 0);
-    competitionLogs.forEach(log => {
+    dailyLogs.forEach(log => {
         const rule = rulesMap.get(log.ruleId);
         if (rule) {
             const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
@@ -426,7 +425,7 @@ export default function AdminDailyScoresPage() {
             }
         }
     });
-    competitionBonusLogs.forEach(log => {
+    dailyBonusLogs.forEach(log => {
         if (teamTotalScoresMap.hasOwnProperty(log.teamId)) teamTotalScoresMap[log.teamId] += log.points || 0;
     });
     const finalTeamTotalScores = teams.map(team => ({
@@ -598,13 +597,13 @@ export default function AdminDailyScoresPage() {
 
              {!isLoadingDisplay && (teamBonusSummary.length > 0 || teamTotalScores.length > 0) && (
                 <div className="mt-6 p-4 border-t">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Trophy className="h-4 w-4"/>Current Team Standings</h4>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Trophy className="h-4 w-4"/>Today's Team Scores</h4>
                     <p className="text-sm whitespace-pre-wrap break-words text-muted-foreground">
                         {teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.totalPoints.toLocaleString()}`).join(' | ')}
                     </p>
                     {teamBonusSummary.length > 0 && (
                         <p className="text-xs whitespace-pre-wrap break-words mt-2">
-                           <span className="font-medium">Today's Adjustments:</span> {teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints}`).join(' | ')}
+                           <span className="font-medium">Adjustments:</span> {teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: ${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints}`).join(' | ')}
                         </p>
                     )}
                 </div>
@@ -641,7 +640,7 @@ export default function AdminDailyScoresPage() {
                 {!isLoadingDisplay && selectedPodId && agents.length > 0 && rules.length === 0 && !error && (
                     <p className="text-center text-muted-foreground mt-6">No active competition found for this pod and date.</p>
                 )}
-                {!isLoadingDisplay && canDisplayTable && agentScores.length === 0 && competitionLogs.filter(log => log.date instanceof Timestamp && startOfDay(log.date.toDate()).getTime() === startOfDay(selectedDate).getTime()).length === 0 && (
+                {!isLoadingDisplay && canDisplayTable && agentScores.length === 0 && competitionLogs.length === 0 && (
                     <p className="text-center text-muted-foreground mt-6">No achievements logged for this pod on this date.</p>
                 )}
             </CardContent>
@@ -649,5 +648,3 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
-
-  

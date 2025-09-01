@@ -232,13 +232,11 @@ export default function AdminLogAchievementsPage() {
         const competitionQuery = query(
             collection(db, 'competitions'),
             where('podIds', 'array-contains', selectedPodId)
-            // REMOVED: orderBy('startDate', 'desc') - This was causing the Firestore index error.
         );
         const competitionSnapshot = await getDocs(competitionQuery);
         
         let allPodCompetitions = competitionSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as (Competition & { id: string; teams?: Team[] })));
         
-        // Manual sorting and filtering on the client
         allPodCompetitions.sort((a, b) => b.startDate.toDate().getTime() - a.startDate.toDate().getTime());
 
         let competitionForLogging: (Competition & { id: string; teams?: Team[] }) | null = null;
@@ -678,7 +676,7 @@ export default function AdminLogAchievementsPage() {
                 }
                 const agentDailyLogs = dailyLogsForPod.filter(l => l.agentId === agent.id);
                 const agentDailyTaskLogs = freshDailyTaskLogs.filter(l => l.agentId === agent.id);
-                const totalPoints = agentDailyLogs.reduce((acc, log) => acc + ((log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0)), 0);
+                const totalPoints = agentDailyLogs.reduce((acc, log) => acc + (log.points ?? 0), 0);
                 const emojiString = numericRules.map(rule => (agentDailyLogs.find(l => l.ruleId === rule.id)?.value || 0) > 0 ? (rule.emoji || '❓').repeat(agentDailyLogs.find(l => l.ruleId === rule.id)!.value) : '').join('');
                 const completedTasks = agentDailyTaskLogs.map(taskLog => ({ ruleName: taskRules.find(r => r.id === taskLog.taskId)?.name || 'Task', ruleEmoji: taskRules.find(r => r.id === taskLog.taskId)?.emoji || '✅' }));
                 return { agentFirstName: agent.name.split(' ')[0], totalPoints, emojiString, completedTasks, isAbsent: false, teamEmoji: teams.find(t => t.agentIds.includes(agent.id!))?.emoji };
@@ -689,7 +687,7 @@ export default function AdminLogAchievementsPage() {
             const podRuleTotalsToday: Record<string, number> = {};
             numericRules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
             dailyLogsForPod.forEach(log => {
-                 if (log.ruleId && podRuleTotalsToday.hasOwnProperty(log.ruleId)) {
+                 if (log.ruleId && podRuleTotalsToday.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
                      podRuleTotalsToday[log.ruleId] += log.value || 0;
                  }
             });
@@ -705,7 +703,7 @@ export default function AdminLogAchievementsPage() {
             const teamTotalScores: TeamTotalScore[] = teams.map(team => {
                 const teamAgentIds = new Set(team.agentIds);
                 const teamCompetitionLogs = competitionLogs.filter(log => teamAgentIds.has(log.agentId));
-                const totalPoints = teamCompetitionLogs.reduce((sum, log) => sum + ((log.value || 0) * (rulesMap.get(log.ruleId)?.points || 0)), 0);
+                const totalPoints = teamCompetitionLogs.reduce((sum, log) => sum + (log.points ?? 0), 0);
                 const totalBonusPoints = competitionBonusLogs.filter(b => b.teamId === team.id).reduce((sum, b) => sum + b.points, 0);
                 return { teamName: team.name, teamEmoji: team.emoji, totalPoints: totalPoints + totalBonusPoints };
             }).sort((a,b) => b.totalPoints - a.totalPoints);
