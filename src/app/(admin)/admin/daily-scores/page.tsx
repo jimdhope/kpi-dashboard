@@ -335,7 +335,7 @@ export default function AdminDailyScoresPage() {
         agentDailyLogs.forEach(log => {
             const rule = rulesMap.get(log.ruleId);
             if (rule) {
-                const points = (log.value || 0) * (rule.points || 0);
+                const points = (log.points ?? 0); // Use pre-calculated points from the log
                 agentData.totalPoints += points;
                 agentData.achievements[rule.id!] = (agentData.achievements[rule.id!] || 0) + (log.value || 0);
             }
@@ -422,7 +422,7 @@ export default function AdminDailyScoresPage() {
         if (rule) {
             const agentTeam = teams.find(team => team.agentIds?.includes(log.agentId));
             if (agentTeam) {
-                teamTotalScoresMap[agentTeam.id] = (teamTotalScoresMap[agentTeam.id] || 0) + ((log.value || 0) * (rule.points || 0));
+                teamTotalScoresMap[agentTeam.id] = (teamTotalScoresMap[agentTeam.id] || 0) + (log.points ?? 0);
             }
         }
     });
@@ -649,3 +649,5 @@ export default function AdminDailyScoresPage() {
     </div>
   );
 }
+
+  
