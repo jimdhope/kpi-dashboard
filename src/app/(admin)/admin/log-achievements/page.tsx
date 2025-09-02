@@ -29,7 +29,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX, Award, Minus, Plus } from 'lucide-react';
-import { format, startOfDay, getDay } from 'date-fns';
+import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
@@ -394,17 +394,25 @@ export default function AdminLogAchievementsPage() {
        };
 
        const achievementsRef = collection(db, 'dailyAchievements');
-       let existingLogId: string | undefined;
-       setAchievementInputs(currentInputs => {
-           existingLogId = currentInputs[agentId]?.[ruleId]?.existingLogId;
-           return currentInputs;
-       });
+       // **THE FIX**: Instead of getting logId from state, query for it directly to find the single source of truth.
+        const logQuery = query(
+            achievementsRef,
+            where('agentId', '==', agentId),
+            where('ruleId', '==', ruleId),
+            where('date', '==', dateTimestamp),
+            where('competitionId', '==', activeCompetitionId),
+            limit(1)
+        );
+        const logSnapshot = await getDocs(logQuery);
+        const existingLogDoc = logSnapshot.docs[0];
 
 
-       if (existingLogId) {
-         const docRef = doc(achievementsRef, existingLogId);
+       if (existingLogDoc) {
+         // If a log exists, UPDATE it. If the new value is 0, DELETE it.
+         const docRef = doc(achievementsRef, existingLogDoc.id);
          if (value === 0) {
              await deleteDoc(docRef);
+             // Update state to remove the logId, preventing future incorrect updates
              setAchievementInputs(prev => {
                  const newState = { ...prev };
                  if (newState[agentId] && newState[agentId][ruleId]) {
@@ -416,25 +424,20 @@ export default function AdminLogAchievementsPage() {
             await setDoc(docRef, logEntry, { merge: true });
          }
        } else if (value > 0) {
-         const addedDoc = await addDoc(achievementsRef, logEntry);
+         // If NO log exists and the value is positive, CREATE a new one.
+         const newDocRef = doc(collection(db, "dailyAchievements"));
+         await setDoc(newDocRef, logEntry);
+
+         // Update state with the new ID immediately for subsequent saves
          setAchievementInputs(prev => {
              const newState = { ...prev };
              if (!newState[agentId]) newState[agentId] = {};
-             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: value, existingLogId: addedDoc.id };
-             else { newState[agentId][ruleId].existingLogId = addedDoc.id; }
+             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: value, existingLogId: newDocRef.id };
+             else { newState[agentId][ruleId].existingLogId = newDocRef.id; }
              return newState;
          });
-       } else if (value === 0 && existingLogId) {
-           const docRef = doc(achievementsRef, existingLogId);
-           await deleteDoc(docRef);
-           setAchievementInputs(prev => {
-               const newState = { ...prev };
-               if (newState[agentId] && newState[agentId][ruleId]) {
-                   newState[agentId][ruleId].existingLogId = undefined;
-               }
-               return newState;
-           });
        }
+
        console.log(`[LogAchievementsPage] Achievement saved for rule ${rule.id}.`);
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
