@@ -92,9 +92,6 @@ export default function KpiBreakdownPage() {
       setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppUser)));
     }));
 
-    // Logs are now fetched in the next effect based on podId
-    // The initial loading state is primarily for base data.
-    // Set loading to false after base data is fetched.
     Promise.all([
         getDocs(query(collection(db, 'pods'))),
         getDocs(query(collection(db, 'additionalKpis'))),
@@ -108,10 +105,10 @@ export default function KpiBreakdownPage() {
   useEffect(() => {
     if (!selectedPodId) {
       setLogs([]);
-      setIsLoading(false); // Ensure loading is false if no pod is selected
+      setIsLoading(false); 
       return;
     }
-    setIsLoading(true); // Set loading true when pod changes
+    setIsLoading(true); 
     const logsQuery = query(
       collection(db, 'additionalKpiLogs'),
       where('podId', '==', selectedPodId),
@@ -119,7 +116,7 @@ export default function KpiBreakdownPage() {
     
     const unsubscribe = onSnapshot(logsQuery, (snap) => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpiLog)));
-      setIsLoading(false); // Set loading false after logs are fetched
+      setIsLoading(false); 
     }, (err) => {
       console.error("Error fetching logs:", err);
       setIsLoading(false);
@@ -196,9 +193,6 @@ export default function KpiBreakdownPage() {
                 agent.weeklyScores[weekOf][log.kpiId] = 0;
             }
             
-            // For percentage type, we should average, not sum. We'll need a count.
-            // This is a simplification for now: we sum everything.
-            // A more complex implementation would store { total, count } and average at the end.
             agent.weeklyScores[weekOf][log.kpiId] += log.value;
         }
     });
@@ -239,12 +233,12 @@ export default function KpiBreakdownPage() {
         </CardContent>
       </Card>
 
-      <Card className="frosted-glass">
+      <Card className="frosted-glass flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BarChartHorizontal className="h-5 w-5" /> Weekly KPI Breakdown</CardTitle>
           <CardDescription>Weekly total scores for each agent across all relevant KPIs.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col">
         {!selectedPodId ? (
           <p className="text-muted-foreground text-center py-6">Please select a pod to view the breakdown.</p>
         ) : isLoading ? (
@@ -252,42 +246,44 @@ export default function KpiBreakdownPage() {
         ) : processedData.length === 0 ? (
           <p className="text-muted-foreground text-center py-6">No scores logged for the selected filters.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead rowSpan={2} className="min-w-[150px] sticky left-0 bg-background/95 align-bottom">Agent</TableHead>
-                  {weekHeaders.map(week => (
-                    <TableHead key={week} colSpan={podKpis.length} className="text-center border-l">
-                      Week of {week}
-                    </TableHead>
-                  ))}
-                </TableRow>
-                <TableRow>
-                  {weekHeaders.flatMap(week =>
-                    podKpis.map(kpi => (
-                      <TableHead key={`${week}-${kpi.id}`} className="text-center w-[100px] border-l" title={kpi.name}>
-                        {kpi.emoji}
+          <div className="flex-1 flex flex-col">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead rowSpan={2} className="min-w-[150px] sticky left-0 bg-background/95 align-bottom">Agent</TableHead>
+                    {weekHeaders.map(week => (
+                      <TableHead key={week} colSpan={podKpis.length} className="text-center border-l">
+                        Week of {week}
                       </TableHead>
-                    ))
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {processedData.map(agentData => (
-                  <TableRow key={agentData.agentId}>
-                    <TableCell className="font-medium sticky left-0 bg-background/95">{agentData.agentName}</TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
                     {weekHeaders.flatMap(week =>
                       podKpis.map(kpi => (
-                        <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className="text-center text-muted-foreground border-l">
-                          {agentData.weeklyScores[week]?.[kpi.id]?.toLocaleString() ?? '-'}
-                        </TableCell>
+                        <TableHead key={`${week}-${kpi.id}`} className="text-center w-[100px] border-l" title={kpi.name}>
+                          {kpi.emoji}
+                        </TableHead>
                       ))
                     )}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {processedData.map(agentData => (
+                    <TableRow key={agentData.agentId}>
+                      <TableCell className="font-medium sticky left-0 bg-background/95">{agentData.agentName}</TableCell>
+                      {weekHeaders.flatMap(week =>
+                        podKpis.map(kpi => (
+                          <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className="text-center text-muted-foreground border-l">
+                            {agentData.weeklyScores[week]?.[kpi.id]?.toLocaleString() ?? '-'}
+                          </TableCell>
+                        ))
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
         </CardContent>
