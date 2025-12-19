@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc, setDoc, deleteDoc, onSnapshot, Unsubscribe, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, setDoc, deleteDoc, onSnapshot, Unsubscribe, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -130,58 +130,80 @@ export default function AdditionalScoresPage() {
   }, [selectedPodId, selectedDate]);
 
 
-  const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
+const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
     const kpi = kpis.find(k => k.id === kpiId);
     if (!kpi) return;
-  
+
     const savingKey = `${agentId}-${kpiId}`;
-    setIsSaving(prev => ({...prev, [savingKey]: true }));
-  
-    const logId = inputs[agentId]?.[kpiId]?.logId;
+    setIsSaving(prev => ({ ...prev, [savingKey]: true }));
+
+    const value = valueStr.trim() === '' ? 0 : parseFloat(valueStr);
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-  
+    const logsCollectionRef = collection(db, 'additionalKpiLogs');
+
     try {
-      // Check if the input is empty first
-      if (valueStr === '') {
-        // If the input is empty and a log exists, delete it
-        if (logId) {
-          await deleteDoc(doc(db, 'additionalKpiLogs', logId));
+        const q = query(
+            logsCollectionRef,
+            where('agentId', '==', agentId),
+            where('kpiId', '==', kpiId),
+            where('date', '==', dateTimestamp),
+            limit(1)
+        );
+        const logSnapshot = await getDocs(q);
+        const existingLogDoc = logSnapshot.docs[0];
+
+        if (existingLogDoc) {
+            // Log exists
+            if (value === 0 || isNaN(value)) {
+                // If new value is 0 or invalid, delete the existing log
+                await deleteDoc(doc(logsCollectionRef, existingLogDoc.id));
+                 setInputs(prev => {
+                    const newInputs = { ...prev };
+                    if (newInputs[agentId]?.[kpiId]) {
+                        delete newInputs[agentId][kpiId];
+                    }
+                    return newInputs;
+                });
+            } else {
+                // Update existing log
+                const logEntryChanges = {
+                    value,
+                    scoreOutOf: kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined,
+                    loggedAt: serverTimestamp() as Timestamp,
+                };
+                await setDoc(doc(logsCollectionRef, existingLogDoc.id), logEntryChanges, { merge: true });
+            }
+        } else if (value > 0 && !isNaN(value)) {
+            // No log exists, and value is valid and positive, so create a new one
+            const logEntry: Omit<AdditionalKpiLog, 'id'> = {
+                agentId,
+                podId: selectedPodId,
+                kpiId,
+                date: dateTimestamp,
+                value,
+                scoreOutOf: kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined,
+                loggedAt: serverTimestamp() as Timestamp,
+            };
+            const newDocRef = doc(logsCollectionRef);
+            await setDoc(newDocRef, logEntry);
+             setInputs(prev => ({
+                ...prev,
+                [agentId]: {
+                    ...prev[agentId],
+                    [kpiId]: { value: String(value), logId: newDocRef.id }
+                }
+            }));
         }
-        // If input is empty and no log exists, do nothing
-      } else {
-        // If input is not empty, parse it
-        const value = parseFloat(valueStr);
-        // Check if the parsed value is a valid number
-        if (isNaN(value)) {
-          // If not a valid number but a log exists, delete it (treat invalid input as empty)
-          if (logId) {
-            await deleteDoc(doc(db, 'additionalKpiLogs', logId));
-          }
-          // Do nothing if invalid and no log exists
-        } else {
-          // The value is a valid number, so create or update the log
-          const logEntry: Omit<AdditionalKpiLog, 'id'> = {
-            agentId,
-            podId: selectedPodId,
-            kpiId,
-            date: dateTimestamp,
-            value,
-            scoreOutOf: kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined,
-            loggedAt: serverTimestamp() as Timestamp,
-          };
-          
-          const docRef = logId ? doc(db, 'additionalKpiLogs', logId) : doc(collection(db, 'additionalKpiLogs'));
-          await setDoc(docRef, logEntry, { merge: true });
-        }
-      }
+        // If value is 0/invalid and no log exists, do nothing.
+
     } catch (e) {
-      console.error("Error saving score:", e);
-      toast({ title: "Save Error", description: `Could not save score for ${kpi.name}.`, variant: "destructive" });
+        console.error("Error saving score:", e);
+        toast({ title: "Save Error", description: `Could not save score for ${kpi.name}.`, variant: "destructive" });
     } finally {
-      setIsSaving(prev => ({...prev, [savingKey]: false }));
+        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
-  }, [inputs, kpis, selectedPodId, selectedDate, toast]);
-  
+}, [kpis, selectedPodId, selectedDate, toast]);
+
   const debouncedSave = useMemo(() => {
     const debounce = (func: Function, delay: number) => {
         let timeoutId: NodeJS.Timeout;
@@ -300,3 +322,5 @@ export default function AdditionalScoresPage() {
     </div>
   );
 }
+
+    
