@@ -21,6 +21,7 @@ import {
   isWithinInterval,
   startOfWeek,
   subWeeks,
+  addWeeks, // Import addWeeks
 } from 'date-fns';
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -60,8 +61,8 @@ export default function KpiBreakdownPage() {
   const [selectedKpiId, setSelectedKpiId] = useState<string>('');
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfWeek(subWeeks(new Date(), 5)), // Default to start of week 6 weeks ago
-    to: endOfWeek(new Date()), // Default to end of current week
+    from: startOfWeek(subWeeks(new Date(), 5), { weekStartsOn: 1 }), // Default to start of week 6 weeks ago, Monday start
+    to: endOfWeek(new Date(), { weekStartsOn: 1 }), // Default to end of current week, Sunday end
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -122,7 +123,7 @@ export default function KpiBreakdownPage() {
   // --- Data Processing ---
 
   const weeklyData = useMemo((): WeeklyScores[] => {
-    if (!dateRange?.from || logs.length === 0) return [];
+    if (!dateRange?.from || !dateRange.to || logs.length === 0) return [];
     
     const podAgents = agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent'));
     if (podAgents.length === 0) return [];
@@ -130,7 +131,7 @@ export default function KpiBreakdownPage() {
     const weeks: WeeklyScores[] = [];
     let currentWeekStart = startOfWeek(dateRange.from, { weekStartsOn: 1 }); // Monday
 
-    while (currentWeekStart <= dateRange.to!) {
+    while (currentWeekStart <= dateRange.to) {
       const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
       const daysInWeek = eachDayOfInterval({ start: currentWeekStart, end: currentWeekEnd });
 
@@ -150,7 +151,9 @@ export default function KpiBreakdownPage() {
         days: daysInWeek,
         agentData: agentData.sort((a,b) => b.total - a.total), // Sort agents by total score for the week
       });
-      currentWeekStart = startOfWeek(addWeeks(currentWeekStart, 1), { weekStartsOn: 1 });
+      
+      // Move to the next week
+      currentWeekStart = addWeeks(currentWeekStart, 1);
     }
     return weeks;
   }, [logs, agents, selectedPodId, dateRange]);
