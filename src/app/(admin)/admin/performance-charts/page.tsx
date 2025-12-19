@@ -123,12 +123,12 @@ export default function PerformanceChartsPage() {
 
   const podAgents = useMemo(() => agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent')), [agents, selectedPodId]);
 
-  const { chartData, tableData, percentageKpis, numberKpis } = useMemo(() => {
+  const { chartData, tableData, percentageKpis, numberKpis, rightAxisMax } = useMemo(() => {
     const showAllKpis = selectedKpiId === 'all';
-    if ((!selectedKpiId || selectedKpiId === '') || !kpis.length) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [] };
+    if ((!selectedKpiId || selectedKpiId === '') || !kpis.length) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [], rightAxisMax: 100 };
     
     let kpisToProcess = showAllKpis ? kpis : kpis.filter(k => k.id === selectedKpiId);
-    if (kpisToProcess.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [] };
+    if (kpisToProcess.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [], rightAxisMax: 100 };
 
     const now = new Date();
     let startDate: Date;
@@ -149,7 +149,7 @@ export default function PerformanceChartsPage() {
             break;
         case 'allTime':
         default:
-            if (logs.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [] };
+            if (logs.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [], rightAxisMax: 100 };
             const sortedLogs = [...logs].sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime());
             startDate = sortedLogs[0].date.toDate();
             endDate = sortedLogs[sortedLogs.length - 1].date.toDate();
@@ -193,11 +193,11 @@ export default function PerformanceChartsPage() {
             const count = dataPoint[countKey];
 
             if (totalValue !== undefined && count > 0) {
-                // If 'All Agents' is selected, average the score regardless of KPI type.
-                // Otherwise, use the total value (for a single agent).
-                if (selectedAgentId === 'all') {
+                 if (selectedAgentId === 'all') {
+                    // Always average if "All Agents" is selected
                     averagedDataPoint[valueKey] = totalValue / count;
                 } else {
+                    // Use the direct sum if a single agent is selected
                     averagedDataPoint[valueKey] = totalValue;
                 }
             }
@@ -208,7 +208,19 @@ export default function PerformanceChartsPage() {
     const finalPercentageKpis = kpisToProcess.filter(k => k.type === 'percentage');
     const finalNumberKpis = kpisToProcess.filter(k => k.type !== 'percentage');
 
-    return { chartData: finalChartData, tableData: relevantLogs, percentageKpis: finalPercentageKpis, numberKpis: finalNumberKpis };
+    // Calculate max value for the right axis
+    let maxRightAxisValue = 0;
+    finalChartData.forEach(dataPoint => {
+        finalNumberKpis.forEach(kpi => {
+            const value = dataPoint[kpi.name];
+            if (typeof value === 'number' && value > maxRightAxisValue) {
+                maxRightAxisValue = value;
+            }
+        });
+    });
+    const finalRightAxisMax = Math.ceil(maxRightAxisValue);
+
+    return { chartData: finalChartData, tableData: relevantLogs, percentageKpis: finalPercentageKpis, numberKpis: finalNumberKpis, rightAxisMax: finalRightAxisMax > 0 ? finalRightAxisMax : 100 };
 
   }, [selectedPodId, selectedKpiId, selectedAgentId, timeframe, logs, kpis, podAgents]);
 
@@ -249,7 +261,7 @@ export default function PerformanceChartsPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis yAxisId="left" stroke={LINE_COLORS[1]} fontSize={12} domain={[0, 100]} tickFormatter={(value) => `${value}%`} hide={percentageKpis.length === 0} />
-                <YAxis yAxisId="right" orientation="right" stroke={LINE_COLORS[0]} fontSize={12} hide={numberKpis.length === 0} />
+                <YAxis yAxisId="right" orientation="right" stroke={LINE_COLORS[0]} fontSize={12} hide={numberKpis.length === 0} domain={[0, rightAxisMax]} />
                 <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
                 <Legend />
                 {percentageKpis.map((kpi, index) => (
@@ -311,4 +323,3 @@ export default function PerformanceChartsPage() {
     </div>
   );
 }
-
