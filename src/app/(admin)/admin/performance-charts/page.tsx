@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format, eachDayOfInterval } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
