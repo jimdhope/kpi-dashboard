@@ -14,6 +14,7 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { AdditionalKpi, AdditionalKpiType } from '@/app/(admin)/admin/additional-kpis/page';
 import type { AdditionalKpiLog } from '@/app/(admin)/admin/additional-scores/page';
+import { subWeeks } from 'date-fns';
 
 interface LeaderboardEntry {
   id: string;
@@ -25,7 +26,7 @@ interface LeaderboardEntry {
   avatarBgColor?: string;
 }
 
-type Timeframe = 'daily' | 'weekly' | 'monthly' | 'allTime';
+type Timeframe = 'weekly' | 'last6weeks' | 'monthly' | 'allTime';
 
 const LEADERBOARD_POD_KEY = 'additionalLeaderboard_selectedPodId';
 const LEADERBOARD_KPI_KEY = 'additionalLeaderboard_selectedKpiId';
@@ -40,7 +41,7 @@ export default function AdditionalLeaderboardPage() {
 
   const [selectedPodId, setSelectedPodId] = useState<string>('');
   const [selectedKpiId, setSelectedKpiId] = useState<string>('overall');
-  const [timeframe, setTimeframe] = useState<Timeframe>('daily');
+  const [timeframe, setTimeframe] = useState<Timeframe>('weekly');
   
   const [isLoading, setIsLoading] = useState(true);
 
@@ -96,11 +97,12 @@ export default function AdditionalLeaderboardPage() {
     const now = new Date();
     let startDate: Date;
     switch (timeframe) {
-      case 'daily':
-        startDate = new Date(now.setHours(0, 0, 0, 0));
-        break;
       case 'weekly':
         startDate = new Date(now.setDate(now.getDate() - now.getDay()));
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last6weeks':
+        startDate = subWeeks(now, 6);
         startDate.setHours(0, 0, 0, 0);
         break;
       case 'monthly':
@@ -187,7 +189,7 @@ export default function AdditionalLeaderboardPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="timeframe-select">Timeframe</Label>
-              <Select onValueChange={handleTimeframeChange} value={timeframe} disabled={isLoading}><SelectTrigger id="timeframe-select"><SelectValue placeholder="Select Timeframe" /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="allTime">All Time</SelectItem></SelectContent></Select>
+              <Select onValueChange={handleTimeframeChange} value={timeframe} disabled={isLoading}><SelectTrigger id="timeframe-select"><SelectValue placeholder="Select Timeframe" /></SelectTrigger><SelectContent><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="last6weeks">Last 6 Weeks</SelectItem><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="allTime">All Time</SelectItem></SelectContent></Select>
             </div>
           </div>
         </CardContent>
