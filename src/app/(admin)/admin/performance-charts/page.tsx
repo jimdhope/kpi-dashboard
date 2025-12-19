@@ -193,7 +193,9 @@ export default function PerformanceChartsPage() {
             const count = dataPoint[countKey];
 
             if (totalValue !== undefined && count > 0) {
-                if (selectedAgentId === 'all' && (kpiInfo.type === 'percentage')) {
+                // If 'All Agents' is selected, average the score regardless of KPI type.
+                // Otherwise, use the total value (for a single agent).
+                if (selectedAgentId === 'all') {
                     averagedDataPoint[valueKey] = totalValue / count;
                 } else {
                     averagedDataPoint[valueKey] = totalValue;
