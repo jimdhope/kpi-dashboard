@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format, startOfDay, endOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -57,7 +57,7 @@ export default function PerformanceChartsPage() {
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [logs, setLogs] = useState<AdditionalKpiLog[]>([]);
 
-  const [selectedPodId, setSelectedPodId] = useState<string>('');
+  const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [selectedKpiId, setSelectedKpiId] = useState<string>('');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('all'); // 'all' or a user ID
   const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
@@ -90,12 +90,14 @@ export default function PerformanceChartsPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedPodId) {
-      setLogs([]);
-      return;
-    }
     setIsLoading(true);
-    const logsQuery = query(collection(db, 'additionalKpiLogs'), where('podId', '==', selectedPodId));
+    let logsQuery;
+    if (selectedPodId === 'all') {
+      logsQuery = query(collection(db, 'additionalKpiLogs'));
+    } else {
+      logsQuery = query(collection(db, 'additionalKpiLogs'), where('podId', '==', selectedPodId));
+    }
+
     const unsubscribe = onSnapshot(logsQuery, (snap) => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpiLog)));
       setIsLoading(false);
@@ -236,8 +238,17 @@ export default function PerformanceChartsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
-            <div className="grid gap-2"><Label>Pod</Label><Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select Pod" /></SelectTrigger><SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-2"><Label>Agent</Label><Select onValueChange={handleAgentChange} value={selectedAgentId} disabled={isLoading || !selectedPodId}><SelectTrigger><SelectValue placeholder="Select Agent" /></SelectTrigger><SelectContent><SelectItem value="all">All Agents (Aggregated)</SelectItem>{podAgents.map(a => <SelectItem key={a.id!} value={a.id!}>{a.name}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-2">
+              <Label>Pod</Label>
+              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
+                <SelectTrigger><SelectValue placeholder="Select Pod" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pods</SelectItem>
+                  {pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2"><Label>Agent</Label><Select onValueChange={handleAgentChange} value={selectedAgentId} disabled={isLoading || !selectedPodId || selectedPodId === 'all'}><SelectTrigger><SelectValue placeholder="Select Agent" /></SelectTrigger><SelectContent><SelectItem value="all">All Agents (Aggregated)</SelectItem>{podAgents.map(a => <SelectItem key={a.id!} value={a.id!}>{a.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label>KPI</Label><Select onValueChange={handleKpiChange} value={selectedKpiId} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select KPI" /></SelectTrigger><SelectContent><SelectItem value="all">All KPIs</SelectItem>{kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label>Timeframe</Label><Select onValueChange={handleTimeframeChange} value={timeframe} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select Timeframe" /></SelectTrigger><SelectContent><SelectItem value="thisWeek">This Week</SelectItem><SelectItem value="thisMonth">This Month</SelectItem><SelectItem value="last6weeks">Last 6 Weeks</SelectItem><SelectItem value="allTime">All Time</SelectItem></SelectContent></Select></div>
           </div>
@@ -248,14 +259,15 @@ export default function PerformanceChartsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><LineChart className="h-5 w-5" /> KPI Performance Chart</CardTitle>
           <CardDescription>
-            Visualizing <span className="font-semibold">{selectedKpiId === 'all' ? 'All KPIs' : kpis.find(k=>k.id === selectedKpiId)?.name}</span> for <span className="font-semibold">{selectedAgentId === 'all' ? 'All Agents' : agents.find(a=>a.id===selectedAgentId)?.name}</span> in <span className="font-semibold">{pods.find(p=>p.id===selectedPodId)?.name || '...'}</span>
+            Visualizing <span className="font-semibold">{selectedKpiId === 'all' ? 'All KPIs' : kpis.find(k=>k.id === selectedKpiId)?.name}</span> for <span className="font-semibold">{selectedAgentId === 'all' ? 'All Agents' : agents.find(a=>a.id===selectedAgentId)?.name}</span>
+            {selectedPodId !== 'all' && ` in ${pods.find(p=>p.id===selectedPodId)?.name || '...'}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <Skeleton className="h-[350px] w-full" />
-          ) : !selectedPodId || !selectedKpiId ? (
-              <div className="h-[350px] flex items-center justify-center text-muted-foreground"><AlertCircle className="mr-2"/>Please select a Pod and KPI to view the chart.</div>
+          ) : !selectedKpiId ? (
+              <div className="h-[350px] flex items-center justify-center text-muted-foreground"><AlertCircle className="mr-2"/>Please select a KPI to view the chart.</div>
           ) : chartData.length === 0 ? (
               <div className="h-[350px] flex items-center justify-center text-muted-foreground"><AlertCircle className="mr-2"/>No data available for the selected filters.</div>
           ) : (

@@ -39,7 +39,7 @@ export default function AdditionalLeaderboardPage() {
   const [kpis, setKpis] = useState<AdditionalKpi[]>([]);
   const [logs, setLogs] = useState<AdditionalKpiLog[]>([]);
 
-  const [selectedPodId, setSelectedPodId] = useState<string>('');
+  const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [selectedKpiId, setSelectedKpiId] = useState<string>('overall');
   const [timeframe, setTimeframe] = useState<Timeframe>('weekly');
   
@@ -74,14 +74,16 @@ export default function AdditionalLeaderboardPage() {
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
 
-  // Fetch logs based on pod filter (all time)
+  // Fetch logs based on pod filter
   useEffect(() => {
-    if (!selectedPodId) {
-      setLogs([]);
-      return;
-    }
     setIsLoading(true);
-    const logsQuery = query(collection(db, 'additionalKpiLogs'), where('podId', '==', selectedPodId));
+    let logsQuery;
+    if (selectedPodId === 'all') {
+      logsQuery = query(collection(db, 'additionalKpiLogs'));
+    } else {
+      logsQuery = query(collection(db, 'additionalKpiLogs'), where('podId', '==', selectedPodId));
+    }
+    
     const unsubscribe = onSnapshot(logsQuery, (snap) => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpiLog)));
       setIsLoading(false);
@@ -116,7 +118,10 @@ export default function AdditionalLeaderboardPage() {
   }, [logs, timeframe]);
 
   const leaderboardData = useMemo((): LeaderboardEntry[] => {
-    const podAgents = agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent'));
+    const podAgents = selectedPodId === 'all'
+      ? agents.filter(a => a.roles?.includes('agent'))
+      : agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent'));
+    
     if (podAgents.length === 0) return [];
   
     let logsToProcess = filteredLogs;
@@ -181,7 +186,13 @@ export default function AdditionalLeaderboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div className="grid gap-2">
               <Label htmlFor="pod-select">Pod</Label>
-              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}><SelectTrigger id="pod-select"><SelectValue placeholder="Select Pod" /></SelectTrigger><SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select>
+              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
+                <SelectTrigger id="pod-select"><SelectValue placeholder="Select Pod" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pods</SelectItem>
+                  {pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="kpi-select">KPI</Label>
@@ -203,8 +214,6 @@ export default function AdditionalLeaderboardPage() {
         <CardContent>
           {isLoading ? (
             <div className="space-y-2"><Skeleton className="h-[300px] w-full" /></div>
-          ) : !selectedPodId ? (
-            <p className="text-muted-foreground text-center py-6">Please select a pod to view the leaderboard.</p>
           ) : (
             <Leaderboard entries={leaderboardData} />
           )}

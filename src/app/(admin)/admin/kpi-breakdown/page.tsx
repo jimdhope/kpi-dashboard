@@ -65,7 +65,7 @@ export default function KpiBreakdownPage() {
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [logs, setLogs] = useState<AdditionalKpiLog[]>([]);
 
-  const [selectedPodId, setSelectedPodId] = useState<string>('');
+  const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
   const [weekStartsOn, setWeekStartsOn] = useState<WeekStartDay>(4); // Default to Thursday
 
@@ -107,16 +107,13 @@ export default function KpiBreakdownPage() {
   }, []);
   
   useEffect(() => {
-    if (!selectedPodId) {
-      setLogs([]);
-      setIsLoading(false); 
-      return;
-    }
     setIsLoading(true); 
-    const logsQuery = query(
-      collection(db, 'additionalKpiLogs'),
-      where('podId', '==', selectedPodId),
-    );
+    let logsQuery;
+    if (selectedPodId === 'all') {
+      logsQuery = query(collection(db, 'additionalKpiLogs'));
+    } else {
+      logsQuery = query(collection(db, 'additionalKpiLogs'), where('podId', '==', selectedPodId));
+    }
     
     const unsubscribe = onSnapshot(logsQuery, (snap) => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpiLog)));
@@ -161,11 +158,14 @@ export default function KpiBreakdownPage() {
 
   // --- Data Processing ---
   const { processedData, weekHeaders, podKpis } = useMemo(() => {
-    if (!selectedPodId || filteredLogs.length === 0 || kpis.length === 0) {
+    if (filteredLogs.length === 0 || kpis.length === 0) {
       return { processedData: [], weekHeaders: [], podKpis: [] };
     }
     
-    const podAgents = agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent'));
+    const podAgents = selectedPodId === 'all'
+      ? agents.filter(a => a.roles?.includes('agent'))
+      : agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent'));
+    
     if (podAgents.length === 0) {
         return { processedData: [], weekHeaders: [], podKpis: [] };
     }
@@ -244,7 +244,13 @@ export default function KpiBreakdownPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div className="grid gap-2">
               <Label htmlFor="pod-select">Pod</Label>
-              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}><SelectTrigger id="pod-select"><SelectValue placeholder="Select Pod" /></SelectTrigger><SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select>
+              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
+                <SelectTrigger id="pod-select"><SelectValue placeholder="Select Pod" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pods</SelectItem>
+                  {pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="timeframe-select">Timeframe</Label>
@@ -264,9 +270,7 @@ export default function KpiBreakdownPage() {
           <CardDescription>Weekly total scores for each agent across all relevant KPIs.</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col">
-        {!selectedPodId ? (
-          <p className="text-muted-foreground text-center py-6">Please select a pod to view the breakdown.</p>
-        ) : isLoading ? (
+        {isLoading ? (
           <Skeleton className="h-[400px] w-full" />
         ) : processedData.length === 0 ? (
           <p className="text-muted-foreground text-center py-6">No scores logged for the selected filters.</p>
