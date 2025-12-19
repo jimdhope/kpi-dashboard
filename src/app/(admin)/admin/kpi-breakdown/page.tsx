@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -93,42 +94,18 @@ export default function KpiBreakdownPage() {
     }));
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
-
-  const dateRange = useMemo(() => {
-    const now = new Date();
-    switch (timeframe) {
-      case 'thisWeek':
-        return { from: startOfWeek(now, { weekStartsOn }), to: endOfWeek(now, { weekStartsOn }) };
-      case 'thisMonth':
-        return { from: startOfMonth(now), to: endOfMonth(now) };
-      case 'last6weeks':
-        return { from: startOfWeek(subWeeks(now, 5), { weekStartsOn }), to: endOfWeek(now, { weekStartsOn }) };
-      case 'allTime':
-      default:
-        // For "All Time", we'll just not filter by date client-side
-        return { from: undefined, to: undefined };
-    }
-  }, [timeframe, weekStartsOn]);
-
+  
   useEffect(() => {
     if (!selectedPodId) {
       setLogs([]);
       return;
     }
     setIsLoading(true);
-    let logsQuery = query(
+    const logsQuery = query(
       collection(db, 'additionalKpiLogs'),
       where('podId', '==', selectedPodId),
     );
     
-    // Only apply date range filters to query if they exist
-    if (dateRange.from) {
-        logsQuery = query(logsQuery, where('date', '>=', Timestamp.fromDate(dateRange.from)));
-    }
-    if (dateRange.to) {
-        logsQuery = query(logsQuery, where('date', '<=', Timestamp.fromDate(dateRange.to)));
-    }
-
     const unsubscribe = onSnapshot(logsQuery, (snap) => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpiLog)));
       setIsLoading(false);
@@ -137,11 +114,43 @@ export default function KpiBreakdownPage() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [selectedPodId, dateRange]);
+  }, [selectedPodId]);
+  
+  const filteredLogs = useMemo(() => {
+    if (timeframe === 'allTime') {
+      return logs;
+    }
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
+    
+    switch (timeframe) {
+      case 'thisWeek':
+        startDate = startOfWeek(now, { weekStartsOn });
+        endDate = endOfWeek(now, { weekStartsOn });
+        break;
+      case 'thisMonth':
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+        break;
+      case 'last6weeks':
+        startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn });
+        endDate = endOfWeek(now, { weekStartsOn });
+        break;
+      default:
+        return logs;
+    }
+
+    return logs.filter(log => {
+      const logDate = log.date.toDate();
+      return logDate >= startDate && logDate <= endDate;
+    });
+  }, [logs, timeframe, weekStartsOn]);
+  
 
   // --- Data Processing ---
   const { processedData, weekHeaders, podKpis } = useMemo(() => {
-    if (!selectedPodId || logs.length === 0 || kpis.length === 0) {
+    if (!selectedPodId || filteredLogs.length === 0 || kpis.length === 0) {
       return { processedData: [], weekHeaders: [], podKpis: [] };
     }
     
@@ -150,7 +159,7 @@ export default function KpiBreakdownPage() {
         return { processedData: [], weekHeaders: [], podKpis: [] };
     }
     
-    const podKpiIds = new Set(logs.map(log => log.kpiId));
+    const podKpiIds = new Set(filteredLogs.map(log => log.kpiId));
     const podKpis = kpis.filter(kpi => podKpiIds.has(kpi.id)).sort((a,b) => a.name.localeCompare(b.name));
 
     const agentData: AgentWeeklyData[] = podAgents.map(agent => ({
@@ -161,7 +170,7 @@ export default function KpiBreakdownPage() {
 
     const weeks = new Set<string>();
 
-    logs.forEach(log => {
+    filteredLogs.forEach(log => {
         const weekStart = startOfWeek(log.date.toDate(), { weekStartsOn });
         const weekOf = format(weekStart, 'MMM dd, yyyy');
         weeks.add(weekOf);
@@ -182,7 +191,7 @@ export default function KpiBreakdownPage() {
     
     return { processedData: agentData.sort((a, b) => a.agentName.localeCompare(b.agentName)), weekHeaders, podKpis };
 
-  }, [logs, agents, selectedPodId, kpis, weekStartsOn]);
+  }, [filteredLogs, agents, selectedPodId, kpis, weekStartsOn]);
 
   const weekDayOptions = [
     { value: 0, label: 'Sunday' }, { value: 1, label: 'Monday' }, { value: 2, label: 'Tuesday' },
