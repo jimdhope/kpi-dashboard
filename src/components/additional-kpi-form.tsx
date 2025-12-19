@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -26,7 +27,7 @@ import {
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Loader2 } from 'lucide-react';
-import type { AdditionalKpi, AdditionalKpiType, KpiSortOrder } from '@/app/(admin)/admin/additional-kpis/page';
+import type { AdditionalKpi, PassFailOperator } from '@/app/(admin)/admin/additional-kpis/page';
 
 
 const kpiFormSchema = z.object({
@@ -34,7 +35,10 @@ const kpiFormSchema = z.object({
   emoji: z.string().min(1, 'Emoji is required.'),
   type: z.enum(['number', 'percentage', 'scoreOutOf'], { required_error: "Please select a type."}),
   maxValue: z.coerce.number().optional(),
-  sortOrder: z.enum(['desc', 'asc']).optional(), // 'desc' = higher is better, 'asc' = lower is better
+  sortOrder: z.enum(['desc', 'asc']).optional(),
+  passFailCriteriaEnabled: z.boolean().optional(),
+  passFailOperator: z.enum(['gte', 'lte']).optional(),
+  passFailValue: z.coerce.number().optional(),
 }).superRefine((data, ctx) => {
     if (data.type === 'scoreOutOf' && (data.maxValue === undefined || data.maxValue <= 0)) {
         ctx.addIssue({
@@ -46,9 +50,17 @@ const kpiFormSchema = z.object({
     if (data.type === 'percentage' && !data.sortOrder) {
          ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Sort order is required for 'Percentage' type.",
+            message: "Goal direction is required for 'Percentage' type.",
             path: ['sortOrder'],
         });
+    }
+    if (data.passFailCriteriaEnabled) {
+        if (!data.passFailOperator) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Operator is required.", path: ['passFailOperator'] });
+        }
+        if (data.passFailValue === undefined || data.passFailValue === null) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Target value is required.", path: ['passFailValue'] });
+        }
     }
 });
 
@@ -68,13 +80,17 @@ export function AdditionalKpiForm({ onSubmit, onCancel, initialData }: Additiona
       name: initialData?.name || '',
       emoji: initialData?.emoji || '',
       type: initialData?.type || 'number',
-      maxValue: initialData?.maxValue || undefined,
+      maxValue: initialData?.maxValue,
       sortOrder: initialData?.sortOrder || 'desc',
+      passFailCriteriaEnabled: initialData?.passFailCriteriaEnabled || false,
+      passFailOperator: initialData?.passFailOperator || 'gte',
+      passFailValue: initialData?.passFailValue,
     },
     mode: 'onChange',
   });
 
   const watchType = form.watch('type');
+  const watchPassFailEnabled = form.watch('passFailCriteriaEnabled');
 
   const handleFormSubmit = async (data: AdditionalKpiFormData) => {
     setIsSubmitting(true);
@@ -174,6 +190,64 @@ export function AdditionalKpiForm({ onSubmit, onCancel, initialData }: Additiona
             )}
           />
         )}
+
+        <div className="space-y-4 rounded-md border p-4">
+            <FormField
+                control={form.control}
+                name="passFailCriteriaEnabled"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                            <FormLabel>Pass/Fail Criteria</FormLabel>
+                            <FormDescription>Set a threshold for pass/fail reporting.</FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={isSubmitting}
+                            />
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
+            {watchPassFailEnabled && (
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                    <FormField
+                        control={form.control}
+                        name="passFailOperator"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Condition</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Operator" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="gte">Greater than or equal to (&gt;=)</SelectItem>
+                                        <SelectItem value="lte">Less than or equal to (&lt;=)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="passFailValue"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Target Value</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g., 95" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} disabled={isSubmitting} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+            )}
+        </div>
+
+
         <DialogFooter className="mt-4 pt-4 border-t">
           <DialogClose asChild>
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
