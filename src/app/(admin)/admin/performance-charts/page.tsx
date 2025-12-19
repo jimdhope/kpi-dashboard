@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { AdditionalKpi } from '@/app/(admin)/admin/additional-kpis/page';
 import type { AdditionalKpiLog } from '@/app/(admin)/admin/additional-scores/page';
+import { startOfDay, endOfDay } from 'date-fns';
 
 type Timeframe = 'thisWeek' | 'thisMonth' | 'last6weeks' | 'allTime';
 
@@ -38,6 +39,17 @@ const CHARTS_POD_KEY = 'performanceCharts_selectedPodId';
 const CHARTS_KPI_KEY = 'performanceCharts_selectedKpiId';
 const CHARTS_AGENT_KEY = 'performanceCharts_selectedAgentId';
 const CHARTS_TIMEFRAME_KEY = 'performanceCharts_timeframe';
+
+// Define a color palette for the chart lines
+const LINE_COLORS = [
+  "hsl(var(--primary))",
+  "#82ca9d",
+  "#ffc658",
+  "#ff7300",
+  "#a4de6c",
+  "#d0ed57",
+  "#ffc0cb",
+];
 
 
 export default function PerformanceChartsPage() {
@@ -112,11 +124,13 @@ export default function PerformanceChartsPage() {
 
   const podAgents = useMemo(() => agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent')), [agents, selectedPodId]);
 
-  const { chartData, tableData, selectedKpiName } = useMemo(() => {
-    if (!selectedKpiId || !kpis.length) return { chartData: [], tableData: [], selectedKpiName: 'Selected KPI' };
+  const { chartData, tableData, displayedKpis } = useMemo(() => {
+    const showAllKpis = selectedKpiId === 'all';
+    if ((!selectedKpiId || selectedKpiId === '') || !kpis.length) return { chartData: [], tableData: [], displayedKpis: [] };
     
-    const kpi = kpis.find(k => k.id === selectedKpiId);
-    if (!kpi) return { chartData: [], tableData: [], selectedKpiName: 'Selected KPI' };
+    let kpisToProcess = showAllKpis ? kpis : kpis.filter(k => k.id === selectedKpiId);
+    if (kpisToProcess.length === 0) return { chartData: [], tableData: [], displayedKpis: [] };
+
 
     const now = new Date();
     let startDate: Date;
@@ -137,8 +151,7 @@ export default function PerformanceChartsPage() {
             break;
         case 'allTime':
         default:
-            // Find earliest and latest log dates
-            if (logs.length === 0) return { chartData: [], tableData: [], selectedKpiName: kpi.name };
+            if (logs.length === 0) return { chartData: [], tableData: [], displayedKpis: kpisToProcess };
             const sortedLogs = [...logs].sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime());
             startDate = sortedLogs[0].date.toDate();
             endDate = sortedLogs[sortedLogs.length - 1].date.toDate();
@@ -148,43 +161,34 @@ export default function PerformanceChartsPage() {
     const relevantLogs = logs.filter(log => {
       const logDate = log.date.toDate();
       const agentMatch = selectedAgentId === 'all' || log.agentId === selectedAgentId;
-      const kpiMatch = log.kpiId === selectedKpiId;
+      const kpiMatch = showAllKpis || log.kpiId === selectedKpiId;
       return agentMatch && kpiMatch && logDate >= startOfDay(startDate) && logDate <= endOfDay(endDate);
     });
 
-    // Create a map to aggregate scores by date
-    const scoresByDate: Record<string, number> = {};
-    const countsByDate: Record<string, number> = {};
-    const datesWithData = new Set<string>();
+    const dataByDate: Record<string, ChartDataPoint> = {};
 
     relevantLogs.forEach(log => {
-        const dateStr = format(log.date.toDate(), 'yyyy-MM-dd');
-        datesWithData.add(dateStr);
-        scoresByDate[dateStr] = (scoresByDate[dateStr] || 0) + log.value;
-        countsByDate[dateStr] = (countsByDate[dateStr] || 0) + 1;
+      const dateStr = format(log.date.toDate(), 'yyyy-MM-dd');
+      const kpiInfo = kpis.find(k => k.id === log.kpiId);
+      if (!kpiInfo) return;
+
+      if (!dataByDate[dateStr]) {
+        dataByDate[dateStr] = { date: format(log.date.toDate(), 'MMM dd') };
+      }
+
+      const existingValue = (dataByDate[dateStr][kpiInfo.name] as number) || 0;
+      dataByDate[dateStr][kpiInfo.name] = existingValue + log.value;
+      
+      // Keep a count for averaging percentages if needed (though not implemented in this version of the aggregation)
+      const countKey = `${kpiInfo.name}_count`;
+      const existingCount = (dataByDate[dateStr][countKey] as number) || 0;
+      dataByDate[dateStr][countKey] = existingCount + 1;
     });
 
-    const finalChartData: ChartDataPoint[] = Array.from(datesWithData).sort().map(dateStr => {
-        const date = new Date(dateStr);
-        const value = scoresByDate[dateStr] || 0;
-        const count = countsByDate[dateStr] || 0;
+    const finalChartData = Object.values(dataByDate).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        let score = 0;
-        if (kpi.type === 'percentage' && count > 0) {
-            score = value / count;
-        } else if (selectedAgentId !== 'all') { // number, scoreOutOf for single agent
-            score = value;
-        } else { // 'all' agents, aggregate for number types
-            score = value;
-        }
-        
-        return {
-            date: format(date, 'MMM dd'),
-            [kpi.name]: score,
-        };
-    });
 
-    return { chartData: finalChartData, tableData: relevantLogs, selectedKpiName: kpi.name };
+    return { chartData: finalChartData, tableData: relevantLogs, displayedKpis: kpisToProcess };
 
   }, [selectedPodId, selectedKpiId, selectedAgentId, timeframe, logs, kpis, podAgents]);
 
@@ -199,7 +203,7 @@ export default function PerformanceChartsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
             <div className="grid gap-2"><Label>Pod</Label><Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select Pod" /></SelectTrigger><SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label>Agent</Label><Select onValueChange={handleAgentChange} value={selectedAgentId} disabled={isLoading || !selectedPodId}><SelectTrigger><SelectValue placeholder="Select Agent" /></SelectTrigger><SelectContent><SelectItem value="all">All Agents (Aggregated)</SelectItem>{podAgents.map(a => <SelectItem key={a.id!} value={a.id!}>{a.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-2"><Label>KPI</Label><Select onValueChange={handleKpiChange} value={selectedKpiId} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select KPI" /></SelectTrigger><SelectContent>{kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-2"><Label>KPI</Label><Select onValueChange={handleKpiChange} value={selectedKpiId} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select KPI" /></SelectTrigger><SelectContent><SelectItem value="all">All KPIs</SelectItem>{kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label>Timeframe</Label><Select onValueChange={handleTimeframeChange} value={timeframe} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select Timeframe" /></SelectTrigger><SelectContent><SelectItem value="thisWeek">This Week</SelectItem><SelectItem value="thisMonth">This Month</SelectItem><SelectItem value="last6weeks">Last 6 Weeks</SelectItem><SelectItem value="allTime">All Time</SelectItem></SelectContent></Select></div>
           </div>
         </CardContent>
@@ -209,7 +213,7 @@ export default function PerformanceChartsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><LineChart className="h-5 w-5" /> KPI Performance Chart</CardTitle>
           <CardDescription>
-            Visualizing <span className="font-semibold">{selectedKpiName}</span> for <span className="font-semibold">{selectedAgentId === 'all' ? 'All Agents' : agents.find(a=>a.id===selectedAgentId)?.name}</span> in <span className="font-semibold">{pods.find(p=>p.id===selectedPodId)?.name || '...'}</span>
+            Visualizing <span className="font-semibold">{selectedKpiId === 'all' ? 'All KPIs' : displayedKpis[0]?.name}</span> for <span className="font-semibold">{selectedAgentId === 'all' ? 'All Agents' : agents.find(a=>a.id===selectedAgentId)?.name}</span> in <span className="font-semibold">{pods.find(p=>p.id===selectedPodId)?.name || '...'}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -227,7 +231,17 @@ export default function PerformanceChartsPage() {
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
                 <Legend />
-                <Line type="monotone" dataKey={selectedKpiName} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                {displayedKpis.map((kpi, index) => (
+                   <Line 
+                     key={kpi.id}
+                     type="monotone" 
+                     dataKey={kpi.name} 
+                     stroke={LINE_COLORS[index % LINE_COLORS.length]} 
+                     strokeWidth={2} 
+                     dot={{ r: 4 }} 
+                     activeDot={{ r: 6 }} 
+                   />
+                ))}
               </RechartsLineChart>
             </ResponsiveContainer>
           )}
@@ -239,17 +253,18 @@ export default function PerformanceChartsPage() {
         <CardContent>
            <div className="overflow-x-auto max-h-80">
             <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Agent</TableHead><TableHead>Value</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Agent</TableHead><TableHead>KPI</TableHead><TableHead>Value</TableHead></TableRow></TableHeader>
                 <TableBody>
                     {isLoading ? (
-                        Array.from({length: 3}).map((_, i) => <TableRow key={i}><TableCell colSpan={3}><Skeleton className="h-6 w-full"/></TableCell></TableRow>)
+                        Array.from({length: 3}).map((_, i) => <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-6 w-full"/></TableCell></TableRow>)
                     ) : tableData.length === 0 ? (
-                        <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No data</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data</TableCell></TableRow>
                     ) : (
                         tableData.map(log => (
                             <TableRow key={log.id}>
                                 <TableCell>{format(log.date.toDate(), 'PPP')}</TableCell>
                                 <TableCell>{agents.find(a => a.id === log.agentId)?.name || 'Unknown'}</TableCell>
+                                <TableCell>{kpis.find(k => k.id === log.kpiId)?.name || 'Unknown'}</TableCell>
                                 <TableCell>{log.value}</TableCell>
                             </TableRow>
                         ))
