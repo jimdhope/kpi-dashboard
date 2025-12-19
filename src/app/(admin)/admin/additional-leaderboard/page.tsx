@@ -143,6 +143,7 @@ export default function AdditionalLeaderboardPage() {
       let finalScore = 0;
   
       if (kpi && kpi.type === 'percentage') {
+        // For percentage, we average the scores
         finalScore = agentData.count > 0 ? (agentData.totalValue / agentData.count) : 0;
       } else {
         // For 'number', 'scoreOutOf', or 'overall', the score is the sum
@@ -158,11 +159,12 @@ export default function AdditionalLeaderboardPage() {
         avatarBgColor: agent.avatarBgColor,
       };
     }).sort((a, b) => {
-        // Sort based on the KPI's sortOrder
-        if (kpi?.sortOrder === 'asc') { // Lower is better
+        // Sort based on the KPI's sortOrder if a specific KPI is selected
+        if (kpi && kpi.sortOrder === 'asc') { // Lower is better
             return a.score - b.score;
         }
-        return b.score - a.score; // Higher is better (default)
+        // Higher is better (default for 'number', 'scoreOutOf', and 'overall')
+        return b.score - a.score;
     });
   }, [filteredLogs, agents, selectedPodId, selectedKpiId, kpis]);
   
