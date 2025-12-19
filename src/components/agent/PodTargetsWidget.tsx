@@ -117,8 +117,10 @@ export function PodTargetsWidget({ currentUser }: PodTargetsWidgetProps) {
     const podTargetSummary = useMemo((): PodTargetSummary[] => {
         const numericRules = rules.filter(r => r.type === 'numeric');
         const dayOfWeek = daysOfWeek[getDay(new Date())];
+        // Correctly identify absent agent IDs from today's logs
         const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
-        const activeAgentsCount = podAgents.filter(agent => !absentAgentIds.has(agent.id!)).length;
+        // Filter out absent agents to get the count of active agents
+        const activeAgentsCount = podAgents.filter(agent => agent.id && !absentAgentIds.has(agent.id)).length;
 
         if (numericRules.length === 0 || !dailyTargets || activeAgentsCount === 0) {
             return [];
