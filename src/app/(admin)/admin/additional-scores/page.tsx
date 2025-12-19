@@ -131,11 +131,9 @@ export default function AdditionalScoresPage() {
 
 
 const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
-    console.log(`[DEBUG] handleSave called for agentId: ${agentId}, kpiId: ${kpiId}, valueStr: "${valueStr}"`);
-    
     const kpi = kpis.find(k => k.id === kpiId);
     if (!kpi) {
-        console.error("[DEBUG] KPI not found for kpiId:", kpiId);
+        console.error("KPI not found for kpiId:", kpiId);
         return;
     }
 
@@ -145,7 +143,6 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
     const value = valueStr.trim() === '' ? 0 : parseFloat(valueStr);
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
     const logsCollectionRef = collection(db, 'additionalKpiLogs');
-    console.log(`[DEBUG] Parsed value: ${value}. Date: ${selectedDate.toDateString()}`);
 
     try {
         const q = query(
@@ -155,50 +152,41 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
             where('date', '==', dateTimestamp),
             limit(1)
         );
-        console.log(`[DEBUG] Querying for existing log with agentId=${agentId}, kpiId=${kpiId}`);
         const logSnapshot = await getDocs(q);
         const existingLogDoc = logSnapshot.docs[0];
 
         if (existingLogDoc) {
-            console.log(`[DEBUG] Found existing log with ID: ${existingLogDoc.id}`);
             if (value === 0 || isNaN(value)) {
-                console.log(`[DEBUG] Value is 0 or NaN. Deleting document ${existingLogDoc.id}...`);
                 await deleteDoc(doc(logsCollectionRef, existingLogDoc.id));
-                console.log(`[DEBUG] Document ${existingLogDoc.id} deleted successfully.`);
             } else {
-                const logEntryChanges = {
+                const logEntryChanges: Partial<AdditionalKpiLog> = {
                     value,
-                    scoreOutOf: kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined,
                     loggedAt: serverTimestamp() as Timestamp,
                 };
-                console.log(`[DEBUG] Value is > 0. Updating document ${existingLogDoc.id} with:`, logEntryChanges);
+                if (kpi.type === 'scoreOutOf') {
+                    logEntryChanges.scoreOutOf = kpi.maxValue;
+                }
                 await setDoc(doc(logsCollectionRef, existingLogDoc.id), logEntryChanges, { merge: true });
-                console.log(`[DEBUG] Document ${existingLogDoc.id} updated successfully.`);
             }
         } else if (value > 0 && !isNaN(value)) {
-            console.log(`[DEBUG] No existing log found. Value is > 0. Creating new document...`);
             const logEntry: Omit<AdditionalKpiLog, 'id'> = {
                 agentId,
                 podId: selectedPodId,
                 kpiId,
                 date: dateTimestamp,
                 value,
-                scoreOutOf: kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined,
                 loggedAt: serverTimestamp() as Timestamp,
             };
+            if (kpi.type === 'scoreOutOf' && kpi.maxValue) {
+                logEntry.scoreOutOf = kpi.maxValue;
+            }
             const newDocRef = doc(logsCollectionRef);
-            console.log(`[DEBUG] New document data:`, logEntry);
             await setDoc(newDocRef, logEntry);
-            console.log(`[DEBUG] New document ${newDocRef.id} created successfully.`);
-        } else {
-             console.log(`[DEBUG] No existing log and value is 0 or NaN. Doing nothing.`);
         }
-
     } catch (e) {
-        console.error("[DEBUG] Error in handleSave function:", e);
+        console.error("Error in handleSave function:", e);
         toast({ title: "Save Error", description: `Could not save score for ${kpi.name}. Check console for details.`, variant: "destructive" });
     } finally {
-        console.log(`[DEBUG] Finished handleSave for ${savingKey}. Resetting saving state.`);
         setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
 }, [kpis, selectedPodId, selectedDate, toast]);
