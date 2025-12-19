@@ -108,19 +108,33 @@ export default function AdditionalKpisPage() {
   };
 
   const handleFormSubmit = async (data: AdditionalKpiFormData) => {
+    // Construct the base object without maxValue
     const kpiDataToSave: Omit<AdditionalKpi, 'id'> = {
       name: data.name,
       emoji: data.emoji,
       type: data.type,
-      maxValue: data.type === 'scoreOutOf' ? data.maxValue : undefined,
     };
+
+    // Conditionally add maxValue only if the type is 'scoreOutOf' and it's a valid number
+    if (data.type === 'scoreOutOf') {
+        const maxValue = data.maxValue;
+        if (typeof maxValue === 'number' && !isNaN(maxValue)) {
+            kpiDataToSave.maxValue = maxValue;
+        }
+    }
+
 
     try {
       if (dialogMode === 'add') {
         await addDoc(kpisCollectionRef, kpiDataToSave);
         toast({ title: "KPI Added", description: `"${data.name}" has been successfully added.` });
       } else if (selectedKpi) {
-        await updateDoc(doc(db, 'additionalKpis', selectedKpi.id), kpiDataToSave);
+        // For updates, ensure we remove maxValue if the type changes
+        const updateData = {...kpiDataToSave};
+        if (updateData.type !== 'scoreOutOf') {
+            delete updateData.maxValue;
+        }
+        await updateDoc(doc(db, 'additionalKpis', selectedKpi.id), updateData);
         toast({ title: "KPI Updated", description: `"${data.name}" has been successfully updated.` });
       }
       setIsFormOpen(false);
@@ -134,6 +148,7 @@ export default function AdditionalKpisPage() {
       });
     }
   };
+
 
   const handleConfirmDelete = async () => {
     if (selectedKpi) {
