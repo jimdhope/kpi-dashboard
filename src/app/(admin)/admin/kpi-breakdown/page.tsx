@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -37,22 +36,22 @@ import type { AdditionalKpi } from '@/app/(admin)/admin/additional-kpis/page';
 import type { AdditionalKpiLog } from '@/app/(admin)/admin/additional-scores/page';
 
 const KPI_BREAKDOWN_POD_KEY = 'kpiBreakdown_selectedPodId';
-const KPI_BREAKDOWN_KPI_KEY = 'kpiBreakdown_selectedKpiId';
 const KPI_BREAKDOWN_TIMEFRAME_KEY = 'kpiBreakdown_timeframe';
 const KPI_BREAKDOWN_WEEKSTART_KEY = 'kpiBreakdown_weekStartsOn';
 
 type Timeframe = 'last6weeks' | 'thisWeek' | 'thisMonth' | 'allTime';
 type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 1=Mon, ..., 6=Sat
 
-interface WeeklyScores {
-  weekOf: string;
-  days: Date[];
-  agentData: Array<{
-    agentId: string;
-    agentName: string;
-    dailyScores: (number | null)[];
-    total: number;
-  }>;
+interface WeeklyKpiTotals {
+  [kpiId: string]: number;
+}
+
+interface AgentWeeklyData {
+  agentId: string;
+  agentName: string;
+  weeklyScores: {
+    [weekOf: string]: WeeklyKpiTotals;
+  };
 }
 
 export default function KpiBreakdownPage() {
@@ -62,7 +61,6 @@ export default function KpiBreakdownPage() {
   const [logs, setLogs] = useState<AdditionalKpiLog[]>([]);
 
   const [selectedPodId, setSelectedPodId] = useState<string>('');
-  const [selectedKpiId, setSelectedKpiId] = useState<string>('');
   const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
   const [weekStartsOn, setWeekStartsOn] = useState<WeekStartDay>(4); // Default to Thursday
 
@@ -73,8 +71,6 @@ export default function KpiBreakdownPage() {
   useEffect(() => {
     const savedPodId = localStorage.getItem(KPI_BREAKDOWN_POD_KEY);
     if (savedPodId) setSelectedPodId(savedPodId);
-    const savedKpiId = localStorage.getItem(KPI_BREAKDOWN_KPI_KEY);
-    if (savedKpiId) setSelectedKpiId(savedKpiId);
     const savedTimeframe = localStorage.getItem(KPI_BREAKDOWN_TIMEFRAME_KEY) as Timeframe | null;
     if (savedTimeframe) setTimeframe(savedTimeframe);
     const savedWeekStart = localStorage.getItem(KPI_BREAKDOWN_WEEKSTART_KEY);
@@ -82,7 +78,6 @@ export default function KpiBreakdownPage() {
   }, []);
 
   const handlePodChange = (podId: string) => { setSelectedPodId(podId); localStorage.setItem(KPI_BREAKDOWN_POD_KEY, podId); };
-  const handleKpiChange = (kpiId: string) => { setSelectedKpiId(kpiId); localStorage.setItem(KPI_BREAKDOWN_KPI_KEY, kpiId); };
   const handleTimeframeChange = (tf: string) => { setTimeframe(tf as Timeframe); localStorage.setItem(KPI_BREAKDOWN_TIMEFRAME_KEY, tf); };
   const handleWeekStartChange = (day: string) => { setWeekStartsOn(parseInt(day, 10) as WeekStartDay); localStorage.setItem(KPI_BREAKDOWN_WEEKSTART_KEY, day); };
 
@@ -109,12 +104,14 @@ export default function KpiBreakdownPage() {
       case 'last6weeks':
         return { from: startOfWeek(subWeeks(now, 5), { weekStartsOn }), to: endOfWeek(now, { weekStartsOn }) };
       case 'allTime':
+      default:
+        // For "All Time", we'll just not filter by date client-side
         return { from: undefined, to: undefined };
     }
   }, [timeframe, weekStartsOn]);
 
   useEffect(() => {
-    if (!selectedPodId || !selectedKpiId) {
+    if (!selectedPodId) {
       setLogs([]);
       return;
     }
@@ -122,9 +119,9 @@ export default function KpiBreakdownPage() {
     let logsQuery = query(
       collection(db, 'additionalKpiLogs'),
       where('podId', '==', selectedPodId),
-      where('kpiId', '==', selectedKpiId)
     );
-
+    
+    // Only apply date range filters to query if they exist
     if (dateRange.from) {
         logsQuery = query(logsQuery, where('date', '>=', Timestamp.fromDate(dateRange.from)));
     }
@@ -140,47 +137,53 @@ export default function KpiBreakdownPage() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [selectedPodId, selectedKpiId, dateRange]);
+  }, [selectedPodId, dateRange]);
 
   // --- Data Processing ---
-
-  const weeklyData = useMemo((): WeeklyScores[] => {
-    if (!dateRange || !dateRange.from || !dateRange.to || logs.length === 0) return [];
+  const { processedData, weekHeaders, podKpis } = useMemo(() => {
+    if (!selectedPodId || logs.length === 0 || kpis.length === 0) {
+      return { processedData: [], weekHeaders: [], podKpis: [] };
+    }
     
     const podAgents = agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent'));
-    if (podAgents.length === 0) return [];
-
-    const weeks: WeeklyScores[] = [];
-    let currentDay = dateRange.from;
-
-    while (currentDay <= dateRange.to) {
-        const weekStart = startOfWeek(currentDay, { weekStartsOn });
-        const weekEnd = endOfWeek(currentDay, { weekStartsOn });
-        const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
-        
-        const logsInWeek = logs.filter(log => isWithinInterval(log.date.toDate(), { start: weekStart, end: weekEnd }));
-        
-        const agentData = podAgents.map(agent => {
-            const dailyScores: (number | null)[] = daysInWeek.map(day => {
-              const logForDay = logsInWeek.find(log => log.agentId === agent.id && isSameDay(log.date.toDate(), day));
-              return logForDay ? logForDay.value : null;
-            });
-            const total = dailyScores.reduce((sum, score) => sum + (score || 0), 0);
-            return { agentId: agent.id!, agentName: agent.name, dailyScores, total };
-        });
-
-        weeks.push({
-            weekOf: format(weekStart, 'do MMMM yyyy'),
-            days: daysInWeek,
-            agentData: agentData.sort((a,b) => b.total - a.total),
-        });
-
-        currentDay = new Date(weekEnd.setDate(weekEnd.getDate() + 1));
+    if (podAgents.length === 0) {
+        return { processedData: [], weekHeaders: [], podKpis: [] };
     }
-    return weeks;
-  }, [logs, agents, selectedPodId, dateRange, weekStartsOn]);
+    
+    const podKpiIds = new Set(logs.map(log => log.kpiId));
+    const podKpis = kpis.filter(kpi => podKpiIds.has(kpi.id)).sort((a,b) => a.name.localeCompare(b.name));
 
-  const selectedKpi = kpis.find(k => k.id === selectedKpiId);
+    const agentData: AgentWeeklyData[] = podAgents.map(agent => ({
+        agentId: agent.id!,
+        agentName: agent.name,
+        weeklyScores: {}
+    }));
+
+    const weeks = new Set<string>();
+
+    logs.forEach(log => {
+        const weekStart = startOfWeek(log.date.toDate(), { weekStartsOn });
+        const weekOf = format(weekStart, 'MMM dd, yyyy');
+        weeks.add(weekOf);
+
+        const agent = agentData.find(a => a.agentId === log.agentId);
+        if (agent) {
+            if (!agent.weeklyScores[weekOf]) {
+                agent.weeklyScores[weekOf] = {};
+            }
+            if (!agent.weeklyScores[weekOf][log.kpiId]) {
+                agent.weeklyScores[weekOf][log.kpiId] = 0;
+            }
+            agent.weeklyScores[weekOf][log.kpiId] += log.value;
+        }
+    });
+
+    const weekHeaders = Array.from(weeks).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    
+    return { processedData: agentData.sort((a, b) => a.agentName.localeCompare(b.agentName)), weekHeaders, podKpis };
+
+  }, [logs, agents, selectedPodId, kpis, weekStartsOn]);
+
   const weekDayOptions = [
     { value: 0, label: 'Sunday' }, { value: 1, label: 'Monday' }, { value: 2, label: 'Tuesday' },
     { value: 3, label: 'Wednesday' }, { value: 4, label: 'Thursday' }, { value: 5, label: 'Friday' },
@@ -194,14 +197,10 @@ export default function KpiBreakdownPage() {
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> KPI Breakdown Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div className="grid gap-2">
               <Label htmlFor="pod-select">Pod</Label>
               <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}><SelectTrigger id="pod-select"><SelectValue placeholder="Select Pod" /></SelectTrigger><SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="kpi-select">KPI</Label>
-              <Select onValueChange={handleKpiChange} value={selectedKpiId} disabled={isLoading}><SelectTrigger id="kpi-select"><SelectValue placeholder="Select KPI" /></SelectTrigger><SelectContent>{kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.emoji} {k.name}</SelectItem>)}</SelectContent></Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="timeframe-select">Timeframe</Label>
@@ -215,53 +214,56 @@ export default function KpiBreakdownPage() {
         </CardContent>
       </Card>
 
-      {!selectedPodId || !selectedKpiId ? (
-        <p className="text-muted-foreground text-center py-6">Please select a pod and a KPI to view the breakdown.</p>
+      {!selectedPodId ? (
+        <p className="text-muted-foreground text-center py-6">Please select a pod to view the breakdown.</p>
       ) : isLoading ? (
         <Skeleton className="h-[400px] w-full" />
-      ) : weeklyData.length === 0 ? (
-        <p className="text-muted-foreground text-center py-6">No scores logged for the selected KPI and date range.</p>
+      ) : processedData.length === 0 ? (
+        <p className="text-muted-foreground text-center py-6">No scores logged for the selected filters.</p>
       ) : (
-        <div className="space-y-8">
-          {weeklyData.map((week) => (
-            <Card key={week.weekOf} className="frosted-glass">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><BarChartHorizontal className="h-5 w-5" /> Week of {week.weekOf}</CardTitle>
-                <CardDescription>Breakdown for KPI: {selectedKpi?.emoji} {selectedKpi?.name}</CardDescription>
-              </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[150px] sticky left-0 bg-background/95">Agent</TableHead>
-                      {week.days.map(day => (
-                        <TableHead key={day.toISOString()} className="text-center w-[80px]">
-                          {format(day, 'E')}
-                          <br/>
-                          {format(day, 'd')}
-                        </TableHead>
-                      ))}
-                      <TableHead className="text-right font-bold w-[100px]">Weekly Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {week.agentData.map(agent => (
-                      <TableRow key={agent.agentId}>
-                        <TableCell className="font-medium sticky left-0 bg-background/95">{agent.agentName}</TableCell>
-                        {agent.dailyScores.map((score, index) => (
-                          <TableCell key={index} className="text-center text-muted-foreground">
-                            {score === null ? '-' : score.toLocaleString()}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-right font-bold text-primary">{agent.total.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card className="frosted-glass">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><BarChartHorizontal className="h-5 w-5" /> Weekly KPI Breakdown</CardTitle>
+            <CardDescription>Weekly total scores for each agent across all relevant KPIs.</CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead rowSpan={2} className="min-w-[150px] sticky left-0 bg-background/95 align-bottom">Agent</TableHead>
+                  {weekHeaders.map(week => (
+                    <TableHead key={week} colSpan={podKpis.length} className="text-center">
+                      Week of {week}
+                    </TableHead>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  {weekHeaders.flatMap(week =>
+                    podKpis.map(kpi => (
+                      <TableHead key={`${week}-${kpi.id}`} className="text-center w-[100px]" title={kpi.name}>
+                        {kpi.emoji} {kpi.name}
+                      </TableHead>
+                    ))
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {processedData.map(agentData => (
+                  <TableRow key={agentData.agentId}>
+                    <TableCell className="font-medium sticky left-0 bg-background/95">{agentData.agentName}</TableCell>
+                    {weekHeaders.flatMap(week =>
+                      podKpis.map(kpi => (
+                        <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className="text-center text-muted-foreground">
+                          {agentData.weeklyScores[week]?.[kpi.id]?.toLocaleString() ?? '-'}
+                        </TableCell>
+                      ))
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
