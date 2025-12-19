@@ -84,7 +84,7 @@ export function PodTargetsWidget({ currentUser }: PodTargetsWidgetProps) {
         const unsubscribes: Unsubscribe[] = [];
 
         // Fetch agents in the pod
-        const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId));
+        const agentsQuery = query(collection(db, 'users'), where('podId', '==', agentPodId), where('roles', 'array-contains', 'agent'));
         unsubscribes.push(onSnapshot(agentsQuery, (snap) => {
             setPodAgents(snap.docs.map(d => d.data() as AppUser));
         }));
@@ -117,12 +117,18 @@ export function PodTargetsWidget({ currentUser }: PodTargetsWidgetProps) {
     const podTargetSummary = useMemo((): PodTargetSummary[] => {
         const numericRules = rules.filter(r => r.type === 'numeric');
         const dayOfWeek = daysOfWeek[getDay(new Date())];
+
+        if (numericRules.length === 0 || !dailyTargets || podAgents.length === 0) {
+            return [];
+        }
+
         // Correctly identify absent agent IDs from today's logs
         const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
         // Filter out absent agents to get the count of active agents
-        const activeAgentsCount = podAgents.filter(agent => agent.id && !absentAgentIds.has(agent.id)).length;
-
-        if (numericRules.length === 0 || !dailyTargets || activeAgentsCount === 0) {
+        const activeAgentsCount = podAgents.filter(agent => agent.roles?.includes('agent') && agent.id && !absentAgentIds.has(agent.id)).length;
+        
+        if (activeAgentsCount === 0) {
+            // If all agents are absent, there are no targets to show for today.
             return [];
         }
 
