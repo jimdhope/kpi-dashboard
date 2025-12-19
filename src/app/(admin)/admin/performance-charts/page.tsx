@@ -155,17 +155,17 @@ export default function PerformanceChartsPage() {
     // Create a map to aggregate scores by date
     const scoresByDate: Record<string, number> = {};
     const countsByDate: Record<string, number> = {};
+    const datesWithData = new Set<string>();
 
     relevantLogs.forEach(log => {
         const dateStr = format(log.date.toDate(), 'yyyy-MM-dd');
+        datesWithData.add(dateStr);
         scoresByDate[dateStr] = (scoresByDate[dateStr] || 0) + log.value;
         countsByDate[dateStr] = (countsByDate[dateStr] || 0) + 1;
     });
 
-    const dateInterval = eachDayOfInterval({ start: startDate, end: endDate });
-    
-    const finalChartData: ChartDataPoint[] = dateInterval.map(date => {
-        const dateStr = format(date, 'yyyy-MM-dd');
+    const finalChartData: ChartDataPoint[] = Array.from(datesWithData).sort().map(dateStr => {
+        const date = new Date(dateStr);
         const value = scoresByDate[dateStr] || 0;
         const count = countsByDate[dateStr] || 0;
 
