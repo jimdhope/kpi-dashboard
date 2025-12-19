@@ -1,8 +1,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc, setDoc, deleteDoc, onSnapshot, Unsubscribe, serverTimestamp, orderBy, limit } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { collection, query, where, getDocs, Timestamp, doc, setDoc, deleteDoc, onSnapshot, Unsubscribe, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CalendarIcon, Loader2, Filter, CheckSquare } from 'lucide-react';
+import { CalendarIcon, Loader2, Filter, CheckSquare, Save } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +37,7 @@ interface KpiInputState {
   [agentId: string]: {
     [kpiId: string]: {
       value: string;
+      initialValue: string; // Store initial value to detect changes
       logId?: string;
     };
   };
@@ -54,10 +55,21 @@ export default function AdditionalScoresPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [inputs, setInputs] = useState<KpiInputState>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasChanges = useMemo(() => {
+    for (const agentId in inputs) {
+        for (const kpiId in inputs[agentId]) {
+            const entry = inputs[agentId][kpiId];
+            if (entry.value !== entry.initialValue) {
+                return true;
+            }
+        }
+    }
+    return false;
+  }, [inputs]);
+
 
   // Load filters from localStorage
   useEffect(() => {
@@ -122,7 +134,8 @@ export default function AdditionalScoresPage() {
       const newInputs: KpiInputState = {};
       logs.forEach(log => {
         if (!newInputs[log.agentId]) newInputs[log.agentId] = {};
-        newInputs[log.agentId][log.kpiId] = { value: String(log.value), logId: log.id };
+        const val = String(log.value);
+        newInputs[log.agentId][log.kpiId] = { value: val, logId: log.id, initialValue: val };
       });
       setInputs(newInputs);
       setIsLoading(false);
@@ -132,110 +145,83 @@ export default function AdditionalScoresPage() {
   }, [selectedPodId, selectedDate]);
 
 
-const handleSave = async (agentId: string, kpiId: string, valueStr: string) => {
-    const kpi = kpis.find(k => k.id === kpiId);
-    if (!kpi) {
-        console.error("[DEBUG] KPI not found for kpiId:", kpiId);
-        return;
-    }
-
-    const savingKey = `${agentId}-${kpiId}`;
-    setIsSaving(prev => ({ ...prev, [savingKey]: true }));
-
-    const value = valueStr.trim() === '' ? 0 : parseFloat(valueStr);
+  const handleSaveAll = async () => {
+    setIsSaving(true);
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
     const logsCollectionRef = collection(db, 'additionalKpiLogs');
-    console.log(`[DEBUG] handleSave called for agentId: ${agentId}, kpiId: ${kpiId}, valueStr: "${valueStr}"`);
-    console.log(`[DEBUG] Parsed value: ${value}. Date: ${selectedDate.toDateString()}`);
+    const batch = writeBatch(db);
 
     try {
-        const q = query(
-            logsCollectionRef,
-            where('agentId', '==', agentId),
-            where('kpiId', '==', kpiId),
-            where('date', '==', dateTimestamp),
-            limit(1)
-        );
-        console.log(`[DEBUG] Querying for existing log with agentId=${agentId}, kpiId=${kpiId}`);
-        const logSnapshot = await getDocs(q);
-        const existingLogDoc = logSnapshot.docs[0];
+        for (const agentId in inputs) {
+            for (const kpiId in inputs[agentId]) {
+                const entry = inputs[agentId][kpiId];
+                if (entry.value === entry.initialValue) continue; // Skip unchanged entries
 
-        if (existingLogDoc) {
-            console.log(`[DEBUG] Existing log found with ID: ${existingLogDoc.id}. Value is ${isNaN(value) ? 'NaN' : value}.`);
-            if (value === 0 || isNaN(value)) {
-                console.log(`[DEBUG] Value is 0 or NaN. Deleting document...`);
-                await deleteDoc(doc(logsCollectionRef, existingLogDoc.id));
-            } else {
-                 console.log(`[DEBUG] Value is > 0. Updating document...`);
-                const logEntryChanges: Partial<AdditionalKpiLog> = {
-                    value,
-                    loggedAt: serverTimestamp() as Timestamp,
-                };
-                if (kpi.type === 'scoreOutOf' && typeof kpi.maxValue === 'number') {
-                    logEntryChanges.scoreOutOf = kpi.maxValue;
-                } else {
-                    // Ensure scoreOutOf is removed if type is not scoreOutOf
-                    logEntryChanges.scoreOutOf = deleteField() as unknown as undefined;
+                const kpi = kpis.find(k => k.id === kpiId);
+                if (!kpi) continue;
+
+                const value = parseFloat(entry.value);
+                const valueIsNumeric = !isNaN(value);
+
+                const logDocRef = entry.logId ? doc(logsCollectionRef, entry.logId) : doc(logsCollectionRef);
+
+                if (valueIsNumeric && value > 0) {
+                    const logEntry: Omit<AdditionalKpiLog, 'id'> = {
+                        agentId,
+                        podId: selectedPodId,
+                        kpiId,
+                        date: dateTimestamp,
+                        value,
+                        loggedAt: serverTimestamp() as Timestamp,
+                    };
+
+                    if (kpi.type === 'scoreOutOf' && typeof kpi.maxValue === 'number') {
+                        logEntry.scoreOutOf = kpi.maxValue;
+                    }
+
+                    batch.set(logDocRef, logEntry, { merge: true });
+                } else if (entry.logId) {
+                    // Value is blank, 0, or not a number, and a log exists, so delete it
+                    batch.delete(logDocRef);
                 }
-                await setDoc(doc(logsCollectionRef, existingLogDoc.id), logEntryChanges, { merge: true });
             }
-        } else if (value > 0 && !isNaN(value)) {
-            console.log(`[DEBUG] No existing log found. Value is > 0. Creating new document...`);
-            const logEntry: Omit<AdditionalKpiLog, 'id'> = {
-                agentId,
-                podId: selectedPodId,
-                kpiId,
-                date: dateTimestamp,
-                value,
-                loggedAt: serverTimestamp() as Timestamp,
-            };
-            if (kpi.type === 'scoreOutOf' && typeof kpi.maxValue === 'number') {
-                logEntry.scoreOutOf = kpi.maxValue;
-            }
-            console.log(`[DEBUG] New document data:`, logEntry);
-            const newDocRef = doc(logsCollectionRef);
-            await setDoc(newDocRef, logEntry);
-        } else {
-            console.log(`[DEBUG] No existing log and value is 0 or NaN. No database action taken.`);
         }
+
+        await batch.commit();
+
+        toast({
+            title: "Scores Saved",
+            description: "All changes have been successfully saved.",
+        });
+
     } catch (e: any) {
-        console.error("[DEBUG] Error in handleSave function:", e);
-        toast({ title: "Save Error", description: `Could not save score for ${kpi.name}. ${e.message}`, variant: "destructive" });
+        console.error("[DEBUG] Error in handleSaveAll function:", e);
+        toast({ title: "Save Error", description: `Could not save scores. ${e.message}`, variant: "destructive" });
     } finally {
-        console.log(`[DEBUG] Finished handleSave for ${savingKey}. Resetting saving state.`);
-        setIsSaving(prev => ({ ...prev, [savingKey]: false }));
+        setIsSaving(false);
     }
-};
-
-
-  const debouncedSave = (agentId: string, kpiId: string, value: string) => {
-    if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(() => {
-        handleSave(agentId, kpiId, value);
-    }, 1000);
   };
 
 
   const handleInputChange = (agentId: string, kpiId: string, value: string) => {
-    // Optimistically update the UI immediately
-    setInputs(prev => ({
-        ...prev,
-        [agentId]: {
-            ...prev[agentId],
-            [kpiId]: { ...prev[agentId]?.[kpiId], value }
-        }
-    }));
-    // Debounce the save operation to Firestore
-    debouncedSave(agentId, kpiId, value);
+    setInputs(prev => {
+        const agentData = prev[agentId] || {};
+        const kpiData = agentData[kpiId] || { value: '', initialValue: '' };
+
+        return {
+            ...prev,
+            [agentId]: {
+                ...agentData,
+                [kpiId]: { ...kpiData, value }
+            }
+        };
+    });
   };
 
 
   const renderInput = (agentId: string, kpi: AdditionalKpi) => {
     const value = inputs[agentId]?.[kpi.id]?.value ?? '';
-    const saving = isSaving[`${agentId}-${kpi.id}`] || false;
-
+    
     return (
         <div className="relative">
             <Input
@@ -243,10 +229,8 @@ const handleSave = async (agentId: string, kpiId: string, valueStr: string) => {
                 placeholder="-"
                 value={value}
                 onChange={(e) => handleInputChange(agentId, kpi.id, e.target.value)}
-                className="h-8 pr-8"
-                disabled={saving}
+                className="h-8"
             />
-            {saving && <Loader2 className="absolute right-2 top-2 h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
     );
   };
@@ -259,21 +243,27 @@ const handleSave = async (agentId: string, kpiId: string, valueStr: string) => {
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="grid gap-2">
-              <Label htmlFor="pod-select">Pod</Label>
-              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
-                <SelectTrigger id="pod-select" className="w-[200px]"><SelectValue placeholder="Select Pod" /></SelectTrigger>
-                <SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-              </Select>
+          <div className="flex flex-wrap gap-4 items-end justify-between">
+            <div className="flex flex-wrap gap-4 items-end">
+                <div className="grid gap-2">
+                <Label htmlFor="pod-select">Pod</Label>
+                <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
+                    <SelectTrigger id="pod-select" className="w-[200px]"><SelectValue placeholder="Select Pod" /></SelectTrigger>
+                    <SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                </Select>
+                </div>
+                <div className="grid gap-2">
+                <Label htmlFor="date-select">Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild><Button id="date-select" variant="outline" className={cn("w-[200px] justify-start", !selectedDate && "text-muted-foreground")} disabled={isLoading}><CalendarIcon className="mr-2 h-4 w-4" />{selectedDate ? format(selectedDate, "PPP") : "Pick date"}</Button></PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-50"><Calendar mode="single" selected={selectedDate} onSelect={handleDateChange} initialFocus/></PopoverContent>
+                </Popover>
+                </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="date-select">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild><Button id="date-select" variant="outline" className={cn("w-[200px] justify-start", !selectedDate && "text-muted-foreground")} disabled={isLoading}><CalendarIcon className="mr-2 h-4 w-4" />{selectedDate ? format(selectedDate, "PPP") : "Pick date"}</Button></PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50"><Calendar mode="single" selected={selectedDate} onSelect={handleDateChange} initialFocus/></PopoverContent>
-              </Popover>
-            </div>
+             <Button onClick={handleSaveAll} disabled={isSaving || !hasChanges}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                {isSaving ? "Saving..." : "Save All Scores"}
+             </Button>
           </div>
         </CardContent>
       </Card>
@@ -327,3 +317,5 @@ const handleSave = async (agentId: string, kpiId: string, valueStr: string) => {
     </div>
   );
 }
+
+    
