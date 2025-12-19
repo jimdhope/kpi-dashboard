@@ -1,7 +1,6 @@
 
-import type {NextConfig} from 'next';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
@@ -24,7 +23,7 @@ const nextConfig: NextConfig = {
     serverActions: {
         // Add your Firebase project's auth domain if needed for server actions interacting with Firebase
         // Ensure NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN is correctly set in your environment
-       allowedOrigins: [process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ""].filter(Boolean) as string[],
+       allowedOrigins: [process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ""].filter(Boolean),
     },
   },
 };
