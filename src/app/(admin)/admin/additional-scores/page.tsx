@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { collection, query, where, getDocs, Timestamp, doc, setDoc, deleteDoc, onSnapshot, Unsubscribe, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -56,6 +56,8 @@ export default function AdditionalScoresPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load filters from localStorage
   useEffect(() => {
@@ -130,10 +132,10 @@ export default function AdditionalScoresPage() {
   }, [selectedPodId, selectedDate]);
 
 
-const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
+const handleSave = async (agentId: string, kpiId: string, valueStr: string) => {
     const kpi = kpis.find(k => k.id === kpiId);
     if (!kpi) {
-        console.error("KPI not found for kpiId:", kpiId);
+        console.error("[DEBUG] KPI not found for kpiId:", kpiId);
         return;
     }
 
@@ -143,6 +145,8 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
     const value = valueStr.trim() === '' ? 0 : parseFloat(valueStr);
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
     const logsCollectionRef = collection(db, 'additionalKpiLogs');
+    console.log(`[DEBUG] handleSave called for agentId: ${agentId}, kpiId: ${kpiId}, valueStr: "${valueStr}"`);
+    console.log(`[DEBUG] Parsed value: ${value}. Date: ${selectedDate.toDateString()}`);
 
     try {
         const q = query(
@@ -152,23 +156,31 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
             where('date', '==', dateTimestamp),
             limit(1)
         );
+        console.log(`[DEBUG] Querying for existing log with agentId=${agentId}, kpiId=${kpiId}`);
         const logSnapshot = await getDocs(q);
         const existingLogDoc = logSnapshot.docs[0];
 
         if (existingLogDoc) {
+            console.log(`[DEBUG] Existing log found with ID: ${existingLogDoc.id}. Value is ${isNaN(value) ? 'NaN' : value}.`);
             if (value === 0 || isNaN(value)) {
+                console.log(`[DEBUG] Value is 0 or NaN. Deleting document...`);
                 await deleteDoc(doc(logsCollectionRef, existingLogDoc.id));
             } else {
+                 console.log(`[DEBUG] Value is > 0. Updating document...`);
                 const logEntryChanges: Partial<AdditionalKpiLog> = {
                     value,
                     loggedAt: serverTimestamp() as Timestamp,
                 };
-                if (kpi.type === 'scoreOutOf') {
+                if (kpi.type === 'scoreOutOf' && typeof kpi.maxValue === 'number') {
                     logEntryChanges.scoreOutOf = kpi.maxValue;
+                } else {
+                    // Ensure scoreOutOf is removed if type is not scoreOutOf
+                    logEntryChanges.scoreOutOf = deleteField() as unknown as undefined;
                 }
                 await setDoc(doc(logsCollectionRef, existingLogDoc.id), logEntryChanges, { merge: true });
             }
         } else if (value > 0 && !isNaN(value)) {
+            console.log(`[DEBUG] No existing log found. Value is > 0. Creating new document...`);
             const logEntry: Omit<AdditionalKpiLog, 'id'> = {
                 agentId,
                 podId: selectedPodId,
@@ -177,31 +189,34 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
                 value,
                 loggedAt: serverTimestamp() as Timestamp,
             };
-            if (kpi.type === 'scoreOutOf' && kpi.maxValue) {
+            if (kpi.type === 'scoreOutOf' && typeof kpi.maxValue === 'number') {
                 logEntry.scoreOutOf = kpi.maxValue;
             }
+            console.log(`[DEBUG] New document data:`, logEntry);
             const newDocRef = doc(logsCollectionRef);
             await setDoc(newDocRef, logEntry);
+        } else {
+            console.log(`[DEBUG] No existing log and value is 0 or NaN. No database action taken.`);
         }
-    } catch (e) {
-        console.error("Error in handleSave function:", e);
-        toast({ title: "Save Error", description: `Could not save score for ${kpi.name}. Check console for details.`, variant: "destructive" });
+    } catch (e: any) {
+        console.error("[DEBUG] Error in handleSave function:", e);
+        toast({ title: "Save Error", description: `Could not save score for ${kpi.name}. ${e.message}`, variant: "destructive" });
     } finally {
+        console.log(`[DEBUG] Finished handleSave for ${savingKey}. Resetting saving state.`);
         setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
-}, [kpis, selectedPodId, selectedDate, toast]);
+};
 
 
-  const debouncedSave = useMemo(() => {
-    const debounce = (func: Function, delay: number) => {
-        let timeoutId: NodeJS.Timeout;
-        return (...args: any[]) => {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => func(...args), delay);
-        };
-    };
-    return debounce(handleSave, 1000);
-  }, [handleSave]);
+  const debouncedSave = (agentId: string, kpiId: string, value: string) => {
+    if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+        handleSave(agentId, kpiId, value);
+    }, 1000);
+  };
+
 
   const handleInputChange = (agentId: string, kpiId: string, value: string) => {
     // Optimistically update the UI immediately
