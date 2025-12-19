@@ -18,7 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords, Database, BarChartHorizontal } from 'lucide-react'; // Added BarChartHorizontal
+import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords, Database, BarChartHorizontal, LineChart } from 'lucide-react'; // Added LineChart
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -220,6 +220,14 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                         <SidebarMenuButton tooltip="KPI Breakdown" isActive={currentPath.startsWith('/admin/kpi-breakdown')}>
                             <BarChartHorizontal />
                             <span>KPI Breakdown</span>
+                        </SidebarMenuButton>
+                    </Link>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <Link href="/admin/performance-charts" passHref>
+                        <SidebarMenuButton tooltip="Performance Charts" isActive={currentPath.startsWith('/admin/performance-charts')}>
+                            <LineChart />
+                            <span>Performance Charts</span>
                         </SidebarMenuButton>
                     </Link>
                  </SidebarMenuItem>
