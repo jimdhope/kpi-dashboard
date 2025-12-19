@@ -120,7 +120,7 @@ export function PodTargetsWidget({ currentUser }: PodTargetsWidgetProps) {
         const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
         const activeAgentsCount = podAgents.filter(agent => !absentAgentIds.has(agent.id!)).length;
 
-        if (numericRules.length === 0 || !dailyTargets) {
+        if (numericRules.length === 0 || !dailyTargets || activeAgentsCount === 0) {
             return [];
         }
 
