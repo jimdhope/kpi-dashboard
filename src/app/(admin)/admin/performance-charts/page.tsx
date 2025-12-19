@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format, startOfDay, endOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -123,13 +123,12 @@ export default function PerformanceChartsPage() {
 
   const podAgents = useMemo(() => agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent')), [agents, selectedPodId]);
 
-  const { chartData, tableData, displayedKpis } = useMemo(() => {
+  const { chartData, tableData, percentageKpis, numberKpis } = useMemo(() => {
     const showAllKpis = selectedKpiId === 'all';
-    if ((!selectedKpiId || selectedKpiId === '') || !kpis.length) return { chartData: [], tableData: [], displayedKpis: [] };
+    if ((!selectedKpiId || selectedKpiId === '') || !kpis.length) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [] };
     
     let kpisToProcess = showAllKpis ? kpis : kpis.filter(k => k.id === selectedKpiId);
-    if (kpisToProcess.length === 0) return { chartData: [], tableData: [], displayedKpis: [] };
-
+    if (kpisToProcess.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [] };
 
     const now = new Date();
     let startDate: Date;
@@ -150,7 +149,7 @@ export default function PerformanceChartsPage() {
             break;
         case 'allTime':
         default:
-            if (logs.length === 0) return { chartData: [], tableData: [], displayedKpis: kpisToProcess };
+            if (logs.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [] };
             const sortedLogs = [...logs].sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime());
             startDate = sortedLogs[0].date.toDate();
             endDate = sortedLogs[sortedLogs.length - 1].date.toDate();
@@ -161,7 +160,7 @@ export default function PerformanceChartsPage() {
       const logDate = log.date.toDate();
       const agentMatch = selectedAgentId === 'all' || log.agentId === selectedAgentId;
       const kpiMatch = showAllKpis || log.kpiId === selectedKpiId;
-      return agentMatch && kpiMatch && logDate >= startOfDay(startDate) && logDate <= endOfDay(endDate);
+      return agentMatch && kpiMatch && logDate >= startDate && logDate <= endDate;
     });
 
     // dataByDate will temporarily store sums and counts.
@@ -194,8 +193,6 @@ export default function PerformanceChartsPage() {
             const count = dataPoint[countKey];
 
             if (totalValue !== undefined && count > 0) {
-                // If "All Agents" is selected for percentage KPIs, average the scores.
-                // Otherwise, use the sum (or the single value if one agent is selected).
                 if (selectedAgentId === 'all' && (kpiInfo.type === 'percentage')) {
                     averagedDataPoint[valueKey] = totalValue / count;
                 } else {
@@ -206,8 +203,10 @@ export default function PerformanceChartsPage() {
         return averagedDataPoint;
     }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    const finalPercentageKpis = kpisToProcess.filter(k => k.type === 'percentage');
+    const finalNumberKpis = kpisToProcess.filter(k => k.type !== 'percentage');
 
-    return { chartData: finalChartData, tableData: relevantLogs, displayedKpis: kpisToProcess };
+    return { chartData: finalChartData, tableData: relevantLogs, percentageKpis: finalPercentageKpis, numberKpis: finalNumberKpis };
 
   }, [selectedPodId, selectedKpiId, selectedAgentId, timeframe, logs, kpis, podAgents]);
 
@@ -232,7 +231,7 @@ export default function PerformanceChartsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><LineChart className="h-5 w-5" /> KPI Performance Chart</CardTitle>
           <CardDescription>
-            Visualizing <span className="font-semibold">{selectedKpiId === 'all' ? 'All KPIs' : displayedKpis[0]?.name}</span> for <span className="font-semibold">{selectedAgentId === 'all' ? 'All Agents' : agents.find(a=>a.id===selectedAgentId)?.name}</span> in <span className="font-semibold">{pods.find(p=>p.id===selectedPodId)?.name || '...'}</span>
+            Visualizing <span className="font-semibold">{selectedKpiId === 'all' ? 'All KPIs' : kpis.find(k=>k.id === selectedKpiId)?.name}</span> for <span className="font-semibold">{selectedAgentId === 'all' ? 'All Agents' : agents.find(a=>a.id===selectedAgentId)?.name}</span> in <span className="font-semibold">{pods.find(p=>p.id===selectedPodId)?.name || '...'}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -247,12 +246,26 @@ export default function PerformanceChartsPage() {
               <RechartsLineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis yAxisId="left" stroke={LINE_COLORS[1]} fontSize={12} domain={[0, 100]} tickFormatter={(value) => `${value}%`} hide={percentageKpis.length === 0} />
+                <YAxis yAxisId="right" orientation="right" stroke={LINE_COLORS[0]} fontSize={12} hide={numberKpis.length === 0} />
                 <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
                 <Legend />
-                {displayedKpis.map((kpi, index) => (
+                {percentageKpis.map((kpi, index) => (
                    <Line 
-                     key={kpi.id}
+                     key={`pct-${kpi.id}`}
+                     yAxisId="left"
+                     type="monotone" 
+                     dataKey={kpi.name} 
+                     stroke={LINE_COLORS[(index + numberKpis.length) % LINE_COLORS.length]} // Offset color index
+                     strokeWidth={2} 
+                     dot={{ r: 4 }} 
+                     activeDot={{ r: 6 }} 
+                   />
+                ))}
+                {numberKpis.map((kpi, index) => (
+                   <Line 
+                     key={`num-${kpi.id}`}
+                     yAxisId="right"
                      type="monotone" 
                      dataKey={kpi.name} 
                      stroke={LINE_COLORS[index % LINE_COLORS.length]} 
@@ -296,3 +309,4 @@ export default function PerformanceChartsPage() {
     </div>
   );
 }
+
