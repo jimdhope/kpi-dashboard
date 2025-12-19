@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format, startOfDay, endOfDay } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -185,7 +185,7 @@ export default function PerformanceChartsPage() {
 
     // Process the aggregated data to calculate averages if needed
     const finalChartData = Object.values(dataByDate).map(dataPoint => {
-        const averagedDataPoint: ChartDataPoint = { date: dataPoint.date };
+        const processedDataPoint: ChartDataPoint = { date: dataPoint.date };
         kpisToProcess.forEach(kpiInfo => {
             const valueKey = kpiInfo.name;
             const countKey = `${kpiInfo.name}_count`;
@@ -193,16 +193,19 @@ export default function PerformanceChartsPage() {
             const count = dataPoint[countKey];
 
             if (totalValue !== undefined && count > 0) {
+                 let finalValue: number;
                  if (selectedAgentId === 'all') {
                     // Always average if "All Agents" is selected
-                    averagedDataPoint[valueKey] = totalValue / count;
+                    finalValue = totalValue / count;
                 } else {
                     // Use the direct sum if a single agent is selected
-                    averagedDataPoint[valueKey] = totalValue;
+                    finalValue = totalValue;
                 }
+                 // Round to 2 decimal places
+                 processedDataPoint[valueKey] = parseFloat(finalValue.toFixed(2));
             }
         });
-        return averagedDataPoint;
+        return processedDataPoint;
     }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const finalPercentageKpis = kpisToProcess.filter(k => k.type === 'percentage');
