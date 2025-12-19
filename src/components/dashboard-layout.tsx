@@ -1,4 +1,3 @@
-
 // src/components/dashboard-layout.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
@@ -19,7 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords, Database } from 'lucide-react'; // Added Database icon
+import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords, Database, BarChart3 } from 'lucide-react'; // Added BarChart3
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -188,6 +187,34 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                         </SidebarMenuButton>
                         </Link>
                     </SidebarMenuItem>
+              </SidebarGroup>
+
+               <SidebarGroup>
+                <SidebarGroupLabel>Performance</SidebarGroupLabel>
+                 <SidebarMenuItem>
+                    <Link href="/admin/additional-kpis" passHref>
+                        <SidebarMenuButton tooltip="Setup Additional KPIs" isActive={currentPath.startsWith('/admin/additional-kpis')}>
+                            <Settings />
+                            <span>Setup KPIs</span>
+                        </SidebarMenuButton>
+                    </Link>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <Link href="/admin/additional-scores" passHref>
+                        <SidebarMenuButton tooltip="Log Additional Scores" isActive={currentPath.startsWith('/admin/additional-scores')}>
+                            <CheckSquare />
+                            <span>Log Scores</span>
+                        </SidebarMenuButton>
+                    </Link>
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <Link href="/admin/additional-leaderboard" passHref>
+                        <SidebarMenuButton tooltip="Additional Leaderboard" isActive={currentPath.startsWith('/admin/additional-leaderboard')}>
+                            <BarChart3 />
+                            <span>Leaderboard</span>
+                        </SidebarMenuButton>
+                    </Link>
+                 </SidebarMenuItem>
               </SidebarGroup>
 
               <SidebarGroup>
