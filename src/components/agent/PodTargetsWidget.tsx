@@ -122,13 +122,10 @@ export function PodTargetsWidget({ currentUser }: PodTargetsWidgetProps) {
             return [];
         }
 
-        // Correctly identify absent agent IDs from today's logs
         const absentAgentIds = new Set(dailyLogs.filter(log => log.status === 'absent').map(log => log.agentId));
-        // Filter out absent agents to get the count of active agents
-        const activeAgentsCount = podAgents.filter(agent => agent.roles?.includes('agent') && agent.id && !absentAgentIds.has(agent.id)).length;
+        const activeAgentsCount = podAgents.filter(agent => !absentAgentIds.has(agent.id!)).length;
         
         if (activeAgentsCount === 0) {
-            // If all agents are absent, there are no targets to show for today.
             return [];
         }
 
@@ -136,7 +133,7 @@ export function PodTargetsWidget({ currentUser }: PodTargetsWidgetProps) {
         numericRules.forEach(rule => { if (rule.id) podRuleTotalsToday[rule.id] = 0; });
 
         dailyLogs.forEach(log => {
-            if (log.ruleId && podRuleTotalsToday.hasOwnProperty(log.ruleId) && log.status !== 'absent') {
+            if (log.ruleId && podRuleTotalsToday.hasOwnProperty(log.ruleId) && !absentAgentIds.has(log.agentId)) {
                 podRuleTotalsToday[log.ruleId] += (log.value || 0);
             }
         });
