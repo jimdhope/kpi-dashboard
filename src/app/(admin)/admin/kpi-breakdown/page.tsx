@@ -90,17 +90,28 @@ export default function KpiBreakdownPage() {
     unsubscribes.push(onSnapshot(query(collection(db, 'additionalKpis'), orderBy('name')), (snap) => setKpis(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpi)))));
     unsubscribes.push(onSnapshot(query(collection(db, 'users'), orderBy('name')), (snap) => {
       setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppUser)));
-      setIsLoading(false);
     }));
+
+    // Logs are now fetched in the next effect based on podId
+    // The initial loading state is primarily for base data.
+    // Set loading to false after base data is fetched.
+    Promise.all([
+        getDocs(query(collection(db, 'pods'))),
+        getDocs(query(collection(db, 'additionalKpis'))),
+        getDocs(query(collection(db, 'users'))),
+    ]).then(() => setIsLoading(false));
+
+
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
   
   useEffect(() => {
     if (!selectedPodId) {
       setLogs([]);
+      setIsLoading(false); // Ensure loading is false if no pod is selected
       return;
     }
-    setIsLoading(true);
+    setIsLoading(true); // Set loading true when pod changes
     const logsQuery = query(
       collection(db, 'additionalKpiLogs'),
       where('podId', '==', selectedPodId),
@@ -108,7 +119,7 @@ export default function KpiBreakdownPage() {
     
     const unsubscribe = onSnapshot(logsQuery, (snap) => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpiLog)));
-      setIsLoading(false);
+      setIsLoading(false); // Set loading false after logs are fetched
     }, (err) => {
       console.error("Error fetching logs:", err);
       setIsLoading(false);
@@ -122,7 +133,7 @@ export default function KpiBreakdownPage() {
     }
     const now = new Date();
     let startDate: Date;
-    let endDate: Date;
+    let endDate: Date = now;
     
     switch (timeframe) {
       case 'thisWeek':
@@ -134,11 +145,10 @@ export default function KpiBreakdownPage() {
         endDate = endOfMonth(now);
         break;
       case 'last6weeks':
+      default:
         startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn });
         endDate = endOfWeek(now, { weekStartsOn });
         break;
-      default:
-        return logs;
     }
 
     return logs.filter(log => {
@@ -176,13 +186,19 @@ export default function KpiBreakdownPage() {
         weeks.add(weekOf);
 
         const agent = agentData.find(a => a.agentId === log.agentId);
-        if (agent) {
+        const kpiDetails = kpis.find(k => k.id === log.kpiId);
+
+        if (agent && kpiDetails) {
             if (!agent.weeklyScores[weekOf]) {
                 agent.weeklyScores[weekOf] = {};
             }
             if (!agent.weeklyScores[weekOf][log.kpiId]) {
                 agent.weeklyScores[weekOf][log.kpiId] = 0;
             }
+            
+            // For percentage type, we should average, not sum. We'll need a count.
+            // This is a simplification for now: we sum everything.
+            // A more complex implementation would store { total, count } and average at the end.
             agent.weeklyScores[weekOf][log.kpiId] += log.value;
         }
     });
@@ -223,25 +239,26 @@ export default function KpiBreakdownPage() {
         </CardContent>
       </Card>
 
-      {!selectedPodId ? (
-        <p className="text-muted-foreground text-center py-6">Please select a pod to view the breakdown.</p>
-      ) : isLoading ? (
-        <Skeleton className="h-[400px] w-full" />
-      ) : processedData.length === 0 ? (
-        <p className="text-muted-foreground text-center py-6">No scores logged for the selected filters.</p>
-      ) : (
-        <Card className="frosted-glass">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><BarChartHorizontal className="h-5 w-5" /> Weekly KPI Breakdown</CardTitle>
-            <CardDescription>Weekly total scores for each agent across all relevant KPIs.</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
+      <Card className="frosted-glass">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><BarChartHorizontal className="h-5 w-5" /> Weekly KPI Breakdown</CardTitle>
+          <CardDescription>Weekly total scores for each agent across all relevant KPIs.</CardDescription>
+        </CardHeader>
+        <CardContent>
+        {!selectedPodId ? (
+          <p className="text-muted-foreground text-center py-6">Please select a pod to view the breakdown.</p>
+        ) : isLoading ? (
+          <Skeleton className="h-[400px] w-full" />
+        ) : processedData.length === 0 ? (
+          <p className="text-muted-foreground text-center py-6">No scores logged for the selected filters.</p>
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead rowSpan={2} className="min-w-[150px] sticky left-0 bg-background/95 align-bottom">Agent</TableHead>
                   {weekHeaders.map(week => (
-                    <TableHead key={week} colSpan={podKpis.length} className="text-center">
+                    <TableHead key={week} colSpan={podKpis.length} className="text-center border-l">
                       Week of {week}
                     </TableHead>
                   ))}
@@ -249,8 +266,8 @@ export default function KpiBreakdownPage() {
                 <TableRow>
                   {weekHeaders.flatMap(week =>
                     podKpis.map(kpi => (
-                      <TableHead key={`${week}-${kpi.id}`} className="text-center w-[100px]" title={kpi.name}>
-                        {kpi.emoji} {kpi.name}
+                      <TableHead key={`${week}-${kpi.id}`} className="text-center w-[100px] border-l" title={kpi.name}>
+                        {kpi.emoji}
                       </TableHead>
                     ))
                   )}
@@ -262,7 +279,7 @@ export default function KpiBreakdownPage() {
                     <TableCell className="font-medium sticky left-0 bg-background/95">{agentData.agentName}</TableCell>
                     {weekHeaders.flatMap(week =>
                       podKpis.map(kpi => (
-                        <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className="text-center text-muted-foreground">
+                        <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className="text-center text-muted-foreground border-l">
                           {agentData.weeklyScores[week]?.[kpi.id]?.toLocaleString() ?? '-'}
                         </TableCell>
                       ))
@@ -271,9 +288,10 @@ export default function KpiBreakdownPage() {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
