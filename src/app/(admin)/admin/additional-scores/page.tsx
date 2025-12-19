@@ -133,36 +133,52 @@ export default function AdditionalScoresPage() {
   const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
     const kpi = kpis.find(k => k.id === kpiId);
     if (!kpi) return;
-
-    const value = parseFloat(valueStr);
+  
     const savingKey = `${agentId}-${kpiId}`;
     setIsSaving(prev => ({...prev, [savingKey]: true }));
-
+  
     const logId = inputs[agentId]?.[kpiId]?.logId;
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-
+  
     try {
-        if (valueStr === '' || isNaN(value)) { // Delete if empty or invalid
-            if (logId) await deleteDoc(doc(db, 'additionalKpiLogs', logId));
-        } else { // Create or Update
-            const logEntry: Omit<AdditionalKpiLog, 'id'> = {
-                agentId,
-                podId: selectedPodId,
-                kpiId,
-                date: dateTimestamp,
-                value,
-                scoreOutOf: kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined,
-                loggedAt: serverTimestamp() as Timestamp,
-            };
-            
-            const docRef = logId ? doc(db, 'additionalKpiLogs', logId) : doc(collection(db, 'additionalKpiLogs'));
-            await setDoc(docRef, logEntry, { merge: true });
+      // Check if the input is empty first
+      if (valueStr === '') {
+        // If the input is empty and a log exists, delete it
+        if (logId) {
+          await deleteDoc(doc(db, 'additionalKpiLogs', logId));
         }
+        // If input is empty and no log exists, do nothing
+      } else {
+        // If input is not empty, parse it
+        const value = parseFloat(valueStr);
+        // Check if the parsed value is a valid number
+        if (isNaN(value)) {
+          // If not a valid number but a log exists, delete it (treat invalid input as empty)
+          if (logId) {
+            await deleteDoc(doc(db, 'additionalKpiLogs', logId));
+          }
+          // Do nothing if invalid and no log exists
+        } else {
+          // The value is a valid number, so create or update the log
+          const logEntry: Omit<AdditionalKpiLog, 'id'> = {
+            agentId,
+            podId: selectedPodId,
+            kpiId,
+            date: dateTimestamp,
+            value,
+            scoreOutOf: kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined,
+            loggedAt: serverTimestamp() as Timestamp,
+          };
+          
+          const docRef = logId ? doc(db, 'additionalKpiLogs', logId) : doc(collection(db, 'additionalKpiLogs'));
+          await setDoc(docRef, logEntry, { merge: true });
+        }
+      }
     } catch (e) {
-        console.error("Error saving score:", e);
-        toast({ title: "Save Error", description: `Could not save score for ${kpi.name}.`, variant: "destructive" });
+      console.error("Error saving score:", e);
+      toast({ title: "Save Error", description: `Could not save score for ${kpi.name}.`, variant: "destructive" });
     } finally {
-        setIsSaving(prev => ({...prev, [savingKey]: false }));
+      setIsSaving(prev => ({...prev, [savingKey]: false }));
     }
   }, [inputs, kpis, selectedPodId, selectedDate, toast]);
   
