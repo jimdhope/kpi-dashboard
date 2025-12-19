@@ -17,7 +17,7 @@ import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, PlusCircle, Settings } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Settings, ArrowDown, ArrowUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,7 @@ import { AdditionalKpiForm, AdditionalKpiFormData } from '@/components/additiona
 
 
 export type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
+export type KpiSortOrder = 'desc' | 'asc'; // desc: higher is better, asc: lower is better
 
 export interface AdditionalKpi {
   id: string;
@@ -50,6 +51,7 @@ export interface AdditionalKpi {
   emoji: string;
   type: AdditionalKpiType;
   maxValue?: number; // Only for 'scoreOutOf' type
+  sortOrder?: KpiSortOrder; // Only for 'percentage' and 'scoreOutOf'
 }
 
 const kpisCollectionRef = collection(db, 'additionalKpis');
@@ -108,32 +110,39 @@ export default function AdditionalKpisPage() {
   };
 
   const handleFormSubmit = async (data: AdditionalKpiFormData) => {
-    // Construct the base object without maxValue
     const kpiDataToSave: Omit<AdditionalKpi, 'id'> = {
       name: data.name,
       emoji: data.emoji,
       type: data.type,
+      // Default sortOrder to 'desc' for 'number' type, use form value otherwise
+      sortOrder: data.type === 'number' ? 'desc' : data.sortOrder,
     };
-
-    // Conditionally add maxValue only if the type is 'scoreOutOf' and it's a valid number
+  
+    // Conditionally add maxValue
     if (data.type === 'scoreOutOf') {
-        const maxValue = data.maxValue;
-        if (typeof maxValue === 'number' && !isNaN(maxValue)) {
-            kpiDataToSave.maxValue = maxValue;
-        }
+      const maxValue = data.maxValue;
+      if (typeof maxValue === 'number' && !isNaN(maxValue)) {
+        kpiDataToSave.maxValue = maxValue;
+      }
     }
-
-
+  
     try {
       if (dialogMode === 'add') {
         await addDoc(kpisCollectionRef, kpiDataToSave);
         toast({ title: "KPI Added", description: `"${data.name}" has been successfully added.` });
       } else if (selectedKpi) {
-        // For updates, ensure we remove maxValue if the type changes
-        const updateData = {...kpiDataToSave};
+        // For updates, ensure we clean up fields that don't apply to the new type
+        const updateData: Partial<AdditionalKpi> = {
+            ...kpiDataToSave
+        };
+  
         if (updateData.type !== 'scoreOutOf') {
-            delete updateData.maxValue;
+          delete updateData.maxValue;
         }
+        if (updateData.type === 'number') {
+            delete updateData.sortOrder; // 'number' type defaults to desc, no need to store it
+        }
+        
         await updateDoc(doc(db, 'additionalKpis', selectedKpi.id), updateData);
         toast({ title: "KPI Updated", description: `"${data.name}" has been successfully updated.` });
       }
@@ -195,6 +204,7 @@ export default function AdditionalKpisPage() {
                     <TableHead className="w-[50px]">Emoji</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Goal</TableHead>
                     <TableHead className="text-right w-[150px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -205,12 +215,13 @@ export default function AdditionalKpisPage() {
                         <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
                         <TableCell className="text-right flex gap-1 justify-end"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></TableCell>
                       </TableRow>
                     ))
                   ) : kpis.length === 0 && !error ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                         No KPIs found. Create one to get started!
                       </TableCell>
                     </TableRow>
@@ -219,7 +230,14 @@ export default function AdditionalKpisPage() {
                       <TableRow key={kpi.id}>
                         <TableCell className="text-xl">{kpi.emoji}</TableCell>
                         <TableCell className="font-medium">{kpi.name}</TableCell>
-                        <TableCell className="text-muted-foreground capitalize">{kpi.type.replace('scoreOutOf', 'Score')}</TableCell>
+                        <TableCell className="text-muted-foreground capitalize">{kpi.type === 'scoreOutOf' ? `Score / ${kpi.maxValue}` : kpi.type}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                            {kpi.type !== 'number' ? (
+                                kpi.sortOrder === 'asc' ? <span className="flex items-center gap-1"><ArrowDown className="h-4 w-4 text-blue-500"/> Lower</span> : <span className="flex items-center gap-1"><ArrowUp className="h-4 w-4 text-green-500"/> Higher</span>
+                            ) : (
+                                <span className="flex items-center gap-1"><ArrowUp className="h-4 w-4 text-green-500"/> Higher</span>
+                            )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
                             <DialogTrigger asChild>

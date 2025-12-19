@@ -116,29 +116,56 @@ export default function AdditionalLeaderboardPage() {
   const leaderboardData = useMemo((): LeaderboardEntry[] => {
     const podAgents = agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent'));
     if (podAgents.length === 0) return [];
-    
-    const scores: Record<string, number> = {};
-    podAgents.forEach(agent => scores[agent.id!] = 0);
-
-    const logsToProcess = selectedKpiId === 'overall' 
-        ? filteredLogs 
-        : filteredLogs.filter(log => log.kpiId === selectedKpiId);
-
+  
+    let logsToProcess = filteredLogs;
+    let kpi: AdditionalKpi | undefined;
+  
+    if (selectedKpiId !== 'overall') {
+      kpi = kpis.find(k => k.id === selectedKpiId);
+      if (kpi) {
+        logsToProcess = filteredLogs.filter(log => log.kpiId === selectedKpiId);
+      }
+    }
+  
+    const agentScores: Record<string, { totalValue: number; count: number }> = {};
+    podAgents.forEach(agent => agent.id && (agentScores[agent.id] = { totalValue: 0, count: 0 }));
+  
     logsToProcess.forEach(log => {
-      if (scores.hasOwnProperty(log.agentId)) {
-        scores[log.agentId] += log.value; // Simple sum for now, can be more complex
+      if (agentScores.hasOwnProperty(log.agentId)) {
+        agentScores[log.agentId].totalValue += log.value;
+        agentScores[log.agentId].count++;
       }
     });
-
-    return podAgents.map(agent => ({
-      id: agent.id!,
-      name: agent.name,
-      score: scores[agent.id!] || 0,
-      avatarUrl: agent.avatarUrl,
-      avatarInitials: agent.avatarInitials,
-      avatarBgColor: agent.avatarBgColor,
-    }));
-  }, [filteredLogs, agents, selectedPodId, selectedKpiId]);
+  
+    // Determine the final score for each agent based on the KPI type
+    return podAgents.map(agent => {
+      const agentData = agent.id ? agentScores[agent.id] : { totalValue: 0, count: 0 };
+      let finalScore = 0;
+  
+      if (kpi && kpi.type === 'percentage') {
+        finalScore = agentData.count > 0 ? (agentData.totalValue / agentData.count) : 0;
+      } else {
+        // For 'number', 'scoreOutOf', or 'overall', the score is the sum
+        finalScore = agentData.totalValue;
+      }
+  
+      return {
+        id: agent.id!,
+        name: agent.name,
+        score: finalScore,
+        avatarUrl: agent.avatarUrl,
+        avatarInitials: agent.avatarInitials,
+        avatarBgColor: agent.avatarBgColor,
+      };
+    }).sort((a, b) => {
+        // Sort based on the KPI's sortOrder
+        if (kpi?.sortOrder === 'asc') { // Lower is better
+            return a.score - b.score;
+        }
+        return b.score - a.score; // Higher is better (default)
+    });
+  }, [filteredLogs, agents, selectedPodId, selectedKpiId, kpis]);
+  
 
   return (
     <div className="space-y-6">

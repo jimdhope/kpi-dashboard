@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc, setDoc, deleteDoc, onSnapshot, Unsubscribe, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, onSnapshot, Unsubscribe, serverTimestamp, writeBatch, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -150,49 +150,74 @@ export default function AdditionalScoresPage() {
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
     const logsCollectionRef = collection(db, 'additionalKpiLogs');
     const batch = writeBatch(db);
+    let hasError = false;
 
     try {
         for (const agentId in inputs) {
             for (const kpiId in inputs[agentId]) {
                 const entry = inputs[agentId][kpiId];
-                if (entry.value === entry.initialValue) continue; // Skip unchanged entries
+                if (entry.value === entry.initialValue) continue;
 
                 const kpi = kpis.find(k => k.id === kpiId);
                 if (!kpi) continue;
 
-                const value = parseFloat(entry.value);
+                const valueStr = entry.value;
+                const value = parseFloat(valueStr);
                 const valueIsNumeric = !isNaN(value);
 
-                const logDocRef = entry.logId ? doc(logsCollectionRef, entry.logId) : doc(logsCollectionRef);
+                // Validation for scoreOutOf
+                if (kpi.type === 'scoreOutOf' && kpi.maxValue !== undefined && value > kpi.maxValue) {
+                    toast({ title: "Validation Error", description: `Score for "${kpi.name}" cannot exceed ${kpi.maxValue}.`, variant: "destructive" });
+                    hasError = true;
+                    continue; // Skip this entry
+                }
 
-                if (valueIsNumeric && value > 0) {
-                    const logEntry: Omit<AdditionalKpiLog, 'id'> = {
+                // Query for the existing document to get its reference
+                const logQuery = query(
+                    logsCollectionRef,
+                    where('agentId', '==', agentId),
+                    where('kpiId', '==', kpiId),
+                    where('date', '==', dateTimestamp)
+                );
+                const logSnapshot = await getDocs(logQuery);
+                const existingLogDoc = logSnapshot.docs[0];
+
+                const logDocRef = existingLogDoc ? existingLogDoc.ref : doc(logsCollectionRef);
+
+                if (valueStr === '' || !valueIsNumeric) {
+                    // If the input is empty or not a number, and a log exists, delete it.
+                    if (existingLogDoc) {
+                        batch.delete(logDocRef);
+                    }
+                } else {
+                    // Otherwise, create or update the log.
+                    const logEntry: Omit<AdditionalKpiLog, 'id' | 'loggedAt'> & { loggedAt: any } = {
                         agentId,
                         podId: selectedPodId,
                         kpiId,
                         date: dateTimestamp,
                         value,
-                        loggedAt: serverTimestamp() as Timestamp,
+                        loggedAt: serverTimestamp(),
                     };
-
+                    
                     if (kpi.type === 'scoreOutOf' && typeof kpi.maxValue === 'number') {
                         logEntry.scoreOutOf = kpi.maxValue;
                     }
-
+                    
                     batch.set(logDocRef, logEntry, { merge: true });
-                } else if (entry.logId) {
-                    // Value is blank, 0, or not a number, and a log exists, so delete it
-                    batch.delete(logDocRef);
                 }
             }
         }
-
-        await batch.commit();
-
-        toast({
-            title: "Scores Saved",
-            description: "All changes have been successfully saved.",
-        });
+        
+        if (hasError) {
+             toast({ title: "Save Incomplete", description: "Please fix the validation errors before saving.", variant: "destructive" });
+        } else {
+             await batch.commit();
+             toast({
+                 title: "Scores Saved",
+                 description: "All changes have been successfully saved.",
+             });
+        }
 
     } catch (e: any) {
         console.error("[DEBUG] Error in handleSaveAll function:", e);
@@ -200,7 +225,7 @@ export default function AdditionalScoresPage() {
     } finally {
         setIsSaving(false);
     }
-  };
+};
 
 
   const handleInputChange = (agentId: string, kpiId: string, value: string) => {
@@ -228,6 +253,8 @@ export default function AdditionalScoresPage() {
                 type="number"
                 placeholder="-"
                 value={value}
+                max={kpi.type === 'scoreOutOf' ? kpi.maxValue : undefined}
+                min={0}
                 onChange={(e) => handleInputChange(agentId, kpi.id, e.target.value)}
                 className="h-8"
             />
@@ -317,5 +344,3 @@ export default function AdditionalScoresPage() {
     </div>
   );
 }
-
-    

@@ -22,10 +22,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Loader2 } from 'lucide-react';
-import type { AdditionalKpi, AdditionalKpiType } from '@/app/(admin)/admin/additional-kpis/page';
+import type { AdditionalKpi, AdditionalKpiType, KpiSortOrder } from '@/app/(admin)/admin/additional-kpis/page';
 
 
 const kpiFormSchema = z.object({
@@ -33,12 +34,20 @@ const kpiFormSchema = z.object({
   emoji: z.string().min(1, 'Emoji is required.'),
   type: z.enum(['number', 'percentage', 'scoreOutOf'], { required_error: "Please select a type."}),
   maxValue: z.coerce.number().optional(),
+  sortOrder: z.enum(['desc', 'asc']).optional(), // 'desc' = higher is better, 'asc' = lower is better
 }).superRefine((data, ctx) => {
     if (data.type === 'scoreOutOf' && (data.maxValue === undefined || data.maxValue <= 0)) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "Max value is required and must be greater than 0 for 'Score Out Of' type.",
             path: ['maxValue'],
+        });
+    }
+    if (data.type === 'percentage' && !data.sortOrder) {
+         ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Sort order is required for 'Percentage' type.",
+            path: ['sortOrder'],
         });
     }
 });
@@ -60,6 +69,7 @@ export function AdditionalKpiForm({ onSubmit, onCancel, initialData }: Additiona
       emoji: initialData?.emoji || '',
       type: initialData?.type || 'number',
       maxValue: initialData?.maxValue || undefined,
+      sortOrder: initialData?.sortOrder || 'desc',
     },
     mode: 'onChange',
   });
@@ -114,15 +124,41 @@ export function AdditionalKpiForm({ onSubmit, onCancel, initialData }: Additiona
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="number">Number</SelectItem>
-                  <SelectItem value="percentage">Percentage</SelectItem>
-                  <SelectItem value="scoreOutOf">Score Out Of</SelectItem>
+                  <SelectItem value="number">Number (e.g., total calls)</SelectItem>
+                  <SelectItem value="percentage">Percentage (e.g., 95%)</SelectItem>
+                  <SelectItem value="scoreOutOf">Score Out Of (e.g., 4/5)</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+        
+        {(watchType === 'percentage' || watchType === 'scoreOutOf') && (
+           <FormField
+            control={form.control}
+            name="sortOrder"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Goal</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isSubmitting}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select Goal Direction" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="desc">Higher is better</SelectItem>
+                            <SelectItem value="asc">Lower is better</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormDescription>Define if a higher or lower score is the desired outcome.</FormDescription>
+                    <FormMessage />
+                </FormItem>
+            )}
+            />
+        )}
+
         {watchType === 'scoreOutOf' && (
           <FormField
             control={form.control}
