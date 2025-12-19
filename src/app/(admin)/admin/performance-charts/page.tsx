@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format, startOfDay, endOfDay } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,6 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { AdditionalKpi } from '@/app/(admin)/admin/additional-kpis/page';
 import type { AdditionalKpiLog } from '@/app/(admin)/admin/additional-scores/page';
-import { startOfDay, endOfDay } from 'date-fns';
 
 type Timeframe = 'thisWeek' | 'thisMonth' | 'last6weeks' | 'allTime';
 
@@ -165,27 +164,47 @@ export default function PerformanceChartsPage() {
       return agentMatch && kpiMatch && logDate >= startOfDay(startDate) && logDate <= endOfDay(endDate);
     });
 
-    const dataByDate: Record<string, ChartDataPoint> = {};
+    // dataByDate will temporarily store sums and counts.
+    const dataByDate: Record<string, ChartDataPoint & Record<string, number>> = {};
 
     relevantLogs.forEach(log => {
-      const dateStr = format(log.date.toDate(), 'yyyy-MM-dd');
-      const kpiInfo = kpis.find(k => k.id === log.kpiId);
-      if (!kpiInfo) return;
+        const dateStr = format(log.date.toDate(), 'yyyy-MM-dd');
+        const kpiInfo = kpis.find(k => k.id === log.kpiId);
+        if (!kpiInfo) return;
 
-      if (!dataByDate[dateStr]) {
-        dataByDate[dateStr] = { date: format(log.date.toDate(), 'MMM dd') };
-      }
+        if (!dataByDate[dateStr]) {
+            dataByDate[dateStr] = { date: format(log.date.toDate(), 'MMM dd') };
+        }
 
-      const existingValue = (dataByDate[dateStr][kpiInfo.name] as number) || 0;
-      dataByDate[dateStr][kpiInfo.name] = existingValue + log.value;
-      
-      // Keep a count for averaging percentages if needed (though not implemented in this version of the aggregation)
-      const countKey = `${kpiInfo.name}_count`;
-      const existingCount = (dataByDate[dateStr][countKey] as number) || 0;
-      dataByDate[dateStr][countKey] = existingCount + 1;
+        const valueKey = kpiInfo.name;
+        const countKey = `${kpiInfo.name}_count`;
+        
+        // Sum values and increment counts
+        dataByDate[dateStr][valueKey] = (dataByDate[dateStr][valueKey] || 0) + log.value;
+        dataByDate[dateStr][countKey] = (dataByDate[dateStr][countKey] || 0) + 1;
     });
 
-    const finalChartData = Object.values(dataByDate).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Process the aggregated data to calculate averages if needed
+    const finalChartData = Object.values(dataByDate).map(dataPoint => {
+        const averagedDataPoint: ChartDataPoint = { date: dataPoint.date };
+        kpisToProcess.forEach(kpiInfo => {
+            const valueKey = kpiInfo.name;
+            const countKey = `${kpiInfo.name}_count`;
+            const totalValue = dataPoint[valueKey];
+            const count = dataPoint[countKey];
+
+            if (totalValue !== undefined && count > 0) {
+                // If "All Agents" is selected for percentage KPIs, average the scores.
+                // Otherwise, use the sum (or the single value if one agent is selected).
+                if (selectedAgentId === 'all' && (kpiInfo.type === 'percentage')) {
+                    averagedDataPoint[valueKey] = totalValue / count;
+                } else {
+                    averagedDataPoint[valueKey] = totalValue;
+                }
+            }
+        });
+        return averagedDataPoint;
+    }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
     return { chartData: finalChartData, tableData: relevantLogs, displayedKpis: kpisToProcess };
