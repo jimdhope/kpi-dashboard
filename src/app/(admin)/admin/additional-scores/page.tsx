@@ -157,13 +157,6 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
             if (value === 0 || isNaN(value)) {
                 // If new value is 0 or invalid, delete the existing log
                 await deleteDoc(doc(logsCollectionRef, existingLogDoc.id));
-                 setInputs(prev => {
-                    const newInputs = { ...prev };
-                    if (newInputs[agentId]?.[kpiId]) {
-                        delete newInputs[agentId][kpiId];
-                    }
-                    return newInputs;
-                });
             } else {
                 // Update existing log
                 const logEntryChanges = {
@@ -186,15 +179,8 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
             };
             const newDocRef = doc(logsCollectionRef);
             await setDoc(newDocRef, logEntry);
-             setInputs(prev => ({
-                ...prev,
-                [agentId]: {
-                    ...prev[agentId],
-                    [kpiId]: { value: String(value), logId: newDocRef.id }
-                }
-            }));
         }
-        // If value is 0/invalid and no log exists, do nothing.
+        // If value is 0/invalid and no log exists, do nothing. The real-time listener will handle UI state.
 
     } catch (e) {
         console.error("Error saving score:", e);
@@ -203,6 +189,7 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
         setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
 }, [kpis, selectedPodId, selectedDate, toast]);
+
 
   const debouncedSave = useMemo(() => {
     const debounce = (func: Function, delay: number) => {
@@ -216,6 +203,7 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
   }, [handleSave]);
 
   const handleInputChange = (agentId: string, kpiId: string, value: string) => {
+    // Optimistically update the UI immediately
     setInputs(prev => ({
         ...prev,
         [agentId]: {
@@ -223,6 +211,7 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
             [kpiId]: { ...prev[agentId]?.[kpiId], value }
         }
     }));
+    // Debounce the save operation to Firestore
     debouncedSave(agentId, kpiId, value);
   };
 
@@ -322,5 +311,3 @@ const handleSave = useCallback(async (agentId: string, kpiId: string, valueStr: 
     </div>
   );
 }
-
-    
