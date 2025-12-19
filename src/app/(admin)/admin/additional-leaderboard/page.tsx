@@ -185,7 +185,7 @@ export default function AdditionalLeaderboardPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="kpi-select">KPI</Label>
-              <Select onValueChange={handleKpiChange} value={selectedKpiId} disabled={isLoading}><SelectTrigger id="kpi-select"><SelectValue placeholder="Select KPI" /></SelectTrigger><SelectContent><SelectItem value="overall">Overall Score</SelectItem>{kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.emoji} {k.name}</SelectItem>)}</SelectContent></Select>
+              <Select onValueChange={handleKpiChange} value={selectedKpiId} disabled={isLoading}><SelectTrigger id="kpi-select"><SelectValue placeholder="Select KPI" /></SelectTrigger><SelectContent><SelectItem value="overall">Overall Score</SelectItem>{kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}</SelectContent></Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="timeframe-select">Timeframe</Label>

@@ -252,17 +252,17 @@ export default function KpiBreakdownPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead rowSpan={2} className="min-w-[150px] sticky left-0 bg-background/95 align-bottom">Agent</TableHead>
-                    {weekHeaders.map(week => (
-                      <TableHead key={week} colSpan={podKpis.length} className="text-center border-l">
+                    {weekHeaders.map((week, weekIndex) => (
+                      <TableHead key={week} colSpan={podKpis.length} className={`text-center border-l-2 border-primary`}>
                         Week of {week}
                       </TableHead>
                     ))}
                   </TableRow>
                   <TableRow>
                     {weekHeaders.flatMap(week =>
-                      podKpis.map(kpi => (
+                      podKpis.map((kpi, kpiIndex) => (
                         <TableHead key={`${week}-${kpi.id}`} className="text-center w-[100px] border-l" title={kpi.name}>
-                          {kpi.emoji}
+                          {kpi.initials}
                         </TableHead>
                       ))
                     )}
@@ -272,9 +272,9 @@ export default function KpiBreakdownPage() {
                   {processedData.map(agentData => (
                     <TableRow key={agentData.agentId}>
                       <TableCell className="font-medium sticky left-0 bg-background/95">{agentData.agentName}</TableCell>
-                      {weekHeaders.flatMap(week =>
-                        podKpis.map(kpi => (
-                          <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className="text-center text-muted-foreground border-l">
+                      {weekHeaders.flatMap((week, weekIndex) =>
+                        podKpis.map((kpi, kpiIndex) => (
+                          <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className={`text-center text-muted-foreground border-l ${weekIndex > 0 && kpiIndex === 0 ? 'border-l-2 border-primary' : ''}`}>
                             {agentData.weeklyScores[week]?.[kpi.id]?.toLocaleString() ?? '-'}
                           </TableCell>
                         ))

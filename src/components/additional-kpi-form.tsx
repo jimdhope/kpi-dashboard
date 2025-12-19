@@ -32,7 +32,7 @@ import type { AdditionalKpi, PassFailOperator } from '@/app/(admin)/admin/additi
 
 const kpiFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
-  emoji: z.string().min(1, 'Emoji is required.'),
+  initials: z.string().min(1, 'Initials are required.').max(4, 'Initials cannot be more than 4 characters.'), // Changed from emoji
   type: z.enum(['number', 'percentage', 'scoreOutOf'], { required_error: "Please select a type."}),
   maxValue: z.coerce.number().optional(),
   sortOrder: z.enum(['desc', 'asc']).optional(),
@@ -78,7 +78,7 @@ export function AdditionalKpiForm({ onSubmit, onCancel, initialData }: Additiona
     resolver: zodResolver(kpiFormSchema),
     defaultValues: {
       name: initialData?.name || '',
-      emoji: initialData?.emoji || '',
+      initials: initialData?.initials || '', // Changed from emoji
       type: initialData?.type || 'number',
       maxValue: initialData?.maxValue,
       sortOrder: initialData?.sortOrder || 'desc',
@@ -116,13 +116,14 @@ export function AdditionalKpiForm({ onSubmit, onCancel, initialData }: Additiona
         />
         <FormField
           control={form.control}
-          name="emoji"
+          name="initials"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Emoji</FormLabel>
+              <FormLabel>Initials</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., 📞" {...field} disabled={isSubmitting} maxLength={2} />
+                <Input placeholder="e.g., CS" {...field} disabled={isSubmitting} maxLength={4} />
               </FormControl>
+              <FormDescription>A short code for table headers (1-4 chars).</FormDescription>
               <FormMessage />
             </FormItem>
           )}

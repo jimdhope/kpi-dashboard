@@ -320,7 +320,9 @@ export default function AdditionalScoresPage() {
                         <TableRow>
                         <TableHead className="min-w-[150px]">Agent</TableHead>
                         {kpis.map(kpi => (
-                            <TableHead key={kpi.id} className="min-w-[150px] text-center">{kpi.emoji} {kpi.name}</TableHead>
+                            <TableHead key={kpi.id} className="min-w-[150px] text-center" title={kpi.name}>
+                                {kpi.initials}
+                            </TableHead>
                         ))}
                         </TableRow>
                     </TableHeader>

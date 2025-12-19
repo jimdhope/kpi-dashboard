@@ -49,7 +49,7 @@ export type PassFailOperator = 'gte' | 'lte'; // gte: >=, lte: <=
 export interface AdditionalKpi {
   id: string;
   name: string;
-  emoji: string;
+  initials: string; // Changed from emoji
   type: AdditionalKpiType;
   maxValue?: number;
   sortOrder?: KpiSortOrder;
@@ -116,7 +116,7 @@ export default function AdditionalKpisPage() {
   const handleFormSubmit = async (data: AdditionalKpiFormData) => {
     const kpiDataToSave: Omit<AdditionalKpi, 'id'> = {
       name: data.name,
-      emoji: data.emoji,
+      initials: data.initials, // Changed from emoji
       type: data.type,
       sortOrder: data.type === 'number' ? 'desc' : data.sortOrder,
       passFailCriteriaEnabled: data.passFailCriteriaEnabled,
@@ -210,7 +210,7 @@ export default function AdditionalKpisPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">Emoji</TableHead>
+                    <TableHead className="w-[50px]">Initials</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Goal</TableHead>
@@ -239,7 +239,7 @@ export default function AdditionalKpisPage() {
                   ) : (
                     kpis.map((kpi) => (
                       <TableRow key={kpi.id}>
-                        <TableCell className="text-xl">{kpi.emoji}</TableCell>
+                        <TableCell className="font-semibold">{kpi.initials}</TableCell>
                         <TableCell className="font-medium">{kpi.name}</TableCell>
                         <TableCell className="text-muted-foreground capitalize">{kpi.type === 'scoreOutOf' ? `Score / ${kpi.maxValue}` : kpi.type}</TableCell>
                         <TableCell className="text-muted-foreground">
