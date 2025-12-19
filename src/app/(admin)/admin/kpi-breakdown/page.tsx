@@ -35,6 +35,7 @@ import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { AdditionalKpi } from '@/app/(admin)/admin/additional-kpis/page';
 import type { AdditionalKpiLog } from '@/app/(admin)/admin/additional-scores/page';
+import { cn } from '@/lib/utils';
 
 const KPI_BREAKDOWN_POD_KEY = 'kpiBreakdown_selectedPodId';
 const KPI_BREAKDOWN_TIMEFRAME_KEY = 'kpiBreakdown_timeframe';
@@ -44,7 +45,10 @@ type Timeframe = 'last6weeks' | 'thisWeek' | 'thisMonth' | 'allTime';
 type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 1=Mon, ..., 6=Sat
 
 interface WeeklyKpiTotals {
-  [kpiId: string]: number;
+  [kpiId: string]: {
+      value: number;
+      count: number;
+  };
 }
 
 interface AgentWeeklyData {
@@ -190,10 +194,11 @@ export default function KpiBreakdownPage() {
                 agent.weeklyScores[weekOf] = {};
             }
             if (!agent.weeklyScores[weekOf][log.kpiId]) {
-                agent.weeklyScores[weekOf][log.kpiId] = 0;
+                agent.weeklyScores[weekOf][log.kpiId] = { value: 0, count: 0 };
             }
             
-            agent.weeklyScores[weekOf][log.kpiId] += log.value;
+            agent.weeklyScores[weekOf][log.kpiId].value += log.value;
+            agent.weeklyScores[weekOf][log.kpiId].count += 1;
         }
     });
 
@@ -208,6 +213,26 @@ export default function KpiBreakdownPage() {
     { value: 3, label: 'Wednesday' }, { value: 4, label: 'Thursday' }, { value: 5, label: 'Friday' },
     { value: 6, label: 'Saturday' }
   ];
+
+  const getScoreCellClass = (score: number | undefined, kpi: AdditionalKpi): string => {
+    if (score === undefined || !kpi.passFailCriteriaEnabled) {
+      return ''; // No score or criteria, no special class
+    }
+  
+    const passValue = kpi.passFailValue;
+    if (passValue === undefined || passValue === null) {
+      return ''; // No value to compare against
+    }
+  
+    let passed = false;
+    if (kpi.passFailOperator === 'gte') {
+      passed = score >= passValue;
+    } else if (kpi.passFailOperator === 'lte') {
+      passed = score <= passValue;
+    }
+  
+    return passed ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50';
+  };
 
   return (
     <div className="space-y-6">
@@ -273,11 +298,32 @@ export default function KpiBreakdownPage() {
                     <TableRow key={agentData.agentId}>
                       <TableCell className="font-medium sticky left-0 bg-background/95">{agentData.agentName}</TableCell>
                       {weekHeaders.flatMap((week, weekIndex) =>
-                        podKpis.map((kpi, kpiIndex) => (
-                          <TableCell key={`${agentData.agentId}-${week}-${kpi.id}`} className={`text-center text-muted-foreground border-l ${weekIndex > 0 && kpiIndex === 0 ? 'border-l-2 border-primary' : ''}`}>
-                            {agentData.weeklyScores[week]?.[kpi.id]?.toLocaleString() ?? '-'}
-                          </TableCell>
-                        ))
+                        podKpis.map((kpi, kpiIndex) => {
+                          const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
+                          let score: number | undefined;
+
+                          if (weeklyData) {
+                            if (kpi.type === 'percentage') {
+                                score = weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0;
+                            } else {
+                                score = weeklyData.value;
+                            }
+                          }
+                          const cellClass = getScoreCellClass(score, kpi);
+
+                          return (
+                            <TableCell
+                              key={`${agentData.agentId}-${week}-${kpi.id}`}
+                              className={cn(
+                                'text-center text-foreground font-medium border-l',
+                                weekIndex > 0 && kpiIndex === 0 ? 'border-l-2 border-primary' : '',
+                                cellClass
+                              )}
+                            >
+                                {score !== undefined ? (kpi.type === 'percentage' ? `${score.toFixed(1)}%` : score.toLocaleString()) : '-'}
+                            </TableCell>
+                          );
+                        })
                       )}
                     </TableRow>
                   ))}
