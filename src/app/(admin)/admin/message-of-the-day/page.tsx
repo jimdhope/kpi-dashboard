@@ -46,7 +46,10 @@ export type WidgetType =
     | 'leaderboard-pod'
     | 'custom-html'
     | 'log-achievements'
-    | 'readonly-achievements';
+    | 'readonly-achievements'
+    | 'additional-kpi-leaderboard'
+    | 'kpi-breakdown'
+    | 'performance-charts';
 
 const baseWidgetSchema = z.object({
   id: z.string(),
@@ -68,7 +71,18 @@ const customHtmlWidgetSchema = baseWidgetSchema.extend({
 });
 
 const standardWidgetSchema = baseWidgetSchema.extend({
-    type: z.enum(['achievements', 'pod-targets', 'leaderboard-agent', 'leaderboard-team', 'leaderboard-pod', 'log-achievements', 'readonly-achievements']),
+    type: z.enum([
+        'achievements', 
+        'pod-targets', 
+        'leaderboard-agent', 
+        'leaderboard-team', 
+        'leaderboard-pod', 
+        'log-achievements', 
+        'readonly-achievements',
+        'additional-kpi-leaderboard',
+        'kpi-breakdown',
+        'performance-charts'
+    ]),
 });
 
 const specificWidgetSchema = z.discriminatedUnion('type', [
@@ -122,6 +136,9 @@ const AVAILABLE_WIDGETS: { id: WidgetType; name: string }[] = [
     { id: 'readonly-achievements', name: 'Read-Only Achievements' },
     { id: 'pod-targets', name: 'Pod Targets Today' },
     { id: 'log-achievements', name: 'Log Achievements' },
+    { id: 'additional-kpi-leaderboard', name: 'Perf. Leaderboard' },
+    { id: 'kpi-breakdown', name: 'Perf. Breakdown' },
+    { id: 'performance-charts', name: 'Perf. Charts' },
     { id: 'custom-html', name: 'Custom HTML' },
 ];
 
@@ -172,6 +189,12 @@ export default function AgentDashboardSettingsPage() {
                 return { ...base, type: 'log-achievements', name: 'Log Achievements' };
              case 'readonly-achievements':
                 return { ...base, type: 'readonly-achievements', name: 'Read-Only Achievements' };
+            case 'additional-kpi-leaderboard':
+                return { ...base, type: 'additional-kpi-leaderboard', name: 'Performance Leaderboard' };
+            case 'kpi-breakdown':
+                return { ...base, type: 'kpi-breakdown', name: 'KPI Breakdown' };
+            case 'performance-charts':
+                return { ...base, type: 'performance-charts', name: 'Performance Charts' };
             case 'custom-html':
                  return { ...base, type: 'custom-html', name: 'Custom HTML', content: '<p>Your custom content here.</p>' };
             default:
@@ -613,7 +636,7 @@ function WidgetEditor({ rowIndex, colIndex, widgetIndex, onRemoveWidget, form }:
                                 <FormField control={control} name={`${widgetPath}.content`} render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><KpiQuestLexicalEditor initialHtml={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)} />
                             </>
                         )}
-                        {(widget.type && widget.type !== 'motd' && widget.type !== 'custom-html') && (
+                        {(widget.type && !['motd', 'custom-html'].includes(widget.type)) && (
                              <p className="text-sm text-muted-foreground">This widget has no additional settings.</p>
                         )}
                     </AccordionContent>

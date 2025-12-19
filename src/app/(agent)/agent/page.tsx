@@ -18,8 +18,9 @@ import { TodaysAchievementsWidget } from '@/components/agent/TodaysAchievementsW
 import { LogAchievementsWidget } from '@/components/agent/LogAchievementsWidget';
 import { MessageOfTheDayWidget } from '@/components/agent/MessageOfTheDayWidget';
 import { ReadOnlyAchievementsWidget } from '@/components/agent/ReadOnlyAchievementsWidget';
-// import { TeamLeaderboardWidget } from '@/components/agent/TeamLeaderboardWidget';
-// import { PodLeaderboardWidget } from '@/components/agent/PodLeaderboardWidget';
+import { AdditionalKpiLeaderboardWidget } from '@/components/agent/AdditionalKpiLeaderboardWidget';
+import { AgentKpiBreakdownWidget } from '@/components/agent/AgentKpiBreakdownWidget';
+import { PerformanceChartsWidget } from '@/components/agent/PerformanceChartsWidget';
 
 
 const SETTINGS_DOC_ID = "agentDashboardSettings_v3";
@@ -87,8 +88,6 @@ export default function AgentDashboardPage() {
         case 'leaderboard-agent':
             return <AgentLeaderboardWidget currentUser={currentUser} />;
         case 'leaderboard-team':
-            // return <TeamLeaderboardWidget currentUser={currentUser} />;
-             return null;
         case 'leaderboard-pod':
              return null;
         case 'achievements':
@@ -99,6 +98,12 @@ export default function AgentDashboardPage() {
             return <LogAchievementsWidget currentUser={currentUser} />;
         case 'readonly-achievements':
             return <ReadOnlyAchievementsWidget currentUser={currentUser} />;
+        case 'additional-kpi-leaderboard':
+            return <AdditionalKpiLeaderboardWidget currentUser={currentUser} />;
+        case 'kpi-breakdown':
+            return <AgentKpiBreakdownWidget currentUser={currentUser} />;
+        case 'performance-charts':
+            return <PerformanceChartsWidget currentUser={currentUser} />;
         case 'custom-html':
              return (
                  <Card>
