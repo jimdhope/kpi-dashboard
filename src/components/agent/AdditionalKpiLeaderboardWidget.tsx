@@ -32,8 +32,12 @@ interface LeaderboardEntry {
   isUser?: boolean;
 }
 
+type Timeframe = 'weekly' | 'last6weeks' | 'monthly' | 'allTime';
+
 const AGENT_WIDGET_LEADERBOARD_POD_KEY = 'agentWidget_leaderboard_selectedPodId';
 const AGENT_WIDGET_LEADERBOARD_KPI_KEY = 'agentWidget_leaderboard_selectedKpiId';
+const AGENT_WIDGET_LEADERBOARD_TIMEFRAME_KEY = 'agentWidget_leaderboard_timeframe';
+
 
 export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLeaderboardWidgetProps) {
     const [pods, setPods] = useState<Pod[]>([]);
@@ -43,6 +47,7 @@ export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLea
 
     const [selectedPodId, setSelectedPodId] = useState<string>(currentUser.podId || 'all');
     const [selectedKpiId, setSelectedKpiId] = useState<string>('overall');
+    const [timeframe, setTimeframe] = useState<Timeframe>('weekly');
     
     const [isLoading, setIsLoading] = useState(true);
 
@@ -51,10 +56,13 @@ export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLea
         if (savedPodId) setSelectedPodId(savedPodId);
         const savedKpiId = localStorage.getItem(AGENT_WIDGET_LEADERBOARD_KPI_KEY);
         if (savedKpiId) setSelectedKpiId(savedKpiId);
+        const savedTimeframe = localStorage.getItem(AGENT_WIDGET_LEADERBOARD_TIMEFRAME_KEY) as Timeframe | null;
+        if (savedTimeframe) setTimeframe(savedTimeframe);
     }, []);
 
     const handlePodChange = (podId: string) => { setSelectedPodId(podId); localStorage.setItem(AGENT_WIDGET_LEADERBOARD_POD_KEY, podId); };
     const handleKpiChange = (kpiId: string) => { setSelectedKpiId(kpiId); localStorage.setItem(AGENT_WIDGET_LEADERBOARD_KPI_KEY, kpiId); };
+    const handleTimeframeChange = (tf: string) => { setTimeframe(tf as Timeframe); localStorage.setItem(AGENT_WIDGET_LEADERBOARD_TIMEFRAME_KEY, tf); };
 
     useEffect(() => {
         setIsLoading(true);
@@ -67,6 +75,28 @@ export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLea
         Promise.all(unsubscribes.map(() => new Promise(res => setTimeout(res, 0)))).finally(() => setIsLoading(false));
         return () => unsubscribes.forEach(unsub => unsub());
     }, []);
+
+    const filteredLogs = useMemo(() => {
+        const now = new Date();
+        let startDate: Date;
+        switch (timeframe) {
+          case 'weekly':
+            startDate = new Date(now.setDate(now.getDate() - now.getDay()));
+            startDate.setHours(0, 0, 0, 0);
+            break;
+          case 'last6weeks':
+            startDate = subWeeks(now, 6);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+          case 'monthly':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case 'allTime':
+          default:
+            return logs;
+        }
+        return logs.filter(log => log.date.toDate() >= startDate);
+    }, [logs, timeframe]);
     
     const leaderboardData = useMemo((): LeaderboardEntry[] => {
         const podAgents = selectedPodId === 'all'
@@ -75,13 +105,13 @@ export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLea
         
         if (podAgents.length === 0) return [];
       
-        let logsToProcess = logs;
+        let logsToProcess = filteredLogs;
         let kpi: AdditionalKpi | undefined;
       
         if (selectedKpiId !== 'overall') {
             kpi = kpis.find(k => k.id === selectedKpiId);
             if (kpi) {
-                logsToProcess = logs.filter(log => log.kpiId === selectedKpiId);
+                logsToProcess = filteredLogs.filter(log => log.kpiId === selectedKpiId);
             }
         }
       
@@ -115,7 +145,7 @@ export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLea
             isUser: agent.id === currentUser.id
           };
         }).sort((a, b) => (kpi && kpi.sortOrder === 'asc') ? a.score - b.score : b.score - a.score);
-    }, [logs, agents, selectedPodId, selectedKpiId, kpis, currentUser]);
+    }, [filteredLogs, agents, selectedPodId, selectedKpiId, kpis, currentUser]);
 
     return (
         <Card>
@@ -123,7 +153,7 @@ export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLea
                 <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /> Performance Leaderboard</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                     <div className="grid gap-2">
                         <Label htmlFor="pod-select">Pod</Label>
                         <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
@@ -141,6 +171,18 @@ export function AdditionalKpiLeaderboardWidget({ currentUser }: AdditionalKpiLea
                             <SelectContent>
                                 <SelectItem value="overall">Overall Score</SelectItem>
                                 {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="timeframe-select">Timeframe</Label>
+                        <Select onValueChange={handleTimeframeChange} value={timeframe} disabled={isLoading}>
+                            <SelectTrigger id="timeframe-select"><SelectValue placeholder="Select Timeframe" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="last6weeks">Last 6 Weeks</SelectItem>
+                                <SelectItem value="allTime">All Time</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
