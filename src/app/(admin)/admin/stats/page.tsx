@@ -23,6 +23,8 @@ import { Leaderboard } from '@/components/leaderboard';
 import { DateRangePicker } from '@/components/date-range-picker';
 import { Filter, GanttChartSquare, Star, Users, BarChart, AlertCircle, Sigma, TrendingUp } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -146,18 +148,21 @@ export default function StatsPage() {
     const ruleIdToDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
 
     filteredLogs.forEach(log => {
+        // Agent Scores
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
-        podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
 
+        // Pod Scores
+        const podId = log.podId || 'unknown'; // Group logs with no podId
+        podScores[podId] = (podScores[podId] || 0) + (log.points || 0);
+        
+        // Rule Breakdown
         const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
-
         if (ruleDetails) {
-            // Normalize the name to handle casing inconsistencies (e.g., "Ask Bruce" vs "ASk bruce")
             const normalizedName = ruleDetails.name.trim().toLowerCase();
             if (!ruleTotals[normalizedName]) {
                 ruleTotals[normalizedName] = { 
                     totalValue: 0, 
-                    originalName: ruleDetails.name, // Keep one of the original names for display
+                    originalName: ruleDetails.name,
                     emoji: ruleDetails.emoji,
                 };
             }
@@ -166,7 +171,18 @@ export default function StatsPage() {
     });
 
     const finalAgentLeaderboard = Object.entries(agentScores).map(([id, score]) => ({ id, score, name: users.find(u=>u.id===id)?.name || 'Unknown' }));
-    const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => ({ id, name: pods.find(p=>p.id === id)?.name || 'Unknown', score }));
+    
+    const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => {
+        const pod = pods.find(p => p.id === id);
+        return { 
+            id, 
+            name: pod?.name || `Unknown (${id})`, // Show the raw ID for unknown pods
+            score,
+            avatarUrl: pod?.logoUrl,
+            avatarInitials: pod?.logoInitials,
+            avatarBgColor: pod?.logoBgColor,
+        };
+    });
     
     const finalRuleBreakdown: RuleBreakdownEntry[] = Object.values(ruleTotals)
         .map(data => ({
@@ -203,6 +219,7 @@ export default function StatsPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <Card className="frosted-glass">
         <CardHeader>
@@ -329,5 +346,8 @@ export default function StatsPage() {
       </div>
 
     </div>
+    </TooltipProvider>
   );
 }
+
+    
