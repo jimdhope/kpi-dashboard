@@ -21,22 +21,16 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Leaderboard } from '@/components/leaderboard';
 import { DateRangePicker } from '@/components/date-range-picker';
-import { Filter, GanttChartSquare, Star, Users, BarChart, AlertCircle, LineChart, TrendingUp, Sigma } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  LineChart as RechartsLineChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  Line,
-} from 'recharts';
+import { Filter, GanttChartSquare, Star, Users, BarChart, AlertCircle, Sigma, TrendingUp } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
+import type { RuleFormData } from '@/models/types';
+
 
 interface LeaderboardEntry {
   id: string;
@@ -47,18 +41,19 @@ interface LeaderboardEntry {
   avatarBgColor?: string;
 }
 
-interface ChartDataPoint {
-    date: string;
-    [key: string]: string | number;
+interface RuleBreakdownEntry {
+    name: string;
+    totalValue: number;
+    emoji?: string;
 }
-
-const LINE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 
 export default function StatsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [logs, setLogs] = useState<DailyAchievementLog[]>([]);
+  const [allRules, setAllRules] = useState<RuleFormData[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
 
   const [filterType, setFilterType] = useState<'period' | 'competition'>('period');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('30');
@@ -73,7 +68,15 @@ export default function StatsPage() {
     setIsLoading(true);
     const unsubscribes = [
       onSnapshot(query(collection(db, 'pods'), orderBy('name')), snap => setPods(snap.docs.map(d => ({ id: d.id, ...d.data() } as Pod)))),
-      onSnapshot(query(collection(db, 'competitions'), orderBy('startDate', 'desc')), snap => setCompetitions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Competition)))),
+      onSnapshot(query(collection(db, 'competitions'), orderBy('startDate', 'desc')), snap => {
+          const fetchedComps = snap.docs.map(d => ({ id: d.id, ...d.data() } as Competition));
+          setCompetitions(fetchedComps);
+          const rules = fetchedComps.flatMap(c => c.rules || []);
+          const uniqueRulesMap = new Map<string, RuleFormData>();
+          rules.forEach(rule => { if (rule.id) uniqueRulesMap.set(rule.id, rule); });
+          setAllRules(Array.from(uniqueRulesMap.values()));
+      }),
+      onSnapshot(query(collection(db, 'users')), snap => setUsers(snap.docs.map(d => ({id: d.id, ...d.data()} as AppUser)))),
       onSnapshot(query(collection(db, 'dailyAchievements')), snap => {
         setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyAchievementLog)));
         setIsLoading(false);
@@ -88,7 +91,6 @@ export default function StatsPage() {
 
   const handleFilterTypeChange = (type: 'period' | 'competition') => {
     setFilterType(type);
-    // Reset other filters
     setSelectedPeriod('30');
     setSelectedCompetitionId('');
     setDateRange({ from: subDays(new Date(), 29), to: new Date() });
@@ -101,7 +103,7 @@ export default function StatsPage() {
     }
   };
 
-  const { filteredLogs, dateArray } = useMemo(() => {
+  const { filteredLogs } = useMemo(() => {
     let start: Date | undefined, end: Date | undefined;
     if (filterType === 'competition' && selectedCompetitionId) {
         const comp = competitions.find(c => c.id === selectedCompetitionId);
@@ -112,47 +114,50 @@ export default function StatsPage() {
         end = dateRange?.to;
     }
 
-    if (!start || !end) return { filteredLogs: [], dateArray: [] };
+    if (!start || !end) return { filteredLogs: [] };
 
     const startDate = startOfDay(start);
     const endDate = endOfDay(end);
 
-    const logsInDateRange = logs.filter(log => {
-      const logDate = log.date.toDate();
-      const podMatch = selectedPodId === 'all' || log.podId === selectedPodId;
-      return logDate >= startDate && logDate <= endDate && podMatch;
-    });
-
-    const dates = [];
-    for (let d = startDate; d <= endDate; d.setDate(d.getDate() + 1)) {
-        dates.push(format(d, 'MMM dd'));
-    }
-
-    return { filteredLogs: logsInDateRange, dateArray: dates };
+    return { 
+        filteredLogs: logs.filter(log => {
+            const logDate = log.date.toDate();
+            const podMatch = selectedPodId === 'all' || log.podId === selectedPodId;
+            return logDate >= startDate && logDate <= endDate && podMatch;
+        })
+    };
   }, [filterType, selectedCompetitionId, dateRange, selectedPodId, logs, competitions]);
   
-  const { totalPoints, totalAchievements, agentLeaderboard, podLeaderboard, chartData } = useMemo(() => {
+  const { totalPoints, totalAchievements, agentLeaderboard, podLeaderboard, ruleBreakdown } = useMemo(() => {
     const totalPoints = filteredLogs.reduce((sum, log) => sum + (log.points || 0), 0);
     const totalAchievements = filteredLogs.reduce((sum, log) => sum + (log.value || 0), 0);
-
+    
     const agentScores: Record<string, number> = {};
     const podScores: Record<string, number> = {};
-    const pointsByDate: Record<string, number> = {};
+    const ruleTotals: Record<string, { totalValue: number; emoji?: string }> = {};
 
     filteredLogs.forEach(log => {
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
         podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
 
-        const dateStr = format(log.date.toDate(), 'MMM dd');
-        pointsByDate[dateStr] = (pointsByDate[dateStr] || 0) + (log.points || 0);
+        const rule = allRules.find(r => r.id === log.ruleId);
+        if (rule) {
+            if (!ruleTotals[rule.name]) {
+                ruleTotals[rule.name] = { totalValue: 0, emoji: rule.emoji };
+            }
+            ruleTotals[rule.name].totalValue += log.value;
+        }
     });
 
-    const finalAgentLeaderboard = Object.entries(agentScores).map(([id, score]) => ({ id, score }));
-    const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => ({ id, name: pods.find(p=>p.id === id)?.name || id, score }));
-    const finalChartData = dateArray.map(date => ({ date, Points: pointsByDate[date] || 0 }));
+    const finalAgentLeaderboard = Object.entries(agentScores).map(([id, score]) => ({ id, score, name: users.find(u=>u.id===id)?.name || 'Unknown' }));
+    const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => ({ id, name: pods.find(p=>p.id === id)?.name || 'Unknown', score }));
+    
+    const finalRuleBreakdown: RuleBreakdownEntry[] = Object.entries(ruleTotals)
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a,b) => b.totalValue - a.totalValue);
 
-    return { totalPoints, totalAchievements, agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard, chartData: finalChartData };
-  }, [filteredLogs, pods, dateArray]);
+    return { totalPoints, totalAchievements, agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard, ruleBreakdown: finalRuleBreakdown };
+  }, [filteredLogs, pods, allRules, users]);
 
 
   const summaryCards = [
@@ -251,26 +256,42 @@ export default function StatsPage() {
       </div>
 
        <Card className="frosted-glass">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><LineChart className="h-5 w-5" /> Points Over Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-                <RechartsLineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
-                    <Legend />
-                    <Line type="monotone" dataKey="Points" stroke={LINE_COLORS[0]} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 5 }} />
-                </RechartsLineChart>
-            </ResponsiveContainer>
-        </CardContent>
-      </Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5" /> Achievement Breakdown</CardTitle>
+                <CardDescription>Total counts for each achievement in the selected period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {ruleBreakdown.length > 0 ? (
+                    <div className="overflow-y-auto max-h-80">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Achievement</TableHead>
+                                <TableHead className="text-right">Total Count</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {ruleBreakdown.map(rule => (
+                                <TableRow key={rule.name}>
+                                    <TableCell className="font-medium flex items-center gap-2">
+                                        <span className="text-lg">{rule.emoji || '❓'}</span>
+                                        {rule.name}
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold text-primary">{rule.totalValue.toLocaleString()}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                    </div>
+                ) : (
+                    <p className="text-muted-foreground text-center py-4">No achievement data to display for the selected filters.</p>
+                )}
+            </CardContent>
+        </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />
-        <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} />
+        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} isStickyHeader={true} />
+        <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} isStickyHeader={true}/>
       </div>
 
     </div>
