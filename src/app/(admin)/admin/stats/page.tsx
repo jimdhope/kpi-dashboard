@@ -134,29 +134,39 @@ export default function StatsPage() {
     
     const agentScores: Record<string, number> = {};
     const podScores: Record<string, number> = {};
-    const ruleTotals: Record<string, { totalValue: number; emoji?: string }> = {};
+    const ruleTotals: Record<string, { totalValue: number; originalName: string; emoji?: string }> = {};
 
-    const ruleIdToNameMap = new Map(allRules.map(rule => [rule.id, rule.name]));
-    const ruleNameToEmojiMap = new Map(allRules.map(rule => [rule.name, rule.emoji || '❓']));
+    const ruleIdToDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
 
     filteredLogs.forEach(log => {
+        // Agent and Pod scores calculation (no changes here)
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
         podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
 
-        const ruleName = ruleIdToNameMap.get(log.ruleId);
-        if (ruleName) {
-            if (!ruleTotals[ruleName]) {
-                ruleTotals[ruleName] = { totalValue: 0, emoji: ruleNameToEmojiMap.get(ruleName) };
+        // Rule breakdown calculation FIX
+        const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
+        if (ruleDetails) {
+            const normalizedName = ruleDetails.name.trim().toLowerCase(); // Normalize by trimming and lowercasing
+            if (!ruleTotals[normalizedName]) {
+                ruleTotals[normalizedName] = { 
+                    totalValue: 0, 
+                    originalName: ruleDetails.name, // Store the first encountered capitalization
+                    emoji: ruleDetails.emoji 
+                };
             }
-            ruleTotals[ruleName].totalValue += log.value;
+            ruleTotals[normalizedName].totalValue += log.value;
         }
     });
 
     const finalAgentLeaderboard = Object.entries(agentScores).map(([id, score]) => ({ id, score, name: users.find(u=>u.id===id)?.name || 'Unknown' }));
     const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => ({ id, name: pods.find(p=>p.id === id)?.name || 'Unknown', score }));
     
-    const finalRuleBreakdown: RuleBreakdownEntry[] = Object.entries(ruleTotals)
-        .map(([name, data]) => ({ name, ...data }))
+    const finalRuleBreakdown: RuleBreakdownEntry[] = Object.values(ruleTotals)
+        .map(data => ({
+            name: data.originalName, // Use the stored original name for display
+            totalValue: data.totalValue,
+            emoji: data.emoji,
+        }))
         .sort((a,b) => b.totalValue - a.totalValue);
 
     return { totalPoints, totalAchievements, agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard, ruleBreakdown: finalRuleBreakdown };
