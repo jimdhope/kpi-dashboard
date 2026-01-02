@@ -18,7 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords, Database, BarChartHorizontal, LineChart } from 'lucide-react'; // Added LineChart
+import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords, Database, BarChartHorizontal, LineChart, GanttChartSquare } from 'lucide-react'; // Added GanttChartSquare
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button'; // Import Button
@@ -115,6 +115,19 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
+
+               <SidebarGroup>
+                    <SidebarGroupLabel>Analysis</SidebarGroupLabel>
+                    <SidebarMenuItem>
+                        <Link href="/admin/stats" passHref>
+                            <SidebarMenuButton tooltip="Stats" isActive={currentPath.startsWith('/admin/stats')}>
+                                <GanttChartSquare />
+                                <span>Stats</span>
+                            </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                </SidebarGroup>
+
 
               <SidebarGroup>
                   <SidebarGroupLabel>Daily Data</SidebarGroupLabel>
