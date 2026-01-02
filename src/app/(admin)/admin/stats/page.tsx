@@ -40,6 +40,7 @@ interface LeaderboardEntry {
   avatarUrl?: string;
   avatarInitials?: string;
   avatarBgColor?: string;
+  tooltipContent?: string; // Added for tooltip
 }
 
 interface RuleBreakdownEntry {
@@ -137,25 +138,31 @@ export default function StatsPage() {
     };
   }, [filterType, selectedCompetitionId, dateRange, selectedPodId, selectedYear, logs, competitions]);
   
- const { totalPoints, totalAchievements, agentLeaderboard, podLeaderboard, ruleBreakdown } = useMemo(() => {
+  const { totalPoints, totalAchievements, agentLeaderboard, podLeaderboard, ruleBreakdown } = useMemo(() => {
     const totalPoints = filteredLogs.reduce((sum, log) => sum + (log.points || 0), 0);
     const totalAchievements = filteredLogs.reduce((sum, log) => sum + (log.value || 0), 0);
     
     const agentScores: Record<string, number> = {};
     const podScores: Record<string, number> = {};
     const ruleTotals: Record<string, { totalValue: number; originalName: string; emoji?: string; }> = {};
+    const podSourceMap: Record<string, Set<string>> = {};
 
     const ruleIdToDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
+    const competitionMap = new Map(competitions.map(c => [c.id, c.name]));
 
     filteredLogs.forEach(log => {
-        // Agent Scores
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
 
-        // Pod Scores
-        const podId = log.podId || 'unknown'; // Group logs with no podId
+        const podId = log.podId || 'unknown';
         podScores[podId] = (podScores[podId] || 0) + (log.points || 0);
+
+        // Track sources for the pod leaderboard
+        if (!podSourceMap[podId]) {
+            podSourceMap[podId] = new Set();
+        }
+        const sourceName = competitionMap.get(log.competitionId) || format(log.date.toDate(), 'yyyy-MM-dd');
+        podSourceMap[podId].add(sourceName);
         
-        // Rule Breakdown
         const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
         if (ruleDetails) {
             const normalizedName = ruleDetails.name.trim().toLowerCase();
@@ -174,13 +181,15 @@ export default function StatsPage() {
     
     const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => {
         const pod = pods.find(p => p.id === id);
+        const sources = podSourceMap[id] ? Array.from(podSourceMap[id]).join(', ') : 'N/A';
         return { 
             id, 
-            name: pod?.name || `Unknown (${id})`, // Show the raw ID for unknown pods
+            name: pod?.name || `Unknown`,
             score,
             avatarUrl: pod?.logoUrl,
             avatarInitials: pod?.logoInitials,
             avatarBgColor: pod?.logoBgColor,
+            tooltipContent: pod ? undefined : `Sources: ${sources}`
         };
     });
     
@@ -341,8 +350,49 @@ export default function StatsPage() {
         </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} isStickyHeader={false} />
-        <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} isStickyHeader={false}/>
+        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />
+        <Card className="shadow-md frosted-glass">
+            <CardHeader>
+                <CardTitle>Pod Leaderboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {podLeaderboard.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No pod data available.</p>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead className="text-right">Score</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {podLeaderboard.map((entry) => (
+                                <TableRow key={entry.id}>
+                                    <TableCell>
+                                        {entry.tooltipContent ? (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="font-medium cursor-help underline decoration-dashed">{entry.name}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{entry.tooltipContent}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ) : (
+                                            <span className="font-medium">{entry.name}</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold text-primary">
+                                        {entry.score.toLocaleString()}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </Card>
       </div>
 
     </div>
