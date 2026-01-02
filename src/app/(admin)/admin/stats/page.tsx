@@ -23,6 +23,7 @@ import { Leaderboard } from '@/components/leaderboard';
 import { DateRangePicker } from '@/components/date-range-picker';
 import { Filter, GanttChartSquare, Star, Users, BarChart, AlertCircle, Sigma, TrendingUp } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 import type { Pod } from '@/app/(admin)/admin/pods/page';
@@ -45,6 +46,7 @@ interface RuleBreakdownEntry {
     name: string;
     totalValue: number;
     emoji?: string;
+    competitions: string[];
 }
 
 
@@ -142,25 +144,32 @@ export default function StatsPage() {
     
     const agentScores: Record<string, number> = {};
     const podScores: Record<string, number> = {};
-    const ruleTotals: Record<string, { totalValue: number; originalName: string; emoji?: string }> = {};
+    const ruleTotals: Record<string, { totalValue: number; originalName: string; emoji?: string; competitions: Set<string> }> = {};
 
     const ruleIdToDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
+    const competitionIdToNameMap = new Map(competitions.map(c => [c.id, c.name]));
 
     filteredLogs.forEach(log => {
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
         podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
 
         const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
+        const competitionName = competitionIdToNameMap.get(log.competitionId);
+
         if (ruleDetails) {
             const normalizedName = ruleDetails.name.trim().toLowerCase();
             if (!ruleTotals[normalizedName]) {
                 ruleTotals[normalizedName] = { 
                     totalValue: 0, 
                     originalName: ruleDetails.name,
-                    emoji: ruleDetails.emoji 
+                    emoji: ruleDetails.emoji,
+                    competitions: new Set(),
                 };
             }
             ruleTotals[normalizedName].totalValue += log.value;
+            if (competitionName) {
+                ruleTotals[normalizedName].competitions.add(competitionName);
+            }
         }
     });
 
@@ -172,11 +181,12 @@ export default function StatsPage() {
             name: data.originalName,
             totalValue: data.totalValue,
             emoji: data.emoji,
+            competitions: Array.from(data.competitions).sort(),
         }))
         .sort((a,b) => b.totalValue - a.totalValue);
 
     return { totalPoints, totalAchievements, agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard, ruleBreakdown: finalRuleBreakdown };
-  }, [filteredLogs, pods, allRules, users]);
+  }, [filteredLogs, pods, allRules, users, competitions]);
 
   const yearOptions = useMemo(() => {
       const currentYear = getYear(new Date());
@@ -202,6 +212,7 @@ export default function StatsPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <Card className="frosted-glass">
         <CardHeader>
@@ -298,22 +309,32 @@ export default function StatsPage() {
        <Card className="frosted-glass">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5" /> Achievement Breakdown</CardTitle>
-                <CardDescription>Total counts for each achievement in the selected period.</CardDescription>
+                <CardDescription>Total counts for each achievement in the selected period. Hover over a card to see source competitions.</CardDescription>
             </CardHeader>
             <CardContent>
                 {ruleBreakdown.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {ruleBreakdown.map(rule => (
-                           <Card key={rule.name} className="shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium truncate" title={rule.name}>{rule.name}</CardTitle>
-                                    <span className="text-lg">{rule.emoji}</span>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-primary">{rule.totalValue.toLocaleString()}</div>
-                                    <p className="text-xs text-muted-foreground">Total Count</p>
-                                </CardContent>
-                            </Card>
+                            <Tooltip key={rule.name}>
+                                <TooltipTrigger asChild>
+                                    <Card className="shadow-sm hover:shadow-md transition-shadow">
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium truncate" title={rule.name}>{rule.name}</CardTitle>
+                                            <span className="text-lg">{rule.emoji}</span>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold text-primary">{rule.totalValue.toLocaleString()}</div>
+                                            <p className="text-xs text-muted-foreground">Total Count</p>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="font-semibold">Source Competitions:</p>
+                                    <ul className="list-disc list-inside">
+                                        {rule.competitions.map(c => <li key={c}>{c}</li>)}
+                                    </ul>
+                                </TooltipContent>
+                            </Tooltip>
                         ))}
                     </div>
                 ) : (
@@ -328,5 +349,6 @@ export default function StatsPage() {
       </div>
 
     </div>
+    </TooltipProvider>
   );
 }
