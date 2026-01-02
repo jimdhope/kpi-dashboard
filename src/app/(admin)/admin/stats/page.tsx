@@ -19,12 +19,11 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Leaderboard } from '@/components/leaderboard';
 import { DateRangePicker } from '@/components/date-range-picker';
 import { Filter, GanttChartSquare, Star, Users, BarChart, AlertCircle, Sigma, TrendingUp } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { generateInitials } from '@/lib/utils';
 
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -33,20 +32,21 @@ import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/p
 import type { RuleFormData } from '@/models/types';
 
 
-interface LeaderboardEntry {
+interface RuleBreakdownEntry {
+    name: string;
+    totalValue: number;
+    emoji?: string;
+}
+
+// Updated interface for Top Trumps cards
+interface TopTrumpEntry {
   id: string;
   name: string;
   score: number;
   avatarUrl?: string;
   avatarInitials?: string;
   avatarBgColor?: string;
-  tooltipContent?: string; // Added for tooltip
-}
-
-interface RuleBreakdownEntry {
-    name: string;
-    totalValue: number;
-    emoji?: string;
+  ruleBreakdown: RuleBreakdownEntry[];
 }
 
 
@@ -138,59 +138,85 @@ export default function StatsPage() {
     };
   }, [filterType, selectedCompetitionId, dateRange, selectedPodId, selectedYear, logs, competitions]);
   
-  const { totalPoints, totalAchievements, agentLeaderboard, podLeaderboard, ruleBreakdown } = useMemo(() => {
+  const { totalPoints, totalAchievements, agentCards, podCards, ruleBreakdown } = useMemo(() => {
     const totalPoints = filteredLogs.reduce((sum, log) => sum + (log.points || 0), 0);
     const totalAchievements = filteredLogs.reduce((sum, log) => sum + (log.value || 0), 0);
     
-    const agentScores: Record<string, number> = {};
-    const podScores: Record<string, number> = {};
-    const ruleTotals: Record<string, { totalValue: number; originalName: string; emoji?: string; }> = {};
-
     const ruleIdToDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
     
+    // --- Overall Rule Breakdown ---
+    const overallRuleTotals: Record<string, { totalValue: number; originalName: string; emoji?: string; }> = {};
     filteredLogs.forEach(log => {
-        agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
-
-        const podId = log.podId || 'unknown';
-        podScores[podId] = (podScores[podId] || 0) + (log.points || 0);
-        
         const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
         if (ruleDetails) {
             const normalizedName = ruleDetails.name.trim().toLowerCase();
-            if (!ruleTotals[normalizedName]) {
-                ruleTotals[normalizedName] = { 
-                    totalValue: 0, 
-                    originalName: ruleDetails.name,
-                    emoji: ruleDetails.emoji,
-                };
+            if (!overallRuleTotals[normalizedName]) {
+                overallRuleTotals[normalizedName] = { totalValue: 0, originalName: ruleDetails.name, emoji: ruleDetails.emoji };
             }
-            ruleTotals[normalizedName].totalValue += log.value;
+            overallRuleTotals[normalizedName].totalValue += log.value;
         }
     });
 
-    const finalAgentLeaderboard = Object.entries(agentScores).map(([id, score]) => ({ id, score, name: users.find(u=>u.id===id)?.name || 'Unknown' }));
+    const finalRuleBreakdown: RuleBreakdownEntry[] = Object.values(overallRuleTotals)
+        .map(data => ({ name: data.originalName, totalValue: data.totalValue, emoji: data.emoji }))
+        .sort((a,b) => b.totalValue - a.totalValue);
+
+    // --- Agent Top Trumps Cards ---
+    const agentData: Record<string, { score: number; ruleTotals: Record<string, number> }> = {};
+    const podData: Record<string, { score: number; ruleTotals: Record<string, number> }> = {};
+
+    filteredLogs.forEach(log => {
+        // Agent data aggregation
+        if (!agentData[log.agentId]) agentData[log.agentId] = { score: 0, ruleTotals: {} };
+        agentData[log.agentId].score += (log.points || 0);
+        agentData[log.agentId].ruleTotals[log.ruleId] = (agentData[log.agentId].ruleTotals[log.ruleId] || 0) + log.value;
+
+        // Pod data aggregation
+        const podId = log.podId || 'unknown';
+        if (!podData[podId]) podData[podId] = { score: 0, ruleTotals: {} };
+        podData[podId].score += (log.points || 0);
+        podData[podId].ruleTotals[log.ruleId] = (podData[podId].ruleTotals[log.ruleId] || 0) + log.value;
+    });
+
+    const finalAgentCards: TopTrumpEntry[] = Object.entries(agentData).map(([id, data]) => {
+        const user = users.find(u => u.id === id);
+        const breakdown = Object.entries(data.ruleTotals).map(([ruleId, totalValue]) => ({
+            name: ruleIdToDetailsMap.get(ruleId)?.name || 'Unknown Rule',
+            totalValue: totalValue,
+            emoji: ruleIdToDetailsMap.get(ruleId)?.emoji
+        })).sort((a,b) => b.totalValue - a.totalValue);
+
+        return {
+            id,
+            name: user?.name || 'Unknown Agent',
+            score: data.score,
+            avatarUrl: user?.avatarUrl,
+            avatarInitials: user?.avatarInitials,
+            avatarBgColor: user?.avatarBgColor,
+            ruleBreakdown: breakdown,
+        };
+    }).sort((a, b) => b.score - a.score);
     
-    const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => {
+    const finalPodCards: TopTrumpEntry[] = Object.entries(podData).map(([id, data]) => {
         const pod = pods.find(p => p.id === id);
+        const breakdown = Object.entries(data.ruleTotals).map(([ruleId, totalValue]) => ({
+            name: ruleIdToDetailsMap.get(ruleId)?.name || 'Unknown Rule',
+            totalValue: totalValue,
+            emoji: ruleIdToDetailsMap.get(ruleId)?.emoji
+        })).sort((a,b) => b.totalValue - a.totalValue);
+        
         return { 
             id, 
-            name: pod?.name || `Unknown`,
-            score,
+            name: pod?.name || 'Unknown Pod',
+            score: data.score,
             avatarUrl: pod?.logoUrl,
             avatarInitials: pod?.logoInitials,
             avatarBgColor: pod?.logoBgColor,
+            ruleBreakdown: breakdown,
         };
-    });
+    }).sort((a,b) => b.score - a.score);
     
-    const finalRuleBreakdown: RuleBreakdownEntry[] = Object.values(ruleTotals)
-        .map(data => ({
-            name: data.originalName,
-            totalValue: data.totalValue,
-            emoji: data.emoji,
-        }))
-        .sort((a,b) => b.totalValue - a.totalValue);
-
-    return { totalPoints, totalAchievements, agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard, ruleBreakdown: finalRuleBreakdown };
+    return { totalPoints, totalAchievements, agentCards: finalAgentCards, podCards: finalPodCards, ruleBreakdown: finalRuleBreakdown };
   }, [filteredLogs, pods, allRules, users]);
 
   const yearOptions = useMemo(() => {
@@ -198,12 +224,11 @@ export default function StatsPage() {
       return Array.from({ length: 5 }, (_, i) => String(currentYear - i));
   }, []);
 
-
   const summaryCards = [
     { title: "Total Points Awarded", value: totalPoints.toLocaleString(), icon: <Star className="text-muted-foreground" /> },
     { title: "Total Achievements Logged", value: totalAchievements.toLocaleString(), icon: <TrendingUp className="text-muted-foreground" /> },
-    { title: "Active Agents", value: agentLeaderboard.length.toLocaleString(), icon: <Users className="text-muted-foreground" /> },
-    { title: "Active Pods", value: podLeaderboard.length.toLocaleString(), icon: <Sigma className="text-muted-foreground" /> },
+    { title: "Active Agents", value: agentCards.length.toLocaleString(), icon: <Users className="text-muted-foreground" /> },
+    { title: "Active Pods", value: podCards.length.toLocaleString(), icon: <Sigma className="text-muted-foreground" /> },
   ];
 
   if (isLoading) {
@@ -217,7 +242,6 @@ export default function StatsPage() {
   }
 
   return (
-    <TooltipProvider>
     <div className="space-y-6">
       <Card className="frosted-glass">
         <CardHeader>
@@ -338,42 +362,85 @@ export default function StatsPage() {
             </CardContent>
         </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} isStickyHeader={false} />
-        <Card className="shadow-md frosted-glass">
-            <CardHeader>
-                <CardTitle>Pod Leaderboard</CardTitle>
-            </CardHeader>
-            <CardContent>
-                {podLeaderboard.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">No pod data available.</p>
-                ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead className="text-right">Score</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {podLeaderboard.map((entry) => (
-                                <TableRow key={entry.id}>
-                                    <TableCell>
-                                        <span className="font-medium">{entry.name}</span>
-                                    </TableCell>
-                                    <TableCell className="text-right font-semibold text-primary">
-                                        {entry.score.toLocaleString()}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                )}
-            </CardContent>
-        </Card>
-      </div>
+        {/* Pod Top Trumps Section */}
+        <div className="space-y-4">
+            <h2 className="text-2xl font-semibold tracking-tight">Pod Leaderboard</h2>
+            {podCards.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {podCards.map(pod => (
+                        <Card key={pod.id} className="frosted-glass shadow-lg flex flex-col">
+                            <CardHeader className="flex flex-row items-center gap-4">
+                                <Avatar className="h-12 w-12">
+                                    <AvatarFallback
+                                        initials={pod.avatarInitials || generateInitials(pod.name)}
+                                        backgroundColor={pod.avatarBgColor}
+                                    />
+                                </Avatar>
+                                <div className="flex-1">
+                                    <CardTitle className="truncate" title={pod.name}>{pod.name}</CardTitle>
+                                    <CardDescription className="font-bold text-lg text-primary">{pod.score.toLocaleString()} Points</CardDescription>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Achievement</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {pod.ruleBreakdown.map(rule => (
+                                            <TableRow key={rule.name}>
+                                                <TableCell className="font-medium truncate">{rule.emoji} {rule.name}</TableCell>
+                                                <TableCell className="text-right">{rule.totalValue.toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-muted-foreground text-center py-4">No pod data available for the selected filters.</p>
+            )}
+        </div>
 
+        {/* Agent Top Trumps Section */}
+        <div className="space-y-4">
+            <h2 className="text-2xl font-semibold tracking-tight">Agent Leaderboard</h2>
+             {agentCards.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {agentCards.map(agent => (
+                        <Card key={agent.id} className="frosted-glass shadow-lg flex flex-col">
+                            <CardHeader className="flex flex-row items-center gap-4">
+                                <Avatar className="h-12 w-12">
+                                    <AvatarFallback
+                                        initials={agent.avatarInitials || generateInitials(agent.name)}
+                                        backgroundColor={agent.avatarBgColor}
+                                    />
+                                </Avatar>
+                                <div className="flex-1">
+                                    <CardTitle className="truncate" title={agent.name}>{agent.name}</CardTitle>
+                                    <CardDescription className="font-bold text-lg text-primary">{agent.score.toLocaleString()} Points</CardDescription>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Achievement</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {agent.ruleBreakdown.map(rule => (
+                                            <TableRow key={rule.name}>
+                                                <TableCell className="font-medium truncate">{rule.emoji} {rule.name}</TableCell>
+                                                <TableCell className="text-right">{rule.totalValue.toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                 <p className="text-muted-foreground text-center py-4">No agent data available for the selected filters.</p>
+            )}
+        </div>
     </div>
-    </TooltipProvider>
   );
 }
