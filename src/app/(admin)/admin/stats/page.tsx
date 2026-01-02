@@ -145,23 +145,14 @@ export default function StatsPage() {
     const agentScores: Record<string, number> = {};
     const podScores: Record<string, number> = {};
     const ruleTotals: Record<string, { totalValue: number; originalName: string; emoji?: string; }> = {};
-    const podSourceMap: Record<string, Set<string>> = {};
 
     const ruleIdToDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
-    const competitionMap = new Map(competitions.map(c => [c.id, c.name]));
-
+    
     filteredLogs.forEach(log => {
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
 
         const podId = log.podId || 'unknown';
         podScores[podId] = (podScores[podId] || 0) + (log.points || 0);
-
-        // Track sources for the pod leaderboard
-        if (!podSourceMap[podId]) {
-            podSourceMap[podId] = new Set();
-        }
-        const sourceName = competitionMap.get(log.competitionId) || format(log.date.toDate(), 'yyyy-MM-dd');
-        podSourceMap[podId].add(sourceName);
         
         const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
         if (ruleDetails) {
@@ -181,7 +172,6 @@ export default function StatsPage() {
     
     const finalPodLeaderboard = Object.entries(podScores).map(([id, score]) => {
         const pod = pods.find(p => p.id === id);
-        const sources = podSourceMap[id] ? Array.from(podSourceMap[id]).join(', ') : 'N/A';
         return { 
             id, 
             name: pod?.name || `Unknown`,
@@ -189,7 +179,6 @@ export default function StatsPage() {
             avatarUrl: pod?.logoUrl,
             avatarInitials: pod?.logoInitials,
             avatarBgColor: pod?.logoBgColor,
-            tooltipContent: pod ? undefined : `Sources: ${sources}`
         };
     });
     
@@ -202,7 +191,7 @@ export default function StatsPage() {
         .sort((a,b) => b.totalValue - a.totalValue);
 
     return { totalPoints, totalAchievements, agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard, ruleBreakdown: finalRuleBreakdown };
-  }, [filteredLogs, pods, allRules, users, competitions]);
+  }, [filteredLogs, pods, allRules, users]);
 
   const yearOptions = useMemo(() => {
       const currentYear = getYear(new Date());
@@ -350,7 +339,7 @@ export default function StatsPage() {
         </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} />
+        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} isStickyHeader={false} />
         <Card className="shadow-md frosted-glass">
             <CardHeader>
                 <CardTitle>Pod Leaderboard</CardTitle>
@@ -370,18 +359,7 @@ export default function StatsPage() {
                             {podLeaderboard.map((entry) => (
                                 <TableRow key={entry.id}>
                                     <TableCell>
-                                        {entry.tooltipContent ? (
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span className="font-medium cursor-help underline decoration-dashed">{entry.name}</span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{entry.tooltipContent}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        ) : (
-                                            <span className="font-medium">{entry.name}</span>
-                                        )}
+                                        <span className="font-medium">{entry.name}</span>
                                     </TableCell>
                                     <TableCell className="text-right font-semibold text-primary">
                                         {entry.score.toLocaleString()}
@@ -399,5 +377,3 @@ export default function StatsPage() {
     </TooltipProvider>
   );
 }
-
-    
