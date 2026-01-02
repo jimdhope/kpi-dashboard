@@ -24,6 +24,13 @@ import { Filter, GanttChartSquare, Star, Users, BarChart, AlertCircle, Sigma, Tr
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -161,7 +168,7 @@ export default function StatsPage() {
         .map(data => ({ name: data.originalName, totalValue: data.totalValue, emoji: data.emoji }))
         .sort((a,b) => b.totalValue - a.totalValue);
 
-    // --- Agent Top Trumps Cards ---
+    // --- Data Aggregation for Cards ---
     const agentData: Record<string, { score: number; ruleTotals: Record<string, number> }> = {};
     const podData: Record<string, { score: number; ruleTotals: Record<string, number> }> = {};
 
@@ -178,14 +185,27 @@ export default function StatsPage() {
         podData[podId].ruleTotals[log.ruleId] = (podData[podId].ruleTotals[log.ruleId] || 0) + log.value;
     });
 
+    // Helper to process rule breakdowns
+    const processRuleBreakdown = (ruleTotals: Record<string, number>): RuleBreakdownEntry[] => {
+        const aggregatedByName: Record<string, { totalValue: number, originalName: string, emoji?: string }> = {};
+        Object.entries(ruleTotals).forEach(([ruleId, totalValue]) => {
+            const ruleDetails = ruleIdToDetailsMap.get(ruleId);
+            if (ruleDetails) {
+                const normalizedName = ruleDetails.name.trim().toLowerCase();
+                if (!aggregatedByName[normalizedName]) {
+                    aggregatedByName[normalizedName] = { totalValue: 0, originalName: ruleDetails.name, emoji: ruleDetails.emoji };
+                }
+                aggregatedByName[normalizedName].totalValue += totalValue;
+            }
+        });
+        return Object.values(aggregatedByName)
+            .map(data => ({ name: data.originalName, totalValue: data.totalValue, emoji: data.emoji }))
+            .sort((a, b) => b.totalValue - a.totalValue);
+    };
+
+    // --- Agent Top Trumps Cards ---
     const finalAgentCards: TopTrumpEntry[] = Object.entries(agentData).map(([id, data]) => {
         const user = users.find(u => u.id === id);
-        const breakdown = Object.entries(data.ruleTotals).map(([ruleId, totalValue]) => ({
-            name: ruleIdToDetailsMap.get(ruleId)?.name || 'Unknown Rule',
-            totalValue: totalValue,
-            emoji: ruleIdToDetailsMap.get(ruleId)?.emoji
-        })).sort((a,b) => b.totalValue - a.totalValue);
-
         return {
             id,
             name: user?.name || 'Unknown Agent',
@@ -193,18 +213,13 @@ export default function StatsPage() {
             avatarUrl: user?.avatarUrl,
             avatarInitials: user?.avatarInitials,
             avatarBgColor: user?.avatarBgColor,
-            ruleBreakdown: breakdown,
+            ruleBreakdown: processRuleBreakdown(data.ruleTotals),
         };
     }).sort((a, b) => b.score - a.score);
     
+    // --- Pod Top Trumps Cards ---
     const finalPodCards: TopTrumpEntry[] = Object.entries(podData).map(([id, data]) => {
         const pod = pods.find(p => p.id === id);
-        const breakdown = Object.entries(data.ruleTotals).map(([ruleId, totalValue]) => ({
-            name: ruleIdToDetailsMap.get(ruleId)?.name || 'Unknown Rule',
-            totalValue: totalValue,
-            emoji: ruleIdToDetailsMap.get(ruleId)?.emoji
-        })).sort((a,b) => b.totalValue - a.totalValue);
-        
         return { 
             id, 
             name: pod?.name || 'Unknown Pod',
@@ -212,7 +227,7 @@ export default function StatsPage() {
             avatarUrl: pod?.logoUrl,
             avatarInitials: pod?.logoInitials,
             avatarBgColor: pod?.logoBgColor,
-            ruleBreakdown: breakdown,
+            ruleBreakdown: processRuleBreakdown(data.ruleTotals),
         };
     }).sort((a,b) => b.score - a.score);
     
