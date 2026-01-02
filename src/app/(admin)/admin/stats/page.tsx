@@ -152,11 +152,12 @@ export default function StatsPage() {
         const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
 
         if (ruleDetails) {
+            // Normalize the name to handle casing inconsistencies (e.g., "Ask Bruce" vs "ASk bruce")
             const normalizedName = ruleDetails.name.trim().toLowerCase();
             if (!ruleTotals[normalizedName]) {
                 ruleTotals[normalizedName] = { 
                     totalValue: 0, 
-                    originalName: ruleDetails.name,
+                    originalName: ruleDetails.name, // Keep one of the original names for display
                     emoji: ruleDetails.emoji,
                 };
             }
@@ -323,8 +324,8 @@ export default function StatsPage() {
         </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} isStickyHeader={true} />
-        <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} isStickyHeader={true}/>
+        <Leaderboard title="Agent Leaderboard" entries={agentLeaderboard} isStickyHeader={false} />
+        <Leaderboard title="Pod Leaderboard" entries={podLeaderboard} isStickyHeader={false}/>
       </div>
 
     </div>
