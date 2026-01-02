@@ -136,16 +136,19 @@ export default function StatsPage() {
     const podScores: Record<string, number> = {};
     const ruleTotals: Record<string, { totalValue: number; emoji?: string }> = {};
 
+    const ruleIdToNameMap = new Map(allRules.map(rule => [rule.id, rule.name]));
+    const ruleNameToEmojiMap = new Map(allRules.map(rule => [rule.name, rule.emoji || '❓']));
+
     filteredLogs.forEach(log => {
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
         podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
 
-        const rule = allRules.find(r => r.id === log.ruleId);
-        if (rule) {
-            if (!ruleTotals[rule.name]) {
-                ruleTotals[rule.name] = { totalValue: 0, emoji: rule.emoji };
+        const ruleName = ruleIdToNameMap.get(log.ruleId);
+        if (ruleName) {
+            if (!ruleTotals[ruleName]) {
+                ruleTotals[ruleName] = { totalValue: 0, emoji: ruleNameToEmojiMap.get(ruleName) };
             }
-            ruleTotals[rule.name].totalValue += log.value;
+            ruleTotals[ruleName].totalValue += log.value;
         }
     });
 
@@ -262,26 +265,19 @@ export default function StatsPage() {
             </CardHeader>
             <CardContent>
                 {ruleBreakdown.length > 0 ? (
-                    <div className="overflow-y-auto max-h-80">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Achievement</TableHead>
-                                <TableHead className="text-right">Total Count</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {ruleBreakdown.map(rule => (
-                                <TableRow key={rule.name}>
-                                    <TableCell className="font-medium flex items-center gap-2">
-                                        <span className="text-lg">{rule.emoji || '❓'}</span>
-                                        {rule.name}
-                                    </TableCell>
-                                    <TableCell className="text-right font-semibold text-primary">{rule.totalValue.toLocaleString()}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {ruleBreakdown.map(rule => (
+                           <Card key={rule.name} className="shadow-sm">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium truncate" title={rule.name}>{rule.name}</CardTitle>
+                                    <span className="text-lg">{rule.emoji}</span>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-primary">{rule.totalValue.toLocaleString()}</div>
+                                    <p className="text-xs text-muted-foreground">Total Count</p>
+                                </CardContent>
+                            </Card>
+                        ))}
                     </div>
                 ) : (
                     <p className="text-muted-foreground text-center py-4">No achievement data to display for the selected filters.</p>
