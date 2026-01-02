@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DateRange } from 'react-day-picker';
-import { subDays, startOfDay, endOfDay, format } from 'date-fns';
+import { subDays, startOfDay, endOfDay, format, startOfYear, endOfYear, getYear, subYears } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -55,11 +55,12 @@ export default function StatsPage() {
   const [allRules, setAllRules] = useState<RuleFormData[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
 
-  const [filterType, setFilterType] = useState<'period' | 'competition'>('period');
+  const [filterType, setFilterType] = useState<'period' | 'competition' | 'year'>('period');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('30');
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
+  const [selectedYear, setSelectedYear] = useState<string>(String(getYear(new Date())));
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,11 +90,12 @@ export default function StatsPage() {
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
 
-  const handleFilterTypeChange = (type: 'period' | 'competition') => {
+  const handleFilterTypeChange = (type: 'period' | 'competition' | 'year') => {
     setFilterType(type);
     setSelectedPeriod('30');
     setSelectedCompetitionId('');
     setDateRange({ from: subDays(new Date(), 29), to: new Date() });
+    setSelectedYear(String(getYear(new Date())));
   };
   
   const handlePeriodChange = (value: string) => {
@@ -109,7 +111,13 @@ export default function StatsPage() {
         const comp = competitions.find(c => c.id === selectedCompetitionId);
         start = comp?.startDate.toDate();
         end = comp?.endDate.toDate();
-    } else {
+    } else if (filterType === 'year') {
+        const yearNum = parseInt(selectedYear, 10);
+        if (!isNaN(yearNum)) {
+            start = startOfYear(new Date(yearNum, 0, 1));
+            end = endOfYear(new Date(yearNum, 11, 31));
+        }
+    } else { // period
         start = dateRange?.from;
         end = dateRange?.to;
     }
@@ -126,9 +134,9 @@ export default function StatsPage() {
             return logDate >= startDate && logDate <= endDate && podMatch;
         })
     };
-  }, [filterType, selectedCompetitionId, dateRange, selectedPodId, logs, competitions]);
+  }, [filterType, selectedCompetitionId, dateRange, selectedPodId, selectedYear, logs, competitions]);
   
-  const { totalPoints, totalAchievements, agentLeaderboard, podLeaderboard, ruleBreakdown } = useMemo(() => {
+ const { totalPoints, totalAchievements, agentLeaderboard, podLeaderboard, ruleBreakdown } = useMemo(() => {
     const totalPoints = filteredLogs.reduce((sum, log) => sum + (log.points || 0), 0);
     const totalAchievements = filteredLogs.reduce((sum, log) => sum + (log.value || 0), 0);
     
@@ -139,18 +147,16 @@ export default function StatsPage() {
     const ruleIdToDetailsMap = new Map(allRules.map(rule => [rule.id, { name: rule.name, emoji: rule.emoji || '❓' }]));
 
     filteredLogs.forEach(log => {
-        // Agent and Pod scores calculation (no changes here)
         agentScores[log.agentId] = (agentScores[log.agentId] || 0) + (log.points || 0);
         podScores[log.podId] = (podScores[log.podId] || 0) + (log.points || 0);
 
-        // Rule breakdown calculation FIX
         const ruleDetails = ruleIdToDetailsMap.get(log.ruleId);
         if (ruleDetails) {
-            const normalizedName = ruleDetails.name.trim().toLowerCase(); // Normalize by trimming and lowercasing
+            const normalizedName = ruleDetails.name.trim().toLowerCase();
             if (!ruleTotals[normalizedName]) {
                 ruleTotals[normalizedName] = { 
                     totalValue: 0, 
-                    originalName: ruleDetails.name, // Store the first encountered capitalization
+                    originalName: ruleDetails.name,
                     emoji: ruleDetails.emoji 
                 };
             }
@@ -163,7 +169,7 @@ export default function StatsPage() {
     
     const finalRuleBreakdown: RuleBreakdownEntry[] = Object.values(ruleTotals)
         .map(data => ({
-            name: data.originalName, // Use the stored original name for display
+            name: data.originalName,
             totalValue: data.totalValue,
             emoji: data.emoji,
         }))
@@ -171,6 +177,11 @@ export default function StatsPage() {
 
     return { totalPoints, totalAchievements, agentLeaderboard: finalAgentLeaderboard, podLeaderboard: finalPodLeaderboard, ruleBreakdown: finalRuleBreakdown };
   }, [filteredLogs, pods, allRules, users]);
+
+  const yearOptions = useMemo(() => {
+      const currentYear = getYear(new Date());
+      return Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+  }, []);
 
 
   const summaryCards = [
@@ -203,7 +214,11 @@ export default function StatsPage() {
                 <Label>Filter By</Label>
                 <Select value={filterType} onValueChange={(v) => handleFilterTypeChange(v as any)}>
                     <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent><SelectItem value="period">Time Period</SelectItem><SelectItem value="competition">Competition</SelectItem></SelectContent>
+                    <SelectContent>
+                        <SelectItem value="period">Time Period</SelectItem>
+                        <SelectItem value="competition">Competition</SelectItem>
+                        <SelectItem value="year">Year</SelectItem>
+                    </SelectContent>
                 </Select>
             </div>
 
@@ -226,6 +241,18 @@ export default function StatsPage() {
                         <DateRangePicker date={dateRange} setDate={setDateRange} disabled={selectedPeriod !== 'custom'} />
                     </div>
                 </>
+            )}
+            
+             {filterType === 'year' && (
+                 <div className="grid gap-2">
+                    <Label>Year</Label>
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {yearOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             )}
 
             {filterType === 'competition' && (
