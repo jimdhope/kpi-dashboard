@@ -4,186 +4,204 @@ import { collection, query, where, getDocs, Timestamp, doc, addDoc, orderBy, ser
 import { db } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
+import type { RuleFormData } from '@/models/types';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { startOfDay, endOfDay } from 'date-fns';
 
+// --- Helper Functions for API Logic ---
+
+/**
+ * Finds a user by email or display name. Throws an error if not found or if the name is ambiguous.
+ */
+async function findUser(email?: string, userName?: string): Promise<AppUser> {
+    const usersRef = collection(db, 'users');
+    let userQuery;
+
+    if (email) {
+        console.log(`[API Helper] Searching for user by email: ${email}`);
+        userQuery = query(usersRef, where('email', '==', email), limit(1));
+    } else if (userName) {
+        console.log(`[API Helper] Searching for user by name: ${userName}`);
+        userQuery = query(usersRef, where('name', '==', userName));
+    } else {
+        throw new Error('User identifier (email or userName) is required.');
+    }
+
+    const userSnapshot = await getDocs(userQuery);
+
+    if (userSnapshot.empty) {
+        throw new Error(`User not found.`);
+    }
+
+    if (userSnapshot.size > 1) {
+        throw new Error(`Multiple users found with the name "${userName}". Please use a unique identifier.`);
+    }
+
+    const userDoc = userSnapshot.docs[0];
+    console.log(`[API Helper] Found user: ${userDoc.data().name} (ID: ${userDoc.id})`);
+    return { id: userDoc.id, ...userDoc.data() } as AppUser;
+}
+
+/**
+ * Finds the most recent, currently active competition for a given pod.
+ */
+async function findActiveCompetition(podId: string): Promise<Competition & { id: string }> {
+    const today = new Date();
+    console.log(`[API Helper] Searching for active competition for pod ${podId} on ${today.toUTCString()}`);
+
+    const competitionsRef = collection(db, 'competitions');
+    const competitionQuery = query(
+        competitionsRef,
+        where('podIds', 'array-contains', podId),
+        orderBy('startDate', 'desc')
+    );
+
+    const competitionSnapshot = await getDocs(competitionQuery);
+    if (competitionSnapshot.empty) {
+        throw new Error(`No competitions found for pod ${podId}.`);
+    }
+
+    for (const docSnap of competitionSnapshot.docs) {
+        const comp = { id: docSnap.id, ...docSnap.data() } as (Competition & { id: string });
+
+        if (comp.startDate?.toDate && comp.endDate?.toDate) {
+            const compStart = startOfDay(comp.startDate.toDate());
+            const compEnd = endOfDay(comp.endDate.toDate()); // Use endOfDay for a full-day check
+
+            if (compStart <= today && today <= compEnd) {
+                console.log(`[API Helper] Found active competition: ${comp.name}`);
+                return comp;
+            }
+        }
+    }
+
+    throw new Error(`No *active* competition found for pod ${podId}.`);
+}
+
+/**
+ * Parses text to find a rule and multiplier.
+ * @returns { ruleName: string, value: number }
+ */
+function parseAchievementText(text: string): { ruleName: string, value: number } {
+    const hashtagMatch = text.match(/#(\w+)/);
+    if (!hashtagMatch) {
+        throw new Error('No achievement hashtag (#ruleName) found in text.');
+    }
+    const ruleName = hashtagMatch[1];
+
+    const multiplierMatch = text.match(/(?:x|\*)\s*(\d+)/i);
+    const value = multiplierMatch ? parseInt(multiplierMatch[1], 10) : 1;
+
+    if (isNaN(value) || value <= 0) {
+        throw new Error('Invalid or non-positive multiplier value found.');
+    }
+
+    console.log(`[API Helper] Parsed text. Found rule: #${ruleName}, value: ${value}`);
+    return { ruleName, value };
+}
+
+/**
+ * Logs the achievement document to Firestore.
+ */
+async function logAchievement(logData: Omit<DailyAchievementLog, 'id' | 'status'>): Promise<string> {
+    const newLogDoc = await addDoc(collection(db, 'dailyAchievements'), logData);
+    console.log(`[API Helper] Successfully logged achievement. Log ID: ${newLogDoc.id}`);
+    return newLogDoc.id;
+}
+
+
+// --- Main API Route (POST) ---
+
 export async function POST(request: Request) {
-    console.log(`[API /api/log-achievement] Received request: ${request.method} ${request.url}`);
+    console.log(`[API] Received request: ${request.method} ${request.url}`);
+    
+    // 1. Authenticate the request
     const apiKey = request.headers.get('x-api-key');
     const serverApiKey = process.env.LOG_ACHIEVEMENT_API_KEY;
 
     if (!serverApiKey) {
-        console.error('CRITICAL: LOG_ACHIEVEMENT_API_KEY is not set in the environment. The API endpoint is insecure and disabled.');
+        console.error('[API] CRITICAL: LOG_ACHIEVEMENT_API_KEY is not set. API is disabled.');
         return NextResponse.json({ error: 'Internal Server Error: API is not configured.' }, { status: 500 });
     }
-
     if (apiKey !== serverApiKey) {
-        console.warn(`[API /api/log-achievement] Unauthorized access attempt with API key: ${apiKey}`);
+        console.warn(`[API] Unauthorized access attempt.`);
         return NextResponse.json({ error: 'Unauthorized: Invalid API Key' }, { status: 401 });
     }
 
+    // 2. Parse and Validate Body
     let body;
     try {
         body = await request.json();
+        console.log(`[API] Request Body:`, JSON.stringify(body, null, 2));
+
+        const { email, userName, text } = body;
+        if ((!email && !userName) || !text) {
+            return NextResponse.json({ error: 'Missing required fields: (email or userName) and text must be provided.' }, { status: 400 });
+        }
+
+        // 3. Main Logic in a Try/Catch block
+        try {
+            const user = await findUser(email, userName);
+            
+            if (!user.podId) {
+                return NextResponse.json({ error: `User ${user.name} is not assigned to a pod.` }, { status: 400 });
+            }
+
+            const competition = await findActiveCompetition(user.podId);
+
+            if (!competition.rules || competition.rules.length === 0) {
+                return NextResponse.json({ error: `The active competition "${competition.name}" has no rules configured.` }, { status: 400 });
+            }
+
+            const { ruleName: ruleNameFromHashtag, value } = parseAchievementText(text);
+
+            const rule = competition.rules.find(r => r.name.toLowerCase() === ruleNameFromHashtag.toLowerCase());
+            if (!rule || !rule.id) {
+                return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} not found in competition "${competition.name}".` }, { status: 404 });
+            }
+
+            if (rule.type !== 'numeric') {
+                return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} is a checkbox task and cannot be logged via this API.` }, { status: 400 });
+            }
+
+            const points = (rule.points || 0) * value;
+            const logEntry: Omit<DailyAchievementLog, 'id' | 'status'> = {
+                agentId: user.id!,
+                podId: user.podId,
+                competitionId: competition.id,
+                ruleId: rule.id,
+                ruleName: rule.name,
+                date: Timestamp.fromDate(startOfDay(new Date())),
+                value,
+                points,
+                loggedAt: serverTimestamp(),
+                loggedBy: 'api_workflow',
+            };
+
+            const logId = await logAchievement(logEntry);
+
+            return NextResponse.json({
+                message: 'Achievement logged successfully.',
+                logId,
+                loggedData: {
+                    agent: user.name,
+                    rule: rule.name,
+                    value,
+                    points,
+                },
+            }, { status: 201 });
+
+        } catch (error: any) {
+            console.error(`[API] Error during processing: ${error.message}`);
+            // Determine status code based on error message
+            const isNotFound = /not found/i.test(error.message);
+            const isBadRequest = /multiple users|invalid|required/i.test(error.message);
+            const status = isNotFound ? 404 : isBadRequest ? 400 : 500;
+            return NextResponse.json({ error: error.message }, { status });
+        }
+
     } catch (error) {
-        console.error('[API /api/log-achievement] Error parsing JSON body:', error);
+        console.error('[API] Invalid JSON body:', error);
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
-    
-    const headersObject: { [key: string]: string } = {};
-    request.headers.forEach((value, key) => {
-        headersObject[key] = value;
-    });
-
-    console.log(`[API /api/log-achievement] Request Headers:`, JSON.stringify(headersObject, null, 2));
-    console.log(`[API /api/log-achievement] Request Body:`, JSON.stringify(body, null, 2));
-
-
-    const { email, text } = body;
-    console.log(`[API /api/log-achievement] Extracted email: "${email}", Extracted text: "${text}"`);
-
-    if (!email || !text) {
-        const missingFields = [];
-        if (!email) missingFields.push('email');
-        if (!text) missingFields.push('text');
-        
-        const errorMessage = `Missing required fields: ${missingFields.join(' and ')}. Please check the Power Automate flow configuration.`;
-        console.error(`[API /api/log-achievement] Validation failed: ${errorMessage}`);
-        
-        return NextResponse.json({ 
-            error: errorMessage,
-            receivedBody: body,
-        }, { status: 400 });
-    }
-
-    try {
-        // 1. Find user by email
-        const usersRef = collection(db, 'users');
-        const userQuery = query(usersRef, where('email', '==', email), limit(1));
-        const userSnapshot = await getDocs(userQuery);
-
-        if (userSnapshot.empty) {
-            console.log(`[API /api/log-achievement] User not found for email: ${email}`);
-            return NextResponse.json({ error: `User with email ${email} not found.` }, { status: 404 });
-        }
-        const userDoc = userSnapshot.docs[0];
-        const userData = { id: userDoc.id, ...userDoc.data() } as AppUser;
-        const { id: userId, podId } = userData;
-        console.log(`[API /api/log-achievement] Found user: ${userData.name} in pod: ${podId}`);
-
-
-        if (!podId) {
-            return NextResponse.json({ error: `User ${email} is not assigned to a pod.` }, { status: 400 });
-        }
-
-        // 2. Find active competition for the user's pod
-        const today = new Date();
-        console.log(`[API /api/log-achievement] Server time (UTC): ${today.toUTCString()}`);
-
-        const competitionsRef = collection(db, 'competitions');
-        const competitionQuery = query(
-            competitionsRef,
-            where('podIds', 'array-contains', podId),
-            orderBy('startDate', 'desc')
-        );
-        const competitionSnapshot = await getDocs(competitionQuery);
-
-        let activeCompetition: (Competition & { id: string }) | null = null;
-        for (const docSnap of competitionSnapshot.docs) {
-            const comp = { id: docSnap.id, ...docSnap.data() } as (Competition & { id: string });
-            
-            if (comp.startDate?.toDate && comp.endDate?.toDate) {
-                const compStart = comp.startDate.toDate();
-                const compEnd = comp.endDate.toDate();
-
-                console.log(`[API /api/log-achievement] Checking competition "${comp.name}" (ID: ${comp.id}) with start: ${compStart.toUTCString()}, end: ${compEnd.toUTCString()}`);
-
-                // Use startOfDay and endOfDay for robust, full-day checks
-                if (startOfDay(compStart) <= today && today <= endOfDay(compEnd)) {
-                     console.log(`[API /api/log-achievement] Match found! Competition "${comp.name}" is active.`);
-                    activeCompetition = comp;
-                    break; // Found the most recent active one, so we stop.
-                }
-            } else {
-                 console.log(`[API /api/log-achievement] Skipping competition "${comp.name}" due to missing start/end dates.`);
-            }
-        }
-        
-        if (!activeCompetition) {
-            console.log(`[API /api/log-achievement] No active competition found for pod: ${podId} on date: ${today.toUTCString()}`);
-            return NextResponse.json({ error: `No active competition found for pod ${podId}.` }, { status: 404 });
-        }
-        console.log(`[API /api/log-achievement] Found active competition: ${activeCompetition.name}`);
-
-        if (!activeCompetition.rules || !Array.isArray(activeCompetition.rules)) {
-            console.error(`[API /api/log-achievement] Internal Data Error: Competition "${activeCompetition.name}" (ID: ${activeCompetition.id}) is missing a 'rules' array.`);
-            return NextResponse.json({ error: `Internal Data Error: The active competition "${activeCompetition.name}" has no rules configured.` }, { status: 500 });
-        }
-
-        // 3. Parse text for hashtag and multiplier
-        const hashtagMatch = text.match(/#(\w+)/);
-        if (!hashtagMatch) {
-            console.log(`[API /api/log-achievement] No hashtag found in text: "${text}"`);
-            return NextResponse.json({ error: 'No achievement hashtag found in text.' }, { status: 400 });
-        }
-        const ruleNameFromHashtag = hashtagMatch[1];
-        
-        const multiplierMatch = text.match(/(?:x|\*)\s*(\d+)/i);
-        const value = multiplierMatch ? parseInt(multiplierMatch[1], 10) : 1;
-
-        if (isNaN(value) || value <= 0) {
-             console.log(`[API /api/log-achievement] Invalid multiplier value in text: "${text}"`);
-            return NextResponse.json({ error: 'Invalid multiplier value.' }, { status: 400 });
-        }
-
-        // 4. Find the matching rule in the competition (case-insensitive)
-        const rule = activeCompetition.rules.find(
-            (r) => r.name.toLowerCase() === ruleNameFromHashtag.toLowerCase()
-        );
-
-        if (!rule || !rule.id) {
-            console.log(`[API /api/log-achievement] Rule for hashtag "${ruleNameFromHashtag}" not found in competition.`);
-            return NextResponse.json({ error: `Rule matching hashtag #${ruleNameFromHashtag} not found in active competition.` }, { status: 404 });
-        }
-
-        if (rule.type !== 'numeric') {
-             console.log(`[API /api/log-achievement] Attempted to log non-numeric rule "${rule.name}" via API.`);
-             return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} is not a numeric achievement and cannot be logged this way.` }, { status: 400 });
-        }
-
-        // 5. Log the achievement
-        const points = (rule.points || 0) * value;
-        const logEntry: Omit<DailyAchievementLog, 'id' | 'status'> = {
-            agentId: userId,
-            podId: podId,
-            competitionId: activeCompetition.id,
-            ruleId: rule.id,
-            ruleName: rule.name,
-            date: Timestamp.fromDate(startOfDay(today)),
-            value: value,
-            points: points,
-            loggedAt: serverTimestamp(),
-            loggedBy: 'api_workflow', // System identifier
-        };
-
-        const newLogDoc = await addDoc(collection(db, 'dailyAchievements'), logEntry);
-        console.log(`[API /api/log-achievement] Successfully logged achievement. Log ID: ${newLogDoc.id}`);
-
-        return NextResponse.json({
-            message: 'Achievement logged successfully.',
-            logId: newLogDoc.id,
-            loggedData: {
-                agent: userData.name,
-                rule: rule.name,
-                value: value,
-                points: points,
-            },
-        }, { status: 201 });
-
-    } catch (error: any) {
-        console.error('Error in /api/log-achievement:', error);
-        return NextResponse.json({ error: 'An internal server error occurred.', details: error.message }, { status: 500 });
-    }
 }
-
-    
