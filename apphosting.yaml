@@ -15,8 +15,10 @@ runConfig:
 
 # Optional: Environment variables can be added here
 # See documentation: https://firebase.google.com/docs/hosting/frameworks/apphosting-configure#configure-environment-variables
+env:
+  - variable: LOG_ACHIEVEMENT_API_KEY
+    secret: LOG_ACHIEVEMENT_API_KEY
 # Example:
-# env:
 #   - variable: NEXT_PUBLIC_MY_ENV_VAR
 #     value: "my_value"
 #     availability: # Can be BUILD, RUNTIME, or both (default)
@@ -44,3 +46,4 @@ runConfig:
 #     exclude:
 #       - .git
 #       - .vscode
+
