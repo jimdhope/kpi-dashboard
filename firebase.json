@@ -25,9 +25,11 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "trailingSlash": false,
     "apphostingDeployMetadata": {
       "versionName": "v1",
       "serviceAccountEmail": "your-service-account@your-project.iam.gserviceaccount.com"
     }
   }
 }
+
