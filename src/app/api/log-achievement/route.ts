@@ -31,8 +31,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
     
-    // Improved logging: Log the actual body received.
-    console.log(`[API /api/log-achievement] Request body received:`, JSON.stringify(body, null, 2));
+    // Improved logging: Log the actual body and relevant headers received.
+    const headersObject: { [key: string]: string } = {};
+    request.headers.forEach((value, key) => {
+        headersObject[key] = value;
+    });
+
+    console.log(`[API /api/log-achievement] Request Headers:`, JSON.stringify(headersObject, null, 2));
+    console.log(`[API /api/log-achievement] Request Body:`, JSON.stringify(body, null, 2));
 
 
     const { email, text } = body;
@@ -44,13 +50,13 @@ export async function POST(request: Request) {
         if (!email) missingFields.push('email');
         if (!text) missingFields.push('text');
         
-        const errorMessage = `Missing required fields: ${missingFields.join(', ')}.`;
+        const errorMessage = `Missing required fields: ${missingFields.join(' and ')}. Please check the Power Automate flow configuration.`;
         console.error(`[API /api/log-achievement] Validation failed: ${errorMessage}`);
         
         // Return a more descriptive error including the body that was received.
         return NextResponse.json({ 
             error: errorMessage,
-            receivedBody: body 
+            receivedBody: body, // Return the problematic body for easier debugging on the client side.
         }, { status: 400 });
     }
 
