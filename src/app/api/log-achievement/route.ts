@@ -9,8 +9,15 @@ import { startOfDay } from 'date-fns';
 
 export async function POST(request: Request) {
     const apiKey = request.headers.get('x-api-key');
+    const serverApiKey = process.env.LOG_ACHIEVEMENT_API_KEY;
 
-    if (apiKey !== process.env.LOG_ACHIEVEMENT_API_KEY) {
+    // Add a check to ensure the API key is configured on the server
+    if (!serverApiKey) {
+        console.error('CRITICAL: LOG_ACHIEVEMENT_API_KEY is not set in the environment. The API endpoint is insecure and disabled.');
+        return NextResponse.json({ error: 'Internal Server Error: API is not configured.' }, { status: 500 });
+    }
+
+    if (apiKey !== serverApiKey) {
         return NextResponse.json({ error: 'Unauthorized: Invalid API Key' }, { status: 401 });
     }
 
