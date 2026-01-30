@@ -78,11 +78,11 @@ async function findActiveCompetition(podId: string): Promise<Competition & { id:
 }
 
 function parseAchievementText(text: string): { ruleName: string, value: number } {
-    const hashtagMatch = text.match(/#(\w+)/);
+    // Handle hashtags with underscores for spaces
+    const hashtagMatch = text.match(/#([\w_]+)/);
     if (!hashtagMatch) {
         throw new Error('No achievement hashtag (#rule_name) found in text.');
     }
-
     const ruleName = hashtagMatch[1].replace(/_/g, ' ');
 
     const multiplierMatch = text.match(/(?:x|\*)\s*(\d+)/i);
@@ -94,6 +94,7 @@ function parseAchievementText(text: string): { ruleName: string, value: number }
 
     return { ruleName, value };
 }
+
 
 async function logAchievement(logData: Omit<DailyAchievementLog, 'id' | 'status'>): Promise<string> {
     const achievementsRef = db.collection('dailyAchievements');
