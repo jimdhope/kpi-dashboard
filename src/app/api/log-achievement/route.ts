@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
-import { startOfDay } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
 
 export async function POST(request: Request) {
     console.log(`[API /api/log-achievement] Received request: ${request.method} ${request.url}`);
@@ -78,6 +78,8 @@ export async function POST(request: Request) {
 
         // 2. Find active competition for the user's pod
         const today = new Date();
+        console.log(`[API /api/log-achievement] Server time (UTC): ${today.toUTCString()}`);
+
         const competitionsRef = collection(db, 'competitions');
         const competitionQuery = query(
             competitionsRef,
@@ -89,23 +91,30 @@ export async function POST(request: Request) {
         let activeCompetition: (Competition & { id: string }) | null = null;
         for (const docSnap of competitionSnapshot.docs) {
             const comp = { id: docSnap.id, ...docSnap.data() } as (Competition & { id: string });
-            // Ensure dates are valid before comparing
+            
             if (comp.startDate?.toDate && comp.endDate?.toDate) {
-                if (comp.startDate.toDate() <= today && comp.endDate.toDate() >= today) {
+                const compStart = comp.startDate.toDate();
+                const compEnd = comp.endDate.toDate();
+
+                console.log(`[API /api/log-achievement] Checking competition "${comp.name}" (ID: ${comp.id}) with start: ${compStart.toUTCString()}, end: ${compEnd.toUTCString()}`);
+
+                // Use startOfDay and endOfDay for robust, full-day checks
+                if (startOfDay(compStart) <= today && today <= endOfDay(compEnd)) {
+                     console.log(`[API /api/log-achievement] Match found! Competition "${comp.name}" is active.`);
                     activeCompetition = comp;
-                    break;
+                    break; // Found the most recent active one, so we stop.
                 }
+            } else {
+                 console.log(`[API /api/log-achievement] Skipping competition "${comp.name}" due to missing start/end dates.`);
             }
         }
         
-        // **FIX**: Check if a competition was found before proceeding.
         if (!activeCompetition) {
-            console.log(`[API /api/log-achievement] No active competition found for pod: ${podId}`);
+            console.log(`[API /api/log-achievement] No active competition found for pod: ${podId} on date: ${today.toUTCString()}`);
             return NextResponse.json({ error: `No active competition found for pod ${podId}.` }, { status: 404 });
         }
         console.log(`[API /api/log-achievement] Found active competition: ${activeCompetition.name}`);
 
-        // **FIX**: Check if rules exist on the competition before trying to access them
         if (!activeCompetition.rules || !Array.isArray(activeCompetition.rules)) {
             console.error(`[API /api/log-achievement] Internal Data Error: Competition "${activeCompetition.name}" (ID: ${activeCompetition.id}) is missing a 'rules' array.`);
             return NextResponse.json({ error: `Internal Data Error: The active competition "${activeCompetition.name}" has no rules configured.` }, { status: 500 });
@@ -119,7 +128,6 @@ export async function POST(request: Request) {
         }
         const ruleNameFromHashtag = hashtagMatch[1];
         
-        // **FIX**: Improved regex for multiplier
         const multiplierMatch = text.match(/(?:x|\*)\s*(\d+)/i);
         const value = multiplierMatch ? parseInt(multiplierMatch[1], 10) : 1;
 
@@ -133,7 +141,6 @@ export async function POST(request: Request) {
             (r) => r.name.toLowerCase() === ruleNameFromHashtag.toLowerCase()
         );
 
-        // **FIX**: Check if a rule was found
         if (!rule || !rule.id) {
             console.log(`[API /api/log-achievement] Rule for hashtag "${ruleNameFromHashtag}" not found in competition.`);
             return NextResponse.json({ error: `Rule matching hashtag #${ruleNameFromHashtag} not found in active competition.` }, { status: 404 });
@@ -178,3 +185,5 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'An internal server error occurred.', details: error.message }, { status: 500 });
     }
 }
+
+    
