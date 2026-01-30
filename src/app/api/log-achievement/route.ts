@@ -8,7 +8,6 @@ import { startOfDay, endOfDay } from 'date-fns';
 import { JSDOM } from 'jsdom';
 
 // --- Initialize Firebase Admin SDK ---
-// This check ensures we don't re-initialize the app in a serverless environment
 if (!admin.apps.length) {
   try {
     admin.initializeApp();
@@ -63,6 +62,7 @@ async function findActiveCompetition(podId: string): Promise<Competition & { id:
     for (const docSnap of competitionSnapshot.docs) {
         const comp = { id: docSnap.id, ...docSnap.data() } as (Competition & { id: string });
 
+        // Ensure dates are valid before converting
         if (comp.startDate?.toDate && comp.endDate?.toDate) {
             const compStart = startOfDay(comp.startDate.toDate());
             const compEnd = endOfDay(comp.endDate.toDate());
@@ -78,16 +78,13 @@ async function findActiveCompetition(podId: string): Promise<Competition & { id:
 }
 
 function parseAchievementText(text: string): { ruleName: string, value: number } {
-    // This regex matches a hashtag followed by one or more "word" characters (letters, numbers, underscore)
     const hashtagMatch = text.match(/#(\w+)/);
     if (!hashtagMatch) {
-        throw new Error('No achievement hashtag (#ruleName) found in text.');
+        throw new Error('No achievement hashtag (#rule_name) found in text.');
     }
 
-    // The first capture group is the rule name. Replace underscores with spaces to handle multi-word rules.
     const ruleName = hashtagMatch[1].replace(/_/g, ' ');
 
-    // Match a multiplier like 'x2' or '*5'
     const multiplierMatch = text.match(/(?:x|\*)\s*(\d+)/i);
     const value = multiplierMatch ? parseInt(multiplierMatch[1], 10) : 1;
 
@@ -99,8 +96,39 @@ function parseAchievementText(text: string): { ruleName: string, value: number }
 }
 
 async function logAchievement(logData: Omit<DailyAchievementLog, 'id' | 'status'>): Promise<string> {
-    const newLogDoc = await db.collection('dailyAchievements').add(logData);
-    return newLogDoc.id;
+    const achievementsRef = db.collection('dailyAchievements');
+    
+    // Query for an existing log for this specific agent, rule, and date.
+    const q = achievementsRef
+        .where('agentId', '==', logData.agentId)
+        .where('ruleId', '==', logData.ruleId)
+        .where('date', '==', logData.date)
+        .limit(1);
+
+    const snapshot = await q.get();
+
+    if (snapshot.empty) {
+        // No existing log found, so create a new one.
+        console.log(`[API Helper] No existing log found. Creating new achievement log.`);
+        const newLogDoc = await achievementsRef.add(logData);
+        return newLogDoc.id;
+    } else {
+        // Existing log found, update it.
+        console.log(`[API Helper] Existing log found. Updating achievement log.`);
+        const doc = snapshot.docs[0];
+        const existingData = doc.data() as DailyAchievementLog;
+        
+        const newValue = (existingData.value || 0) + logData.value;
+        const newPoints = (existingData.points || 0) + (logData.points || 0);
+
+        await doc.ref.update({
+            value: newValue,
+            points: newPoints,
+            loggedAt: logData.loggedAt // Update the timestamp to the latest log time
+        });
+
+        return doc.id; // Return the ID of the updated document.
+    }
 }
 
 
@@ -129,7 +157,6 @@ export async function POST(request: Request) {
     let body;
     try {
         body = await request.json();
-        // Log the raw incoming body for debugging
         console.log('[API] Received request body:', JSON.stringify(body, null, 2));
     } catch (error) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
@@ -158,12 +185,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: `The active competition "${competition.name}" has no rules configured.` }, { status: 400 });
         }
         
-        // --- NEW: Strip HTML from the text content ---
         const dom = new JSDOM(text);
         const plainText = dom.window.document.body.textContent || "";
         console.log(`[API] Plain text content after stripping HTML: "${plainText}"`);
 
-        // Use the plain text for parsing
         const { ruleName: ruleNameFromHashtag, value } = parseAchievementText(plainText);
         const rule = competition.rules.find(r => r.name.toLowerCase() === ruleNameFromHashtag.toLowerCase());
         
