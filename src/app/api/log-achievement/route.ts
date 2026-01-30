@@ -40,9 +40,18 @@ export async function POST(request: Request) {
     console.log(`[API /api/log-achievement] Extracted email: "${email}", Extracted text: "${text}"`);
 
     if (!email || !text) {
-        // More descriptive error log
-        console.error(`[API /api/log-achievement] Validation failed: email or text is missing or empty. Email: "${email}", Text: "${text}"`);
-        return NextResponse.json({ error: 'Missing required fields: email and text' }, { status: 400 });
+        const missingFields = [];
+        if (!email) missingFields.push('email');
+        if (!text) missingFields.push('text');
+        
+        const errorMessage = `Missing required fields: ${missingFields.join(', ')}.`;
+        console.error(`[API /api/log-achievement] Validation failed: ${errorMessage}`);
+        
+        // Return a more descriptive error including the body that was received.
+        return NextResponse.json({ 
+            error: errorMessage,
+            receivedBody: body 
+        }, { status: 400 });
     }
 
     try {
