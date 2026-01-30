@@ -5,8 +5,10 @@ import { AppUser } from '@/services/user';
 import { Competition } from '@/app/(admin)/admin/competitions/page';
 import { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { startOfDay, endOfDay } from 'date-fns';
+import { JSDOM } from 'jsdom';
 
 // --- Initialize Firebase Admin SDK ---
+// This check ensures we don't re-initialize the app in a serverless environment
 if (!admin.apps.length) {
   try {
     admin.initializeApp();
@@ -27,7 +29,7 @@ async function findUser(email?: string, userName?: string): Promise<AppUser> {
     if (email) {
         userQuery = usersRef.where('email', '==', email).limit(1);
     } else if (userName) {
-        userQuery = usersRef.where('name', '==', userName);
+        userQuery = usersRef.where('name', '==', userName).limit(1);
     } else {
         throw new Error('User identifier (email or userName) is required.');
     }
@@ -39,7 +41,7 @@ async function findUser(email?: string, userName?: string): Promise<AppUser> {
     }
 
     if (userSnapshot.size > 1) {
-        throw new Error(`Multiple users found with the name "${userName}". Please use a unique identifier like email.`);
+        console.warn(`[API] Multiple users found with name "${userName}". Using the first result.`);
     }
 
     const userDoc = userSnapshot.docs[0];
@@ -115,16 +117,20 @@ export async function POST(request: Request) {
     let body;
     try {
         body = await request.json();
+        // Log the raw incoming body for debugging
+        console.log('[API] Received request body:', JSON.stringify(body, null, 2));
     } catch (error) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { email, userName, text } = body;
-    if ((!email && !userName) || !text) {
-        return NextResponse.json({ error: 'Missing required fields: (email or userName) and text must be provided.' }, { status: 400 });
-    }
-
     try {
+        const { email, userName, text } = body;
+        
+        if ((!email && !userName) || !text) {
+            console.error('[API] Bad Request: Missing required fields.', body);
+            return NextResponse.json({ error: 'Missing required fields: (email or userName) and text must be provided.' }, { status: 400 });
+        }
+
         const user = await findUser(email, userName);
         console.log(`[API] Found user: ${user.name} (Pod ID: ${user.podId || 'None'})`);
 
@@ -134,22 +140,29 @@ export async function POST(request: Request) {
         }
 
         const competition = await findActiveCompetition(user.podId);
-        console.log(`[API] Found active competition: ${competition.name}`);
-
+        
         if (!competition.rules || competition.rules.length === 0) {
+            console.error(`[API] Bad Request: Competition "${competition.name}" has no rules.`);
             return NextResponse.json({ error: `The active competition "${competition.name}" has no rules configured.` }, { status: 400 });
         }
+        
+        // --- NEW: Strip HTML from the text content ---
+        const dom = new JSDOM(text);
+        const plainText = dom.window.document.body.textContent || "";
+        console.log(`[API] Plain text content after stripping HTML: "${plainText}"`);
 
-        const { ruleName: ruleNameFromHashtag, value } = parseAchievementText(text);
+        // Use the plain text for parsing
+        const { ruleName: ruleNameFromHashtag, value } = parseAchievementText(plainText);
         const rule = competition.rules.find(r => r.name.toLowerCase() === ruleNameFromHashtag.toLowerCase());
         
         if (!rule || !rule.id) {
+            console.error(`[API] Not Found: Rule #${ruleNameFromHashtag} not found.`);
             return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} not found in competition "${competition.name}".` }, { status: 404 });
         }
         console.log(`[API] Matched rule: ${rule.name} (Type: ${rule.type})`);
 
         if (rule.type !== 'numeric') {
-            console.error(`[API] Bad Request: Rule #${ruleNameFromHashtag} is a checkbox task and cannot be logged via this API.`);
+            console.error(`[API] Bad Request: Rule #${ruleNameFromHashtag} is a checkbox task.`);
             return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} is a checkbox task and cannot be logged via this API.` }, { status: 400 });
         }
 
@@ -177,11 +190,12 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         const errorMessage = error.message || 'An unknown internal error occurred.';
-        console.error(`[API] Error during processing: ${errorMessage}`);
+        console.error(`[API] Error during processing: ${errorMessage}`, { received_body: body });
         const isNotFound = /not found/i.test(errorMessage);
-        const isBadRequest = /multiple users|invalid|required|not assigned/i.test(errorMessage);
+        const isBadRequest = /multiple users|invalid|required|not assigned|no achievement hashtag/i.test(errorMessage);
         const status = isNotFound ? 404 : isBadRequest ? 400 : 500;
         
         return NextResponse.json({ error: errorMessage }, { status });
     }
 }
+
