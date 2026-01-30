@@ -30,12 +30,18 @@ export async function POST(request: Request) {
         console.error('[API /api/log-achievement] Error parsing JSON body:', error);
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
+    
+    // Improved logging: Log the actual body received.
+    console.log(`[API /api/log-achievement] Request body received:`, JSON.stringify(body, null, 2));
+
 
     const { email, text } = body;
-    console.log(`[API /api/log-achievement] Processing request for email: "${email}" with text: "${text}"`);
-
+    // Log the extracted values for easier debugging
+    console.log(`[API /api/log-achievement] Extracted email: "${email}", Extracted text: "${text}"`);
 
     if (!email || !text) {
+        // More descriptive error log
+        console.error(`[API /api/log-achievement] Validation failed: email or text is missing or empty. Email: "${email}", Text: "${text}"`);
         return NextResponse.json({ error: 'Missing required fields: email and text' }, { status: 400 });
     }
 
