@@ -108,6 +108,12 @@ export async function POST(request: Request) {
         }
         console.log(`[API /api/log-achievement] Found active competition: ${activeCompetition.name}`);
 
+        // **FIX**: Check if rules exist on the competition before trying to access them
+        if (!activeCompetition.rules || !Array.isArray(activeCompetition.rules)) {
+            console.error(`[API /api/log-achievement] Internal Data Error: Competition "${activeCompetition.name}" (ID: ${activeCompetition.id}) is missing a 'rules' array.`);
+            return NextResponse.json({ error: `Internal Data Error: The active competition "${activeCompetition.name}" has no rules configured.` }, { status: 500 });
+        }
+
         // 3. Parse text for hashtag and multiplier
         const hashtagMatch = text.match(/#(\w+)/);
         if (!hashtagMatch) {
@@ -151,7 +157,7 @@ export async function POST(request: Request) {
             date: Timestamp.fromDate(startOfDay(today)),
             value: value,
             points: points,
-            loggedAt: serverTimestamp() as Timestamp,
+            loggedAt: serverTimestamp(),
             loggedBy: 'api_workflow', // System identifier
         };
 
