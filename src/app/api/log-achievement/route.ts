@@ -8,6 +8,7 @@ import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/p
 import { startOfDay } from 'date-fns';
 
 export async function POST(request: Request) {
+    console.log(`[API /api/log-achievement] Received request: ${request.method} ${request.url}`);
     const apiKey = request.headers.get('x-api-key');
     const serverApiKey = process.env.LOG_ACHIEVEMENT_API_KEY;
 
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     }
 
     if (apiKey !== serverApiKey) {
+        console.warn(`[API /api/log-achievement] Unauthorized access attempt with API key: ${apiKey}`);
         return NextResponse.json({ error: 'Unauthorized: Invalid API Key' }, { status: 401 });
     }
 
@@ -25,10 +27,13 @@ export async function POST(request: Request) {
     try {
         body = await request.json();
     } catch (error) {
+        console.error('[API /api/log-achievement] Error parsing JSON body:', error);
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
     const { email, text } = body;
+    console.log(`[API /api/log-achievement] Processing request for email: "${email}" with text: "${text}"`);
+
 
     if (!email || !text) {
         return NextResponse.json({ error: 'Missing required fields: email and text' }, { status: 400 });
@@ -41,11 +46,14 @@ export async function POST(request: Request) {
         const userSnapshot = await getDocs(userQuery);
 
         if (userSnapshot.empty) {
+            console.log(`[API /api/log-achievement] User not found for email: ${email}`);
             return NextResponse.json({ error: `User with email ${email} not found.` }, { status: 404 });
         }
         const userDoc = userSnapshot.docs[0];
         const userData = { id: userDoc.id, ...userDoc.data() } as AppUser;
         const { id: userId, podId } = userData;
+        console.log(`[API /api/log-achievement] Found user: ${userData.name} in pod: ${podId}`);
+
 
         if (!podId) {
             return NextResponse.json({ error: `User ${email} is not assigned to a pod.` }, { status: 400 });
@@ -74,12 +82,15 @@ export async function POST(request: Request) {
         }
 
         if (!activeCompetition) {
+            console.log(`[API /api/log-achievement] No active competition found for pod: ${podId}`);
             return NextResponse.json({ error: `No active competition found for pod ${podId}.` }, { status: 404 });
         }
+        console.log(`[API /api/log-achievement] Found active competition: ${activeCompetition.name}`);
 
         // 3. Parse text for hashtag and multiplier
         const hashtagMatch = text.match(/#(\w+)/);
         if (!hashtagMatch) {
+            console.log(`[API /api/log-achievement] No hashtag found in text: "${text}"`);
             return NextResponse.json({ error: 'No achievement hashtag found in text.' }, { status: 400 });
         }
         const ruleNameFromHashtag = hashtagMatch[1];
@@ -89,6 +100,7 @@ export async function POST(request: Request) {
         const value = multiplierMatch ? parseInt(multiplierMatch[1], 10) : 1;
 
         if (isNaN(value) || value <= 0) {
+             console.log(`[API /api/log-achievement] Invalid multiplier value in text: "${text}"`);
             return NextResponse.json({ error: 'Invalid multiplier value.' }, { status: 400 });
         }
 
@@ -98,10 +110,12 @@ export async function POST(request: Request) {
         );
 
         if (!rule || !rule.id) {
+            console.log(`[API /api/log-achievement] Rule for hashtag "${ruleNameFromHashtag}" not found in competition.`);
             return NextResponse.json({ error: `Rule matching hashtag #${ruleNameFromHashtag} not found in active competition.` }, { status: 404 });
         }
 
         if (rule.type !== 'numeric') {
+             console.log(`[API /api/log-achievement] Attempted to log non-numeric rule "${rule.name}" via API.`);
              return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} is not a numeric achievement and cannot be logged this way.` }, { status: 400 });
         }
 
@@ -121,6 +135,7 @@ export async function POST(request: Request) {
         };
 
         const newLogDoc = await addDoc(collection(db, 'dailyAchievements'), logEntry);
+        console.log(`[API /api/log-achievement] Successfully logged achievement. Log ID: ${newLogDoc.id}`);
 
         return NextResponse.json({
             message: 'Achievement logged successfully.',
