@@ -78,12 +78,16 @@ async function findActiveCompetition(podId: string): Promise<Competition & { id:
 }
 
 function parseAchievementText(text: string): { ruleName: string, value: number } {
+    // This regex matches a hashtag followed by one or more "word" characters (letters, numbers, underscore)
     const hashtagMatch = text.match(/#(\w+)/);
     if (!hashtagMatch) {
         throw new Error('No achievement hashtag (#ruleName) found in text.');
     }
-    const ruleName = hashtagMatch[1];
 
+    // The first capture group is the rule name. Replace underscores with spaces to handle multi-word rules.
+    const ruleName = hashtagMatch[1].replace(/_/g, ' ');
+
+    // Match a multiplier like 'x2' or '*5'
     const multiplierMatch = text.match(/(?:x|\*)\s*(\d+)/i);
     const value = multiplierMatch ? parseInt(multiplierMatch[1], 10) : 1;
 
@@ -105,6 +109,14 @@ async function logAchievement(logData: Omit<DailyAchievementLog, 'id' | 'status'
 export async function POST(request: Request) {
     const apiKey = request.headers.get('x-api-key');
     const serverApiKey = process.env.LOG_ACHIEVEMENT_API_KEY;
+
+    // Log all incoming headers for debugging
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+        headers[key] = value;
+    });
+    console.log('[API] Received Headers:', JSON.stringify(headers, null, 2));
+
 
     if (!serverApiKey) {
         console.error('[API] CRITICAL: LOG_ACHIEVEMENT_API_KEY is not set.');
@@ -198,4 +210,3 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: errorMessage }, { status });
     }
 }
-
