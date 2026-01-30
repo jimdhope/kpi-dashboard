@@ -7,11 +7,8 @@ import { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { startOfDay, endOfDay } from 'date-fns';
 
 // --- Initialize Firebase Admin SDK ---
-// This ensures the SDK is initialized only once.
 if (!admin.apps.length) {
   try {
-    // In a managed Google Cloud environment (like App Hosting), the SDK can auto-initialize.
-    // For local development, you would need to set up a service account.
     admin.initializeApp();
     console.log('[API] Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
@@ -64,7 +61,6 @@ async function findActiveCompetition(podId: string): Promise<Competition & { id:
     for (const docSnap of competitionSnapshot.docs) {
         const comp = { id: docSnap.id, ...docSnap.data() } as (Competition & { id: string });
 
-        // Ensure dates are valid Timestamps before converting
         if (comp.startDate?.toDate && comp.endDate?.toDate) {
             const compStart = startOfDay(comp.startDate.toDate());
             const compEnd = endOfDay(comp.endDate.toDate());
@@ -130,22 +126,30 @@ export async function POST(request: Request) {
 
     try {
         const user = await findUser(email, userName);
+        console.log(`[API] Found user: ${user.name} (Pod ID: ${user.podId || 'None'})`);
+
         if (!user.podId) {
+            console.error(`[API] Bad Request: User ${user.name} is not assigned to a pod.`);
             return NextResponse.json({ error: `User ${user.name} is not assigned to a pod.` }, { status: 400 });
         }
 
         const competition = await findActiveCompetition(user.podId);
+        console.log(`[API] Found active competition: ${competition.name}`);
+
         if (!competition.rules || competition.rules.length === 0) {
             return NextResponse.json({ error: `The active competition "${competition.name}" has no rules configured.` }, { status: 400 });
         }
 
         const { ruleName: ruleNameFromHashtag, value } = parseAchievementText(text);
         const rule = competition.rules.find(r => r.name.toLowerCase() === ruleNameFromHashtag.toLowerCase());
+        
         if (!rule || !rule.id) {
             return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} not found in competition "${competition.name}".` }, { status: 404 });
         }
+        console.log(`[API] Matched rule: ${rule.name} (Type: ${rule.type})`);
 
         if (rule.type !== 'numeric') {
+            console.error(`[API] Bad Request: Rule #${ruleNameFromHashtag} is a checkbox task and cannot be logged via this API.`);
             return NextResponse.json({ error: `Rule #${ruleNameFromHashtag} is a checkbox task and cannot be logged via this API.` }, { status: 400 });
         }
 
@@ -172,10 +176,12 @@ export async function POST(request: Request) {
         }, { status: 201 });
 
     } catch (error: any) {
-        console.error(`[API] Error during processing: ${error.message}`);
-        const isNotFound = /not found/i.test(error.message);
-        const isBadRequest = /multiple users|invalid|required/i.test(error.message);
+        const errorMessage = error.message || 'An unknown internal error occurred.';
+        console.error(`[API] Error during processing: ${errorMessage}`);
+        const isNotFound = /not found/i.test(errorMessage);
+        const isBadRequest = /multiple users|invalid|required|not assigned/i.test(errorMessage);
         const status = isNotFound ? 404 : isBadRequest ? 400 : 500;
-        return NextResponse.json({ error: error.message }, { status });
+        
+        return NextResponse.json({ error: errorMessage }, { status });
     }
 }
