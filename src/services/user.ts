@@ -1,7 +1,11 @@
-import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot, updateDoc } from 'firebase/firestore'; // Added updateDoc
-import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+
+import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot, updateDoc, getDoc } from 'firebase/firestore'; // Added getDoc
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'; // Added signInWithEmailAndPassword, signOut
 import { db, app } from '@/lib/firebase'; // Import Firestore and Auth instances
 import { USER_ROLES, UserRole } from '@/components/user-form'; // Import roles definitions
+import { initializeApp, deleteApp } from 'firebase/app';
+import { firebaseConfig } from '@/lib/firebase-config';
+
 
 const usersCollectionRef = collection(db, 'users');
 const auth = getAuth(app);
@@ -22,12 +26,7 @@ export interface AppUser {
 
 /**
  * Creates a new user in Firebase Authentication and Firestore.
- * Uses the Auth UID as the Firestore document ID for easy linking.
- *
- * WARNING: This basic version creates users with email/password from the client-side.
- * This might not be ideal for production security. Consider using Firebase Functions
- * (callable functions) triggered from the client to handle user creation on the backend,
- * especially if you need more complex validation or logic.
+ * If the user already exists in Auth but not Firestore, it repairs the record.
  *
  * @param name User's full name
  * @param email User's email address
@@ -69,9 +68,6 @@ export async function createUser(name: string, email: string, password: string, 
             avatarInitials: '', // Initialize custom initials as empty
             avatarBgColor: '', // Initialize custom color as empty
             podId: null, // Initialize podId as null
-            // Note: A default placeholder image URL like picsum is removed.
-            // The Avatar component now handles generating initials and random colors
-            // if avatarUrl, avatarInitials, or avatarBgColor are not provided.
         };
         // Use the Auth UID as the Firestore document ID
         const userDocRef = doc(db, 'users', user.uid);
@@ -83,11 +79,58 @@ export async function createUser(name: string, email: string, password: string, 
         return { id: user.uid, ...newUser };
 
     } catch (error: any) {
-        console.error("Error creating user:", error);
-        // Provide more specific error messages
+        console.error("Initial error creating user:", error.code);
+        
+        // --- Orphaned User Recovery Logic ---
         if (error.code === 'auth/email-already-in-use') {
-            throw new Error(`The email address ${email} is already in use by another account.`);
-        } else if (error.code === 'auth/weak-password') {
+             console.log(`Email ${email} already exists in Auth. Attempting to recover orphaned user...`);
+             const tempAppName = `temp-auth-app-${Date.now()}`;
+             const tempApp = initializeApp(firebaseConfig, tempAppName);
+             const tempAuth = getAuth(tempApp);
+
+             try {
+                // Try to sign in with the provided credentials to get the UID
+                const userCredential = await signInWithEmailAndPassword(tempAuth, email, password);
+                const existingUser = userCredential.user;
+                const userDocRef = doc(db, 'users', existingUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (!userDocSnap.exists()) {
+                    // This is an orphan. Create the Firestore doc to fix it.
+                    console.log(`User ${email} is an orphan. Creating Firestore document...`);
+                    const newUserDoc: Omit<AppUser, 'id'> = {
+                        uid: existingUser.uid,
+                        name: name,
+                        email: email,
+                        roles: roles,
+                        avatarUrl: '',
+                        avatarInitials: '',
+                        avatarBgColor: '',
+                        podId: null,
+                    };
+                    await setDoc(userDocRef, newUserDoc);
+                    console.log(`Successfully created Firestore document for orphaned user ${email}.`);
+                    return { id: existingUser.uid, ...newUserDoc };
+                } else {
+                    // User exists in both Auth and Firestore. This is a true duplicate.
+                    throw new Error(`The email address ${email} is already in use by another account.`);
+                }
+
+             } catch (signInError: any) {
+                 // This catch block handles errors from the temporary sign-in attempt.
+                 console.error(`Error during orphan recovery for ${email}:`, signInError.code);
+                 // If sign-in failed (e.g., wrong password for existing user), throw the original error.
+                 throw new Error(`The email address ${email} is already in use. If you are trying to repair a user, ensure the password is correct.`);
+             } finally {
+                // Always clean up the temporary app instance
+                await signOut(tempAuth);
+                await deleteApp(tempApp);
+                console.log(`Temporary app instance ${tempAppName} cleaned up.`);
+             }
+        }
+        
+        // Provide more specific error messages for other cases
+        if (error.code === 'auth/weak-password') {
              throw new Error("The password provided is too weak.");
         } else if (error.code === 'auth/invalid-email') {
             throw new Error(`The email address ${email} is not valid.`);
