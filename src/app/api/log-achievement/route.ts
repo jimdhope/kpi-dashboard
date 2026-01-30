@@ -12,7 +12,6 @@ export async function POST(request: Request) {
     const apiKey = request.headers.get('x-api-key');
     const serverApiKey = process.env.LOG_ACHIEVEMENT_API_KEY;
 
-    // Add a check to ensure the API key is configured on the server
     if (!serverApiKey) {
         console.error('CRITICAL: LOG_ACHIEVEMENT_API_KEY is not set in the environment. The API endpoint is insecure and disabled.');
         return NextResponse.json({ error: 'Internal Server Error: API is not configured.' }, { status: 500 });
@@ -31,7 +30,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
     
-    // Improved logging: Log the actual body and relevant headers received.
     const headersObject: { [key: string]: string } = {};
     request.headers.forEach((value, key) => {
         headersObject[key] = value;
@@ -42,7 +40,6 @@ export async function POST(request: Request) {
 
 
     const { email, text } = body;
-    // Log the extracted values for easier debugging
     console.log(`[API /api/log-achievement] Extracted email: "${email}", Extracted text: "${text}"`);
 
     if (!email || !text) {
@@ -53,10 +50,9 @@ export async function POST(request: Request) {
         const errorMessage = `Missing required fields: ${missingFields.join(' and ')}. Please check the Power Automate flow configuration.`;
         console.error(`[API /api/log-achievement] Validation failed: ${errorMessage}`);
         
-        // Return a more descriptive error including the body that was received.
         return NextResponse.json({ 
             error: errorMessage,
-            receivedBody: body, // Return the problematic body for easier debugging on the client side.
+            receivedBody: body,
         }, { status: 400 });
     }
 
@@ -101,7 +97,8 @@ export async function POST(request: Request) {
                 }
             }
         }
-
+        
+        // **FIX**: Check if a competition was found before proceeding.
         if (!activeCompetition) {
             console.log(`[API /api/log-achievement] No active competition found for pod: ${podId}`);
             return NextResponse.json({ error: `No active competition found for pod ${podId}.` }, { status: 404 });
@@ -122,7 +119,7 @@ export async function POST(request: Request) {
         }
         const ruleNameFromHashtag = hashtagMatch[1];
         
-        // Look for multipliers like x2, x 2, *2, * 2
+        // **FIX**: Improved regex for multiplier
         const multiplierMatch = text.match(/(?:x|\*)\s*(\d+)/i);
         const value = multiplierMatch ? parseInt(multiplierMatch[1], 10) : 1;
 
@@ -136,6 +133,7 @@ export async function POST(request: Request) {
             (r) => r.name.toLowerCase() === ruleNameFromHashtag.toLowerCase()
         );
 
+        // **FIX**: Check if a rule was found
         if (!rule || !rule.id) {
             console.log(`[API /api/log-achievement] Rule for hashtag "${ruleNameFromHashtag}" not found in competition.`);
             return NextResponse.json({ error: `Rule matching hashtag #${ruleNameFromHashtag} not found in active competition.` }, { status: 404 });
