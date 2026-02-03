@@ -56,82 +56,105 @@ export interface TrackerData {
 }
 
 
-// Helper function to generate the KPI key string
+// --- Internal Generic Webhook Sender ---
+
+/**
+ * Internal function to construct and send an Adaptive Card to a Teams webhook.
+ * This ensures the fetch request and payload structure are identical for all sends.
+ * @param webhookUrl The Microsoft Teams webhook URL.
+ * @param cardBody The array of Adaptive Card body elements.
+ * @throws Error if the webhook request fails.
+ */
+async function _sendAdaptiveCardToTeams(webhookUrl: string, cardBody: any[]) {
+    if (!webhookUrl) {
+        throw new Error("Webhook URL is not configured.");
+    }
+    
+    const webhookPayload = {
+        type: "message",
+        attachments: [
+            {
+                contentType: "application/vnd.microsoft.card.adaptive",
+                contentUrl: null, // This is important for Teams
+                content: {
+                    $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+                    type: "AdaptiveCard",
+                    version: "1.4",
+                    body: cardBody,
+                },
+            },
+        ],
+    };
+
+    console.log("[TeamsWebhook] Generic sender payload:", JSON.stringify(webhookPayload, null, 2));
+
+    const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': '' // Explicitly clear Authorization header
+        },
+        body: JSON.stringify(webhookPayload),
+        cache: 'no-store',
+    });
+    
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[TeamsWebhook] Failed to send webhook. Status: ${response.status}, Response: ${errorText}`);
+        throw new Error(`Failed to send message to Teams (Status: ${response.status}). Response: ${errorText}`);
+    }
+
+    console.log(`[TeamsWebhook] Successfully sent message via generic sender.`);
+}
+
+
+// --- Helper Functions for Daily Data ---
+
 const generateKpiKey = (rules: RuleFormData[]): string => {
   return rules
-    .filter(rule => rule.type === 'numeric') // Only include numeric rules in the key
+    .filter(rule => rule.type === 'numeric')
     .map(rule => `${(rule.emoji && rule.emoji.trim() !== '') ? rule.emoji : '❓'}=${rule.name}`)
     .join('  ');
 };
 
-// Updated helper function to generate Adaptive Card elements for the agent scores table
 const generateAgentScoresAdaptiveCardElements = (agentScores: AgentScoreForTeams[], taskRules: RuleFormData[]): any[] => {
     if (agentScores.length === 0) {
         return [{ type: "TextBlock", text: "No agent scores recorded for today.", wrap: true, spacing: "Medium" }];
     }
 
-    // Header Row
     const headerRow = {
         type: "ColumnSet",
-        spacing: "Small", // Reduced spacing
+        spacing: "Small",
         columns: [
-            {
-                type: "Column",
-                width: "stretch",
-                items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }]
-            },
-            {
-                type: "Column",
-                width: "stretch",
-                items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
-            },
-            {
-                type: "Column",
-                width: "auto", // Adjust width as needed for points
-                items: [{ type: "TextBlock", text: "Score", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }]
-            }
+            { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }] },
+            { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Center" }] },
+            { type: "Column", width: "auto", items: [{ type: "TextBlock", text: "Score", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }] }
         ]
     };
 
-    // Agent Data Rows
     const agentRows = agentScores.map(score => {
-        // Combine numeric emojis with task emojis
         const taskEmojis = score.completedTasks?.map(t => t.ruleEmoji).join('') || '';
         const achievementsDisplay = score.isAbsent ? "N/A" : (`${score.emojiString || ''}${taskEmojis}`.trim() || '-');
         const scoreDisplay = score.isAbsent ? "N/A" : `${score.totalPoints.toLocaleString()}`;
 
         return {
             type: "ColumnSet",
-            spacing: "Small", // Spacing between rows
-            separator: true, // Adds a subtle line between rows
+            spacing: "Small",
+            separator: true,
             columns: [
-                {
-                    type: "Column",
-                    width: "stretch",
-                    items: [{ type: "TextBlock", text: `${score.teamEmoji || ''} ${score.agentFirstName}`, wrap: true }]
-                },
-                {
-                    type: "Column",
-                    width: "stretch",
-                    items: [{ type: "TextBlock", text: achievementsDisplay, wrap: true, horizontalAlignment: "Center"}]
-                },
-                {
-                    type: "Column",
-                    width: "auto",
-                    items: [{ type: "TextBlock", text: scoreDisplay, wrap: true, horizontalAlignment: "Right"}]
-                }
+                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: `${score.teamEmoji || ''} ${score.agentFirstName}`, wrap: true }] },
+                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: achievementsDisplay, wrap: true, horizontalAlignment: "Center"}] },
+                { type: "Column", width: "auto", items: [{ type: "TextBlock", text: scoreDisplay, wrap: true, horizontalAlignment: "Right"}] }
             ]
         };
     });
 
-     const taskKey = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
-     const taskKeyElement = taskKey ? { type: "TextBlock", text: `**Tasks:** ${taskKey}`, wrap: true, spacing: "Small", size: "Small" } : null;
+    const taskKey = taskRules.map(rule => `${rule.emoji || '✅'}=${rule.name}`).join('  ');
+    const taskKeyElement = taskKey ? { type: "TextBlock", text: `**Tasks:** ${taskKey}`, wrap: true, spacing: "Small", size: "Small" } : null;
 
     return [headerRow, ...agentRows, taskKeyElement].filter(Boolean);
 };
 
-
-// Helper function to generate the pod targets summary string
 const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[]): string => {
   if (podTargetSummary.length === 0) return "";
   return podTargetSummary
@@ -139,6 +162,8 @@ const generatePodTargetsSummary = (podTargetSummary: PodTargetSummaryForTeams[])
     .join('   |   ');
 };
 
+
+// --- Exposed Webhook Functions ---
 
 export const sendTeamsUpdate = async (
     podName: string,
@@ -151,106 +176,50 @@ export const sendTeamsUpdate = async (
     teamBonusSummary: TeamBonusSummary[],
     teamTotalScores: TeamTotalScore[]
 ) => {
-    console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}, Webhook URL Provided: ${!!webhookUrl}`);
-    let currentStep = "Initial Checks";
-
     try {
-        if (!webhookUrl) {
-            console.log(`[sendTeamsUpdate] No webhook URL provided for pod ${podName}. Skipping notification.`);
-            throw new Error(`No webhook URL configured for pod ${podName}.`);
-        }
-
-        currentStep = "Formatting Data";
         const numericRules = rules.filter(r => r.type === 'numeric');
         const taskRules = rules.filter(r => r.type === 'checkbox');
         const kpiKeyText = generateKpiKey(numericRules);
-
-        // Generate team standings text with a line break
         const teamStandingsText = `${teamTotalScores.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.totalPoints.toLocaleString()}**`).join(' | ')}`;
-
-        // Generate daily bonus text if applicable
         const dailyBonusText = teamBonusSummary.length > 0
             ? `**Today's Adjustments:** ${teamBonusSummary.map(s => `${s.teamEmoji || '🏆'} ${s.teamName}: **${s.bonusPoints > 0 ? '+' : ''}${s.bonusPoints}**`).join(' | ')}`
             : null;
-
-        // Generate pod target text if applicable
         const podTargetsText = podTargetSummaryForTeams.length > 0
             ? `**Pod Targets:** ${generatePodTargetsSummary(podTargetSummaryForTeams)}`
             : null;
 
-        // Construct the Adaptive Card body elements
-        const adaptiveCardBodyElements = [
+        const cardBody = [
             {
-                "type": "TextBlock",
-                "text": `**Key:** ${kpiKeyText}`,
-                "wrap": true,
-                "spacing": "Medium",
-                "size": "Small"
+                type: "TextBlock",
+                text: `**Key:** ${kpiKeyText}`,
+                wrap: true,
+                spacing: "Medium",
+                size: "Small"
             },
-            // Wrap the agent scores table in a styled container
             {
-                "type": "Container",
-                "style": "emphasis",
-                "spacing": "Medium",
-                "items": generateAgentScoresAdaptiveCardElements(agentScoresForTeams, taskRules)
+                type: "Container",
+                style: "emphasis",
+                spacing: "Medium",
+                items: generateAgentScoresAdaptiveCardElements(agentScoresForTeams, taskRules)
             },
-            // Add Pod Targets if they exist
-            ...(podTargetsText ? [{ "type": "TextBlock", "text": podTargetsText, "wrap": true, "separator": true, "spacing": "Medium" }] : []),
-            // Add team standings and bonuses at the end as plain text
+            ...(podTargetsText ? [{ type: "TextBlock", text: podTargetsText, wrap: true, separator: true, spacing: "Medium" }] : []),
             {
-                "type": "TextBlock",
-                "text": `**Competition Standings:** ${teamStandingsText}`,
-                "wrap": true,
-                "separator": true,
-                "spacing": "Medium"
+                type: "TextBlock",
+                text: `**Competition Standings:** ${teamStandingsText}`,
+                wrap: true,
+                separator: true,
+                spacing: "Medium"
             },
-             ...(dailyBonusText ? [{ "type": "TextBlock", "text": dailyBonusText, "wrap": true, "size": "Small", "spacing": "Small" }] : [])
+             ...(dailyBonusText ? [{ type: "TextBlock", text: dailyBonusText, wrap: true, size: "Small", spacing: "Small" }] : [])
         ];
-
-        const webhookPayload = {
-            "type": "message",
-            "attachments": [
-                {
-                    "contentType": "application/vnd.microsoft.card.adaptive",
-                    "contentUrl": null, // Must be null if content is provided directly
-                    "content": {
-                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                        "type": "AdaptiveCard",
-                        "version": "1.4",
-                        "body": adaptiveCardBodyElements
-                    }
-                }
-            ]
-        };
-
-
-        currentStep = "Sending Webhook Request";
-        console.log("[sendTeamsUpdate] Webhook Payload being sent:", JSON.stringify(webhookPayload, null, 2));
-
-
-        const response = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': '' // Explicitly clear Authorization header
-            },
-            body: JSON.stringify(webhookPayload),
-            cache: 'no-store',
-        });
-
-        console.log(`[sendTeamsUpdate] Webhook response status: ${response.status}, ok: ${response.ok}`);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[sendTeamsUpdate] Failed to send webhook to Teams for pod ${podName}. Status: ${response.status}, Response: ${errorText}`);
-            throw new Error(`Failed to send message to Teams (Status: ${response.status}). Response: ${errorText}`);
-        }
-
+        
+        console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}`);
+        await _sendAdaptiveCardToTeams(webhookUrl, cardBody);
         console.log(`[sendTeamsUpdate] Successfully sent scores to Teams for pod ${podName}.`);
 
     } catch (error: any) {
-        console.error(`[sendTeamsUpdate] Error during step "${currentStep}" for pod ${podName}:`, error);
-        throw new Error(`Error during Teams update (${currentStep}): ${error.message}`);
+        console.error(`[sendTeamsUpdate] Error for pod ${podName}:`, error);
+        throw new Error(`Error during Teams update for daily scores: ${error.message}`);
     }
 };
 
@@ -259,103 +228,51 @@ export const sendTrackerDataToTeams = async (
     date: Date,
     data: TrackerData[]
 ) => {
-    if (!webhookUrl) {
-        throw new Error("Webhook URL is not configured.");
-    }
     if (data.length === 0) {
         throw new Error("No tracker data to send.");
     }
 
-    // --- Table Header ---
-    const headerRow = {
-        type: "ColumnSet",
-        spacing: "Small",
-        columns: [
-            {
-                type: "Column",
-                width: "stretch",
-                items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }]
-            },
-            {
-                type: "Column",
-                width: "stretch",
-                items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }]
-            }
-        ]
-    };
+    try {
+        const headerRow = {
+            type: "ColumnSet",
+            spacing: "Small",
+            columns: [
+                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }] },
+                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }] }
+            ]
+        };
 
-    // --- Agent Data Rows ---
-    const agentRows = data.map(agentData => {
-        const achievementsText = agentData.achievements
-            .map(ach => `${ach.kpiName}: **${ach.value}**`)
-            .join('  \n'); // Use markdown for new lines
-
-        return {
+        const agentRows = data.map(agentData => ({
             type: "ColumnSet",
             spacing: "Small",
             separator: true,
             columns: [
-                {
-                    type: "Column",
-                    width: "stretch",
-                    items: [{ type: "TextBlock", text: agentData.agentName, wrap: true }]
-                },
-                {
-                    type: "Column",
-                    width: "stretch",
-                    items: [{ type: "TextBlock", text: achievementsText, wrap: true, horizontalAlignment: "Right"}]
-                }
+                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: agentData.agentName, wrap: true }] },
+                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: agentData.achievements.map(ach => `${ach.kpiName}: **${ach.value}**`).join('  \n'), wrap: true, horizontalAlignment: "Right" }] }
             ]
-        };
-    });
+        }));
 
-
-    const webhookPayload = {
-        type: "message",
-        attachments: [
+        const cardBody = [
             {
-                contentType: "application/vnd.microsoft.card.adaptive",
-                contentUrl: null,
-                content: {
-                    $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
-                    type: "AdaptiveCard",
-                    version: "1.4", // Match the working schema version
-                    body: [
-                        {
-                            type: "TextBlock",
-                            text: `Tracker Results for ${format(date, 'PPP')}`,
-                            weight: "Bolder",
-                            size: "Medium",
-                        },
-                        {
-                            type: "Container",
-                            style: "emphasis",
-                            spacing: "Medium",
-                            items: [headerRow, ...agentRows]
-                        }
-                    ],
-                },
+                type: "TextBlock",
+                text: `Tracker Results for ${format(date, 'PPP')}`,
+                weight: "Bolder",
+                size: "Medium",
             },
-        ],
-    };
+            {
+                type: "Container",
+                style: "emphasis",
+                spacing: "Medium",
+                items: [headerRow, ...agentRows]
+            }
+        ];
 
-    try {
-        const response = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': '' // Explicitly clear Authorization header
-            },
-            body: JSON.stringify(webhookPayload),
-            cache: 'no-store',
-        });
+        console.log(`[sendTrackerDataToTeams] Triggered for Date: ${date.toISOString()}`);
+        await _sendAdaptiveCardToTeams(webhookUrl, cardBody);
+        console.log(`[sendTrackerDataToTeams] Successfully sent tracker data to Teams.`);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to send message to Teams (Status: ${response.status}). Response: ${errorText}`);
-        }
     } catch (error: any) {
-        console.error("Error sending tracker data to Teams:", error);
-        throw error; // Re-throw to be caught by the calling function
+        console.error(`[sendTrackerDataToTeams] Error:`, error);
+        throw new Error(`Error during Teams update for trackers: ${error.message}`);
     }
 };
