@@ -36,7 +36,6 @@ export function TrackerCard({ kpi, value, isSaving, onValueChange, disabled = fa
     <Card className={cn("shadow-sm overflow-hidden flex flex-col h-full", disabled && "opacity-50 bg-muted/50")}>
        <CardHeader className="p-3 pb-0">
          <CardTitle className="text-sm font-medium truncate flex items-center gap-2">
-            <span className="text-lg font-semibold">{kpi.initials}</span>
             <span className="truncate" title={kpi.name}>{kpi.name}</span>
          </CardTitle>
        </CardHeader>
