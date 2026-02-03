@@ -266,20 +266,49 @@ export const sendTrackerDataToTeams = async (
         throw new Error("No tracker data to send.");
     }
 
-    // Use a FactSet for a simpler, more robust layout.
-    const facts = data.flatMap((agentData, agentIndex) => {
-        const agentFacts = agentData.achievements.map(ach => ({
-            title: agentIndex === 0 ? `${agentData.agentName} - ${ach.kpiName}` : ` - ${ach.kpiName}`,
-            value: String(ach.value)
-        }));
-        
-        const agentTitleFact = {
-            title: `**${agentData.agentName}**`,
-            value: agentData.achievements.map(ach => `${ach.kpiName}: **${ach.value}**`).join(', ')
-        }
+    // --- Table Header ---
+    const headerRow = {
+        type: "ColumnSet",
+        spacing: "Small",
+        columns: [
+            {
+                type: "Column",
+                width: "stretch",
+                items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }]
+            },
+            {
+                type: "Column",
+                width: "stretch",
+                items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }]
+            }
+        ]
+    };
 
-        return agentTitleFact;
+    // --- Agent Data Rows ---
+    const agentRows = data.map(agentData => {
+        const achievementsText = agentData.achievements
+            .map(ach => `${ach.kpiName}: **${ach.value}**`)
+            .join('  \n'); // Use markdown for new lines
+
+        return {
+            type: "ColumnSet",
+            spacing: "Small",
+            separator: true,
+            columns: [
+                {
+                    type: "Column",
+                    width: "stretch",
+                    items: [{ type: "TextBlock", text: agentData.agentName, wrap: true }]
+                },
+                {
+                    type: "Column",
+                    width: "stretch",
+                    items: [{ type: "TextBlock", text: achievementsText, wrap: true, horizontalAlignment: "Right"}]
+                }
+            ]
+        };
     });
+
 
     const webhookPayload = {
         type: "message",
@@ -299,10 +328,10 @@ export const sendTrackerDataToTeams = async (
                             size: "Medium",
                         },
                         {
-                            type: "FactSet",
-                            facts: facts,
-                            separator: true,
-                            spacing: "Medium"
+                            type: "Container",
+                            style: "emphasis",
+                            spacing: "Medium",
+                            items: [headerRow, ...agentRows]
                         }
                     ],
                 },
@@ -330,5 +359,3 @@ export const sendTrackerDataToTeams = async (
         throw error; // Re-throw to be caught by the calling function
     }
 };
-
-    
