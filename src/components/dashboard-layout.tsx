@@ -14,8 +14,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Home, Users, Settings, Trophy, Megaphone, ShieldCheck, UsersRound, Award, CheckSquare, Star, ClipboardList, Target, UserSquare, FileText, MessageSquare, Swords, Database, BarChartHorizontal, LineChart, GanttChartSquare } from 'lucide-react'; // Added GanttChartSquare
@@ -31,6 +29,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { RoleSwitcher } from './role-switcher';
 import { AppLogo } from './app-logo';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -115,184 +115,219 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-
-               <SidebarGroup>
-                    <SidebarGroupLabel>Analysis</SidebarGroupLabel>
-                    <SidebarMenuItem>
-                        <Link href="/admin/stats" passHref>
-                            <SidebarMenuButton tooltip="Stats" isActive={currentPath.startsWith('/admin/stats')}>
-                                <GanttChartSquare />
-                                <span>Stats</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                </SidebarGroup>
-
-
-              <SidebarGroup>
-                  <SidebarGroupLabel>Daily Data</SidebarGroupLabel>
-                  <SidebarMenuItem>
-                    <Link href="/admin/log-achievements" passHref>
-                        <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/admin/log-achievements'}>
-                        <CheckSquare />
-                        <span>Log Achievements</span>
-                        </SidebarMenuButton>
-                    </Link>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <Link href="/admin/daily-scores" passHref>
-                        <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/admin/daily-scores'}>
-                            <ClipboardList />
-                            <span>Daily Scores</span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                     <SidebarMenuItem>
-                        <Link href="/admin/rps-scores" passHref>
-                        <SidebarMenuButton tooltip="RPS Scores" isActive={currentPath === '/admin/rps-scores'}>
-                            <Swords />
-                            <span>RPS Scores</span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-              </SidebarGroup>
-
-
-              <SidebarGroup>
-                <SidebarGroupLabel>Competitions</SidebarGroupLabel>
-                <SidebarMenuItem>
-                  <Link href="/admin/competitions" passHref>
-                      <SidebarMenuButton tooltip="Competitions" isActive={currentPath.startsWith('/admin/competitions')}>
-                        <Trophy />
-                        <span>Competitions</span>
-                      </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <Link href="/admin/pod-targets" passHref>
-                      <SidebarMenuButton tooltip="Pod Daily Targets" isActive={currentPath === '/admin/pod-targets'}>
-                          <Target />
-                          <span>Pod Targets</span>
-                      </SidebarMenuButton>
-                      </Link>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <Link href="/admin/teams" passHref>
-                          <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}>
-                            <Users />
-                            <span>Teams</span>
-                          </SidebarMenuButton>
-                      </Link>
-                  </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <Link href="/admin/leaderboard" passHref>
-                        <SidebarMenuButton tooltip="Competition Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
-                            <Star />
-                            <span>Leaderboard</span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <Link href="/admin/certificates" passHref>
-                        <SidebarMenuButton tooltip="Generate Certificates" isActive={currentPath === '/admin/certificates'}>
-                            <Award />
-                            <span>Certificates</span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-              </SidebarGroup>
-
-               <SidebarGroup>
-                <SidebarGroupLabel>Performance</SidebarGroupLabel>
-                 <SidebarMenuItem>
-                    <Link href="/admin/additional-kpis" passHref>
-                        <SidebarMenuButton tooltip="Setup Additional KPIs" isActive={currentPath.startsWith('/admin/additional-kpis')}>
-                            <Settings />
-                            <span>Setup KPIs</span>
-                        </SidebarMenuButton>
-                    </Link>
-                 </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <Link href="/admin/additional-scores" passHref>
-                        <SidebarMenuButton tooltip="Log Additional Scores" isActive={currentPath.startsWith('/admin/additional-scores')}>
-                            <CheckSquare />
-                            <span>Log Scores</span>
-                        </SidebarMenuButton>
-                    </Link>
-                 </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <Link href="/admin/additional-leaderboard" passHref>
-                        <SidebarMenuButton tooltip="Additional Leaderboard" isActive={currentPath.startsWith('/admin/additional-leaderboard')}>
-                            <Star />
-                            <span>Leaderboard</span>
-                        </SidebarMenuButton>
-                    </Link>
-                 </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <Link href="/admin/kpi-breakdown" passHref>
-                        <SidebarMenuButton tooltip="KPI Breakdown" isActive={currentPath.startsWith('/admin/kpi-breakdown')}>
-                            <BarChartHorizontal />
-                            <span>KPI Breakdown</span>
-                        </SidebarMenuButton>
-                    </Link>
-                 </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <Link href="/admin/performance-charts" passHref>
-                        <SidebarMenuButton tooltip="Performance Charts" isActive={currentPath.startsWith('/admin/performance-charts')}>
-                            <LineChart />
-                            <span>Performance Charts</span>
-                        </SidebarMenuButton>
-                    </Link>
-                 </SidebarMenuItem>
-              </SidebarGroup>
-
-              <SidebarGroup>
-                <SidebarGroupLabel>Management</SidebarGroupLabel>
-                <SidebarMenuItem>
-                  <Link href="/admin/campaigns" passHref>
-                      <SidebarMenuButton tooltip="Campaigns" isActive={currentPath === '/admin/campaigns'}>
-                        <Megaphone />
-                        <span>Campaigns</span>
-                      </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <Link href="/admin/pods" passHref>
-                      <SidebarMenuButton tooltip="Pods" isActive={currentPath === '/admin/pods'}>
-                        <ShieldCheck />
-                        <span>Pods</span>
-                      </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <Link href="/admin/users" passHref>
-                      <SidebarMenuButton tooltip="Users" isActive={currentPath === '/admin/users'}>
-                        <UsersRound />
-                        <span>Users</span>
-                      </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <Link href="/admin/message-of-the-day" passHref>
-                    <SidebarMenuButton tooltip="Dashboard Settings" isActive={currentPath === '/admin/message-of-the-day'}>
-                      <Settings />
-                      <span>Dashboard Settings</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              </SidebarGroup>
-
-              <SidebarSeparator />
-              <SidebarMenuItem>
-                  <Link href="/agent" passHref>
-                      <SidebarMenuButton tooltip="View Agent Dashboard" isActive={currentPath.startsWith('/agent')}>
-                          <UserSquare />
-                          <span>View Agent Dashboard</span>
-                      </SidebarMenuButton>
-                  </Link>
-              </SidebarMenuItem>
-
             </SidebarMenu>
+            
+            <Accordion type="multiple" defaultValue={['analysis', 'daily-data', 'competitions', 'trackers', 'management']} className="w-full">
+
+                <AccordionItem value="analysis" className="border-none">
+                    <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
+                        Analysis
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-4 pt-1 pb-0">
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <Link href="/admin/stats" passHref>
+                                    <SidebarMenuButton tooltip="Stats" isActive={currentPath.startsWith('/admin/stats')}>
+                                        <GanttChartSquare />
+                                        <span>Stats</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="daily-data" className="border-none">
+                    <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
+                       Daily Data
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-4 pt-1 pb-0">
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <Link href="/admin/log-achievements" passHref>
+                                    <SidebarMenuButton tooltip="Log Achievements" isActive={currentPath === '/admin/log-achievements'}>
+                                    <CheckSquare />
+                                    <span>Log Achievements</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/daily-scores" passHref>
+                                <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/admin/daily-scores'}>
+                                    <ClipboardList />
+                                    <span>Daily Scores</span>
+                                </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/rps-scores" passHref>
+                                <SidebarMenuButton tooltip="RPS Scores" isActive={currentPath === '/admin/rps-scores'}>
+                                    <Swords />
+                                    <span>RPS Scores</span>
+                                </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="competitions" className="border-none">
+                    <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
+                       Competitions
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-4 pt-1 pb-0">
+                        <SidebarMenu>
+                             <SidebarMenuItem>
+                                <Link href="/admin/competitions" passHref>
+                                    <SidebarMenuButton tooltip="Competitions" isActive={currentPath.startsWith('/admin/competitions')}>
+                                        <Trophy />
+                                        <span>Competitions</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/pod-targets" passHref>
+                                <SidebarMenuButton tooltip="Pod Daily Targets" isActive={currentPath === '/admin/pod-targets'}>
+                                    <Target />
+                                    <span>Pod Targets</span>
+                                </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/teams" passHref>
+                                    <SidebarMenuButton tooltip="Teams" isActive={currentPath === '/admin/teams'}>
+                                        <Users />
+                                        <span>Teams</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/leaderboard" passHref>
+                                <SidebarMenuButton tooltip="Competition Leaderboard" isActive={currentPath === '/admin/leaderboard'}>
+                                    <Star />
+                                    <span>Leaderboard</span>
+                                </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/certificates" passHref>
+                                <SidebarMenuButton tooltip="Generate Certificates" isActive={currentPath === '/admin/certificates'}>
+                                    <Award />
+                                    <span>Certificates</span>
+                                </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </AccordionContent>
+                </AccordionItem>
+
+                 <AccordionItem value="trackers" className="border-none">
+                    <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
+                       Trackers
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-4 pt-1 pb-0">
+                        <SidebarMenu>
+                             <SidebarMenuItem>
+                                <Link href="/admin/additional-kpis" passHref>
+                                    <SidebarMenuButton tooltip="Setup Additional KPIs" isActive={currentPath.startsWith('/admin/additional-kpis')}>
+                                        <Settings />
+                                        <span>Setup KPIs</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/additional-scores" passHref>
+                                    <SidebarMenuButton tooltip="Log Additional Scores" isActive={currentPath.startsWith('/admin/additional-scores')}>
+                                        <CheckSquare />
+                                        <span>Log Scores</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/additional-leaderboard" passHref>
+                                    <SidebarMenuButton tooltip="Additional Leaderboard" isActive={currentPath.startsWith('/admin/additional-leaderboard')}>
+                                        <Star />
+                                        <span>Leaderboard</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/kpi-breakdown" passHref>
+                                    <SidebarMenuButton tooltip="KPI Breakdown" isActive={currentPath.startsWith('/admin/kpi-breakdown')}>
+                                        <BarChartHorizontal />
+                                        <span>KPI Breakdown</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/performance-charts" passHref>
+                                    <SidebarMenuButton tooltip="Performance Charts" isActive={currentPath.startsWith('/admin/performance-charts')}>
+                                        <LineChart />
+                                        <span>Performance Charts</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="management" className="border-none">
+                    <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
+                       Management
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-4 pt-1 pb-0">
+                        <SidebarMenu>
+                           <SidebarMenuItem>
+                            <Link href="/admin/campaigns" passHref>
+                                <SidebarMenuButton tooltip="Campaigns" isActive={currentPath === '/admin/campaigns'}>
+                                    <Megaphone />
+                                    <span>Campaigns</span>
+                                </SidebarMenuButton>
+                            </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                            <Link href="/admin/pods" passHref>
+                                <SidebarMenuButton tooltip="Pods" isActive={currentPath === '/admin/pods'}>
+                                    <ShieldCheck />
+                                    <span>Pods</span>
+                                </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/users" passHref>
+                                <SidebarMenuButton tooltip="Users" isActive={currentPath === '/admin/users'}>
+                                    <UsersRound />
+                                    <span>Users</span>
+                                </SidebarMenuButton>
+                            </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                            <Link href="/admin/message-of-the-day" passHref>
+                                <SidebarMenuButton tooltip="Dashboard Settings" isActive={currentPath === '/admin/message-of-the-day'}>
+                                <Settings />
+                                <span>Dashboard Settings</span>
+                                </SidebarMenuButton>
+                            </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </AccordionContent>
+                </AccordionItem>
+
+            </Accordion>
+
+
+            <SidebarMenu>
+                <SidebarSeparator />
+                <SidebarMenuItem>
+                    <Link href="/agent" passHref>
+                        <SidebarMenuButton tooltip="View Agent Dashboard" isActive={currentPath.startsWith('/agent')}>
+                            <UserSquare />
+                            <span>View Agent Dashboard</span>
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+             </SidebarMenu>
+
           </SidebarContent>
           <SidebarFooter className="p-4 border-t border-sidebar-border">
             <div className="flex items-center gap-3">
