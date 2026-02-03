@@ -285,6 +285,14 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/admin/trackers/log" passHref>
+                                    <SidebarMenuButton tooltip="Log Scores" isActive={currentPath.startsWith('/admin/trackers/log')}>
+                                        <CheckSquare />
+                                        <span>Log Scores</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
                         </SidebarMenu>
                     </AccordionContent>
                 </AccordionItem>
