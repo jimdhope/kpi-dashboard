@@ -88,10 +88,10 @@ export interface TeamBonusLog {
 interface AchievementInputState {
   [agentId: string]: {
     [ruleId: string]: {
-      value: number; // Changed to number
+      value: string; // Changed to string to support input
       existingLogId?: string;
     };
-    isPresent?: boolean; // Changed from isNA to isPresent
+    isPresent?: boolean;
     naLogId?: string;
   };
 }
@@ -314,7 +314,7 @@ export default function AdminLogAchievementsPage() {
             competitionRules.forEach(rule => {
                 if (!rule.id || rule.type === 'checkbox') return;
                 const existingLog = agentLogs.find(log => log.ruleId === rule.id && log.status !== 'absent');
-                initialInputs[agent.id!][rule.id] = { value: existingLog ? existingLog.value : 0, existingLogId: existingLog?.id };
+                initialInputs[agent.id!][rule.id] = { value: existingLog ? String(existingLog.value) : '0', existingLogId: existingLog?.id };
             });
         });
         setAchievementInputs(initialInputs);
@@ -362,7 +362,7 @@ export default function AdminLogAchievementsPage() {
   }, [activeCompetitionId, selectedPodId, selectedDate, currentUserUid, agents, competitionRules, teams]);
 
 
-  const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: number) => {
+  const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: string) => {
     if (!selectedPodId || !currentUserUid || !activeCompetitionId) {
       console.error("Pod, user, or active competition information missing for auto-save.");
       return;
@@ -373,7 +373,13 @@ export default function AdminLogAchievementsPage() {
        console.error("Rule or input data not found for auto-save. Rule:", rule);
       return;
     }
-     const points = value * (rule.points || 0);
+    
+    const numericValue = value === '' ? 0 : parseInt(value, 10);
+    if (isNaN(numericValue) || numericValue < 0) {
+        // Silently ignore invalid input for now to prevent bad data
+        return;
+    }
+    const points = numericValue * (rule.points || 0);
 
      const savingKey = `${agentId}-${ruleId}`;
      setIsSaving(prev => ({ ...prev, [savingKey]: true }));
@@ -387,14 +393,13 @@ export default function AdminLogAchievementsPage() {
          ruleId: rule.id!,
          ruleName: rule.name,
          date: dateTimestamp,
-         value: value,
+         value: numericValue,
          points: points,
          loggedAt: serverTimestamp() as Timestamp,
          loggedBy: currentUserUid,
        };
 
        const achievementsRef = collection(db, 'dailyAchievements');
-       // **THE FIX**: Instead of getting logId from state, query for it directly to find the single source of truth.
         const logQuery = query(
             achievementsRef,
             where('agentId', '==', agentId),
@@ -408,31 +413,27 @@ export default function AdminLogAchievementsPage() {
 
 
        if (existingLogDoc) {
-         // If a log exists, UPDATE it. If the new value is 0, DELETE it.
          const docRef = doc(achievementsRef, existingLogDoc.id);
-         if (value === 0) {
+         if (numericValue === 0) {
              await deleteDoc(docRef);
-             // Update state to remove the logId, preventing future incorrect updates
              setAchievementInputs(prev => {
                  const newState = { ...prev };
                  if (newState[agentId] && newState[agentId][ruleId]) {
-                     newState[agentId][ruleId].existingLogId = undefined;
+                     delete newState[agentId][ruleId].existingLogId;
+                     newState[agentId][ruleId].value = '0';
                  }
                  return newState;
              });
          } else {
             await setDoc(docRef, logEntry, { merge: true });
          }
-       } else if (value > 0) {
-         // If NO log exists and the value is positive, CREATE a new one.
+       } else if (numericValue > 0) {
          const newDocRef = doc(collection(db, "dailyAchievements"));
          await setDoc(newDocRef, logEntry);
-
-         // Update state with the new ID immediately for subsequent saves
          setAchievementInputs(prev => {
              const newState = { ...prev };
              if (!newState[agentId]) newState[agentId] = {};
-             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: value, existingLogId: newDocRef.id };
+             if (!newState[agentId][ruleId]) newState[agentId][ruleId] = { value: String(numericValue), existingLogId: newDocRef.id };
              else { newState[agentId][ruleId].existingLogId = newDocRef.id; }
              return newState;
          });
@@ -452,22 +453,24 @@ export default function AdminLogAchievementsPage() {
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), [handleSaveAchievement]);
 
-  const handleValueChange = useCallback((agentId: string, ruleId: string, change: number) => {
-    const currentValue = achievementInputs[agentId]?.[ruleId]?.value ?? 0;
-    const newValue = Math.max(0, currentValue + change);
+   const handleInputChange = useCallback((agentId: string, ruleId: string, newValue: string) => {
+    // Allow empty string for clearing, but prevent non-numeric/negative values
+    if (newValue !== '' && (!/^\d*$/.test(newValue))) {
+      return; // Ignore if not a valid integer string
+    }
 
     setAchievementInputs(prev => ({
       ...prev,
       [agentId]: {
         ...prev[agentId],
         [ruleId]: {
-          ...(prev[agentId]?.[ruleId] || { value: 0 }),
+          ...(prev[agentId]?.[ruleId] || { value: '0' }),
           value: newValue,
         },
       },
     }));
     debouncedSave(agentId, ruleId, newValue);
-  }, [achievementInputs, debouncedSave]);
+   }, [debouncedSave]);
 
 
   const handlePresenceChange = async (agentId: string, isPresent: boolean) => {
@@ -863,10 +866,9 @@ export default function AdminLogAchievementsPage() {
                                                 {rule.type === 'numeric' ? (
                                                     <AchievementCard
                                                         rule={rule}
-                                                        currentValue={achievementInputs[agent.id!]?.[rule.id!]?.value ?? 0}
+                                                        value={achievementInputs[agent.id!]?.[rule.id!]?.value ?? '0'}
                                                         isSaving={isSaving[`${agent.id!}-${rule.id!}`] || false}
-                                                        onIncrement={() => handleValueChange(agent.id!, rule.id!, 1)}
-                                                        onDecrement={() => handleValueChange(agent.id!, rule.id!, -1)}
+                                                        onValueChange={(newValue) => handleInputChange(agent.id!, rule.id!, newValue)}
                                                         disabled={!achievementInputs[agent.id!]?.isPresent}
                                                     />
                                                 ) : (

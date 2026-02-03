@@ -1,23 +1,37 @@
-
 'use client';
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Plus, Minus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RuleFormData } from '@/models/types';
 
 interface AchievementCardProps {
   rule: RuleFormData;
-  currentValue: number;
+  value: string; // Value is now a string to support the input field
   isSaving: boolean;
-  onIncrement: () => void;
-  onDecrement: () => void;
+  onValueChange: (newValue: string) => void; // A single handler for all changes
   disabled?: boolean;
 }
 
-export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onDecrement, disabled = false }: AchievementCardProps) {
+export function AchievementCard({ rule, value, isSaving, onValueChange, disabled = false }: AchievementCardProps) {
+  
+  const handleIncrement = () => {
+    const numericValue = parseInt(value, 10);
+    const currentVal = isNaN(numericValue) ? 0 : numericValue;
+    onValueChange(String(currentVal + 1));
+  };
+
+  const handleDecrement = () => {
+    const numericValue = parseInt(value, 10);
+    const currentVal = isNaN(numericValue) ? 0 : numericValue;
+    onValueChange(String(Math.max(0, currentVal - 1)));
+  };
+  
+  const numericValueForCheck = parseInt(value, 10);
+
   return (
     <Card className={cn("shadow-sm overflow-hidden flex flex-col h-full", disabled && "opacity-50 bg-muted/50")}>
        <CardHeader className="p-3 pb-0">
@@ -27,32 +41,38 @@ export function AchievementCard({ rule, currentValue, isSaving, onIncrement, onD
          </CardTitle>
          <CardDescription className="text-xs">{rule.points} pts each</CardDescription>
        </CardHeader>
-      <CardContent className="p-3 flex items-center justify-between flex-grow">
-        {/* The flex-grow class was removed from this div to make the card compact */}
-        <div className="flex items-center justify-center">
-          <p className="text-2xl font-bold text-primary">{currentValue}</p>
-        </div>
-        <div className="flex flex-col border-l ml-3 pl-3">
+      <CardContent className="p-3 flex items-center justify-center flex-grow">
+        <div className="flex items-center justify-center gap-1 w-full relative">
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-md border-b"
-                onClick={onIncrement}
+                className="h-8 w-8"
+                onClick={handleDecrement}
+                disabled={isSaving || isNaN(numericValueForCheck) || numericValueForCheck <= 0 || disabled}
+                aria-label={`Decrease ${rule.name}`}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <Input
+              type="number"
+              placeholder="0"
+              value={value}
+              onChange={(e) => onValueChange(e.target.value)}
+              className="h-9 w-16 text-center text-xl font-bold"
+              disabled={isSaving || disabled}
+              min="0"
+            />
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleIncrement}
                 disabled={isSaving || disabled}
                 aria-label={`Increase ${rule.name}`}
             >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              <Plus className="h-4 w-4" />
             </Button>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-md"
-                onClick={onDecrement}
-                disabled={isSaving || currentValue <= 0 || disabled}
-                aria-label={`Decrease ${rule.name}`}
-            >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Minus className="h-4 w-4" />}
-            </Button>
+            {isSaving && <Loader2 className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
         </div>
       </CardContent>
     </Card>
