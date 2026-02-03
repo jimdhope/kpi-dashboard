@@ -319,6 +319,7 @@ export const sendTrackerDataToTeams = async (
         attachments: [
             {
                 contentType: "application/vnd.microsoft.card.adaptive",
+                contentUrl: null, // This is the fix
                 content: {
                     $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
                     type: "AdaptiveCard",
@@ -349,3 +350,4 @@ export const sendTrackerDataToTeams = async (
         throw error; // Re-throw to be caught by the calling function
     }
 };
+
