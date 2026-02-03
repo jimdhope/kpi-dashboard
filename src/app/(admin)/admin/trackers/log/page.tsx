@@ -281,59 +281,79 @@ export default function LogTrackerPage() {
         </CardContent>
       </Card>
     
-      <Card className="frosted-glass">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5" /> Log Tracker Scores</CardTitle>
-          <CardDescription>Enter the scores for each agent. Changes are saved automatically.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-            </div>
-          ) : selectedPodIds.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">Please select one or more pods to begin.</p>
-          ) : kpis.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">No trackers have been set up yet.</p>
-          ) : agents.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">No agents found in the selected pod(s).</p>
-          ) : (
-            <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="min-w-[150px]">Agent</TableHead>
-                            <TableHead>Tracker Scores</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {agents.map(agent => (
-                        <TableRow key={agent.id}>
-                            <TableCell className="font-medium align-top pt-6">{agent.name}</TableCell>
-                            <TableCell>
-                               <div className="flex flex-wrap items-center gap-4">
-                                {kpis.map(kpi => (
-                                    <div key={kpi.id} className="min-w-[200px]">
-                                        <TrackerCard
-                                            kpi={kpi}
-                                            value={inputs[agent.id!]?.[kpi.id!]?.value ?? '0'}
-                                            isSaving={isSaving[`${agent.id!}-${kpi.id!}`] || false}
-                                            onValueChange={(newValue) => handleInputChange(agent.id!, kpi.id!, newValue)}
-                                        />
-                                    </div>
+      <div className="space-y-6">
+        {isLoading ? (
+            <div className="space-y-6">
+                {Array.from({ length: 2 }).map((_, podIndex) => (
+                    <Card key={podIndex} className="frosted-glass">
+                        <CardHeader>
+                            <Skeleton className="h-6 w-1/4" />
+                            <Skeleton className="h-4 w-1/5" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {Array.from({ length: 4 }).map((_, agentIndex) => (
+                                    <Card key={agentIndex} className="bg-background/50 shadow-inner">
+                                        <CardHeader className="p-3">
+                                            <Skeleton className="h-5 w-3/4" />
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0 space-y-2">
+                                            <Skeleton className="h-24 w-full" />
+                                        </CardContent>
+                                    </Card>
                                 ))}
-                               </div>
-                            </TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+        ) : selectedPodIds.length === 0 ? (
+            <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">Please select one or more pods to begin.</p></CardContent></Card>
+        ) : kpis.length === 0 ? (
+            <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">No trackers have been set up yet.</p></CardContent></Card>
+        ) : agents.length === 0 ? (
+            <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">No agents found in the selected pod(s).</p></CardContent></Card>
+        ) : (
+            selectedPodIds.map(podId => {
+                const pod = pods.find(p => p.id === podId);
+                const podAgents = agents.filter(a => a.podId === podId).sort((a, b) => a.name.localeCompare(b.name));
+
+                if (!pod || podAgents.length === 0) return null;
+
+                return (
+                    <Card key={podId} className="frosted-glass">
+                        <CardHeader>
+                            <CardTitle>{pod.name}</CardTitle>
+                            <CardDescription>{podAgents.length} agent(s) in this pod.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {podAgents.map(agent => (
+                                    <Card key={agent.id} className="bg-background/50 shadow-inner">
+                                        <CardHeader className="p-3">
+                                            <CardTitle className="text-base">{agent.name}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0 space-y-2">
+                                            {kpis.map(kpi => (
+                                                <TrackerCard
+                                                    key={kpi.id}
+                                                    kpi={kpi}
+                                                    value={inputs[agent.id!]?.[kpi.id!]?.value ?? '0'}
+                                                    isSaving={isSaving[`${agent.id!}-${kpi.id!}`] || false}
+                                                    onValueChange={(newValue) => handleInputChange(agent.id!, kpi.id!, newValue)}
+                                                />
+                                            ))}
+                                            {kpis.length === 0 && <p className="text-xs text-muted-foreground">No trackers defined.</p>}
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )
+            })
+        )}
+        </div>
     </div>
   );
 }
