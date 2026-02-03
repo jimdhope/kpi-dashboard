@@ -232,10 +232,10 @@ export const sendTeamsUpdate = async (
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': '' // Explicitly clear Authorization header
             },
             body: JSON.stringify(webhookPayload),
-            cache: 'no-store', // Prevent caching of the request
-            credentials: 'omit', // Prevent forwarding auth cookies/headers
+            cache: 'no-store',
         });
 
         console.log(`[sendTeamsUpdate] Webhook response status: ${response.status}, ok: ${response.ok}`);
@@ -332,10 +332,12 @@ export const sendTrackerDataToTeams = async (
     try {
         const response = await fetch(webhookUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': '' // Explicitly clear Authorization header
+            },
             body: JSON.stringify(webhookPayload),
-            cache: 'no-store', // Prevent caching of the request
-            credentials: 'omit', // Prevent forwarding auth cookies/headers
+            cache: 'no-store',
         });
 
         if (!response.ok) {
