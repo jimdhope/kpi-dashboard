@@ -1,18 +1,17 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, Timestamp, doc, onSnapshot, Unsubscribe, serverTimestamp, writeBatch, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send } from 'lucide-react';
+import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +19,14 @@ import { cn } from '@/lib/utils';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { TrackerKpi } from '@/app/(admin)/admin/trackers/setup/page';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 export interface TrackerLog {
@@ -41,7 +48,7 @@ interface KpiInputState {
   };
 }
 
-const SCORES_POD_KEY = 'trackerScores_selectedPodId';
+const SCORES_POD_KEY = 'trackerScores_selectedPodIds'; // Changed key name
 const SCORES_DATE_KEY = 'trackerScores_selectedDate';
 
 
@@ -49,7 +56,7 @@ export default function LogTrackerPage() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [kpis, setKpis] = useState<TrackerKpi[]>([]);
-  const [selectedPodId, setSelectedPodId] = useState<string>('');
+  const [selectedPodIds, setSelectedPodIds] = useState<string[]>([]); // Changed to array
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [inputs, setInputs] = useState<KpiInputState>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -70,15 +77,28 @@ export default function LogTrackerPage() {
   }, [inputs]);
 
   useEffect(() => {
-    const savedPodId = localStorage.getItem(SCORES_POD_KEY);
-    if (savedPodId) setSelectedPodId(savedPodId);
+    const savedPodIds = localStorage.getItem(SCORES_POD_KEY);
+    if (savedPodIds) {
+      try {
+        const parsed = JSON.parse(savedPodIds);
+        if (Array.isArray(parsed)) {
+          setSelectedPodIds(parsed);
+        }
+      } catch (e) {
+        console.error("Failed to parse saved pod IDs from localStorage", e);
+        localStorage.removeItem(SCORES_POD_KEY);
+      }
+    }
     const savedDate = localStorage.getItem(SCORES_DATE_KEY);
     if (savedDate) setSelectedDate(new Date(savedDate));
   }, []);
 
-  const handlePodChange = (podId: string) => {
-    setSelectedPodId(podId);
-    localStorage.setItem(SCORES_POD_KEY, podId);
+  const handlePodSelectionChange = (podId: string) => {
+    const newSelectedPodIds = selectedPodIds.includes(podId)
+        ? selectedPodIds.filter(id => id !== podId)
+        : [...selectedPodIds, podId];
+    setSelectedPodIds(newSelectedPodIds);
+    localStorage.setItem(SCORES_POD_KEY, JSON.stringify(newSelectedPodIds));
   };
 
   const handleDateChange = (date: Date | undefined) => {
@@ -105,22 +125,25 @@ export default function LogTrackerPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedPodId) {
+    if (selectedPodIds.length === 0) {
       setAgents([]);
       setInputs({});
+      setIsLoading(false);
       return;
     }
     
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
 
-    const agentsQuery = query(collection(db, 'users'), where('podId', '==', selectedPodId), where('roles', 'array-contains', 'agent'), orderBy('name'));
+    const agentsQuery = query(collection(db, 'users'), where('podId', 'in', selectedPodIds), where('roles', 'array-contains', 'agent'), orderBy('name'));
     unsubscribes.push(onSnapshot(agentsQuery, (snap) => {
       setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppUser)));
     }));
 
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-    const logsQuery = query(collection(db, 'trackerLogs'), where('podId', '==', selectedPodId), where('date', '==', dateTimestamp));
+    // Firestore 'in' queries are limited to 30 elements. If more pods are selected, this will fail.
+    // For this app's scale, it's acceptable. For larger scale, multiple queries would be needed.
+    const logsQuery = query(collection(db, 'trackerLogs'), where('podId', 'in', selectedPodIds), where('date', '==', dateTimestamp));
     unsubscribes.push(onSnapshot(logsQuery, (snap) => {
       const logs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TrackerLog));
       const newInputs: KpiInputState = {};
@@ -134,7 +157,7 @@ export default function LogTrackerPage() {
     }));
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedPodId, selectedDate]);
+  }, [selectedPodIds, selectedDate]);
 
 
   const handleSaveAll = async () => {
@@ -145,6 +168,9 @@ export default function LogTrackerPage() {
 
     try {
         for (const agentId in inputs) {
+            const agent = agents.find(a => a.id === agentId);
+            if (!agent?.podId) continue; // Skip if we can't determine the agent's pod
+
             for (const kpiId in inputs[agentId]) {
                 const entry = inputs[agentId][kpiId];
                 if (entry.value === entry.initialValue) continue;
@@ -161,8 +187,12 @@ export default function LogTrackerPage() {
                     if (existingLogDoc) batch.delete(logDocRef);
                 } else {
                     const logEntry: Omit<TrackerLog, 'id' | 'loggedAt'> & { loggedAt: any } = {
-                        agentId, podId: selectedPodId, trackerKpiId: kpiId,
-                        date: dateTimestamp, value, loggedAt: serverTimestamp(),
+                        agentId, 
+                        podId: agent.podId, // Use the agent's actual podId
+                        trackerKpiId: kpiId,
+                        date: dateTimestamp, 
+                        value, 
+                        loggedAt: serverTimestamp(),
                     };
                     batch.set(logDocRef, logEntry, { merge: true });
                 }
@@ -216,11 +246,28 @@ export default function LogTrackerPage() {
           <div className="flex flex-wrap gap-4 items-end justify-between">
             <div className="flex flex-wrap gap-4 items-end">
                 <div className="grid gap-2">
-                <Label htmlFor="pod-select">Pod</Label>
-                <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
-                    <SelectTrigger id="pod-select" className="w-[200px]"><SelectValue placeholder="Select Pod" /></SelectTrigger>
-                    <SelectContent>{pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                </Select>
+                  <Label htmlFor="pod-select">Pods</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button id="pod-select" variant="outline" className="w-[200px] justify-between" disabled={isLoading}>
+                         {selectedPodIds.length === 0 ? "Select Pods" : `${selectedPodIds.length} selected`}
+                         <ListFilter className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      <DropdownMenuLabel>Pods</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {pods.map(pod => (
+                          <DropdownMenuCheckboxItem
+                              key={pod.id}
+                              checked={selectedPodIds.includes(pod.id)}
+                              onCheckedChange={() => handlePodSelectionChange(pod.id)}
+                          >
+                              {pod.name}
+                          </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <div className="grid gap-2">
                 <Label htmlFor="date-select">Date</Label>
@@ -235,7 +282,7 @@ export default function LogTrackerPage() {
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                     {isSaving ? "Saving..." : "Save Scores"}
                  </Button>
-                 <Button onClick={handleSendToTeams} disabled={isSending || !selectedPodId || agents.length === 0} variant="secondary">
+                 <Button onClick={handleSendToTeams} disabled={isSending || selectedPodIds.length === 0 || agents.length === 0} variant="secondary">
                      {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                      Send to Teams
                  </Button>
@@ -256,12 +303,12 @@ export default function LogTrackerPage() {
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
             </div>
-          ) : !selectedPodId ? (
-            <p className="text-muted-foreground text-center py-6">Please select a pod to begin.</p>
+          ) : selectedPodIds.length === 0 ? (
+            <p className="text-muted-foreground text-center py-6">Please select one or more pods to begin.</p>
           ) : kpis.length === 0 ? (
             <p className="text-muted-foreground text-center py-6">No trackers have been set up yet.</p>
           ) : agents.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">No agents found in the selected pod.</p>
+            <p className="text-muted-foreground text-center py-6">No agents found in the selected pod(s).</p>
           ) : (
             <div className="overflow-x-auto">
                 <Table>
@@ -295,3 +342,5 @@ export default function LogTrackerPage() {
     </div>
   );
 }
+
+    
