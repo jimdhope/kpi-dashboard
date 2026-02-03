@@ -77,6 +77,7 @@ export default function LogTrackerPage() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [kpis, setKpis] = useState<TrackerKpi[]>([]);
+  const [logs, setLogs] = useState<TrackerLog[]>([]); // New state for logs
   const [selectedPodIds, setSelectedPodIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [inputs, setInputs] = useState<KpiInputState>({});
@@ -126,6 +127,7 @@ export default function LogTrackerPage() {
     }
   };
 
+  // Effect to fetch static data like Pods and KPIs
   useEffect(() => {
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
@@ -136,52 +138,82 @@ export default function LogTrackerPage() {
 
     unsubscribes.push(onSnapshot(query(collection(db, 'trackerKpis'), orderBy('name')), (snap) => {
       setKpis(snap.docs.map(d => ({ id: d.id, ...d.data() } as TrackerKpi)));
-      setIsLoading(false);
+      setIsLoading(false); // Can consider loading finished after this
     }));
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
 
+  // Effect to fetch agents when pod selection changes
   useEffect(() => {
     if (selectedPodIds.length === 0) {
       setAgents([]);
-      setInputs({});
-      setIsLoading(false);
       return;
     }
-    
     setIsLoading(true);
-    const unsubscribes: Unsubscribe[] = [];
-
     const agentsQuery = query(collection(db, 'users'), where('podId', 'in', selectedPodIds), where('roles', 'array-contains', 'agent'), orderBy('name'));
-    unsubscribes.push(onSnapshot(agentsQuery, (snap) => {
-      setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppUser)));
-    }));
+    const unsubscribe = onSnapshot(agentsQuery, (snap) => {
+        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppUser)));
+    });
 
-    const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-    const logsQuery = query(collection(db, 'trackerLogs'), where('podId', 'in', selectedPodIds), where('date', '==', dateTimestamp));
-    unsubscribes.push(onSnapshot(logsQuery, (snap) => {
-      const logs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TrackerLog));
-      const newInputs: KpiInputState = {};
-      agents.forEach(agent => {
-          if (!agent.id) return;
-          newInputs[agent.id] = {};
-          kpis.forEach(kpi => {
-              if (!kpi.id) return;
-              const existingLog = logs.find(log => log.agentId === agent.id && log.trackerKpiId === kpi.id);
-              const val = existingLog ? String(existingLog.value) : '0';
-              newInputs[agent.id][kpi.id] = { value: val, initialValue: val, logId: existingLog?.id };
-          });
+    return () => unsubscribe();
+  }, [selectedPodIds]);
+
+  // Effect to fetch logs when pod or date selection changes
+  useEffect(() => {
+      if (selectedPodIds.length === 0) {
+          setLogs([]);
+          setIsLoading(false);
+          return;
+      }
+      setIsLoading(true);
+      const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+      const logsQuery = query(collection(db, 'trackerLogs'), where('podId', 'in', selectedPodIds), where('date', '==', dateTimestamp));
+      const unsubscribe = onSnapshot(logsQuery, (snap) => {
+          setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as TrackerLog)));
+          setIsLoading(false);
+      }, (error) => {
+          console.error("Error fetching logs: ", error);
+          setIsLoading(false);
       });
-      setInputs(newInputs);
-      setIsLoading(false);
-    }, (error) => {
-        console.error("Error fetching logs: ", error);
-        setIsLoading(false);
-    }));
 
-    return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedPodIds, selectedDate, agents, kpis]); // Re-run when agents list changes
+      return () => unsubscribe();
+  }, [selectedPodIds, selectedDate]);
+
+
+  // Effect to compose the `inputs` state from fetched data, while preserving user input
+  useEffect(() => {
+    setInputs(currentInputs => {
+        const newInputs: KpiInputState = {};
+        agents.forEach(agent => {
+            if (!agent.id) return;
+            newInputs[agent.id] = {};
+            kpis.forEach(kpi => {
+                if (!kpi.id) return;
+                
+                const log = logs.find(l => l.agentId === agent.id && l.trackerKpiId === kpi.id);
+                const dbValue = log ? String(log.value) : '0';
+                const logId = log?.id;
+
+                const currentAgentKpiInput = currentInputs[agent.id]?.[kpi.id];
+
+                // If DB value is unchanged from what's in our state's 'initialValue',
+                // it means the source data hasn't changed, so we can keep the user's typed value.
+                // Otherwise, we should update to the new value from the database.
+                const valueToDisplay = (currentAgentKpiInput && currentAgentKpiInput.initialValue === dbValue)
+                    ? currentAgentKpiInput.value
+                    : dbValue;
+                
+                newInputs[agent.id][kpi.id] = {
+                    value: valueToDisplay,
+                    initialValue: dbValue, // Always update initialValue to reflect the latest from DB
+                    logId: logId,
+                };
+            });
+        });
+        return newInputs;
+    });
+  }, [agents, kpis, logs]); // This effect now safely composes state
 
 
   const handleSaveTrackerScore = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
