@@ -1,8 +1,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, Timestamp, doc, onSnapshot, Unsubscribe, serverTimestamp, writeBatch, orderBy, getDocs } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { collection, query, where, Timestamp, doc, onSnapshot, Unsubscribe, serverTimestamp, orderBy, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter, Plus, Minus } from 'lucide-react';
+import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { TrackerKpi } from '@/app/(admin)/admin/trackers/setup/page';
+import { TrackerCard } from '@/components/tracker-card';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -44,37 +45,34 @@ interface KpiInputState {
     [kpiId: string]: {
       value: string;
       initialValue: string;
+      logId?: string;
     };
   };
 }
 
-const SCORES_POD_KEY = 'trackerScores_selectedPodIds'; // Changed key name
+const SCORES_POD_KEY = 'trackerScores_selectedPodIds';
 const SCORES_DATE_KEY = 'trackerScores_selectedDate';
+
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  return (...args: any[]) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
 
 
 export default function LogTrackerPage() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [kpis, setKpis] = useState<TrackerKpi[]>([]);
-  const [selectedPodIds, setSelectedPodIds] = useState<string[]>([]); // Changed to array
+  const [selectedPodIds, setSelectedPodIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [inputs, setInputs] = useState<KpiInputState>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
-
-  const hasChanges = useMemo(() => {
-    for (const agentId in inputs) {
-        for (const kpiId in inputs[agentId]) {
-            const entry = inputs[agentId][kpiId];
-            if (entry.value !== entry.initialValue) {
-                return true;
-            }
-        }
-    }
-    return false;
-  }, [inputs]);
 
   useEffect(() => {
     const savedPodIds = localStorage.getItem(SCORES_POD_KEY);
@@ -141,138 +139,96 @@ export default function LogTrackerPage() {
     }));
 
     const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-    // Firestore 'in' queries are limited to 30 elements. If more pods are selected, this will fail.
-    // For this app's scale, it's acceptable. For larger scale, multiple queries would be needed.
     const logsQuery = query(collection(db, 'trackerLogs'), where('podId', 'in', selectedPodIds), where('date', '==', dateTimestamp));
     unsubscribes.push(onSnapshot(logsQuery, (snap) => {
       const logs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TrackerLog));
       const newInputs: KpiInputState = {};
-      logs.forEach(log => {
-        if (!newInputs[log.agentId]) newInputs[log.agentId] = {};
-        const val = String(log.value);
-        newInputs[log.agentId][log.trackerKpiId] = { value: val, initialValue: val };
+      agents.forEach(agent => {
+          if (!agent.id) return;
+          newInputs[agent.id] = {};
+          kpis.forEach(kpi => {
+              if (!kpi.id) return;
+              const existingLog = logs.find(log => log.agentId === agent.id && log.trackerKpiId === kpi.id);
+              const val = existingLog ? String(existingLog.value) : '0';
+              newInputs[agent.id][kpi.id] = { value: val, initialValue: val, logId: existingLog?.id };
+          });
       });
       setInputs(newInputs);
       setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching logs: ", error);
+        setIsLoading(false);
     }));
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [selectedPodIds, selectedDate]);
+  }, [selectedPodIds, selectedDate, agents, kpis]); // Re-run when agents list changes
 
 
-  const handleSaveAll = async () => {
-    setIsSaving(true);
-    const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
-    const logsCollectionRef = collection(db, 'trackerLogs');
-    const batch = writeBatch(db);
+  const handleSaveTrackerScore = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
+    const agent = agents.find(a => a.id === agentId);
+    if (!agent?.podId) return;
+
+    const savingKey = `${agentId}-${kpiId}`;
+    setIsSaving(prev => ({...prev, [savingKey]: true }));
+
+    const value = parseInt(valueStr, 10);
+    const valueIsNumeric = !isNaN(value);
 
     try {
-        for (const agentId in inputs) {
-            const agent = agents.find(a => a.id === agentId);
-            if (!agent?.podId) continue; // Skip if we can't determine the agent's pod
+        const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
+        const logsCollectionRef = collection(db, 'trackerLogs');
+        const existingLogId = inputs[agentId]?.[kpiId]?.logId;
 
-            for (const kpiId in inputs[agentId]) {
-                const entry = inputs[agentId][kpiId];
-                if (entry.value === entry.initialValue) continue;
+        if (valueStr === '' || !valueIsNumeric || value <= 0) {
+            if (existingLogId) {
+                await deleteDoc(doc(logsCollectionRef, existingLogId));
+                setInputs(prev => {
+                    const newState = {...prev};
+                    if(newState[agentId]?.[kpiId]) newState[agentId][kpiId].logId = undefined;
+                    return newState;
+                });
+            }
+        } else {
+             const logEntry: Omit<TrackerLog, 'id'> = {
+                agentId,
+                podId: agent.podId,
+                trackerKpiId: kpiId,
+                date: dateTimestamp,
+                value,
+                loggedAt: serverTimestamp() as Timestamp,
+            };
+            
+            const logDocRef = existingLogId ? doc(logsCollectionRef, existingLogId) : doc(logsCollectionRef);
+            await setDoc(logDocRef, logEntry, { merge: true });
 
-                const valueStr = entry.value;
-                const value = parseFloat(valueStr);
-
-                const logQuery = query(logsCollectionRef, where('agentId', '==', agentId), where('trackerKpiId', '==', kpiId), where('date', '==', dateTimestamp));
-                const logSnapshot = await getDocs(logQuery);
-                const existingLogDoc = logSnapshot.docs[0];
-                const logDocRef = existingLogDoc ? existingLogDoc.ref : doc(logsCollectionRef);
-
-                if (valueStr === '' || isNaN(value)) {
-                    if (existingLogDoc) batch.delete(logDocRef);
-                } else {
-                    const logEntry: Omit<TrackerLog, 'id' | 'loggedAt'> & { loggedAt: any } = {
-                        agentId, 
-                        podId: agent.podId, // Use the agent's actual podId
-                        trackerKpiId: kpiId,
-                        date: dateTimestamp, 
-                        value, 
-                        loggedAt: serverTimestamp(),
-                    };
-                    batch.set(logDocRef, logEntry, { merge: true });
-                }
+            if (!existingLogId) {
+                setInputs(prev => ({ ...prev, [agentId]: { ...prev[agentId], [kpiId]: { ...prev[agentId][kpiId], logId: logDocRef.id }}}));
             }
         }
-        
-        await batch.commit();
-        toast({ title: "Tracker Scores Saved", description: "All changes have been successfully saved." });
-    } catch (e: any) {
-        console.error("Error saving tracker scores:", e);
-        toast({ title: "Save Error", description: `Could not save scores. ${e.message}`, variant: "destructive" });
+    } catch(e) {
+        toast({ title: "Auto-Save Error", description: "Could not save score.", variant: "destructive" });
     } finally {
-        setIsSaving(false);
+        setIsSaving(prev => ({...prev, [savingKey]: false }));
     }
-};
+  }, [agents, inputs, selectedDate, toast]);
+  
+  const debouncedSave = useMemo(() => debounce(handleSaveTrackerScore, 1000), [handleSaveTrackerScore]);
+
+  const handleInputChange = useCallback((agentId: string, kpiId: string, newValue: string) => {
+    if (newValue !== '' && (!/^\d*$/.test(newValue))) return;
+    
+    setInputs(prev => ({
+        ...prev,
+        [agentId]: { ...prev[agentId], [kpiId]: { ...(prev[agentId]?.[kpiId]), value: newValue } }
+    }));
+    debouncedSave(agentId, kpiId, newValue);
+  }, [debouncedSave]);
 
  const handleSendToTeams = async () => {
     setIsSending(true);
-    // TODO: Implement webhook logic
-    // 1. Get Pod's webhook URL
-    // 2. Format data into a markdown table or Adaptive Card
-    // 3. Send POST request to webhook URL
     toast({ title: "Coming Soon!", description: "Sending tracker data to Microsoft Teams is not yet implemented." });
     setIsSending(false);
   };
-
-
-  const handleInputChange = (agentId: string, kpiId: string, value: string) => {
-    setInputs(prev => {
-        const agentData = prev[agentId] || {};
-        const kpiData = agentData[kpiId] || { value: '', initialValue: '' };
-        return { ...prev, [agentId]: { ...agentData, [kpiId]: { ...kpiData, value } } };
-    });
-  };
-
-  const handleValueChange = (agentId: string, kpiId: string, change: number) => {
-    const currentValue = parseFloat(inputs[agentId]?.[kpiId]?.value || '0');
-    // If currentValue is NaN (e.g., from an empty string), treat it as 0.
-    const baseValue = isNaN(currentValue) ? 0 : currentValue;
-    const newValue = Math.max(0, baseValue + change);
-
-    handleInputChange(agentId, kpiId, String(newValue));
-  };
-
-
-  const renderInput = (agentId: string, kpi: TrackerKpi) => {
-    const value = inputs[agentId]?.[kpi.id]?.value ?? '';
-    return (
-        <div className="flex items-center justify-center gap-1 w-full">
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleValueChange(agentId, kpi.id, -1)}
-                disabled={isSaving || !value || parseFloat(value) <= 0}
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <Input
-              type="number"
-              placeholder="-"
-              value={value}
-              min={0}
-              onChange={(e) => handleInputChange(agentId, kpi.id, e.target.value)}
-              className="h-8 w-16 text-center"
-              disabled={isSaving}
-            />
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleValueChange(agentId, kpi.id, 1)}
-                disabled={isSaving}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-        </div>
-    );
-  };
-
 
   return (
     <div className="space-y-6">
@@ -316,10 +272,6 @@ export default function LogTrackerPage() {
                 </div>
             </div>
             <div className="flex gap-2">
-                 <Button onClick={handleSaveAll} disabled={isSaving || !hasChanges}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                    {isSaving ? "Saving..." : "Save Scores"}
-                 </Button>
                  <Button onClick={handleSendToTeams} disabled={isSending || selectedPodIds.length === 0 || agents.length === 0} variant="secondary">
                      {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                      Send to Teams
@@ -332,14 +284,14 @@ export default function LogTrackerPage() {
       <Card className="frosted-glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5" /> Log Tracker Scores</CardTitle>
-          <CardDescription>Enter the scores for each agent against the defined trackers.</CardDescription>
+          <CardDescription>Enter the scores for each agent. Changes are saved automatically.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
+            <div className="space-y-4">
                 <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
             </div>
           ) : selectedPodIds.length === 0 ? (
             <p className="text-muted-foreground text-center py-6">Please select one or more pods to begin.</p>
@@ -350,25 +302,30 @@ export default function LogTrackerPage() {
           ) : (
             <div className="overflow-x-auto">
                 <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableHeader>
                         <TableRow>
-                        <TableHead className="min-w-[150px]">Agent</TableHead>
-                        {kpis.map(kpi => (
-                            <TableHead key={kpi.id} className="min-w-[150px] text-center" title={kpi.name}>
-                                {kpi.initials}
-                            </TableHead>
-                        ))}
+                            <TableHead className="min-w-[150px]">Agent</TableHead>
+                            <TableHead>Tracker Scores</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {agents.map(agent => (
                         <TableRow key={agent.id}>
-                            <TableCell className="font-medium">{agent.name}</TableCell>
-                            {kpis.map(kpi => (
-                            <TableCell key={kpi.id}>
-                                {renderInput(agent.id!, kpi)}
+                            <TableCell className="font-medium align-top pt-6">{agent.name}</TableCell>
+                            <TableCell>
+                               <div className="flex flex-wrap items-center gap-4">
+                                {kpis.map(kpi => (
+                                    <div key={kpi.id} className="min-w-[200px]">
+                                        <TrackerCard
+                                            kpi={kpi}
+                                            value={inputs[agent.id!]?.[kpi.id!]?.value ?? '0'}
+                                            isSaving={isSaving[`${agent.id!}-${kpi.id!}`] || false}
+                                            onValueChange={(newValue) => handleInputChange(agent.id!, kpi.id!, newValue)}
+                                        />
+                                    </div>
+                                ))}
+                               </div>
                             </TableCell>
-                            ))}
                         </TableRow>
                         ))}
                     </TableBody>
@@ -380,5 +337,3 @@ export default function LogTrackerPage() {
     </div>
   );
 }
-
-    
