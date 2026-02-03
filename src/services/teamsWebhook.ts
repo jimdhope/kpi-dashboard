@@ -222,7 +222,6 @@ export const sendTeamsUpdate = async (
 
 /**
  * Sends Tracker data to a Teams webhook.
- * This has been refactored to use the same sender logic as sendTeamsUpdate.
  */
 export const sendTrackerDataToTeams = async (
     webhookUrl: string,
@@ -234,34 +233,62 @@ export const sendTrackerDataToTeams = async (
     }
 
     try {
+        // Get all unique KPI names from the data to build table headers
+        const allKpiNames = Array.from(new Set(data.flatMap(d => d.achievements.map(ach => ach.kpiName))));
+
+        // Build the header ColumnSet
+        const headerColumns = [
+            {
+                type: "Column",
+                width: "stretch",
+                items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }]
+            },
+            ...allKpiNames.map(kpiName => ({
+                type: "Column",
+                width: "auto",
+                items: [{ type: "TextBlock", text: kpiName, weight: "Bolder", wrap: true, horizontalAlignment: "Center" }]
+            }))
+        ];
+
         const headerRow = {
             type: "ColumnSet",
             spacing: "Small",
-            columns: [
-                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }] },
-                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true, horizontalAlignment: "Right" }] }
-            ]
+            columns: headerColumns
         };
 
-        const agentRows = data.map(agentData => ({
-            type: "ColumnSet",
-            spacing: "Small",
-            separator: true,
-            columns: [
-                { type: "Column", width: "stretch", items: [{ type: "TextBlock", text: agentData.agentName, wrap: true }] },
-                { type: "Column", width: "stretch", items: [{ 
-                    type: "TextBlock", 
-                    text: agentData.achievements.map(ach => `${ach.kpiName}: **${ach.value}**`).join('  \n'),
-                    wrap: true, 
-                    horizontalAlignment: "Right" 
-                }] }
-            ]
-        }));
+        // Build the agent data rows
+        const agentRows = data.map(agentData => {
+            const agentRowColumns = [
+                // Agent name column
+                {
+                    type: "Column",
+                    width: "stretch",
+                    items: [{ type: "TextBlock", text: agentData.agentName, wrap: true }]
+                },
+                // KPI value columns
+                ...allKpiNames.map(kpiName => {
+                    const achievement = agentData.achievements.find(ach => ach.kpiName === kpiName);
+                    const valueText = achievement ? String(achievement.value) : "0";
+                    return {
+                        type: "Column",
+                        width: "auto",
+                        items: [{ type: "TextBlock", text: valueText, wrap: true, horizontalAlignment: "Center" }]
+                    };
+                })
+            ];
+
+            return {
+                type: "ColumnSet",
+                spacing: "Small",
+                separator: true,
+                columns: agentRowColumns
+            };
+        });
 
         const cardBody = [
             {
                 type: "TextBlock",
-                text: `Tracker Results for ${format(date, 'PPP')}`,
+                text: "Smart Chart",
                 weight: "Bolder",
                 size: "Medium",
             },
@@ -278,11 +305,11 @@ export const sendTrackerDataToTeams = async (
             attachments: [
                 {
                     contentType: "application/vnd.microsoft.card.adaptive",
-                    contentUrl: null, // Ensure this is included
+                    contentUrl: null,
                     content: {
                         $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
                         type: "AdaptiveCard",
-                        version: "1.4", // Match version
+                        version: "1.4",
                         body: cardBody,
                     },
                 },
@@ -297,3 +324,5 @@ export const sendTrackerDataToTeams = async (
         throw new Error(`Error during Teams update for trackers: ${error.message}`);
     }
 };
+
+    
