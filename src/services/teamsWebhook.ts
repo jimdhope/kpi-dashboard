@@ -266,52 +266,19 @@ export const sendTrackerDataToTeams = async (
         throw new Error("No tracker data to send.");
     }
 
-    const title = {
-        type: "TextBlock",
-        text: `Tracker Results for ${format(date, 'PPP')}`,
-        weight: "Bolder",
-        size: "Medium",
-    };
+    // Use a FactSet for a simpler, more robust layout.
+    const facts = data.flatMap((agentData, agentIndex) => {
+        const agentFacts = agentData.achievements.map(ach => ({
+            title: agentIndex === 0 ? `${agentData.agentName} - ${ach.kpiName}` : ` - ${ach.kpiName}`,
+            value: String(ach.value)
+        }));
+        
+        const agentTitleFact = {
+            title: `**${agentData.agentName}**`,
+            value: agentData.achievements.map(ach => `${ach.kpiName}: **${ach.value}**`).join(', ')
+        }
 
-    const header = {
-        type: "ColumnSet",
-        separator: true,
-        columns: [
-            {
-                type: "Column",
-                width: "stretch",
-                items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }],
-            },
-            {
-                type: "Column",
-                width: "stretch",
-                items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true }],
-            },
-        ],
-    };
-
-    const rows = data.map(agentData => {
-        const achievementsText = agentData.achievements
-            .map(ach => `${ach.kpiName}: ${ach.value}`)
-            .join(', ');
-
-        return {
-            type: "ColumnSet",
-            separator: true,
-            spacing: "Small",
-            columns: [
-                {
-                    type: "Column",
-                    width: "stretch",
-                    items: [{ type: "TextBlock", text: agentData.agentName, wrap: true }],
-                },
-                {
-                    type: "Column",
-                    width: "stretch",
-                    items: [{ type: "TextBlock", text: achievementsText, wrap: true }],
-                },
-            ],
-        };
+        return agentTitleFact;
     });
 
     const webhookPayload = {
@@ -319,12 +286,25 @@ export const sendTrackerDataToTeams = async (
         attachments: [
             {
                 contentType: "application/vnd.microsoft.card.adaptive",
-                contentUrl: null, // This is the fix
+                contentUrl: null,
                 content: {
                     $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
                     type: "AdaptiveCard",
-                    version: "1.5",
-                    body: [title, header, ...rows],
+                    version: "1.4", // Match the working schema version
+                    body: [
+                        {
+                            type: "TextBlock",
+                            text: `Tracker Results for ${format(date, 'PPP')}`,
+                            weight: "Bolder",
+                            size: "Medium",
+                        },
+                        {
+                            type: "FactSet",
+                            facts: facts,
+                            separator: true,
+                            spacing: "Medium"
+                        }
+                    ],
                 },
             },
         ],
@@ -333,7 +313,7 @@ export const sendTrackerDataToTeams = async (
     try {
         const response = await fetch(webhookUrl, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Authorization': '' // Explicitly clear Authorization header
             },
@@ -351,3 +331,4 @@ export const sendTrackerDataToTeams = async (
     }
 };
 
+    
