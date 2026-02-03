@@ -3,6 +3,9 @@
 
 import { format } from 'date-fns';
 import type { RuleFormData } from '@/models/types';
+import type { AppUser } from '@/services/user';
+import type { TrackerKpi } from '@/app/(admin)/admin/trackers/setup/page';
+
 
 // Interface for agent scores passed TO this function
 export interface AgentScoreForTeams {
@@ -41,6 +44,15 @@ export interface TeamTotalScore {
     teamName: string;
     teamEmoji?: string;
     totalPoints: number;
+}
+
+// Interface for tracker data
+export interface TrackerData {
+    agentName: string;
+    achievements: {
+        kpiName: string;
+        value: number;
+    }[];
 }
 
 
@@ -237,5 +249,97 @@ export const sendTeamsUpdate = async (
     } catch (error: any) {
         console.error(`[sendTeamsUpdate] Error during step "${currentStep}" for pod ${podName}:`, error);
         throw new Error(`Error during Teams update (${currentStep}): ${error.message}`);
+    }
+};
+
+export const sendTrackerDataToTeams = async (
+    webhookUrl: string,
+    date: Date,
+    data: TrackerData[]
+) => {
+    if (!webhookUrl) {
+        throw new Error("Webhook URL is not configured.");
+    }
+    if (data.length === 0) {
+        throw new Error("No tracker data to send.");
+    }
+
+    const title = {
+        type: "TextBlock",
+        text: `Tracker Results for ${format(date, 'PPP')}`,
+        weight: "Bolder",
+        size: "Medium",
+    };
+
+    const header = {
+        type: "ColumnSet",
+        separator: true,
+        columns: [
+            {
+                type: "Column",
+                width: "stretch",
+                items: [{ type: "TextBlock", text: "Agent", weight: "Bolder", wrap: true }],
+            },
+            {
+                type: "Column",
+                width: "stretch",
+                items: [{ type: "TextBlock", text: "Achievements", weight: "Bolder", wrap: true }],
+            },
+        ],
+    };
+
+    const rows = data.map(agentData => {
+        const achievementsText = agentData.achievements
+            .map(ach => `${ach.kpiName}: ${ach.value}`)
+            .join(', ');
+
+        return {
+            type: "ColumnSet",
+            separator: true,
+            spacing: "Small",
+            columns: [
+                {
+                    type: "Column",
+                    width: "stretch",
+                    items: [{ type: "TextBlock", text: agentData.agentName, wrap: true }],
+                },
+                {
+                    type: "Column",
+                    width: "stretch",
+                    items: [{ type: "TextBlock", text: achievementsText, wrap: true }],
+                },
+            ],
+        };
+    });
+
+    const webhookPayload = {
+        type: "message",
+        attachments: [
+            {
+                contentType: "application/vnd.microsoft.card.adaptive",
+                content: {
+                    $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+                    type: "AdaptiveCard",
+                    version: "1.5",
+                    body: [title, header, ...rows],
+                },
+            },
+        ],
+    };
+
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to send message to Teams (Status: ${response.status}). Response: ${errorText}`);
+        }
+    } catch (error: any) {
+        console.error("Error sending tracker data to Teams:", error);
+        throw error; // Re-throw to be caught by the calling function
     }
 };

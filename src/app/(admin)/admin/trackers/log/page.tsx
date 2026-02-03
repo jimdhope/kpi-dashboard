@@ -37,6 +37,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { sendTrackerDataToTeams, type TrackerData } from '@/services/teamsWebhook';
 
 
 export interface TrackerLog {
@@ -253,9 +254,50 @@ export default function LogTrackerPage() {
       return;
     }
     setIsSending(true);
-    toast({ title: "Coming Soon!", description: "Sending tracker data to Microsoft Teams is not yet implemented." });
-    // In the future, this would be: await sendTrackerDataToTeams(webhookUrl, ...);
-    setIsSending(false);
+
+    const dataToSend: TrackerData[] = agents
+      .map(agent => {
+        const agentAchievements = kpis
+          .map(kpi => {
+            const value = parseInt(inputs[agent.id!]?.[kpi.id!]?.value || '0', 10);
+            return { kpiName: kpi.name, value };
+          })
+          .filter(ach => ach.value > 0);
+
+        if (agentAchievements.length > 0) {
+          return {
+            agentName: agent.name,
+            achievements: agentAchievements,
+          };
+        }
+        return null;
+      })
+      .filter((item): item is TrackerData => item !== null);
+
+    if (dataToSend.length === 0) {
+      toast({
+        title: "No Data to Send",
+        description: "No agents have tracked scores for the selected date.",
+      });
+      setIsSending(false);
+      return;
+    }
+
+    try {
+      await sendTrackerDataToTeams(webhookUrl, selectedDate, dataToSend);
+      toast({
+        title: "Report Sent",
+        description: "The tracker report was successfully sent to Teams.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Send Failed",
+        description: error.message || "An unknown error occurred while sending to Teams.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
   
   const handleSaveWebhookUrl = () => {
