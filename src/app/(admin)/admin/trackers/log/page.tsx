@@ -11,7 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter } from 'lucide-react';
+import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter, Settings } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +28,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 
 export interface TrackerLog {
@@ -52,6 +61,7 @@ interface KpiInputState {
 
 const SCORES_POD_KEY = 'trackerScores_selectedPodIds';
 const SCORES_DATE_KEY = 'trackerScores_selectedDate';
+const TRACKER_WEBHOOK_URL_KEY = 'tracker_webhookUrl';
 
 const debounce = (func: Function, delay: number) => {
   let timeoutId: NodeJS.Timeout | null = null;
@@ -74,6 +84,10 @@ export default function LogTrackerPage() {
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
 
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [tempWebhookUrl, setTempWebhookUrl] = useState('');
+
   useEffect(() => {
     const savedPodIds = localStorage.getItem(SCORES_POD_KEY);
     if (savedPodIds) {
@@ -89,6 +103,11 @@ export default function LogTrackerPage() {
     }
     const savedDate = localStorage.getItem(SCORES_DATE_KEY);
     if (savedDate) setSelectedDate(new Date(savedDate));
+    const savedWebhookUrl = localStorage.getItem(TRACKER_WEBHOOK_URL_KEY);
+    if (savedWebhookUrl) {
+      setWebhookUrl(savedWebhookUrl);
+      setTempWebhookUrl(savedWebhookUrl);
+    }
   }, []);
 
   const handlePodSelectionChange = (podId: string) => {
@@ -224,10 +243,29 @@ export default function LogTrackerPage() {
     debouncedSave(agentId, kpiId, newValue);
   }, [debouncedSave]);
 
- const handleSendToTeams = async () => {
+  const handleSendToTeams = async () => {
+    if (!webhookUrl) {
+      toast({
+        title: "Webhook URL missing",
+        description: "Please configure the webhook URL in settings first.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSending(true);
     toast({ title: "Coming Soon!", description: "Sending tracker data to Microsoft Teams is not yet implemented." });
+    // In the future, this would be: await sendTrackerDataToTeams(webhookUrl, ...);
     setIsSending(false);
+  };
+  
+  const handleSaveWebhookUrl = () => {
+    setWebhookUrl(tempWebhookUrl);
+    localStorage.setItem(TRACKER_WEBHOOK_URL_KEY, tempWebhookUrl);
+    toast({
+      title: "Settings Saved",
+      description: "Webhook URL has been updated.",
+    });
+    setIsSettingsOpen(false);
   };
 
   return (
@@ -272,10 +310,40 @@ export default function LogTrackerPage() {
                 </div>
             </div>
             <div className="flex gap-2">
-                 <Button onClick={handleSendToTeams} disabled={isSending || selectedPodIds.length === 0 || agents.length === 0} variant="secondary">
+                 <Button onClick={handleSendToTeams} disabled={isSending || selectedPodIds.length === 0 || agents.length === 0 || !webhookUrl} variant="secondary">
                      {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                      Send to Teams
                  </Button>
+                 <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="icon" title="Settings">
+                            <Settings className="h-4 w-4" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Webhook Settings</DialogTitle>
+                            <DialogDescription>
+                                Enter the Microsoft Teams webhook URL to send tracker results.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="webhook-url">Webhook URL</Label>
+                                <Input
+                                    id="webhook-url"
+                                    value={tempWebhookUrl}
+                                    onChange={(e) => setTempWebhookUrl(e.target.value)}
+                                    placeholder="https://your-org.webhook.office.com/..."
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsSettingsOpen(false)}>Cancel</Button>
+                            <Button type="button" onClick={handleSaveWebhookUrl}>Save</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
           </div>
         </CardContent>
