@@ -435,12 +435,12 @@ export default function LogTrackerPage() {
                         <CardContent>
                             <div className="flex flex-wrap gap-4">
                                 {Array.from({ length: 4 }).map((_, agentIndex) => (
-                                    <Card key={agentIndex} className="bg-background/50 shadow-inner w-72 flex flex-col">
+                                    <Card key={agentIndex} className="bg-background/50 shadow-inner w-60 flex flex-col">
                                         <CardHeader className="p-3">
                                             <Skeleton className="h-5 w-3/4" />
                                         </CardHeader>
                                         <CardContent className="p-3 pt-0 space-y-2">
-                                            <Skeleton className="h-24 w-full" />
+                                            <Skeleton className="h-12 w-full" />
                                         </CardContent>
                                     </Card>
                                 ))}
@@ -471,7 +471,7 @@ export default function LogTrackerPage() {
                         <CardContent>
                             <div className="flex flex-wrap gap-4">
                                 {podAgents.map(agent => (
-                                    <Card key={agent.id} className="bg-background/50 shadow-inner w-72 flex flex-col">
+                                    <Card key={agent.id} className="bg-background/50 shadow-inner w-60 flex flex-col">
                                         <CardHeader className="p-3">
                                             <CardTitle className="text-base">{agent.name}</CardTitle>
                                         </CardHeader>

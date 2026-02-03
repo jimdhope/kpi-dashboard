@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Minus, Loader2 } from 'lucide-react';
@@ -34,48 +34,52 @@ export function TrackerCard({ kpi, value, isSaving, onValueChange, disabled = fa
   const numericValueForCheck = parseInt(value, 10);
 
   return (
-    <Card className={cn("shadow-sm overflow-hidden flex flex-col h-full", disabled && "opacity-50 bg-muted/50")}>
-       <CardHeader className="p-3 pb-0">
-         <CardTitle className="text-sm font-medium truncate flex items-center justify-center gap-2">
-            <span className="truncate" title={kpi.name}>{kpi.name}</span>
-         </CardTitle>
-       </CardHeader>
-      <CardContent className="p-3 flex items-center justify-between flex-grow">
-        <div className="relative">
-          <Input
-            type="number"
-            placeholder="0"
-            value={value}
-            onChange={(e) => onValueChange(e.target.value)}
-            className="h-10 text-xl font-bold text-center w-24 pr-8"
-            disabled={isSaving || disabled}
-            min="0"
-          />
-          {isSaving && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
-        </div>
-        <div className="flex flex-col">
+    // Single compact card with flex layout
+    <Card className={cn("p-2 shadow-sm", disabled && "opacity-50 bg-muted/50")}>
+      <div className="flex items-center justify-between gap-2">
+        {/* KPI Name on the left */}
+        <span className="flex-1 truncate text-sm font-medium" title={kpi.name}>
+            {kpi.name}
+        </span>
+
+        {/* Controls on the right */}
+        <div className="flex items-center gap-1">
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
-                onClick={handleIncrement}
-                disabled={isSaving || disabled}
-                aria-label={`Increase ${kpi.name}`}
-            >
-                <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+                className="h-7 w-7 rounded-md"
                 onClick={handleDecrement}
                 disabled={isSaving || isNaN(numericValueForCheck) || numericValueForCheck <= 0 || disabled}
                 aria-label={`Decrease ${kpi.name}`}
             >
                 <Minus className="h-4 w-4" />
             </Button>
+
+            <div className="relative w-16">
+                 <Input
+                    type="number"
+                    placeholder="0"
+                    value={value}
+                    onChange={(e) => onValueChange(e.target.value)}
+                    className="h-8 text-center text-base font-bold pr-6" // Added padding for loader
+                    disabled={isSaving || disabled}
+                    min="0"
+                 />
+                 {isSaving && <Loader2 className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
+
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-md"
+                onClick={handleIncrement}
+                disabled={isSaving || disabled}
+                aria-label={`Increase ${kpi.name}`}
+            >
+                <Plus className="h-4 w-4" />
+            </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }
