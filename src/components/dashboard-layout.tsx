@@ -117,7 +117,7 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
               </SidebarMenuItem>
             </SidebarMenu>
             
-            <Accordion type="multiple" defaultValue={['analysis', 'daily-data', 'competitions', 'trackers', 'management']} className="w-full">
+            <Accordion type="multiple" defaultValue={['analysis', 'daily-data', 'competitions', 'performance', 'management', 'trackers']} className="w-full">
 
                 <AccordionItem value="analysis" className="border-none">
                     <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
@@ -221,9 +221,9 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                     </AccordionContent>
                 </AccordionItem>
 
-                 <AccordionItem value="trackers" className="border-none">
+                 <AccordionItem value="performance" className="border-none">
                     <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
-                       Trackers
+                       Performance
                     </AccordionTrigger>
                     <AccordionContent className="pl-4 pt-1 pb-0">
                         <SidebarMenu>
@@ -264,6 +264,24 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                                     <SidebarMenuButton tooltip="Performance Charts" isActive={currentPath.startsWith('/admin/performance-charts')}>
                                         <LineChart />
                                         <span>Performance Charts</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="trackers" className="border-none">
+                    <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
+                       Trackers
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-4 pt-1 pb-0">
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <Link href="/admin/trackers/setup" passHref>
+                                    <SidebarMenuButton tooltip="Setup Tracker" isActive={currentPath.startsWith('/admin/trackers/setup')}>
+                                        <Settings />
+                                        <span>Setup Tracker</span>
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>
