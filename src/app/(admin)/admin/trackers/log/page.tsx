@@ -11,7 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter } from 'lucide-react';
+import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter, Plus, Minus } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -228,10 +228,48 @@ export default function LogTrackerPage() {
     });
   };
 
+  const handleValueChange = (agentId: string, kpiId: string, change: number) => {
+    const currentValue = parseFloat(inputs[agentId]?.[kpiId]?.value || '0');
+    // If currentValue is NaN (e.g., from an empty string), treat it as 0.
+    const baseValue = isNaN(currentValue) ? 0 : currentValue;
+    const newValue = Math.max(0, baseValue + change);
+
+    handleInputChange(agentId, kpiId, String(newValue));
+  };
+
+
   const renderInput = (agentId: string, kpi: TrackerKpi) => {
     const value = inputs[agentId]?.[kpi.id]?.value ?? '';
     return (
-        <Input type="number" placeholder="-" value={value} min={0} onChange={(e) => handleInputChange(agentId, kpi.id, e.target.value)} className="h-8" />
+        <div className="flex items-center justify-center gap-1 w-full">
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleValueChange(agentId, kpi.id, -1)}
+                disabled={isSaving || !value || parseFloat(value) <= 0}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <Input
+              type="number"
+              placeholder="-"
+              value={value}
+              min={0}
+              onChange={(e) => handleInputChange(agentId, kpi.id, e.target.value)}
+              className="h-8 w-16 text-center"
+              disabled={isSaving}
+            />
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleValueChange(agentId, kpi.id, 1)}
+                disabled={isSaving}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+        </div>
     );
   };
 
