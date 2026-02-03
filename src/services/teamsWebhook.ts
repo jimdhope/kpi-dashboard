@@ -56,58 +56,6 @@ export interface TrackerData {
 }
 
 
-// --- Internal Generic Webhook Sender ---
-
-/**
- * Internal function to construct and send an Adaptive Card to a Teams webhook.
- * This ensures the fetch request and payload structure are identical for all sends.
- * @param webhookUrl The Microsoft Teams webhook URL.
- * @param cardBody The array of Adaptive Card body elements.
- * @throws Error if the webhook request fails.
- */
-async function _sendAdaptiveCardToTeams(webhookUrl: string, cardBody: any[]) {
-    if (!webhookUrl) {
-        throw new Error("Webhook URL is not configured.");
-    }
-    
-    const webhookPayload = {
-        type: "message",
-        attachments: [
-            {
-                contentType: "application/vnd.microsoft.card.adaptive",
-                contentUrl: null, // This is important for Teams
-                content: {
-                    $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
-                    type: "AdaptiveCard",
-                    version: "1.4",
-                    body: cardBody,
-                },
-            },
-        ],
-    };
-
-    console.log("[TeamsWebhook] Generic sender payload:", JSON.stringify(webhookPayload, null, 2));
-
-    const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': '' // Explicitly clear Authorization header
-        },
-        body: JSON.stringify(webhookPayload),
-        cache: 'no-store',
-    });
-    
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[TeamsWebhook] Failed to send webhook. Status: ${response.status}, Response: ${errorText}`);
-        throw new Error(`Failed to send message to Teams (Status: ${response.status}). Response: ${errorText}`);
-    }
-
-    console.log(`[TeamsWebhook] Successfully sent message via generic sender.`);
-}
-
-
 // --- Helper Functions for Daily Data ---
 
 const generateKpiKey = (rules: RuleFormData[]): string => {
@@ -177,6 +125,10 @@ export const sendTeamsUpdate = async (
     teamTotalScores: TeamTotalScore[]
 ) => {
     try {
+        if (!webhookUrl) {
+            throw new Error("Webhook URL is not configured.");
+        }
+        
         const numericRules = rules.filter(r => r.type === 'numeric');
         const taskRules = rules.filter(r => r.type === 'checkbox');
         const kpiKeyText = generateKpiKey(numericRules);
@@ -213,8 +165,41 @@ export const sendTeamsUpdate = async (
              ...(dailyBonusText ? [{ type: "TextBlock", text: dailyBonusText, wrap: true, size: "Small", spacing: "Small" }] : [])
         ];
         
+         const webhookPayload = {
+            type: "message",
+            attachments: [
+                {
+                    contentType: "application/vnd.microsoft.card.adaptive",
+                    contentUrl: null, // This is important for Teams
+                    content: {
+                        $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+                        type: "AdaptiveCard",
+                        version: "1.4",
+                        body: cardBody,
+                    },
+                },
+            ],
+        };
+
         console.log(`[sendTeamsUpdate] Triggered for Pod Name: ${podName}, Date: ${date.toISOString()}`);
-        await _sendAdaptiveCardToTeams(webhookUrl, cardBody);
+        console.log("[sendTeamsUpdate] Payload:", JSON.stringify(webhookPayload, null, 2));
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': ''
+            },
+            body: JSON.stringify(webhookPayload),
+            cache: 'no-store',
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[TeamsWebhook] Failed to send scores webhook. Status: ${response.status}, Response: ${errorText}`);
+            throw new Error(`Failed to send message to Teams (Status: ${response.status}). Response: ${errorText}`);
+        }
+    
         console.log(`[sendTeamsUpdate] Successfully sent scores to Teams for pod ${podName}.`);
 
     } catch (error: any) {
@@ -223,6 +208,10 @@ export const sendTeamsUpdate = async (
     }
 };
 
+/**
+ * Sends Tracker data to a Teams webhook.
+ * This is a duplicate of the working sendTeamsUpdate logic, adapted for tracker data.
+ */
 export const sendTrackerDataToTeams = async (
     webhookUrl: string,
     date: Date,
@@ -230,6 +219,9 @@ export const sendTrackerDataToTeams = async (
 ) => {
     if (data.length === 0) {
         throw new Error("No tracker data to send.");
+    }
+     if (!webhookUrl) {
+        throw new Error("Webhook URL is not configured.");
     }
 
     try {
@@ -267,8 +259,41 @@ export const sendTrackerDataToTeams = async (
             }
         ];
 
+        const webhookPayload = {
+            type: "message",
+            attachments: [
+                {
+                    contentType: "application/vnd.microsoft.card.adaptive",
+                    contentUrl: null, // This is important for Teams
+                    content: {
+                        $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+                        type: "AdaptiveCard",
+                        version: "1.4",
+                        body: cardBody,
+                    },
+                },
+            ],
+        };
+
         console.log(`[sendTrackerDataToTeams] Triggered for Date: ${date.toISOString()}`);
-        await _sendAdaptiveCardToTeams(webhookUrl, cardBody);
+        console.log("[sendTrackerDataToTeams] Payload:", JSON.stringify(webhookPayload, null, 2));
+        
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': ''
+            },
+            body: JSON.stringify(webhookPayload),
+            cache: 'no-store',
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[sendTrackerDataToTeams] Failed to send tracker webhook. Status: ${response.status}, Response: ${errorText}`);
+            throw new Error(`Failed to send message to Teams (Status: ${response.status}). Response: ${errorText}`);
+        }
+
         console.log(`[sendTrackerDataToTeams] Successfully sent tracker data to Teams.`);
 
     } catch (error: any) {
@@ -276,3 +301,5 @@ export const sendTrackerDataToTeams = async (
         throw new Error(`Error during Teams update for trackers: ${error.message}`);
     }
 };
+
+    
