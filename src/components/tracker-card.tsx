@@ -40,27 +40,20 @@ export function TrackerCard({ kpi, value, isSaving, onValueChange, disabled = fa
             <span className="truncate" title={kpi.name}>{kpi.name}</span>
          </CardTitle>
        </CardHeader>
-      <CardContent className="p-3 flex items-center justify-center flex-grow">
-        <div className="flex items-center justify-center gap-1 w-full relative">
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleDecrement}
-                disabled={isSaving || isNaN(numericValueForCheck) || numericValueForCheck <= 0 || disabled}
-                aria-label={`Decrease ${kpi.name}`}
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <Input
-              type="number"
-              placeholder="0"
-              value={value}
-              onChange={(e) => onValueChange(e.target.value)}
-              className="h-9 w-16 text-center text-xl font-bold"
-              disabled={isSaving || disabled}
-              min="0"
-            />
+      <CardContent className="p-3 flex items-center justify-between flex-grow">
+        <div className="relative">
+          <Input
+            type="number"
+            placeholder="0"
+            value={value}
+            onChange={(e) => onValueChange(e.target.value)}
+            className="h-10 text-xl font-bold text-center w-24 pr-8"
+            disabled={isSaving || disabled}
+            min="0"
+          />
+          {isSaving && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+        <div className="flex flex-col">
             <Button
                 variant="ghost"
                 size="icon"
@@ -69,9 +62,18 @@ export function TrackerCard({ kpi, value, isSaving, onValueChange, disabled = fa
                 disabled={isSaving || disabled}
                 aria-label={`Increase ${kpi.name}`}
             >
-              <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
             </Button>
-            {isSaving && <Loader2 className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleDecrement}
+                disabled={isSaving || isNaN(numericValueForCheck) || numericValueForCheck <= 0 || disabled}
+                aria-label={`Decrease ${kpi.name}`}
+            >
+                <Minus className="h-4 w-4" />
+            </Button>
         </div>
       </CardContent>
     </Card>

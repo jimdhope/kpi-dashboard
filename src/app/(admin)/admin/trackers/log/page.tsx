@@ -433,9 +433,9 @@ export default function LogTrackerPage() {
                             <Skeleton className="h-4 w-1/5" />
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <div className="flex flex-wrap gap-4">
                                 {Array.from({ length: 4 }).map((_, agentIndex) => (
-                                    <Card key={agentIndex} className="bg-background/50 shadow-inner">
+                                    <Card key={agentIndex} className="bg-background/50 shadow-inner w-72 flex flex-col">
                                         <CardHeader className="p-3">
                                             <Skeleton className="h-5 w-3/4" />
                                         </CardHeader>
@@ -469,9 +469,9 @@ export default function LogTrackerPage() {
                             <CardDescription>{podAgents.length} agent(s) in this pod.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <div className="flex flex-wrap gap-4">
                                 {podAgents.map(agent => (
-                                    <Card key={agent.id} className="bg-background/50 shadow-inner">
+                                    <Card key={agent.id} className="bg-background/50 shadow-inner w-72 flex flex-col">
                                         <CardHeader className="p-3">
                                             <CardTitle className="text-base">{agent.name}</CardTitle>
                                         </CardHeader>
