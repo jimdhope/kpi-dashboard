@@ -304,10 +304,10 @@ export default function KpiBreakdownPage() {
           <div className="flex-1 flex flex-col">
             {isLongTimeframe ? (
               viewMode === 'agent' ? (
-                /* --- Agent Card View --- */
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1920px]:grid-cols-5 gap-6">
+                /* --- Agent Card Flex View --- */
+                <div className="flex flex-wrap gap-6 justify-center lg:justify-start">
                   {processedData.map(agentData => (
-                    <Card key={agentData.agentId} className="border shadow-sm overflow-hidden flex flex-col bg-card/50">
+                    <Card key={agentData.agentId} className="border shadow-sm overflow-hidden flex flex-col bg-card/50 min-w-[380px] flex-1 max-w-[600px]">
                       <CardHeader className="bg-muted/20 py-3 px-4 border-b">
                         <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4 text-primary" /> {agentData.agentName}</CardTitle>
                       </CardHeader>
@@ -361,10 +361,10 @@ export default function KpiBreakdownPage() {
                   ))}
                 </div>
               ) : (
-                /* --- KPI Card View --- */
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1920px]:grid-cols-5 gap-6">
+                /* --- KPI Card Flex View --- */
+                <div className="flex flex-wrap gap-6 justify-center lg:justify-start">
                   {podKpis.map(kpi => (
-                    <Card key={kpi.id} className="border shadow-sm overflow-hidden flex flex-col bg-card/50">
+                    <Card key={kpi.id} className="border shadow-sm overflow-hidden flex flex-col bg-card/50 min-w-[380px] flex-1 max-w-[600px]">
                       <CardHeader className="bg-muted/20 py-3 px-4 border-b">
                         <CardTitle className="text-base flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-primary" /> {kpi.name}</CardTitle>
                       </CardHeader>
