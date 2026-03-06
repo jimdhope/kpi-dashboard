@@ -305,7 +305,7 @@ export default function KpiBreakdownPage() {
             {isLongTimeframe ? (
               viewMode === 'agent' ? (
                 /* --- Agent Card View --- */
-                <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1920px]:grid-cols-5 gap-6">
                   {processedData.map(agentData => (
                     <Card key={agentData.agentId} className="border shadow-sm overflow-hidden flex flex-col bg-card/50">
                       <CardHeader className="bg-muted/20 py-3 px-4 border-b">
@@ -362,7 +362,7 @@ export default function KpiBreakdownPage() {
                 </div>
               ) : (
                 /* --- KPI Card View --- */
-                <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1920px]:grid-cols-5 gap-6">
                   {podKpis.map(kpi => (
                     <Card key={kpi.id} className="border shadow-sm overflow-hidden flex flex-col bg-card/50">
                       <CardHeader className="bg-muted/20 py-3 px-4 border-b">
