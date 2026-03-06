@@ -326,8 +326,8 @@ export default function KpiBreakdownPage() {
                           <TableBody>
                             {podKpis.map(kpi => (
                               <TableRow key={kpi.id} className="h-8 hover:bg-accent/5 transition-colors">
-                                <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-muted/5">
-                                  {kpi.initials} <span className="hidden sm:inline font-normal text-muted-foreground ml-1">({kpi.name})</span>
+                                <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-muted/5 truncate max-w-[140px]" title={kpi.name}>
+                                  {kpi.name}
                                 </TableCell>
                                 {weekHeaders.map(week => {
                                   const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
@@ -366,7 +366,7 @@ export default function KpiBreakdownPage() {
                   {podKpis.map(kpi => (
                     <Card key={kpi.id} className="border shadow-sm overflow-hidden flex flex-col bg-card/50">
                       <CardHeader className="bg-muted/20 py-3 px-4 border-b">
-                        <CardTitle className="text-base flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-primary" /> {kpi.name} ({kpi.initials})</CardTitle>
+                        <CardTitle className="text-base flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-primary" /> {kpi.name}</CardTitle>
                       </CardHeader>
                       <div className="overflow-x-auto">
                         <Table>
@@ -434,8 +434,8 @@ export default function KpiBreakdownPage() {
                     <TableRow>
                       {weekHeaders.flatMap(week =>
                         podKpis.map((kpi, kpiIndex) => (
-                          <TableHead key={`${week}-${kpi.id}`} className="text-center w-[100px] border-l" title={kpi.name}>
-                            {kpi.initials}
+                          <TableHead key={`${week}-${kpi.id}`} className="text-center min-w-[120px] border-l">
+                            {kpi.name}
                           </TableHead>
                         ))
                       )}
