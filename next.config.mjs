@@ -28,108 +28,46 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Redirect old admin routes to new competitions routes
-      {
-        source: '/admin/log-achievements',
-        destination: '/competitions/log',
-        permanent: false,
-      },
-      {
-        source: '/admin/daily-scores',
-        destination: '/competitions/scores',
-        permanent: false,
-      },
-      {
-        source: '/admin/rps-scores',
-        destination: '/competitions/rps',
-        permanent: false,
-      },
+      // Redirect old competition routes to new competition routes
       {
         source: '/admin/competitions',
-        destination: '/competitions/setup',
+        destination: '/competitions',
         permanent: false,
       },
       {
-        source: '/admin/pod-targets',
-        destination: '/competitions/targets',
+        source: '/admin/competitions/manage',
+        destination: '/competitions/manage',
         permanent: false,
       },
       {
-        source: '/admin/teams',
-        destination: '/competitions/teams',
+        source: '/admin/competitions/manage/wizard',
+        destination: '/competitions/manage/wizard',
         permanent: false,
       },
       {
-        source: '/admin/leaderboard',
-        destination: '/competitions/leaderboard',
-        permanent: false,
-      },
-      {
-        source: '/admin/certificates',
+        source: '/admin/competitions/certificates',
         destination: '/competitions/certificates',
         permanent: false,
       },
+      // Redirect old routes to new competition routes
       {
-        source: '/admin/stats',
-        destination: '/competitions/dashboard',
-        permanent: false,
-      },
-      // Redirect old admin routes to new trackers routes
-      {
-        source: '/admin/trackers/setup',
-        destination: '/trackers/setup',
+        source: '/competitions/setup',
+        destination: '/competitions/manage',
         permanent: false,
       },
       {
-        source: '/admin/trackers/log',
-        destination: '/trackers/log',
-        permanent: false,
-      },
-      // Redirect old admin routes to new performance routes
-      {
-        source: '/admin/additional-kpis',
-        destination: '/performance/kpis',
+        source: '/competitions/setup/add',
+        destination: '/competitions/manage/wizard',
         permanent: false,
       },
       {
-        source: '/admin/additional-scores',
-        destination: '/performance/log',
+        source: '/competitions/setup/edit/:id',
+        destination: '/competitions/manage/wizard?edit=:id',
         permanent: false,
       },
       {
-        source: '/admin/additional-leaderboard',
-        destination: '/performance/leaderboard',
-        permanent: false,
-      },
-      {
-        source: '/admin/kpi-breakdown',
-        destination: '/performance/breakdown',
-        permanent: false,
-      },
-      {
-        source: '/admin/performance-charts',
-        destination: '/performance/charts',
-        permanent: false,
-      },
-      // Redirect old admin routes to new settings routes
-      {
-        source: '/admin/campaigns',
-        destination: '/settings/campaigns',
-        permanent: false,
-      },
-      {
-        source: '/admin/pods',
-        destination: '/settings/pods',
-        permanent: false,
-      },
-      {
-        source: '/admin/users',
-        destination: '/settings/users',
-        permanent: false,
-      },
-      {
-        source: '/admin/message-of-the-day',
-        destination: '/settings/dashboard',
+        source: '/competitions/rps',
+        destination: '/mini-games/rps',
         permanent: false,
       },
     ];

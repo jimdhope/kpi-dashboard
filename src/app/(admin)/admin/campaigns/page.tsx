@@ -51,6 +51,13 @@ export interface Campaign {
   logoUrl?: string; // Keep URL for data storage, but don't display image
   logoInitials?: string; // Optional custom initials
   logoBgColor?: string; // Optional custom background color
+  // Certificate branding
+  companyName?: string;
+  certificatePrimaryColor?: string;
+  certificateSecondaryColor?: string;
+  certificateFontFamily?: string;
+  certificateTagline?: string;
+  certificateFooterText?: string;
 }
 
 const campaignsCollectionRef = collection(db, 'campaigns'); // Reference to the 'campaigns' collection

@@ -6,12 +6,14 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   onSnapshot,
   Timestamp,
   query,
   orderBy,
+  where,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +61,14 @@ import {
   PopoverContent as DialogPopoverContent,
   PopoverTrigger as DialogPopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
@@ -129,6 +139,7 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
   const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
   const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
   const [openEmojiPickerId, setOpenEmojiPickerId] = useState<string | null>(null);
+  const [selectedAgentForTeam, setSelectedAgentForTeam] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     const unsubscribes: (() => void)[] = [];
@@ -217,7 +228,8 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
     });
     const unassigned: AppUser[] = [];
     
-    filteredPods.forEach((pod) => {
+    const selectedPods = pods.filter(p => formData.podIds.includes(p.id));
+    selectedPods.forEach((pod) => {
       (pod.agentIds || []).forEach((userId) => {
         if (!agentIds.has(userId)) {
           const user = users.find((u) => u.id === userId);
@@ -227,7 +239,7 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
     });
     
     return unassigned;
-  }, [filteredPods, teams, users]);
+  }, [pods, formData.podIds, teams, users]);
 
   const getTeamAgents = (teamId: string): AppUser[] => {
     const team = teams.find((t) => t.id === teamId);
@@ -319,6 +331,64 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
     
     setTeams(newTeams);
     toast({ title: 'Agents Assigned', description: 'Agents have been randomly assigned to teams.' });
+  };
+
+  const handleSuggestedAssignment = async () => {
+    if (formData.podIds.length === 0 || !competitionId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select pods first.' });
+      return;
+    }
+
+    try {
+      const compsQuery = query(collection(db, 'competitions'), orderBy('startDate', 'desc'));
+      const compsSnapshot = await getDocs(compsQuery);
+      
+      const pastComp = compsSnapshot.docs.find((doc) => {
+        const data = doc.data();
+        return doc.id !== competitionId && 
+               formData.podIds.some((pid) => data.podIds?.includes(pid));
+      });
+
+      if (!pastComp) {
+        toast({ variant: 'destructive', title: 'No Previous Competition', description: 'Could not find a previous competition with shared pods.' });
+        return;
+      }
+
+      const pastCompId = pastComp.id;
+      const logsQuery = query(
+        collection(db, 'dailyAchievements'),
+        where('competitionId', '==', pastCompId),
+        where('podId', 'in', formData.podIds.slice(0, 10))
+      );
+      const logsSnapshot = await getDocs(logsQuery);
+      
+      const agentScores: Record<string, number> = {};
+      logsSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const points = data.points || 0;
+        agentScores[data.agentId] = (agentScores[data.agentId] || 0) + points;
+      });
+
+      const rankedAgents = Object.entries(agentScores)
+        .map(([id, score]) => ({ id, score }))
+        .sort((a, b) => b.score - a.score);
+
+      if (rankedAgents.length === 0) {
+        toast({ variant: 'destructive', title: 'No Data', description: 'No achievement data found for previous competition.' });
+        return;
+      }
+
+      const newTeams: Team[] = teams.map((t) => ({ ...t, agentIds: [] }));
+      rankedAgents.forEach((agent, index) => {
+        newTeams[index % newTeams.length].agentIds.push(agent.id);
+      });
+      
+      setTeams(newTeams);
+      toast({ title: 'Suggested Teams Applied', description: `Based on "${pastComp.data().name}" rankings.` });
+    } catch (error) {
+      console.error('Error generating suggested teams:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate suggested teams.' });
+    }
   };
 
   const handleTargetChange = (ruleId: string, day: string, value: string) => {
@@ -693,6 +763,9 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={handleSuggestedAssignment}>
+                    Suggested Teams
+                  </Button>
                   <Button type="button" variant="outline" onClick={handleRandomAssignment}>
                     Random Assign
                   </Button>
@@ -703,38 +776,38 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card className="bg-muted/30">
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-base">Unassigned ({selectedPodAgents.length})</CardTitle>
-                  </CardHeader>
-                  <ScrollArea className="h-[300px] p-4 pt-0">
-                    <div className="space-y-2">
-                      {selectedPodAgents.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">All agents assigned.</p>
-                      ) : (
-                        selectedPodAgents.map((agent) => {
-                          const agentId = agent.id;
-                          return (
-                            <div
-                              key={agent.id}
-                              className="p-2 text-sm bg-card rounded-md cursor-pointer hover:bg-accent"
-                              onClick={() => {
-                                if (teams.length > 0 && agentId) {
-                                  handleAssignAgent(teams[0].id, agentId);
-                                }
-                              }}
-                            >
-                              {agent.name}
-                            </div>
-                          );
-                        })
-                      )}
+            <CardContent className="space-y-6">
+              <Card className="bg-muted/30">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Unassigned ({selectedPodAgents.length})</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  {selectedPodAgents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">All agents assigned.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPodAgents.map((agent) => {
+                        const agentId = agent.id;
+                        return (
+                          <div
+                            key={agent.id}
+                            className="px-3 py-1.5 text-sm bg-card rounded-full cursor-pointer hover:bg-accent border"
+                            onClick={() => {
+                              if (agentId && agent.name) {
+                                setSelectedAgentForTeam({ id: agentId, name: agent.name });
+                              }
+                            }}
+                          >
+                            {agent.name}
+                          </div>
+                        );
+                      })}
                     </div>
-                  </ScrollArea>
-                </Card>
+                  )}
+                </CardContent>
+              </Card>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {teams.map((team) => (
                   <Card key={team.id}>
                     <CardHeader className="p-4 flex flex-row items-start justify-between gap-2">
@@ -833,21 +906,56 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!selectedAgentForTeam} onOpenChange={() => setSelectedAgentForTeam(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign to Team</DialogTitle>
+            <DialogDescription>
+              Choose which team to assign {selectedAgentForTeam?.name} to:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            {teams.map((team) => (
+              <Button
+                key={team.id}
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => {
+                  if (selectedAgentForTeam?.id) {
+                    handleAssignAgent(team.id, selectedAgentForTeam.id);
+                    setSelectedAgentForTeam(null);
+                  }
+                }}
+              >
+                <span className="mr-2 text-lg">{team.emoji || '🏆'}</span>
+                {team.name}
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {team.agentIds.length} members
+                </span>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
+function WizardPageContent({ competitionId }: { competitionId?: string }) {
+  return <WizardContent competitionId={competitionId} />;
+}
+
 export default function CompetitionWizard() {
-  const searchParams = useSearchParams();
-  const competitionId = searchParams.get('edit') || undefined;
-  
   return (
     <Suspense fallback={<div className="space-y-6"><Skeleton className="h-8 w-64" /><Skeleton className="h-[400px] w-full" /></div>}>
-      <WizardContent competitionId={competitionId} />
+      <WizardPageContentWrapper />
     </Suspense>
   );
 }
 
-  const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
-  const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
-  const [openEmojiPickerId, setOpenEmojiPickerId] = useState<string | null>(null);
+function WizardPageContentWrapper() {
+  const searchParams = useSearchParams();
+  const competitionId = searchParams.get('edit') || undefined;
+  return <WizardPageContent competitionId={competitionId} />;
+}

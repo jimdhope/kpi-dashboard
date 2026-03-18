@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Home, Trophy, Users, Target, Star, Award, CheckSquare, ClipboardList, Swords, GanttChartSquare } from 'lucide-react';
+import { Home, Trophy, Star, Award, CheckSquare, Gamepad2, Target, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AppNavBar } from '@/components/app-navbar';
 
@@ -22,13 +22,8 @@ interface CompetitionsLayoutProps {
 
 const competitionsMenuItems = [
   { label: 'Dashboard', href: '/competitions', icon: Home },
-  { label: 'Log Achievements', href: '/competitions/log', icon: CheckSquare },
-  { label: 'Daily Scores', href: '/competitions/scores', icon: ClipboardList },
-  { label: 'RPS Scores', href: '/competitions/rps', icon: Swords },
-  { label: 'Competitions', href: '/competitions/setup', icon: Trophy },
-  { label: 'Pod Targets', href: '/competitions/targets', icon: Target },
-  { label: 'Teams', href: '/competitions/teams', icon: Users },
-  { label: 'Leaderboard', href: '/competitions/leaderboard', icon: Star },
+  { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare },
+  { label: 'Manage', href: '/competitions/manage', icon: Trophy },
   { label: 'Certificates', href: '/competitions/certificates', icon: Award },
 ];
 
@@ -50,6 +45,9 @@ export default function CompetitionsLayout({ children }: CompetitionsLayoutProps
         <div className="flex flex-1">
           <Sidebar className="glass-sidebar border-r border-glass-border/40 pt-0 top-[65px] h-[calc(100vh-65px)]">
             <SidebarContent className="pt-4">
+              <div className="px-4 mb-4">
+                <h3 className="text-sm font-semibold">Competitions</h3>
+              </div>
               <SidebarMenu>
                 {competitionsMenuItems.map((item) => {
                   const Icon = item.icon;
@@ -89,8 +87,16 @@ export default function CompetitionsLayout({ children }: CompetitionsLayoutProps
                   <SidebarMenuItem>
                     <Link href="/performance">
                       <SidebarMenuButton>
-                        <GanttChartSquare className="w-4 h-4" />
+                        <BarChart3 className="w-4 h-4" />
                         <span>Performance App</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <Link href="/mini-games">
+                      <SidebarMenuButton>
+                        <Gamepad2 className="w-4 h-4" />
+                        <span>Mini Games App</span>
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>

@@ -152,32 +152,6 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                                 </Link>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <Link href="/admin/daily-scores" passHref>
-                                <SidebarMenuButton tooltip="Daily Scores" isActive={currentPath === '/admin/daily-scores'}>
-                                    <ClipboardList />
-                                    <span>Daily Scores</span>
-                                </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <Link href="/admin/rps-scores" passHref>
-                                <SidebarMenuButton tooltip="RPS Scores" isActive={currentPath === '/admin/rps-scores'}>
-                                    <Swords />
-                                    <span>RPS Scores</span>
-                                </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="competitions" className="border-none">
-                    <AccordionTrigger className="py-2 px-2 text-xs font-medium uppercase text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md">
-                       Competitions
-                    </AccordionTrigger>
-                    <AccordionContent className="pl-4 pt-1 pb-0">
-                        <SidebarMenu>
-                             <SidebarMenuItem>
                                 <Link href="/admin/competitions" passHref>
                                     <SidebarMenuButton tooltip="Competitions" isActive={currentPath.startsWith('/admin/competitions')}>
                                         <Trophy />

@@ -57,7 +57,7 @@ export function AppNavBar({ className }: { className?: string }) {
 
   const isActive = (href: string) => {
     if (href === '/competitions') {
-      return pathname.startsWith('/competitions') || pathname === '/admin';
+      return pathname.startsWith('/competitions');
     }
     return pathname.startsWith(href);
   };
