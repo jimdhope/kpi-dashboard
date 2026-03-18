@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, query, where, Timestamp, doc, onSnapshot, Unsubscribe, serverTimestamp, orderBy, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, onSnapshot, Unsubscribe, serverTimestamp, orderBy, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CalendarIcon, Loader2, Filter, CheckSquare, Save, Send, ListFilter, Settings } from 'lucide-react';
+import { CalendarIcon, Loader2, Filter, Save, Send, ListFilter, Settings, Minus, Plus } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,7 +18,6 @@ import { cn } from '@/lib/utils';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { TrackerKpi } from '@/app/(admin)/admin/trackers/setup/page';
-import { TrackerCard } from '@/components/tracker-card';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -77,7 +75,7 @@ export default function LogTrackerPage() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [kpis, setKpis] = useState<TrackerKpi[]>([]);
-  const [logs, setLogs] = useState<TrackerLog[]>([]); // New state for logs
+  const [logs, setLogs] = useState<TrackerLog[]>([]);
   const [selectedPodIds, setSelectedPodIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [inputs, setInputs] = useState<KpiInputState>({});
@@ -112,6 +110,17 @@ export default function LogTrackerPage() {
     }
   }, []);
 
+  const handleSelectAllPods = () => {
+    const allPodIds = pods.map(p => p.id).filter(Boolean) as string[];
+    setSelectedPodIds(allPodIds);
+    localStorage.setItem(SCORES_POD_KEY, JSON.stringify(allPodIds));
+  };
+
+  const handleClearAllPods = () => {
+    setSelectedPodIds([]);
+    localStorage.setItem(SCORES_POD_KEY, JSON.stringify([]));
+  };
+
   const handlePodSelectionChange = (podId: string) => {
     const newSelectedPodIds = selectedPodIds.includes(podId)
         ? selectedPodIds.filter(id => id !== podId)
@@ -127,7 +136,6 @@ export default function LogTrackerPage() {
     }
   };
 
-  // Effect to fetch static data like Pods and KPIs
   useEffect(() => {
     setIsLoading(true);
     const unsubscribes: Unsubscribe[] = [];
@@ -138,13 +146,12 @@ export default function LogTrackerPage() {
 
     unsubscribes.push(onSnapshot(query(collection(db, 'trackerKpis'), orderBy('name')), (snap) => {
       setKpis(snap.docs.map(d => ({ id: d.id, ...d.data() } as TrackerKpi)));
-      setIsLoading(false); // Can consider loading finished after this
+      setIsLoading(false);
     }));
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
 
-  // Effect to fetch agents when pod selection changes
   useEffect(() => {
     if (selectedPodIds.length === 0) {
       setAgents([]);
@@ -159,7 +166,6 @@ export default function LogTrackerPage() {
     return () => unsubscribe();
   }, [selectedPodIds]);
 
-  // Effect to fetch logs when pod or date selection changes
   useEffect(() => {
       if (selectedPodIds.length === 0) {
           setLogs([]);
@@ -181,7 +187,6 @@ export default function LogTrackerPage() {
   }, [selectedPodIds, selectedDate]);
 
 
-  // Effect to compose the `inputs` state from fetched data, while preserving user input
   useEffect(() => {
     setInputs(currentInputs => {
         const newInputs: KpiInputState = {};
@@ -195,25 +200,24 @@ export default function LogTrackerPage() {
                 const dbValue = log ? String(log.value) : '0';
                 const logId = log?.id;
 
-                const currentAgentKpiInput = currentInputs[agent.id]?.[kpi.id];
+                const currentAgentKpiInput = agent.id && kpi.id ? currentInputs[agent.id]?.[kpi.id] : undefined;
 
-                // If DB value is unchanged from what's in our state's 'initialValue',
-                // it means the source data hasn't changed, so we can keep the user's typed value.
-                // Otherwise, we should update to the new value from the database.
                 const valueToDisplay = (currentAgentKpiInput && currentAgentKpiInput.initialValue === dbValue)
                     ? currentAgentKpiInput.value
                     : dbValue;
                 
-                newInputs[agent.id][kpi.id] = {
-                    value: valueToDisplay,
-                    initialValue: dbValue, // Always update initialValue to reflect the latest from DB
-                    logId: logId,
-                };
+                if (agent.id && kpi.id) {
+                    newInputs[agent.id][kpi.id] = {
+                        value: valueToDisplay,
+                        initialValue: dbValue,
+                        logId: logId,
+                    };
+                }
             });
         });
         return newInputs;
     });
-  }, [agents, kpis, logs]); // This effect now safely composes state
+  }, [agents, kpis, logs]);
 
 
   const handleSaveTrackerScore = useCallback(async (agentId: string, kpiId: string, valueStr: string) => {
@@ -275,6 +279,18 @@ export default function LogTrackerPage() {
     }));
     debouncedSave(agentId, kpiId, newValue);
   }, [debouncedSave]);
+
+  const handleIncrement = useCallback((agentId: string, kpiId: string, currentValue: string) => {
+    const numericValue = parseInt(currentValue, 10) || 0;
+    handleInputChange(agentId, kpiId, String(numericValue + 1));
+  }, [handleInputChange]);
+
+  const handleDecrement = useCallback((agentId: string, kpiId: string, currentValue: string) => {
+    const numericValue = parseInt(currentValue, 10) || 0;
+    if (numericValue > 0) {
+      handleInputChange(agentId, kpiId, String(numericValue - 1));
+    }
+  }, [handleInputChange]);
 
   const handleSendToTeams = async () => {
     if (!webhookUrl) {
@@ -342,6 +358,8 @@ export default function LogTrackerPage() {
     setIsSettingsOpen(false);
   };
 
+  const canSendToTeams = selectedPodIds.length > 0 && agents.length > 0 && webhookUrl && !isSending;
+
   return (
     <div className="space-y-6">
       <Card className="frosted-glass">
@@ -356,12 +374,19 @@ export default function LogTrackerPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button id="pod-select" variant="outline" className="w-[200px] justify-between" disabled={isLoading}>
-                         {selectedPodIds.length === 0 ? "Select Pods" : `${selectedPodIds.length} selected`}
+                         {selectedPodIds.length === 0 ? "Select Pods" : selectedPodIds.length === pods.length ? "All Pods" : `${selectedPodIds.length} selected`}
                          <ListFilter className="h-4 w-4 opacity-50" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56">
                       <DropdownMenuLabel>Pods</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem
+                        checked={selectedPodIds.length === pods.length && pods.length > 0}
+                        onCheckedChange={(checked) => checked ? handleSelectAllPods() : handleClearAllPods()}
+                      >
+                        {selectedPodIds.length === pods.length ? "Deselect All" : "Select All"}
+                      </DropdownMenuCheckboxItem>
                       <DropdownMenuSeparator />
                       {pods.map(pod => (
                           <DropdownMenuCheckboxItem
@@ -384,7 +409,7 @@ export default function LogTrackerPage() {
                 </div>
             </div>
             <div className="flex gap-2">
-                 <Button onClick={handleSendToTeams} disabled={isSending || selectedPodIds.length === 0 || agents.length === 0 || !webhookUrl} variant="secondary">
+                 <Button onClick={handleSendToTeams} disabled={!canSendToTeams} variant="secondary">
                      {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                      Send to Teams
                  </Button>
@@ -425,30 +450,18 @@ export default function LogTrackerPage() {
     
       <div className="space-y-6">
         {isLoading ? (
-            <div className="space-y-6">
-                {Array.from({ length: 2 }).map((_, podIndex) => (
-                    <Card key={podIndex} className="frosted-glass">
-                        <CardHeader>
-                            <Skeleton className="h-6 w-1/4" />
-                            <Skeleton className="h-4 w-1/5" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-wrap gap-4">
-                                {Array.from({ length: 4 }).map((_, agentIndex) => (
-                                    <Card key={agentIndex} className="bg-background/50 shadow-inner w-60 flex flex-col">
-                                        <CardHeader className="p-3">
-                                            <Skeleton className="h-5 w-3/4" />
-                                        </CardHeader>
-                                        <CardContent className="p-3 pt-0 space-y-2">
-                                            <Skeleton className="h-12 w-full" />
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+            <Card className="frosted-glass">
+              <CardHeader>
+                <Skeleton className="h-6 w-1/4" />
+                <Skeleton className="h-4 w-1/5" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+              </CardContent>
+            </Card>
         ) : selectedPodIds.length === 0 ? (
             <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">Please select one or more pods to begin.</p></CardContent></Card>
         ) : kpis.length === 0 ? (
@@ -456,44 +469,89 @@ export default function LogTrackerPage() {
         ) : agents.length === 0 ? (
             <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">No agents found in the selected pod(s).</p></CardContent></Card>
         ) : (
-            selectedPodIds.map(podId => {
-                const pod = pods.find(p => p.id === podId);
-                const podAgents = agents.filter(a => a.podId === podId).sort((a, b) => a.name.localeCompare(b.name));
-
-                if (!pod || podAgents.length === 0) return null;
-
-                return (
-                    <Card key={podId} className="frosted-glass">
-                        <CardHeader>
-                            <CardTitle>{pod.name}</CardTitle>
-                            <CardDescription>{podAgents.length} agent(s) in this pod.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-wrap gap-4">
-                                {podAgents.map(agent => (
-                                    <Card key={agent.id} className="bg-background/50 shadow-inner w-60 flex flex-col">
-                                        <CardHeader className="p-3">
-                                            <CardTitle className="text-base">{agent.name}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-3 pt-0 space-y-2">
-                                            {kpis.map(kpi => (
-                                                <TrackerCard
-                                                    key={kpi.id}
-                                                    kpi={kpi}
-                                                    value={inputs[agent.id!]?.[kpi.id!]?.value ?? '0'}
-                                                    isSaving={isSaving[`${agent.id!}-${kpi.id!}`] || false}
-                                                    onValueChange={(newValue) => handleInputChange(agent.id!, kpi.id!, newValue)}
-                                                />
-                                            ))}
-                                            {kpis.length === 0 && <p className="text-xs text-muted-foreground">No trackers defined.</p>}
-                                        </CardContent>
-                                    </Card>
-                                ))}
+            <Card className="frosted-glass">
+              <CardHeader>
+                <CardTitle>Log Daily Trackers</CardTitle>
+                <CardDescription>Track metrics for each agent. Changes are saved automatically.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="sticky left-0 z-10 bg-muted/50 w-[200px]">Agent</TableHead>
+                        {kpis.map(kpi => (
+                          <TableHead key={kpi.id} className="text-center min-w-[100px]">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-lg">{kpi.initials || '📋'}</span>
+                              <span className="text-xs font-normal">{kpi.name}</span>
                             </div>
-                        </CardContent>
-                    </Card>
-                )
-            })
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {agents.map(agent => (
+                        <TableRow key={agent.id}>
+                          <TableCell className="sticky left-0 z-10 bg-background font-medium">
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded border-2 border-green-500 bg-green-500/20 flex items-center justify-center">
+                                <span className="text-xs text-green-600">✓</span>
+                              </div>
+                              <span>{agent.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                ({pods.find(p => p.id === agent.podId)?.name || 'Unknown Pod'})
+                              </span>
+                            </div>
+                          </TableCell>
+                          {kpis.map(kpi => {
+                            const savingKey = `${agent.id}-${kpi.id}`;
+                            const isSavingThis = isSaving[savingKey] || false;
+                            return (
+                              <TableCell key={kpi.id} className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={inputs[agent.id!]?.[kpi.id!]?.value ?? '0'}
+                                    onChange={(e) => handleInputChange(agent.id!, kpi.id!, e.target.value)}
+                                    className="w-14 h-8 text-center"
+                                    disabled={isSavingThis}
+                                  />
+                                  <div className="flex flex-col">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-4 w-6 text-xs"
+                                      onClick={() => handleIncrement(agent.id!, kpi.id!, inputs[agent.id!]?.[kpi.id!]?.value ?? '0')}
+                                      disabled={isSavingThis}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-4 w-6 text-xs"
+                                      onClick={() => handleDecrement(agent.id!, kpi.id!, inputs[agent.id!]?.[kpi.id!]?.value ?? '0')}
+                                      disabled={isSavingThis || parseInt(inputs[agent.id!]?.[kpi.id!]?.value ?? '0') <= 0}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  {isSavingThis && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                                </div>
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
         )}
         </div>
     </div>
