@@ -220,88 +220,72 @@ export default function AdminCompetitionsPage() {
                </Link>
                {isAddDisabled && !isLoading && <p className="text-xs text-muted-foreground">{addButtonTooltip}</p>}
             </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[calc(100vh-220px)]">
+            <CardContent>
               {error && !isLoading && (
                 <div className="mb-4 text-center text-destructive">{error}</div>
               )}
-              <Table>
-                <TableHeader className="sticky top-0 z-10 bg-background">
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead>Pod(s)</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead className="text-right w-[150px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    Array.from({ length: 3 }).map((_, index) => (
-                      <TableRow key={`loading-${index}`}>
-                        <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-1/4" /></TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
-                            <Skeleton className="h-8 w-8" />
-                            <Skeleton className="h-8 w-8" />
+              
+              {isLoading ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-48 w-full" />
+                  ))}
+                </div>
+              ) : competitions.length === 0 && !error ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Trophy className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No competitions yet</p>
+                  <p className="text-sm">Create your first competition to get started!</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {competitions.map((comp) => (
+                    <Card key={comp.id} className="frosted-glass hover:border-primary/50 transition-colors">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="text-lg line-clamp-1">{comp.name}</CardTitle>
+                          <Trophy className="h-5 w-5 text-primary shrink-0" />
+                        </div>
+                        <CardDescription className="line-clamp-1">{comp.campaignName}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Pods</span>
+                            <span className="font-medium truncate max-w-[150px]" title={comp.podNames?.join(', ')}>
+                              {comp.podNames?.slice(0, 2).join(', ')}
+                              {comp.podNames && comp.podNames.length > 2 && ` +${comp.podNames.length - 2}`}
+                            </span>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : competitions.length === 0 && !error ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                        No competitions found. Create one to get started!
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    competitions.map((comp) => (
-                      <TableRow key={comp.id}>
-                        <TableCell className="font-medium">{comp.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{comp.campaignName}</TableCell>
-                        <TableCell className="text-muted-foreground truncate max-w-xs" title={comp.podNames?.join(', ')}>
-                            {comp.podNames?.join(', ') || 'N/A'}
-                        </TableCell>
-                        <TableCell>{comp.startDate ? format(comp.startDate.toDate(), 'PP') : 'N/A'}</TableCell>
-                        <TableCell>{comp.endDate ? format(comp.endDate.toDate(), 'PP') : 'N/A'}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
-                            {/* Changed Edit Button to Link */}
-                            <Link href={`/admin/competitions/edit/${comp.id}`} passHref>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Edit ${comp.name}`}
-                                title={`Edit ${comp.name}`}
-                                disabled={isLoading || isLoadingRelated} // Disable while loading related data
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                                onClick={() => openDeleteAlert(comp)}
-                                aria-label={`Delete ${comp.name}`}
-                                title={`Delete ${comp.name}`}
-                                disabled={isLoading || isDeleting}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Dates</span>
+                            <span className="font-medium text-xs">
+                              {comp.startDate ? format(comp.startDate.toDate(), 'MMM d') : 'N/A'} - {comp.endDate ? format(comp.endDate.toDate(), 'MMM d') : 'N/A'}
+                            </span>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Rules</span>
+                            <span className="font-medium">{comp.rules?.length || 0}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-4 pt-4 border-t">
+                          <Link href={`/admin/competitions/${comp.id}`} className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">
+                              View
+                            </Button>
+                          </Link>
+                          <Link href={`/admin/competitions/wizard?edit=${comp.id}`} className="flex-1">
+                            <Button variant="secondary" size="sm" className="w-full">
+                              <Edit className="mr-1 h-4 w-4" />
+                              Edit
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
