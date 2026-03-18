@@ -1,0 +1,138 @@
+
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Medal } from 'lucide-react';
+import { generateInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+interface LeaderboardEntry {
+  id: string;
+  rank?: number;
+  name: string;
+  score: number;
+  avatarUrl?: string;
+  avatarInitials?: string;
+  avatarBgColor?: string;
+  emoji?: string; // Added emoji for teams
+  isUser?: boolean;
+}
+
+interface LeaderboardProps {
+  title: string;
+  description?: string;
+  entries: LeaderboardEntry[];
+  isStickyHeader?: boolean;
+}
+
+const getMedalColor = (rank: number) => {
+  switch (rank) {
+    case 1: return 'text-yellow-400';
+    case 2: return 'text-gray-300';
+    case 3: return 'text-orange-400';
+    default: return 'text-muted-foreground';
+  }
+}
+
+const getRankHighlightStyle = (rank: number): React.CSSProperties => {
+  switch (rank) {
+    case 1: return { backgroundColor: '#9f8f5e', color: '#ffffff' };
+    case 2: return { backgroundColor: '#969696', color: '#ffffff' };
+    case 3: return { backgroundColor: '#996b4f', color: '#ffffff' };
+    default: return {};
+  }
+};
+
+export function Leaderboard({ title, description, entries, isStickyHeader = true }: LeaderboardProps) {
+    const sortedEntries = [...entries].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank: number })[] => {
+        if (items.length === 0) return [];
+        const itemsWithScores = items.map(item => ({ ...item, score: typeof item.score === 'number' ? item.score : 0 }));
+        const sorted = [...itemsWithScores].sort((a, b) => b.score - a.score);
+
+        if (sorted.length === 0) return [];
+
+        const scoreRankMap = new Map<number, number>();
+        let rankCounter = 1;
+        for (const item of sorted) {
+            if (!scoreRankMap.has(item.score)) {
+                scoreRankMap.set(item.score, rankCounter++);
+            }
+        }
+        return items.map(item => ({
+            ...item,
+            score: typeof item.score === 'number' ? item.score : 0,
+            rank: scoreRankMap.get(typeof item.score === 'number' ? item.score : 0) || items.length
+        }));
+    };
+
+    const rankedEntries = assignDenseRanks(sortedEntries);
+
+  return (
+    <Card className="shadow-md frosted-glass">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
+      </CardHeader>
+      <CardContent className={cn(isStickyHeader && "overflow-y-auto max-h-[calc(100vh-380px)]")}>
+        <Table>
+          <TableHeader className={cn(isStickyHeader && "sticky top-0 z-10 bg-background")}>
+            <TableRow>
+              <TableHead className="w-[50px]">Rank</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead className="text-right">Score</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rankedEntries.map((entry) => (
+              <TableRow
+                key={`${entry.id}-${entry.name}`}
+                style={getRankHighlightStyle(entry.rank ?? 0)}
+                className={cn(
+                    entry.isUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
+                    (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
+                )}
+              >
+                <TableCell className="font-medium text-center align-middle">
+                  {(entry.rank ?? 0) <= 3 ? (
+                    <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                  ) : (
+                    entry.rank
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    {entry.emoji ? (
+                        <span className="text-xl">{entry.emoji}</span>
+                    ) : (
+                        <Avatar className="h-8 w-8">
+                        <AvatarFallback
+                            initials={entry.avatarInitials || generateInitials(entry.name)}
+                            backgroundColor={entry.avatarBgColor}
+                            className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
+                        >
+                            {!entry.avatarInitials && generateInitials(entry.name)}
+                        </AvatarFallback>
+                        </Avatar>
+                    )}
+                    <span className={cn("font-medium truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
+                     {entry.isUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
+                  </div>
+                </TableCell>
+                <TableCell className={cn(
+                    "text-right font-semibold",
+                    (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary'
+                  )}
+                >
+                    {(entry.score ?? 0).toLocaleString()}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}

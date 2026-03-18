@@ -1,0 +1,247 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap'); /* Added Dancing Script import */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apply a subtle, theme-aware repeating background pattern to the body */
+body {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  background-color: hsl(var(--background));
+  /* The pattern is created by a repeating gradient. The border color provides subtle contrast. */
+  background-image: repeating-radial-gradient(
+    circle at center,
+    hsl(var(--border)) 0,
+    hsl(var(--border)) 1px,
+    transparent 1px,
+    transparent 20px
+  );
+  background-size: 20px 20px;
+}
+
+
+@layer base {
+  body {
+    @apply text-foreground; /* Apply theme foreground */
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  :root {
+    /* Light Mode */
+    --background: 203 42% 96%; /* #f2f7f9 - Very light grey-blue for main bg area */
+    --foreground: 0 0% 10%; /* Dark Gray */
+    --card: hsla(0, 0%, 100%, 0.85); /* White with 85% opacity for stronger frost */
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 180 100% 25%; /* Teal #008080 */
+    --primary-rgb: 0, 128, 128; /* RGB for primary color */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 0 0% 90%; /* Slightly darker gray */
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 180 50% 90%; /* Lighter Teal for hover */
+    --accent-foreground: 180 100% 15%; /* Darker Teal for hover text */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 85%; /* Slightly darker border */
+    --input: 0 0% 85%;
+    --ring: 180 100% 25%; /* Teal for focus rings */
+    --chart-1: 51 100% 50%; /* Gold #FFD700 */
+    --chart-2: 180 70% 40%; /* Teal variant */
+    --chart-3: 210 40% 50%; /* Blueish gray */
+    --chart-4: 30 80% 60%; /* Orangeish */
+    --chart-5: 120 40% 55%; /* Greenish */
+    --sidebar-background: hsla(0, 0%, 98%, 0.80);
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 180 100% 25%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 50% 90%;
+    --sidebar-accent-foreground: 180 100% 15%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 180 100% 25%;
+    /* Glassmorphic theme */
+    --glass: 180 20% 95%;
+    --glass-foreground: 0 0% 10%;
+    --glass-border: 180 20% 80%;
+    --glass-hover: 180 30% 90%;
+
+  }
+
+  .dark {
+    /* Dark Mode */
+    --background: 210 10% 15%; /* #212429 - Dark cool grey for main bg area */
+    --foreground: 0 0% 98%; /* White */
+    --card: hsla(210, 10%, 20%, 0.85); /* Dark Blueish Gray with 85% opacity */
+    --card-foreground: 0 0% 98%;
+    --popover: 210 10% 20%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 180 80% 60%; /* Lighter Teal */
+    --primary-rgb: 92, 230, 230; /* RGB for primary color */
+    --primary-foreground: 180 100% 10%; /* Dark Teal */
+    --secondary: 210 10% 25%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 210 10% 25%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 180 50% 30%; /* Darker Teal for hover */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 10% 30%;
+    --input: 210 10% 30%;
+    --ring: 180 80% 60%; /* Lighter Teal */
+    --chart-1: 51 100% 60%; /* Lighter Gold */
+    --chart-2: 180 70% 50%; /* Teal variant */
+    --chart-3: 210 40% 60%; /* Blueish gray */
+    --chart-4: 30 80% 70%; /* Orangeish */
+    --chart-5: 120 40% 65%; /* Greenish */
+    --sidebar-background: hsla(210, 8%, 18%, 0.80);
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 180 80% 60%;
+    --sidebar-primary-foreground: 180 100% 10%;
+    --sidebar-accent: 180 50% 30%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 210 10% 25%;
+    --sidebar-ring: 180 80% 60%;
+    /* Glassmorphic theme - Dark */
+    --glass: 210 10% 20%;
+    --glass-foreground: 0 0% 95%;
+    --glass-border: 210 10% 30%;
+    --glass-hover: 210 15% 25%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+}
+
+/* Frosted Glass effect for cards */
+.frosted-glass {
+  /* Decreased opacity and increased blur for a more pronounced effect */
+  @apply bg-card/85 border border-border/50 shadow-lg;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Glassmorphic Base */
+.glass {
+  @apply bg-glass/60 backdrop-blur-md border border-glass-border/50;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Glassmorphic Card */
+.glass-card {
+  @apply bg-glass/70 backdrop-blur-lg border border-glass-border/60 shadow-xl;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  @apply rounded-xl;
+}
+
+/* Glassmorphic Card Hover */
+.glass-card-hover {
+  @apply glass-card transition-all duration-300;
+}
+
+.glass-card-hover:hover {
+  @apply bg-glass-hover/80 shadow-2xl border-glass-border/80;
+  transform: translateY(-2px);
+}
+
+/* Glassmorphic Button */
+.glass-button {
+  @apply glass transition-all duration-200 active:scale-95;
+}
+
+.glass-button:hover {
+  @apply bg-glass-hover;
+}
+
+/* Glassmorphic Input */
+.glass-input {
+  @apply bg-glass/50 backdrop-blur-sm border border-glass-border/60 focus:bg-glass/70;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Glassmorphic Sidebar */
+.glass-sidebar {
+  @apply bg-glass/80 backdrop-blur-xl border-r border-glass-border/40;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+/* Glassmorphic Overlay */
+.glass-overlay {
+  @apply bg-glass/40 backdrop-blur-md;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Gradient Backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 100%);
+}
+
+.gradient-gold {
+  background: linear-gradient(135deg, hsl(var(--chart-1)) 0%, hsl(var(--chart-1) / 0.7) 100%);
+}
+
+.gradient-teal {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(180 70% 40%) 100%);
+}
+
+/* Animated Gradient Background */
+.gradient-animated {
+  background: linear-gradient(-45deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.1) 50%, hsl(var(--background)) 100%);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Shimmer Effect for Glass */
+.shimmer-glass {
+  @apply glass relative overflow-hidden;
+}
+
+.shimmer-glass::after {
+  content: '';
+  @apply absolute inset-0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--glass) / 0.3),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Remove fixed background container as it's no longer needed */
+.fixed-background-container {
+  display: none;
+}
+
+/* The scrollable container now just needs to be a basic block element */
+.scrollable-content-container {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  background-color: transparent;
+}
+
+
+/* Style for SVG certificate container */
+.certificate-svg-container svg {
+  @apply max-w-full h-auto block max-h-full; /* Ensure SVG scales down and maintains aspect ratio within container */
+}

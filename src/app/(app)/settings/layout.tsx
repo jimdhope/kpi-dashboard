@@ -1,0 +1,140 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarSeparator,
+} from '@/components/ui/sidebar';
+import { Home, Trophy, Target, Settings as SettingsIcon, User, Bell, Megaphone, ShieldCheck, MessageSquare, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { AppNavBar } from '@/components/app-navbar';
+
+interface SettingsLayoutProps {
+  children: React.ReactNode;
+}
+
+const settingsMenuItems = [
+  { label: 'Profile', href: '/settings/profile', icon: User },
+  { label: 'Notifications', href: '/settings/notifications', icon: Bell },
+  { label: 'General', href: '/settings/general', icon: SettingsIcon },
+];
+
+const managementMenuItems = [
+  { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
+  { label: 'Pods', href: '/settings/pods', icon: ShieldCheck },
+  { label: 'Users', href: '/settings/users', icon: Users },
+  { label: 'Dashboard Settings', href: '/settings/dashboard', icon: MessageSquare },
+];
+
+export default function SettingsLayout({ children }: SettingsLayoutProps) {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    return pathname.startsWith(href);
+  };
+
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex relative min-h-screen w-full flex-col">
+        <AppNavBar />
+        
+        <div className="flex flex-1">
+          <Sidebar className="glass-sidebar border-r border-glass-border/40 pt-0 top-[65px] h-[calc(100vh-65px)]">
+            <SidebarContent className="pt-4">
+              <div className="px-4 mb-4">
+                <h3 className="text-sm font-semibold">Settings</h3>
+              </div>
+              <SidebarMenu>
+                {settingsMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <Link href={item.href}>
+                        <SidebarMenuButton 
+                          isActive={active}
+                          className={cn(
+                            "mb-1",
+                            active && "bg-primary/20 text-primary border-l-2 border-primary"
+                          )}
+                        >
+                          <Icon className={cn("w-4 h-4", active ? "text-primary" : "")} />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </Link>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+
+              <SidebarSeparator className="my-4" />
+
+              <div className="px-4 mb-4">
+                <h3 className="text-sm font-semibold">Management</h3>
+              </div>
+              <SidebarMenu>
+                {managementMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <Link href={item.href}>
+                        <SidebarMenuButton 
+                          isActive={active}
+                          className={cn(
+                            "mb-1",
+                            active && "bg-primary/20 text-primary border-l-2 border-primary"
+                          )}
+                        >
+                          <Icon className={cn("w-4 h-4", active ? "text-primary" : "")} />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </Link>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+
+              <SidebarSeparator className="my-4" />
+
+              <div className="px-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase mb-2">Other Apps</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <Link href="/competitions">
+                      <SidebarMenuButton>
+                        <Trophy className="w-4 h-4" />
+                        <span>Competitions</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <Link href="/trackers">
+                      <SidebarMenuButton>
+                        <Target className="w-4 h-4" />
+                        <span>Trackers</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            </SidebarContent>
+          </Sidebar>
+
+          <main className="flex-1 p-6 overflow-y-auto min-h-[calc(100vh-65px)]">
+            <div className="glass-card p-6 rounded-xl min-h-full">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
