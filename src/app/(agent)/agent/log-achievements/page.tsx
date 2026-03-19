@@ -13,6 +13,8 @@ import {
   addDoc,
   orderBy,
   serverTimestamp,
+  Unsubscribe,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -41,7 +43,7 @@ interface DailyAchievementLog {
   date: Timestamp; // Date the achievement occurred (start of day)
   value: number; // The actual achievement value logged
   points: number; // Calculated points based on rule and value
-  loggedAt: Timestamp; // Timestamp when logged
+  loggedAt: Timestamp | ReturnType<typeof serverTimestamp>; // Timestamp when logged
   loggedBy?: string | null; // UID of user who logged it (could be self or admin)
 }
 
@@ -51,6 +53,21 @@ interface AgentAchievementInputState {
     value: string; // Use string for input control
     existingLogId?: string; // To know if we update or add
   };
+}
+
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: RuleFormData[];
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
 }
 
 export default function AgentLogAchievementsPage() {
@@ -151,7 +168,7 @@ export default function AgentLogAchievementsPage() {
         let activeCompetition: (Competition & { id: string }) | null = null;
         for (const docSnap of competitionSnapshot.docs) {
           const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-          if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
+          if (comp.endDate && comp.endDate.toDate() >= dateTimestamp.toDate()) {
             activeCompetition = comp;
             break;
           }
@@ -253,14 +270,14 @@ export default function AgentLogAchievementsPage() {
      const dateTimestamp = Timestamp.fromDate(startOfDay(selectedDate));
      const competitionQuery = query(competitionsRef, where('podId', '==', agentPodId), where('startDate', '<=', dateTimestamp), orderBy('startDate', 'desc'));
      const competitionSnapshot = await getDocs(competitionQuery);
-     let activeCompetitionId: string | null = null;
-     for (const docSnap of competitionSnapshot.docs) {
-         const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
-         if (comp.endDate && comp.endDate.toDate() >= dateTimestamp) {
-             activeCompetitionId = comp.id;
-             break;
-         }
-     }
+      let activeCompetitionId: string | null = null;
+      for (const docSnap of competitionSnapshot.docs) {
+          const comp = { id: docSnap.id, ...docSnap.data() } as Competition & { id: string };
+          if (comp.endDate && comp.endDate.toDate() >= dateTimestamp.toDate()) {
+              activeCompetitionId = comp.id;
+              break;
+          }
+      }
 
     if (!activeCompetitionId) {
        console.error("No active competition found for auto-save.");

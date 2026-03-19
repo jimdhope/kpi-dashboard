@@ -4,7 +4,14 @@
 import { format } from 'date-fns';
 import type { RuleFormData } from '@/models/types';
 import type { AppUser } from '@/services/user';
-import type { TrackerKpi } from '@/app/(admin)/admin/trackers/setup/page';
+
+export interface TrackerKpi {
+  id: string;
+  name: string;
+  initials: string;
+  type?: 'number' | 'percentage' | 'scoreOutOf';
+  maxValue?: number;
+}
 
 
 // Interface for agent scores passed TO this function

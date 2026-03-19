@@ -71,6 +71,8 @@ interface Team {
 interface Competition {
   id: string;
   name: string;
+  startDate?: { toDate: () => Date };
+  endDate?: { toDate: () => Date };
   podIds: string[];
   rules?: { id: string; name: string }[];
   teams?: Team[];

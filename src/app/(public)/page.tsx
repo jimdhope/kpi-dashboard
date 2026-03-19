@@ -1,199 +1,229 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Trophy, Users, BarChart, Zap, Target } from 'lucide-react'; // Added Zap, Target
 import Link from 'next/link';
-import { Progress } from '@/components/ui/progress'; // Import Progress
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar
-import { MockupKpiDefinition } from '@/components/landing-mockup-kpi'; // Import KPI Definition Mockup
-import { MockupProgressTracking } from '@/components/landing-mockup-progress'; // Import Progress Tracking Mockup
-import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard'; // Import Leaderboard Mockup
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Trophy, Target, TrendingUp, Users, BookOpen, Contact, Zap, CheckCircle, Star, BarChart3, Award, Gamepad2 } from 'lucide-react';
 
+const features = [
+  {
+    id: 'competitions',
+    title: 'Competitions',
+    badge: 'Current',
+    badgeColor: 'bg-green-500/20 text-green-600 border-green-500/30',
+    icon: Trophy,
+    iconColor: 'text-yellow-500',
+    features: [
+      'Custom KPI competitions with flexible rules',
+      'Team & individual leaderboards',
+      'Daily achievement logging',
+      'Team bonus points',
+      'Certificate generation for top performers',
+    ],
+  },
+  {
+    id: 'performance',
+    title: 'Performance',
+    badge: 'Current',
+    badgeColor: 'bg-green-500/20 text-green-600 border-green-500/30',
+    icon: BarChart3,
+    iconColor: 'text-blue-500',
+    features: [
+      'Campaign-wide KPI tracking',
+      'Real-time dashboards',
+      'Pod & agent breakdowns',
+      '6-week performance trends',
+      'Export-ready reports',
+    ],
+  },
+  {
+    id: 'knowledge',
+    title: 'Knowledge Base',
+    badge: 'Coming Soon',
+    badgeColor: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
+    icon: BookOpen,
+    iconColor: 'text-purple-500',
+    features: [
+      'Articles & resources',
+      'Help documentation',
+      'Onboarding guides',
+      'Team knowledge sharing',
+      'Searchable wiki',
+    ],
+  },
+  {
+    id: 'directory',
+    title: 'Directory',
+    badge: 'Coming Soon',
+    badgeColor: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
+    icon: Contact,
+    iconColor: 'text-orange-500',
+    features: [
+      'Internal contacts',
+      'External contacts',
+      'Quick access for agents',
+      'Role-based visibility',
+      'Contact search',
+    ],
+  },
+];
 
-// Mock Leaderboard Entry Component
-const MockLeaderboardEntry = ({ rank, name, score, initials, bgColor }: { rank: number; name: string; score: number; initials: string; bgColor?: string }) => (
-  <div className="flex items-center justify-between p-2 rounded-md transition-colors hover:bg-muted/50">
-    <div className="flex items-center gap-3">
-      <span className="font-mono text-sm w-4 text-center text-muted-foreground">{rank}</span>
-       <Avatar className="h-7 w-7">
-         <AvatarFallback initials={initials} backgroundColor={bgColor} />
-       </Avatar>
-      <span className="text-sm font-medium">{name}</span>
-    </div>
-    <span className="text-sm font-semibold text-primary">{score.toLocaleString()} pts</span>
-  </div>
-);
-
-// Mock KPI Card Component
-const MockKpiCard = ({ title, value, target, progress, icon }: { title: string, value: string, target: string, progress: number, icon: React.ReactNode }) => (
-  // Ensure mock card itself uses frosted glass
-  <Card className="text-left shadow-md frosted-glass">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-       <div className="text-muted-foreground">{icon}</div>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold text-primary">{value}</div>
-      <p className="text-xs text-muted-foreground">Target: {target}</p>
-      <Progress value={progress} className="mt-3 h-2" />
-      <p className="mt-1 text-xs text-muted-foreground">
-        {progress.toFixed(0)}% achieved
-      </p>
-    </CardContent>
-  </Card>
-);
-
+const steps = [
+  {
+    number: 1,
+    title: 'Define',
+    description: 'Set up your KPIs, create competitions, and define achievement rules',
+    icon: Target,
+  },
+  {
+    number: 2,
+    title: 'Track',
+    description: 'Log daily achievements and monitor real-time progress',
+    icon: TrendingUp,
+  },
+  {
+    number: 3,
+    title: 'Win!',
+    description: 'Climb leaderboards, earn certificates, and celebrate success',
+    icon: Trophy,
+  },
+];
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col items-center w-full">
       {/* Hero Section */}
-      <section
-        className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden"
-      >
+      <section className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden">
         <div className="container mx-auto px-4 md:px-6 relative z-10">
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg">
-            Welcome to KPI Quest
+            Gamify Your Team&apos;s Performance
           </h1>
           <p className="mx-auto max-w-[700px] text-foreground/90 md:text-xl mt-4 drop-shadow-sm">
-            Gamify your team's performance, track KPIs effortlessly, and foster friendly competition to drive results.
+            Transform KPI tracking into friendly competition. Track metrics, compete with colleagues, and celebrate wins together.
           </p>
           <div className="mt-8">
             <Link href="/login" passHref>
-             <Button size="lg">Get Started</Button>
+              <Button size="lg">Get Started</Button>
             </Link>
           </div>
         </div>
       </section>
 
-       {/* Features & Preview Section - Apply frosted-glass */}
-       <section id="features" className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
-         <div className="container mx-auto px-4 md:px-6">
-           <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-16">
-             How KPI Quest Elevates Performance
-           </h2>
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="space-y-8">
-                 <div className="flex items-start gap-4">
-                    <div className="bg-primary/10 rounded-full p-3">
-                        <Trophy className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-semibold">Gamified Motivation</h3>
-                        <p className="text-muted-foreground mt-1">Boost engagement with dynamic leaderboards, points for achievements, and friendly team rivalries.</p>
-                    </div>
-                 </div>
-                 <div className="flex items-start gap-4">
-                    <div className="bg-primary/10 rounded-full p-3">
-                        <BarChart className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-semibold">Clear KPI Tracking</h3>
-                        <p className="text-muted-foreground mt-1">Visualize progress towards individual and pod targets with intuitive dashboards and progress bars.</p>
-                    </div>
-                 </div>
-                 <div className="flex items-start gap-4">
-                    <div className="bg-primary/10 rounded-full p-3">
-                        <Users className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-semibold">Team Collaboration</h3>
-                        <p className="text-muted-foreground mt-1">Foster teamwork within pods, encourage peer support, and celebrate collective success.</p>
-                    </div>
-                 </div>
-                  <div className="flex items-start gap-4">
-                    <div className="bg-primary/10 rounded-full p-3">
-                        <Zap className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-semibold">AI-Powered Encouragement</h3>
-                        <p className="text-muted-foreground mt-1">Receive personalized motivational messages based on your progress to keep the momentum going.</p>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                       {/* These MockKpiCards inherently have frosted-glass applied */}
-                       <MockKpiCard title="Sales Calls" value="85" target="120" progress={71} icon={<Target />} />
-                       <MockKpiCard title="Customer Rating" value="4.8" target="4.5" progress={100} icon={<CheckCircle />} />
-                  </div>
-                  {/* This Card should also have frosted-glass */}
-                  <Card className="frosted-glass">
-                      <CardHeader>
-                          <CardTitle className="text-lg">Pod Leaderboard</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-1">
-                          <MockLeaderboardEntry rank={1} name="Alpha Pod" score={1250} initials="AP" bgColor="#008080" />
-                          <MockLeaderboardEntry rank={2} name="Bravo Pod" score={1080} initials="BP" bgColor="#FFD700"/>
-                          <MockLeaderboardEntry rank={3} name="Charlie Pod" score={950} initials="CP" bgColor="#FF8C00" />
-                      </CardContent>
-                  </Card>
-              </div>
-           </div>
-         </div>
-       </section>
-
-       {/* How it Works */}
-       <section className="w-full py-16 md:py-24 lg:py-32">
+      {/* Features Section */}
+      <section className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
         <div className="container mx-auto px-4 md:px-6">
-            <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
-              Simple Steps to Success
-            </h2>
-             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              {/* Step 1 */}
-              <div className="flex flex-col items-center text-center">
-                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">1</div>
-                 {/* Ensure Mockup component has frosted-glass */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
-                    <MockupKpiDefinition />
-                 </div>
-                 <h3 className="text-xl font-semibold mb-2">Define KPIs</h3>
-                 <p className="text-muted-foreground mb-4 min-h-[60px]">Set clear, measurable goals for your campaigns and pods.</p>
-              </div>
+          <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
+            Everything You Need to Succeed
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <Card key={feature.id} variant="glass" className="relative overflow-hidden">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg bg-primary/10`}>
+                          <Icon className={`h-6 w-6 ${feature.iconColor}`} />
+                        </div>
+                        <CardTitle className="text-xl">{feature.title}</CardTitle>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full border ${feature.badgeColor}`}>
+                        {feature.badge}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {feature.features.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
-              {/* Step 2 */}
-              <div className="flex flex-col items-center text-center">
-                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">2</div>
-                  {/* Ensure Mockup component has frosted-glass */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
-                    <MockupProgressTracking />
-                 </div>
-                 <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
-                 <p className="text-muted-foreground mb-4 min-h-[60px]">Log daily achievements and monitor performance via dashboards.</p>
-              </div>
+      {/* How It Works */}
+      <section className="w-full py-16 md:py-24 lg:py-32">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
+            How It Works
+          </h2>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            {steps.map((step) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.number} className="flex flex-col items-center text-center">
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 rounded-full border-4 border-primary/20 bg-primary/5 flex items-center justify-center">
+                      <Icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center">
+                      {step.number}
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                  <p className="text-muted-foreground text-sm max-w-[250px]">{step.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
-               {/* Step 3 */}
-              <div className="flex flex-col items-center text-center">
-                 <div className="mb-4 mx-auto rounded-full border-4 border-primary p-3 text-primary font-bold text-xl w-12 h-12 flex items-center justify-center flex-shrink-0">3</div>
-                  {/* Ensure Mockup component has frosted-glass */}
-                 <div className="mb-6 w-full max-w-xs mx-auto min-h-[280px] flex items-center justify-center flex-shrink-0">
-                    <MockupLeaderboardSnippet />
-                 </div>
-                 <h3 className="text-xl font-semibold mb-2">Celebrate Wins</h3>
-                 <p className="text-muted-foreground mb-4 min-h-[60px]">Recognize top performers and motivate with leaderboards.</p>
-              </div>
+      {/* Key Highlights */}
+      <section className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
+            Built for Teams
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
+              <Trophy className="h-10 w-10 text-yellow-500 mb-4" />
+              <h3 className="font-semibold mb-2">Leaderboards</h3>
+              <p className="text-sm text-muted-foreground">Real-time rankings for pods, teams, and individuals</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
+              <Star className="h-10 w-10 text-purple-500 mb-4" />
+              <h3 className="font-semibold mb-2">Achievements</h3>
+              <p className="text-sm text-muted-foreground">Log daily wins and earn points for your team</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
+              <Award className="h-10 w-10 text-emerald-500 mb-4" />
+              <h3 className="font-semibold mb-2">Certificates</h3>
+              <p className="text-sm text-muted-foreground">Download awards for top performers</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
+              <Gamepad2 className="h-10 w-10 text-blue-500 mb-4" />
+              <h3 className="font-semibold mb-2">Mini-Games</h3>
+              <p className="text-sm text-muted-foreground">Fun breaks that contribute to team scores</p>
             </div>
           </div>
-       </section>
+        </div>
+      </section>
 
-      {/* CTA Section - Apply frosted-glass */}
-      <section className="w-full py-20 md:py-32 text-center frosted-glass">
+      {/* CTA Section */}
+      <section className="w-full py-20 md:py-32 text-center">
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
             Ready to Boost Performance?
           </h2>
           <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl mt-4 mb-8">
-            Log in to start your KPI Quest adventure today.
+            Join your team on KPI Quest and start turning targets into achievements.
           </p>
-           <Link href="/login" passHref>
-             <Button size="lg" variant="default">
-               Login / Get Started
-             </Button>
-            </Link>
+          <Link href="/login" passHref>
+            <Button size="lg">
+              Login / Get Started
+            </Button>
+          </Link>
         </div>
       </section>
     </div>

@@ -32,10 +32,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Filter, BarChartHorizontal, User, LayoutGrid, Download } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Pod } from '@/app/(admin)/admin/pods/page';
+import type { Pod } from '@/app/(app)/settings/pods/page';
 import type { AppUser } from '@/services/user';
-import type { AdditionalKpi } from '@/app/(admin)/admin/additional-kpis/page';
-import type { AdditionalKpiLog } from '@/app/(admin)/admin/additional-scores/page';
+import type { AdditionalKpi } from '@/app/(app)/performance/kpis/page';
+import type { AdditionalKpiLog } from '@/app/(app)/performance/log/page';
 import { cn } from '@/lib/utils';
 
 const KPI_BREAKDOWN_POD_KEY = 'kpiBreakdown_selectedPodId';

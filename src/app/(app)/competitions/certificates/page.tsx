@@ -22,7 +22,7 @@ import { Download, Loader2, Award, Trophy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
+import type { Pod } from '@/app/(app)/settings/pods/page';
 import type { AppUser } from '@/services/user';
 
 interface Competition {

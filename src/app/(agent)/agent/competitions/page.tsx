@@ -4,11 +4,24 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trophy, Users, Star, Target, User, ArrowRight } from "lucide-react";
-import { onSnapshot, doc, getDoc, query, collection, where, orderBy } from 'firebase/firestore';
+import { onSnapshot, doc, getDoc, query, collection, where, orderBy, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
-import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
+
+interface DailyAchievementLog {
+  id?: string;
+  agentId: string;
+  podId: string;
+  competitionId: string;
+  ruleId: string;
+  ruleName: string;
+  date: Timestamp;
+  value: number;
+  points: number;
+  loggedAt: Timestamp;
+  loggedBy?: string | null;
+}
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
@@ -46,9 +59,10 @@ interface RuleFormData {
   name: string;
   emoji?: string;
   pointValue?: number;
+  points?: number;
 }
 
-interface CompetitionWithRules extends Competition {
+interface CompetitionWithRules extends Omit<Competition, 'rules'> {
   rules: RuleFormData[];
 }
 
@@ -360,7 +374,7 @@ export default function AgentCompetitionsPage() {
 
   // Filter competitions by user's pod if they have one
   const filteredCompetitions = currentUser?.podId
-    ? competitions.filter(c => c.podIds?.includes(currentUser.podId))
+    ? competitions.filter(c => c.podIds?.includes(currentUser.podId!))
     : competitions;
 
   if (filteredCompetitions.length === 0) {

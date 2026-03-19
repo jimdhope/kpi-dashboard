@@ -69,14 +69,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
+import type { Campaign } from '@/app/(app)/settings/campaigns/page';
+import type { Pod } from '@/app/(app)/settings/pods/page';
 import type { AppUser } from '@/services/user';
 import type { RuleFormData } from '@/models/types';
 
 interface Competition {
   id: string;
   name: string;
+  campaignId?: string;
   startDate?: Timestamp;
   endDate?: Timestamp;
   podIds?: string[];
@@ -85,6 +86,7 @@ interface Competition {
     name: string;
     emoji?: string;
     points: number;
+    type: 'numeric' | 'checkbox';
   }>;
   teams?: Array<{
     id: string;
@@ -110,12 +112,8 @@ interface Team {
 interface Rule extends RuleFormData {}
 
 interface DailyTargetData {
-  [ruleId: string]: {
-    [dayOfWeek: string]: number | null;
-  };
+  [ruleId: string]: number;
 }
-
-const daysOfWeek = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 interface CompetitionFormData {
   name: string;
@@ -410,16 +408,13 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
     }
   };
 
-  const handleTargetChange = (ruleId: string, day: string, value: string) => {
-    const numericValue = value === '' ? null : parseInt(value, 10);
-    if (value !== '' && (isNaN(numericValue!) || numericValue! < 0)) return;
+  const handleTargetChange = (ruleId: string, value: string) => {
+    const numericValue = value === '' ? 0 : parseInt(value, 10);
+    if (value !== '' && (isNaN(numericValue) || numericValue < 0)) return;
 
     setDailyTargets((prev) => ({
       ...prev,
-      [ruleId]: {
-        ...(prev[ruleId] || {}),
-        [day]: numericValue,
-      },
+      [ruleId]: numericValue,
     }));
   };
 
@@ -736,10 +731,10 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
                           <Input
                             type="number"
                             placeholder="Daily"
-                            value={dailyTargets[rule.id]?.mon ?? ''}
+                            value={dailyTargets[rule.id!] ?? ''}
                             onChange={(e) => {
                               const ruleId = rule.id;
-                              if (ruleId) handleTargetChange(ruleId, 'mon', e.target.value);
+                              if (ruleId) handleTargetChange(ruleId, e.target.value);
                             }}
                             className="h-9"
                           />

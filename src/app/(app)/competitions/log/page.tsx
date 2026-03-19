@@ -29,13 +29,16 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { CalendarIcon, Loader2, Send, Filter, Minus, Plus } from 'lucide-react';
 import { format, startOfDay, getDay } from 'date-fns';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
+import type { Pod } from '@/app/(app)/settings/pods/page';
 import type { AppUser } from '@/services/user';
 import type { RuleFormData } from '@/models/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
+
+interface DailyTargetData {
+  [ruleId: string]: number;
+}
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type TeamBonusSummary, type TeamTotalScore } from '@/services/teamsWebhook';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -657,8 +660,8 @@ export default function LogScoresPage() {
       const freshDailyTargets = targetsDocSnap.exists() ? targetsDocSnap.data() as DailyTargetData : null;
 
       const podTargetSummary: PodTargetSummaryForTeams[] = numericRules.map(rule => {
-        const individualTarget = freshDailyTargets?.[rule.id!]?.[dayOfWeek];
-        if (individualTarget === undefined || individualTarget === null || individualTarget < 0) return null;
+        const individualTarget = freshDailyTargets?.[rule.id!];
+        if (individualTarget === undefined || individualTarget < 0) return null;
         const podTarget = individualTarget * activeAgents.length;
         const achieved = podRuleTotalsToday[rule.id!] || 0;
         return { ruleName: rule.name, ruleEmoji: rule.emoji || '❓', achieved, target: podTarget };

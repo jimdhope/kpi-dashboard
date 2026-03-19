@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Minus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { TrackerKpi } from '@/app/(admin)/admin/trackers/setup/page';
+import type { TrackerKpi } from '@/app/(app)/trackers/setup/page';
 
 interface TrackerCardProps {
   kpi: TrackerKpi;

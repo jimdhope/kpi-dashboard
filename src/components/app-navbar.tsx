@@ -4,12 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, Crown, Activity } from 'lucide-react';
+import { Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, Crown, Activity, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
+import { useTheme } from 'next-themes';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { AppUser, UserRole } from '@/services/user';
@@ -122,6 +123,7 @@ const rolesWithSettingsAccess: UserRole[] = [
 
 export function AppNavBar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const { setTheme } = useTheme();
   const [currentUser, setCurrentUser] = React.useState<AppUser | null>(null);
 
   React.useEffect(() => {
@@ -289,6 +291,16 @@ export function AppNavBar({ className }: { className?: string }) {
                   </DropdownMenuItem>
                 </>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
+                <Sun className="w-4 h-4 mr-2" />
+                Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
+                <Moon className="w-4 h-4 mr-2" />
+                Dark
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={handleLogout} 

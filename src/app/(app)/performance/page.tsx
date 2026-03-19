@@ -12,7 +12,7 @@ import { Trophy, TrendingUp, TrendingDown, Filter } from "lucide-react";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import type { Pod } from '@/app/(admin)/admin/pods/page';
+import type { Pod } from '@/app/(app)/settings/pods/page';
 import type { AppUser } from '@/services/user';
 
 type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
