@@ -3,15 +3,15 @@
 import React from 'react';
 import { AppNavBar } from '@/components/app-navbar';
 
-interface AgentLayoutProps {
+export default function AppLayout({
+  children,
+}: {
   children: React.ReactNode;
-}
-
-export default function AgentLayout({ children }: AgentLayoutProps) {
+}) {
   return (
     <div className="min-h-screen bg-background">
       <AppNavBar />
-      <main className="p-6">
+      <main>
         {children}
       </main>
     </div>

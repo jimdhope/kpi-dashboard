@@ -301,14 +301,6 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                                 </SidebarMenuButton>
                             </Link>
                             </SidebarMenuItem>
-                            <SidebarMenuItem>
-                            <Link href="/admin/message-of-the-day" passHref>
-                                <SidebarMenuButton tooltip="Dashboard Settings" isActive={currentPath === '/admin/message-of-the-day'}>
-                                <Settings />
-                                <span>Dashboard Settings</span>
-                                </SidebarMenuButton>
-                            </Link>
-                            </SidebarMenuItem>
                         </SidebarMenu>
                     </AccordionContent>
                 </AccordionItem>
@@ -354,8 +346,8 @@ export function DashboardLayout({ children, roles = [], currentLayout = null, on
                           <p className="text-sm font-medium truncate">{currentUserData.name}</p>
                           <p className="text-xs text-muted-foreground truncate">{currentUserData.email}</p>
                       </div>
-                      <Link href="/profile" passHref>
-                          <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/profile'}>
+                      <Link href="/settings/profile" passHref>
+                          <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/settings/profile'}>
                               <Settings />
                           </SidebarMenuButton>
                       </Link>

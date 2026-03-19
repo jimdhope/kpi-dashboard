@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Home, Trophy, Target, Settings, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AppNavBar } from '@/components/app-navbar';
 
 interface TrackersLayoutProps {
   children: React.ReactNode;
@@ -39,8 +38,6 @@ export default function TrackersLayout({ children }: TrackersLayoutProps) {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex relative min-h-screen w-full flex-col">
-        <AppNavBar />
-        
         <div className="flex flex-1">
           <Sidebar className="glass-sidebar border-r border-glass-border/40 pt-0 top-[65px] h-[calc(100vh-65px)]">
             <SidebarContent className="pt-4">
@@ -66,37 +63,11 @@ export default function TrackersLayout({ children }: TrackersLayoutProps) {
                   );
                 })}
               </SidebarMenu>
-
-              <SidebarSeparator className="my-4" />
-
-              <div className="px-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-2">Quick Links</p>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <Link href="/competitions">
-                      <SidebarMenuButton>
-                        <Trophy className="w-4 h-4" />
-                        <span>Competitions App</span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <Link href="/performance">
-                      <SidebarMenuButton>
-                        <Target className="w-4 h-4" />
-                        <span>Performance App</span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </div>
             </SidebarContent>
           </Sidebar>
 
           <main className="flex-1 p-6 overflow-y-auto min-h-[calc(100vh-65px)]">
-            <div className="glass-card p-6 rounded-xl min-h-full">
-              {children}
-            </div>
+            {children}
           </main>
         </div>
       </div>

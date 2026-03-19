@@ -30,12 +30,20 @@ import {
 } from "@/components/ui/tooltip"
 
 // Define available user roles
-export const USER_ROLES = ['admin', 'podManager', 'teamLeader', 'agent'] as const;
+export const USER_ROLES = ['admin', 'campaignManager', 'podManager', 'teamLeader', 'competitionRunner', 'agent'] as const;
 export type UserRole = typeof USER_ROLES[number];
 
 // Helper function for display formatting
 const formatRoleForDisplay = (role: UserRole) => {
-    return role.charAt(0).toUpperCase() + role.slice(1).replace('Manager', ' Manager').replace('Leader', ' Leader');
+    const labels: Record<UserRole, string> = {
+        admin: 'Admin',
+        campaignManager: 'Campaign Manager',
+        podManager: 'Pod Manager',
+        teamLeader: 'Team Leader',
+        competitionRunner: 'Competition Runner',
+        agent: 'Agent',
+    };
+    return labels[role] || role;
 };
 
 // Define the validation schema using Zod

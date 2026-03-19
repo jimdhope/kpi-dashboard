@@ -128,15 +128,31 @@ export default function AgentDashboard() {
       const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
       setCompetitions(fetchedComps);
       
-      // Set default competition
+      // Set default competition - always prefer active competition
       if (fetchedComps.length > 0) {
-        const savedCompId = localStorage.getItem(LEADERBOARD_COMPETITION_KEY);
-        if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
-          setSelectedCompetitionId(savedCompId);
+        const now = new Date();
+        
+        // First, find currently active competition (startDate <= now <= endDate)
+        const currentComp = fetchedComps.find(comp => {
+          const start = comp.startDate?.toDate();
+          const end = comp.endDate?.toDate();
+          return start && end && now >= start && now <= end;
+        });
+        
+        if (currentComp) {
+          // Use active competition and update localStorage
+          setSelectedCompetitionId(currentComp.id);
+          localStorage.setItem(LEADERBOARD_COMPETITION_KEY, currentComp.id);
         } else {
-          const defaultComp = fetchedComps[0];
-          setSelectedCompetitionId(defaultComp.id);
-          localStorage.setItem(LEADERBOARD_COMPETITION_KEY, defaultComp.id);
+          // No active competition - fall back to saved or most recent
+          const savedCompId = localStorage.getItem(LEADERBOARD_COMPETITION_KEY);
+          if (savedCompId && fetchedComps.some(c => c.id === savedCompId)) {
+            setSelectedCompetitionId(savedCompId);
+          } else {
+            const defaultComp = fetchedComps[0];
+            setSelectedCompetitionId(defaultComp.id);
+            localStorage.setItem(LEADERBOARD_COMPETITION_KEY, defaultComp.id);
+          }
         }
       }
     });

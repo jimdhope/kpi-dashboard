@@ -192,8 +192,8 @@ export function AgentSidebarLayout({ children, roles = [], currentLayout = null,
                       <p className="text-sm font-medium truncate">{currentUserData.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{currentUserData.email}</p>
                     </div>
-                    <Link href="/profile" passHref>
-                        <SidebarMenuButton tooltip="Settings" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/profile'}>
+                    <Link href="/agent/profile" passHref>
+                        <SidebarMenuButton tooltip="Profile" size="sm" variant="ghost" className="ml-auto" isActive={currentPath === '/agent/profile'}>
                             <Settings />
                         </SidebarMenuButton>
                     </Link>

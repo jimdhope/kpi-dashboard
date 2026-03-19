@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   collection,
   query,
@@ -23,13 +23,14 @@ import {
   startOfMonth,
   endOfMonth,
 } from 'date-fns';
+import html2canvas from 'html2canvas';
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Filter, BarChartHorizontal, User, LayoutGrid } from 'lucide-react';
+import { Filter, BarChartHorizontal, User, LayoutGrid, Download } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
@@ -43,7 +44,7 @@ const KPI_BREAKDOWN_WEEKSTART_KEY = 'kpiBreakdown_weekStartsOn';
 const KPI_BREAKDOWN_VIEWMODE_KEY = 'kpiBreakdown_viewMode';
 
 type Timeframe = 'last6weeks' | 'thisWeek' | 'thisMonth' | 'allTime';
-type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 1=Mon, ..., 6=Sat
+type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type ViewMode = 'agent' | 'kpi';
 
 interface WeeklyKpiTotals {
@@ -61,6 +62,35 @@ interface AgentWeeklyData {
   };
 }
 
+const downloadAsPng = async (elementId: string, filename: string) => {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  try {
+    const canvas = await html2canvas(element, {
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+    
+    const link = document.createElement('a');
+    link.download = `${filename}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (error) {
+    console.error('Error downloading PNG:', error);
+  }
+};
+
+const downloadAllTables = async (ids: string[], names: string[], prefix: string) => {
+  for (let i = 0; i < ids.length; i++) {
+    const sanitizedName = names[i].replace(/\s+/g, '-');
+    await downloadAsPng(ids[i], `${prefix}-${sanitizedName}`);
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+};
+
 export default function KpiBreakdownPage() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [kpis, setKpis] = useState<AdditionalKpi[]>([]);
@@ -69,12 +99,11 @@ export default function KpiBreakdownPage() {
 
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
-  const [weekStartsOn, setWeekStartsOn] = useState<WeekStartDay>(4); // Default to Thursday
+  const [weekStartsOn, setWeekStartsOn] = useState<WeekStartDay>(4);
   const [viewMode, setViewMode] = useState<ViewMode>('agent');
 
   const [isLoading, setIsLoading] = useState(true);
-
-  // --- Data Fetching ---
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const savedPodId = localStorage.getItem(KPI_BREAKDOWN_POD_KEY);
@@ -92,6 +121,21 @@ export default function KpiBreakdownPage() {
   const handleWeekStartChange = (day: string) => { setWeekStartsOn(parseInt(day, 10) as WeekStartDay); localStorage.setItem(KPI_BREAKDOWN_WEEKSTART_KEY, day); };
   const handleViewModeChange = (mode: string) => { setViewMode(mode as ViewMode); localStorage.setItem(KPI_BREAKDOWN_VIEWMODE_KEY, mode); };
 
+  const handleDownloadAllAgents = async () => {
+    setIsDownloading(true);
+    const ids = processedData.map(a => `agent-table-${a.agentId}`);
+    const names = processedData.map(a => a.agentName);
+    await downloadAllTables(ids, names, 'KPI-agent');
+    setIsDownloading(false);
+  };
+
+  const handleDownloadAllKpis = async () => {
+    setIsDownloading(true);
+    const ids = podKpis.map(k => `kpi-table-${k.id}`);
+    const names = podKpis.map(k => k.name);
+    await downloadAllTables(ids, names, 'KPI-kpi');
+    setIsDownloading(false);
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -162,7 +206,6 @@ export default function KpiBreakdownPage() {
   }, [logs, timeframe, weekStartsOn]);
   
 
-  // --- Data Processing ---
   const { processedData, weekHeaders, podKpis } = useMemo(() => {
     if (filteredLogs.length === 0 || kpis.length === 0) {
       return { processedData: [], weekHeaders: [], podKpis: [] };
@@ -222,12 +265,12 @@ export default function KpiBreakdownPage() {
 
   const getScoreCellClass = (score: number | undefined, kpi: AdditionalKpi): string => {
     if (score === undefined || !kpi.passFailCriteriaEnabled) {
-      return ''; // No score or criteria, no special class
+      return '';
     }
   
     const passValue = kpi.passFailValue;
     if (passValue === undefined || passValue === null) {
-      return ''; // No value to compare against
+      return '';
     }
   
     let passed = false;
@@ -305,57 +348,102 @@ export default function KpiBreakdownPage() {
             {isLongTimeframe ? (
               viewMode === 'agent' ? (
                 /* --- Agent Card Flex View --- */
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {processedData.length} agent tables
+                  </span>
+                  <button
+                    onClick={handleDownloadAllAgents}
+                    disabled={isDownloading}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isDownloading ? 'Downloading...' : 'Download All Agent Tables'}
+                  </button>
+                </div>
+              ) : (
+                /* --- KPI Card Flex View --- */
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {podKpis.length} KPI tables
+                  </span>
+                  <button
+                    onClick={handleDownloadAllKpis}
+                    disabled={isDownloading}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isDownloading ? 'Downloading...' : 'Download All KPI Tables'}
+                  </button>
+                </div>
+              )
+            ) : null}
+            {isLongTimeframe ? (
+              viewMode === 'agent' ? (
+                /* --- Agent Card Flex View --- */
                 <div className="flex flex-wrap gap-6 justify-center lg:justify-start">
                   {processedData.map(agentData => (
                     <Card key={agentData.agentId} className="border shadow-sm overflow-hidden flex flex-col bg-card/50 min-w-[380px] flex-1 max-w-[600px]">
-                      <CardHeader className="bg-muted/20 py-3 px-4 border-b">
-                        <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4 text-primary" /> {agentData.agentName}</CardTitle>
-                      </CardHeader>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/10 hover:bg-muted/10">
-                              <TableHead className="w-[140px] text-xs font-bold uppercase">KPI</TableHead>
-                              {weekHeaders.map(week => (
-                                <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase">
-                                  {format(new Date(week), 'dd/MM')}
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {podKpis.map(kpi => (
-                              <TableRow key={kpi.id} className="h-8 hover:bg-accent/5 transition-colors">
-                                <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-muted/5 truncate max-w-[140px]" title={kpi.name}>
-                                  {kpi.name}
-                                </TableCell>
-                                {weekHeaders.map(week => {
-                                  const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
-                                  let score: number | undefined;
-                                  if (weeklyData) {
-                                    score = kpi.type === 'percentage' 
-                                      ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0) 
-                                      : weeklyData.value;
-                                  }
-                                  const cellClass = getScoreCellClass(score, kpi);
-                                  return (
-                                    <TableCell 
-                                      key={week} 
-                                      className={cn(
-                                        "text-center text-[11px] py-1 px-1 border-l tabular-nums font-medium", 
-                                        cellClass
-                                      )}
-                                    >
-                                      {score !== undefined 
-                                        ? (kpi.type === 'percentage' ? `${score.toFixed(0)}%` : score.toLocaleString()) 
-                                        : '-'}
-                                    </TableCell>
-                                  );
-                                })}
+                      <div id={`agent-table-${agentData.agentId}`} style={{ backgroundColor: 'transparent' }}>
+                        <CardHeader className="bg-gray-200 dark:bg-gray-700 py-3 px-4 border-b flex flex-row items-center justify-between">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <User className="h-4 w-4 text-blue-600 dark:text-blue-400" /> 
+                            <span className="text-gray-800 dark:text-gray-100">{agentData.agentName}</span>
+                          </CardTitle>
+                          <button
+                            onClick={() => downloadAsPng(`agent-table-${agentData.agentId}`, `KPI-agent-${agentData.agentName}`)}
+                            className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            title="Download as PNG"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        </CardHeader>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-100 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                <TableHead className="w-[140px] text-xs font-bold uppercase text-gray-700 dark:text-gray-200">KPI</TableHead>
+                                {weekHeaders.map(week => (
+                                  <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-gray-700 dark:text-gray-200">
+                                    {format(new Date(week), 'dd/MM')}
+                                  </TableHead>
+                                ))}
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {podKpis.map((kpi, idx) => (
+                                <TableRow key={kpi.id} className={`h-8 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
+                                  <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-gray-100/30 dark:bg-gray-700/30 text-gray-800 dark:text-gray-200 truncate max-w-[140px]" title={kpi.name}>
+                                    {kpi.name}
+                                  </TableCell>
+                                  {weekHeaders.map(week => {
+                                    const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
+                                    let score: number | undefined;
+                                    if (weeklyData) {
+                                      score = kpi.type === 'percentage' 
+                                        ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0) 
+                                        : weeklyData.value;
+                                    }
+                                    const cellClass = getScoreCellClass(score, kpi);
+                                    return (
+                                      <TableCell 
+                                        key={week} 
+                                        className={cn(
+                                          "text-center text-[11px] py-1 px-1 border-l bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 tabular-nums font-medium", 
+                                          cellClass
+                                        )}
+                                      >
+                                        {score !== undefined 
+                                          ? (kpi.type === 'percentage' ? `${score.toFixed(0)}%` : score.toLocaleString()) 
+                                          : '-'}
+                                      </TableCell>
+                                    );
+                                  })}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -365,54 +453,66 @@ export default function KpiBreakdownPage() {
                 <div className="flex flex-wrap gap-6 justify-center lg:justify-start">
                   {podKpis.map(kpi => (
                     <Card key={kpi.id} className="border shadow-sm overflow-hidden flex flex-col bg-card/50 min-w-[380px] flex-1 max-w-[600px]">
-                      <CardHeader className="bg-muted/20 py-3 px-4 border-b">
-                        <CardTitle className="text-base flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-primary" /> {kpi.name}</CardTitle>
-                      </CardHeader>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/10 hover:bg-muted/10">
-                              <TableHead className="w-[140px] text-xs font-bold uppercase">Agent</TableHead>
-                              {weekHeaders.map(week => (
-                                <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase">
-                                  {format(new Date(week), 'dd/MM')}
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {processedData.map(agentData => (
-                              <TableRow key={agentData.agentId} className="h-8 hover:bg-accent/5 transition-colors">
-                                <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-muted/5 truncate max-w-[140px]" title={agentData.agentName}>
-                                  {agentData.agentName}
-                                </TableCell>
-                                {weekHeaders.map(week => {
-                                  const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
-                                  let score: number | undefined;
-                                  if (weeklyData) {
-                                    score = kpi.type === 'percentage' 
-                                      ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0) 
-                                      : weeklyData.value;
-                                  }
-                                  const cellClass = getScoreCellClass(score, kpi);
-                                  return (
-                                    <TableCell 
-                                      key={week} 
-                                      className={cn(
-                                        "text-center text-[11px] py-1 px-1 border-l tabular-nums font-medium", 
-                                        cellClass
-                                      )}
-                                    >
-                                      {score !== undefined 
-                                        ? (kpi.type === 'percentage' ? `${score.toFixed(0)}%` : score.toLocaleString()) 
-                                        : '-'}
-                                    </TableCell>
-                                  );
-                                })}
+                      <div id={`kpi-table-${kpi.id}`} style={{ backgroundColor: 'transparent' }}>
+                        <CardHeader className="bg-gray-200 dark:bg-gray-700 py-3 px-4 border-b flex flex-row items-center justify-between">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <LayoutGrid className="h-4 w-4 text-blue-600 dark:text-blue-400" /> 
+                            <span className="text-gray-800 dark:text-gray-100">{kpi.name}</span>
+                          </CardTitle>
+                          <button
+                            onClick={() => downloadAsPng(`kpi-table-${kpi.id}`, `KPI-kpi-${kpi.name}`)}
+                            className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            title="Download as PNG"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        </CardHeader>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-100 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                <TableHead className="w-[140px] text-xs font-bold uppercase text-gray-700 dark:text-gray-200">Agent</TableHead>
+                                {weekHeaders.map(week => (
+                                  <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-gray-700 dark:text-gray-200">
+                                    {format(new Date(week), 'dd/MM')}
+                                  </TableHead>
+                                ))}
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {processedData.map((agentData, idx) => (
+                                <TableRow key={agentData.agentId} className={`h-8 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
+                                  <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-gray-100/30 dark:bg-gray-700/30 text-gray-800 dark:text-gray-200 truncate max-w-[140px]" title={agentData.agentName}>
+                                    {agentData.agentName}
+                                  </TableCell>
+                                  {weekHeaders.map(week => {
+                                    const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
+                                    let score: number | undefined;
+                                    if (weeklyData) {
+                                      score = kpi.type === 'percentage' 
+                                        ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0) 
+                                        : weeklyData.value;
+                                    }
+                                    const cellClass = getScoreCellClass(score, kpi);
+                                    return (
+                                      <TableCell 
+                                        key={week} 
+                                        className={cn(
+                                          "text-center text-[11px] py-1 px-1 border-l bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 tabular-nums font-medium", 
+                                          cellClass
+                                        )}
+                                      >
+                                        {score !== undefined 
+                                          ? (kpi.type === 'percentage' ? `${score.toFixed(0)}%` : score.toLocaleString()) 
+                                          : '-'}
+                                      </TableCell>
+                                    );
+                                  })}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
                     </Card>
                   ))}

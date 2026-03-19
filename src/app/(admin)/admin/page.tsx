@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Target, BarChart3, Gamepad2, Users, Settings, Megaphone, ShieldCheck, MessageSquare, ArrowRight } from "lucide-react";
+import { Trophy, Target, BarChart3, Gamepad2, Users, Settings, Megaphone, ShieldCheck, ArrowRight } from "lucide-react";
 import { collection, query, orderBy, getCountFromServer, doc, onSnapshot } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/lib/firebase';
@@ -141,7 +141,6 @@ export default function AdminDashboard() {
     { title: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
     { title: 'Pods', href: '/settings/pods', icon: ShieldCheck },
     { title: 'Users', href: '/settings/users', icon: Users },
-    { title: 'Dashboard Settings', href: '/settings/dashboard', icon: MessageSquare },
   ];
 
   if (isLoading) {

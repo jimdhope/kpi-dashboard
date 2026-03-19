@@ -83,7 +83,7 @@ export default function AgentCompetitionsPage() {
       const fetchedComps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompetitionWithRules));
       setCompetitions(fetchedComps);
       
-      // Set default competition
+      // Set default competition - always prefer active competition
       if (fetchedComps.length > 0 && !selectedCompetitionId) {
         const userPodId = currentUser?.podId;
         const filteredComps = userPodId 
@@ -91,11 +91,25 @@ export default function AgentCompetitionsPage() {
           : fetchedComps;
         const availableComps = filteredComps.length > 0 ? filteredComps : fetchedComps;
         
-        const savedCompId = localStorage.getItem(AGENT_COMPETITION_KEY);
-        if (savedCompId && availableComps.some(c => c.id === savedCompId)) {
-          setSelectedCompetitionId(savedCompId);
-        } else if (availableComps.length > 0) {
-          setSelectedCompetitionId(availableComps[0].id);
+        const now = new Date();
+        
+        // First, find currently active competition
+        const currentComp = availableComps.find(comp => {
+          const start = comp.startDate?.toDate();
+          const end = comp.endDate?.toDate();
+          return start && end && now >= start && now <= end;
+        });
+        
+        if (currentComp) {
+          setSelectedCompetitionId(currentComp.id);
+        } else {
+          // No active competition - fall back to saved or most recent
+          const savedCompId = localStorage.getItem(AGENT_COMPETITION_KEY);
+          if (savedCompId && availableComps.some(c => c.id === savedCompId)) {
+            setSelectedCompetitionId(savedCompId);
+          } else if (availableComps.length > 0) {
+            setSelectedCompetitionId(availableComps[0].id);
+          }
         }
       }
     });
@@ -112,11 +126,25 @@ export default function AgentCompetitionsPage() {
         : competitions;
       const availableComps = filteredComps.length > 0 ? filteredComps : competitions;
       
-      const savedCompId = localStorage.getItem(AGENT_COMPETITION_KEY);
-      if (savedCompId && availableComps.some(c => c.id === savedCompId)) {
-        setSelectedCompetitionId(savedCompId);
-      } else if (availableComps.length > 0) {
-        setSelectedCompetitionId(availableComps[0].id);
+      const now = new Date();
+      
+      // First, find currently active competition
+      const currentComp = availableComps.find(comp => {
+        const start = comp.startDate?.toDate();
+        const end = comp.endDate?.toDate();
+        return start && end && now >= start && now <= end;
+      });
+      
+      if (currentComp) {
+        setSelectedCompetitionId(currentComp.id);
+      } else {
+        // No active competition - fall back to saved or most recent
+        const savedCompId = localStorage.getItem(AGENT_COMPETITION_KEY);
+        if (savedCompId && availableComps.some(c => c.id === savedCompId)) {
+          setSelectedCompetitionId(savedCompId);
+        } else if (availableComps.length > 0) {
+          setSelectedCompetitionId(availableComps[0].id);
+        }
       }
     }
   }, [competitions, currentUser?.podId, selectedCompetitionId]);

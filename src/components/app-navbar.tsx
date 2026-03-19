@@ -2,17 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Trophy, Target, BarChart3, Gamepad2, Settings, ChevronDown, User, Shield, Users, Crown, Activity } from 'lucide-react';
+import { Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, Crown, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
-import type { AppUser } from '@/services/user';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import type { AppUser, UserRole } from '@/services/user';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,45 +22,107 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export type AppType = 'competitions' | 'trackers' | 'performance' | 'mini-games' | 'settings';
-
-interface RoleView {
-  id: string;
+interface NavItem {
+  key: string;
   label: string;
-  href: string;
+  adminHref: string;
+  agentHref: string;
   icon: React.ElementType;
-  description: string;
 }
 
-const roleViews: RoleView[] = [
-  { id: 'admin', label: 'Admin', href: '/admin', icon: Shield, description: 'Full system access' },
-  { id: 'agent', label: 'Agent', href: '/agent', icon: User, description: 'Personal dashboard' },
-  { id: 'podSupport', label: 'Pod Support', href: '/pod-support', icon: Users, description: 'Support pod members' },
-  { id: 'podManager', label: 'Pod Manager', href: '/pod-manager', icon: Crown, description: 'Manage pods and teams' },
-  { id: 'teamLeader', label: 'Team Leader', href: '/team-leader', icon: Activity, description: 'Lead your team' },
-  { id: 'competitionRunner', label: 'Competition Runner', href: '/competition-runner', icon: Trophy, description: 'Manage competitions' },
+const navItems: NavItem[] = [
+  { key: 'competitions', label: 'Competitions', adminHref: '/competitions', agentHref: '/agent/competitions', icon: Trophy },
+  { key: 'trackers', label: 'Trackers', adminHref: '/trackers', agentHref: '/agent/trackers', icon: Target },
+  { key: 'performance', label: 'Performance', adminHref: '/performance', agentHref: '/agent/performance', icon: BarChart3 },
+  { key: 'miniGames', label: 'Mini Games', adminHref: '/mini-games', agentHref: '/agent/mini-games', icon: Gamepad2 },
 ];
 
-const navItems: { label: string; href: string; icon: React.ElementType; app: AppType }[] = [
-  { label: 'Competitions', href: '/competitions', icon: Trophy, app: 'competitions' },
-  { label: 'Trackers', href: '/trackers', icon: Target, app: 'trackers' },
-  { label: 'Performance', href: '/performance', icon: BarChart3, app: 'performance' },
-  { label: 'Mini Games', href: '/mini-games', icon: Gamepad2, app: 'mini-games' },
-  { label: 'Settings', href: '/settings', icon: Settings, app: 'settings' },
+const rolePermissions: Record<UserRole, Record<string, 'admin' | 'agent' | 'none'>> = {
+  admin: {
+    competitions: 'admin',
+    trackers: 'admin',
+    performance: 'admin',
+    miniGames: 'admin',
+  },
+  campaignManager: {
+    competitions: 'admin',
+    trackers: 'admin',
+    performance: 'admin',
+    miniGames: 'admin',
+  },
+  podManager: {
+    competitions: 'admin',
+    trackers: 'admin',
+    performance: 'admin',
+    miniGames: 'admin',
+  },
+  teamLeader: {
+    competitions: 'admin',
+    trackers: 'admin',
+    performance: 'agent',
+    miniGames: 'agent',
+  },
+  competitionRunner: {
+    competitions: 'admin',
+    trackers: 'agent',
+    performance: 'agent',
+    miniGames: 'agent',
+  },
+  agent: {
+    competitions: 'agent',
+    trackers: 'agent',
+    performance: 'agent',
+    miniGames: 'agent',
+  },
+};
+
+const roleDashboardHrefs: Record<UserRole, string> = {
+  admin: '/admin',
+  campaignManager: '/campaign-manager',
+  podManager: '/pod-manager',
+  teamLeader: '/team-leader',
+  competitionRunner: '/competition-runner',
+  agent: '/agent',
+};
+
+const roleDashboardLabels: Record<UserRole, string> = {
+  admin: 'Dashboard',
+  campaignManager: 'Dashboard',
+  podManager: 'Dashboard',
+  teamLeader: 'Dashboard',
+  competitionRunner: 'Dashboard',
+  agent: 'My Dashboard',
+};
+
+const roleIcons: Record<UserRole, React.ElementType> = {
+  admin: Shield,
+  campaignManager: Megaphone,
+  podManager: Crown,
+  teamLeader: Activity,
+  competitionRunner: Trophy,
+  agent: User,
+};
+
+const rolePriority: UserRole[] = [
+  'admin',
+  'campaignManager',
+  'podManager',
+  'teamLeader',
+  'competitionRunner',
+  'agent',
+];
+
+const rolesWithSettingsAccess: UserRole[] = [
+  'admin',
+  'campaignManager',
+  'podManager',
+  'teamLeader',
+  'competitionRunner',
 ];
 
 export function AppNavBar({ className }: { className?: string }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [currentUser, setCurrentUser] = React.useState<AppUser | null>(null);
-  const [currentView, setCurrentView] = React.useState<string>('admin');
-
-  const isActive = (href: string) => {
-    if (href === '/competitions') {
-      return pathname.startsWith('/competitions');
-    }
-    return pathname.startsWith(href);
-  };
 
   React.useEffect(() => {
     const auth = getAuth(app);
@@ -77,36 +139,48 @@ export function AppNavBar({ className }: { className?: string }) {
     return () => unsubscribe();
   }, []);
 
-  React.useEffect(() => {
-    if (pathname.startsWith('/admin')) {
-      setCurrentView('admin');
-    } else if (pathname.startsWith('/agent')) {
-      setCurrentView('agent');
-    } else if (pathname.startsWith('/pod-support')) {
-      setCurrentView('podSupport');
-    } else if (pathname.startsWith('/pod-manager')) {
-      setCurrentView('podManager');
-    } else if (pathname.startsWith('/team-leader')) {
-      setCurrentView('teamLeader');
-    } else if (pathname.startsWith('/competition-runner')) {
-      setCurrentView('competitionRunner');
+  const userRoles = currentUser?.roles as UserRole[] || [];
+
+  const getHighestRole = (): UserRole => {
+    for (const role of rolePriority) {
+      if (userRoles.includes(role)) {
+        return role;
+      }
     }
-  }, [pathname]);
-
-  const availableViews = React.useMemo(() => {
-    if (!currentUser?.roles) return [roleViews[0]];
-    
-    const userRoles = currentUser.roles;
-    return roleViews.filter(view => userRoles.includes(view.id));
-  }, [currentUser?.roles]);
-
-  const currentViewInfo = roleViews.find(v => v.id === currentView) || roleViews[0];
-  const CurrentViewIcon = currentViewInfo.icon;
-
-  const handleRoleSwitch = (view: RoleView) => {
-    setCurrentView(view.id);
-    router.push(view.href);
+    return 'agent';
   };
+
+  const primaryRole = getHighestRole();
+
+  const getHighestAccess = (key: string): 'admin' | 'agent' | 'none' => {
+    let highest: 'admin' | 'agent' | 'none' = 'none';
+    
+    for (const role of userRoles) {
+      const permission = rolePermissions[role]?.[key];
+      if (permission === 'admin') {
+        return 'admin';
+      }
+      if (permission === 'agent') {
+        highest = 'agent';
+      }
+    }
+    
+    return highest;
+  };
+
+  const getNavHref = (item: NavItem): string | null => {
+    const access = getHighestAccess(item.key);
+    if (access === 'none') return null;
+    return access === 'admin' ? item.adminHref : item.agentHref;
+  };
+
+  const visibleNavItems = navItems.filter(item => getNavHref(item) !== null);
+
+  const dashboardHref = roleDashboardHrefs[primaryRole];
+  const dashboardLabel = roleDashboardLabels[primaryRole];
+  const RoleIcon = roleIcons[primaryRole];
+
+  const hasSettingsAccess = userRoles.some(role => rolesWithSettingsAccess.includes(role));
 
   const handleLogout = async () => {
     const auth = getAuth(app);
@@ -114,10 +188,24 @@ export function AppNavBar({ className }: { className?: string }) {
     window.location.href = '/login';
   };
 
+  const isActive = (href: string) => {
+    if (href === '/competitions') {
+      return pathname.startsWith('/competitions');
+    }
+    if (href === '/agent/competitions') {
+      return pathname.startsWith('/agent/competitions');
+    }
+    return pathname.startsWith(href);
+  };
+
+  if (!currentUser) {
+    return null;
+  }
+
   return (
     <nav className={cn("glass-sidebar sticky top-0 z-50 flex items-center justify-between px-6 py-3", className)}>
       <div className="flex items-center gap-2">
-        <Link href={currentViewInfo.href} className="flex items-center gap-2 mr-4">
+        <Link href={dashboardHref} className="flex items-center gap-2 mr-4">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Trophy className="w-5 h-5 text-primary-foreground" />
           </div>
@@ -125,11 +213,28 @@ export function AppNavBar({ className }: { className?: string }) {
         </Link>
 
         <div className="flex items-center gap-1">
-          {navItems.map((item) => {
+          <Link href={dashboardHref}>
+            <Button
+              variant="ghost"
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200",
+                isActive(dashboardHref) 
+                  ? "bg-primary/20 text-primary border border-primary/30" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-glass/50"
+              )}
+            >
+              <RoleIcon className="w-4 h-4" />
+              <span className="text-sm font-medium">{dashboardLabel}</span>
+            </Button>
+          </Link>
+
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const href = getNavHref(item);
+            if (!href) return null;
+            const active = isActive(href);
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.key} href={href}>
                 <Button
                   variant="ghost"
                   className={cn(
@@ -149,54 +254,18 @@ export function AppNavBar({ className }: { className?: string }) {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Role Switcher Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 px-3 py-1.5 h-auto">
-              <CurrentViewIcon className="w-4 h-4" />
-              <span className="text-sm font-medium">{currentViewInfo.label}</span>
-              <ChevronDown className="w-3 h-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Switch View</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {availableViews.map((view) => {
-              const ViewIcon = view.icon;
-              return (
-                <DropdownMenuItem 
-                  key={view.id}
-                  onClick={() => handleRoleSwitch(view)}
-                  className={cn(
-                    "cursor-pointer",
-                    currentView === view.id && "bg-primary/10 text-primary"
-                  )}
-                >
-                  <ViewIcon className="w-4 h-4 mr-2" />
-                  <div className="flex flex-col">
-                    <span>{view.label}</span>
-                    <span className="text-xs text-muted-foreground">{view.description}</span>
-                  </div>
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* User Profile Dropdown */}
-        {currentUser ? (
+        {currentUser && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-lg">
                 <Avatar className="w-8 h-8 border-2 border-glass-border">
-                  <AvatarImage src={currentUser.avatarUrl} />
                   <AvatarFallback className="bg-primary/20 text-primary text-sm">
                     {generateInitials(currentUser.name || currentUser.email || 'U')}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden lg:block text-left">
                   <p className="text-sm font-medium leading-none">{currentUser.name || currentUser.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize leading-none mt-0.5">{currentUser.roles?.[0] || 'User'}</p>
+                  <p className="text-xs text-muted-foreground capitalize leading-none mt-0.5">{primaryRole.replace(/([A-Z])/g, ' $1').trim()}</p>
                 </div>
                 <ChevronDown className="w-3 h-3 text-muted-foreground" />
               </Button>
@@ -205,11 +274,21 @@ export function AppNavBar({ className }: { className?: string }) {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="cursor-pointer">
+                <Link href="/agent/profile" className="cursor-pointer">
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </Link>
               </DropdownMenuItem>
+              {hasSettingsAccess && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="cursor-pointer">
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={handleLogout} 
@@ -219,10 +298,6 @@ export function AppNavBar({ className }: { className?: string }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : (
-          <Link href="/login">
-            <Button variant="glass" size="sm">Sign In</Button>
-          </Link>
         )}
       </div>
     </nav>
