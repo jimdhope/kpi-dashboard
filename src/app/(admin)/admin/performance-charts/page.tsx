@@ -1,55 +1,55 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LineChart, Filter, AlertCircle } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  LineChart as RechartsLineChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  Line,
-} from 'recharts';
-
+import { Trophy, TrendingUp, TrendingDown, ArrowUpDown, Filter } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { generateInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { AdditionalKpi } from '@/app/(admin)/admin/additional-kpis/page';
-import type { AdditionalKpiLog } from '@/app/(admin)/admin/additional-scores/page';
 
 type Timeframe = 'thisWeek' | 'thisMonth' | 'last6weeks' | 'allTime';
 
-interface ChartDataPoint {
-  date: string; // Formatted date string e.g., 'MMM dd'
-  [key: string]: string | number | undefined; // Can have multiple KPI scores
+interface AdditionalKpiLog {
+  id: string;
+  agentId: string;
+  podId: string;
+  kpiId: string;
+  date: any;
+  value: number;
+}
+
+interface LeaderboardEntry {
+  agentId: string;
+  agentName: string;
+  score: number;
+  rank: number;
+}
+
+interface KpiLeaderboard {
+  kpi: AdditionalKpi;
+  entries: LeaderboardEntry[];
 }
 
 const CHARTS_POD_KEY = 'performanceCharts_selectedPodId';
-const CHARTS_KPI_KEY = 'performanceCharts_selectedKpiId';
-const CHARTS_AGENT_KEY = 'performanceCharts_selectedAgentId';
 const CHARTS_TIMEFRAME_KEY = 'performanceCharts_timeframe';
 
-// Define a color palette for the chart lines
-const LINE_COLORS = [
-  "hsl(var(--primary))",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7300",
-  "#a4de6c",
-  "#d0ed57",
-  "#ffc0cb",
-];
-
+const getMedalStyle = (rank: number) => {
+  switch (rank) {
+    case 1: return 'bg-yellow-500/30 text-yellow-400 border-yellow-500/50';
+    case 2: return 'bg-gray-400/30 text-gray-300 border-gray-400/50';
+    case 3: return 'bg-orange-400/30 text-orange-400 border-orange-400/50';
+    default: return 'bg-muted/30 text-muted-foreground border-muted';
+  }
+};
 
 export default function PerformanceChartsPage() {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -58,22 +58,12 @@ export default function PerformanceChartsPage() {
   const [logs, setLogs] = useState<AdditionalKpiLog[]>([]);
 
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
-  const [selectedKpiId, setSelectedKpiId] = useState<string>('');
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('all'); // 'all' or a user ID
-  const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
-
+  const [timeframe, setTimeframe] = useState<Timeframe>('thisWeek');
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // --- Data Fetching ---
   useEffect(() => {
-    // Load saved filters from localStorage
     const savedPodId = localStorage.getItem(CHARTS_POD_KEY);
     if (savedPodId) setSelectedPodId(savedPodId);
-    const savedKpiId = localStorage.getItem(CHARTS_KPI_KEY);
-    if (savedKpiId) setSelectedKpiId(savedKpiId);
-    const savedAgentId = localStorage.getItem(CHARTS_AGENT_KEY);
-    if (savedAgentId) setSelectedAgentId(savedAgentId);
     const savedTimeframe = localStorage.getItem(CHARTS_TIMEFRAME_KEY) as Timeframe | null;
     if (savedTimeframe) setTimeframe(savedTimeframe);
   }, []);
@@ -85,7 +75,7 @@ export default function PerformanceChartsPage() {
       onSnapshot(query(collection(db, 'additionalKpis'), orderBy('name')), snap => setKpis(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpi)))),
       onSnapshot(query(collection(db, 'users'), orderBy('name')), snap => setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppUser)))),
     ];
-    Promise.all(unsubscribes.map(() => new Promise(res => setTimeout(res, 0)))).finally(() => setIsLoading(false)); // A bit of a hack to wait for initial loads
+
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
 
@@ -101,240 +91,289 @@ export default function PerformanceChartsPage() {
     const unsubscribe = onSnapshot(logsQuery, (snap) => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdditionalKpiLog)));
       setIsLoading(false);
-    }, (err) => {
-      console.error("Error fetching logs:", err);
-      setError("Failed to load KPI logs.");
+    }, () => {
       setIsLoading(false);
     });
     return () => unsubscribe();
   }, [selectedPodId]);
 
-
-  // --- Event Handlers for Filters ---
   const handlePodChange = (podId: string) => {
     setSelectedPodId(podId);
-    setSelectedAgentId('all'); // Reset agent when pod changes
     localStorage.setItem(CHARTS_POD_KEY, podId);
-    localStorage.removeItem(CHARTS_AGENT_KEY);
   };
-  const handleKpiChange = (kpiId: string) => { setSelectedKpiId(kpiId); localStorage.setItem(CHARTS_KPI_KEY, kpiId); };
-  const handleAgentChange = (agentId: string) => { setSelectedAgentId(agentId); localStorage.setItem(CHARTS_AGENT_KEY, agentId); };
-  const handleTimeframeChange = (tf: string) => { setTimeframe(tf as Timeframe); localStorage.setItem(CHARTS_TIMEFRAME_KEY, tf); };
 
-  // --- Memoized Data Processing ---
+  const handleTimeframeChange = (tf: string) => {
+    setTimeframe(tf as Timeframe);
+    localStorage.setItem(CHARTS_TIMEFRAME_KEY, tf);
+  };
 
-  const podAgents = useMemo(() => agents.filter(a => a.podId === selectedPodId && a.roles?.includes('agent')), [agents, selectedPodId]);
-
-  const { chartData, tableData, percentageKpis, numberKpis, rightAxisMax } = useMemo(() => {
-    const showAllKpis = selectedKpiId === 'all';
-    if ((!selectedKpiId || selectedKpiId === '') || !kpis.length) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [], rightAxisMax: 100 };
-    
-    let kpisToProcess = showAllKpis ? kpis : kpis.filter(k => k.id === selectedKpiId);
-    if (kpisToProcess.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [], rightAxisMax: 100 };
+  const filteredLogs = useMemo(() => {
+    if (logs.length === 0 || kpis.length === 0) return [];
 
     const now = new Date();
     let startDate: Date;
     let endDate: Date = now;
 
     switch (timeframe) {
-        case 'thisWeek':
-            startDate = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-            endDate = endOfWeek(now, { weekStartsOn: 1 });
-            break;
-        case 'thisMonth':
-            startDate = startOfMonth(now);
-            endDate = endOfMonth(now);
-            break;
-        case 'last6weeks':
-            startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn: 1 });
-            endDate = endOfWeek(now, { weekStartsOn: 1 });
-            break;
-        case 'allTime':
-        default:
-            if (logs.length === 0) return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [], rightAxisMax: 100 };
-            const sortedLogs = [...logs].sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime());
-            startDate = sortedLogs[0].date.toDate();
-            endDate = sortedLogs[sortedLogs.length - 1].date.toDate();
-            break;
+      case 'thisWeek':
+        startDate = startOfWeek(now, { weekStartsOn: 1 });
+        endDate = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'thisMonth':
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+        break;
+      case 'last6weeks':
+        startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn: 1 });
+        endDate = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'allTime':
+      default:
+        if (logs.length === 0) return [];
+        const sortedLogs = [...logs].sort((a, b) => a.date.toDate().getTime() - b.date.toDate().getTime());
+        startDate = sortedLogs[0].date.toDate();
+        endDate = sortedLogs[sortedLogs.length - 1].date.toDate();
+        break;
     }
-    
-    const relevantLogs = logs.filter(log => {
+
+    return logs.filter(log => {
       const logDate = log.date.toDate();
-      const agentMatch = selectedAgentId === 'all' || log.agentId === selectedAgentId;
-      const kpiMatch = showAllKpis || log.kpiId === selectedKpiId;
-      return agentMatch && kpiMatch && logDate >= startDate && logDate <= endDate;
+      return logDate >= startDate && logDate <= endDate;
     });
+  }, [logs, timeframe, kpis]);
 
-    // dataByDate will temporarily store sums and counts.
-    const dataByDate: Record<string, ChartDataPoint & Record<string, number>> = {};
+  const kpiLeaderboards = useMemo((): KpiLeaderboard[] => {
+    if (kpis.length === 0) return [];
 
-    relevantLogs.forEach(log => {
-        const dateStr = format(log.date.toDate(), 'yyyy-MM-dd');
-        const kpiInfo = kpis.find(k => k.id === log.kpiId);
-        if (!kpiInfo) return;
+    return kpis.map(kpi => {
+      const kpiLogs = filteredLogs.filter(log => log.kpiId === kpi.id);
 
-        if (!dataByDate[dateStr]) {
-            dataByDate[dateStr] = { date: format(log.date.toDate(), 'MMM dd') };
+      const agentData: Record<string, { sum: number; count: number }> = {};
+      kpiLogs.forEach(log => {
+        if (!agentData[log.agentId]) agentData[log.agentId] = { sum: 0, count: 0 };
+        agentData[log.agentId].sum += log.value;
+        agentData[log.agentId].count += 1;
+      });
+
+      const agentScores: Record<string, number> = {};
+      Object.entries(agentData).forEach(([agentId, data]) => {
+        if (kpi.type === 'percentage') {
+          agentScores[agentId] = data.count > 0 ? data.sum / data.count : 0;
+        } else {
+          agentScores[agentId] = data.sum;
         }
+      });
 
-        const valueKey = kpiInfo.name;
-        const countKey = `${kpiInfo.name}_count`;
-        
-        // Sum values and increment counts
-        dataByDate[dateStr][valueKey] = (dataByDate[dateStr][valueKey] || 0) + log.value;
-        dataByDate[dateStr][countKey] = (dataByDate[dateStr][countKey] || 0) + 1;
+      const agentIds = Object.keys(agentScores);
+      const entries = agentIds.map(agentId => {
+        const agent = agents.find(a => a.id === agentId);
+        return {
+          agentId,
+          agentName: agent?.name || 'Unknown Agent',
+          score: agentScores[agentId],
+        } as LeaderboardEntry;
+      });
+
+      const sortedEntries = entries.sort((a, b) => {
+        if (kpi.sortOrder === 'asc') {
+          return a.score - b.score;
+        }
+        return b.score - a.score;
+      });
+
+      const rankedEntries: LeaderboardEntry[] = sortedEntries.map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+      }));
+
+      return {
+        kpi,
+        entries: rankedEntries.slice(0, 5),
+      };
     });
+  }, [kpis, filteredLogs, agents]);
 
-    // Process the aggregated data to calculate averages if needed
-    const finalChartData = Object.values(dataByDate).map(dataPoint => {
-        const processedDataPoint: ChartDataPoint = { date: dataPoint.date };
-        kpisToProcess.forEach(kpiInfo => {
-            const valueKey = kpiInfo.name;
-            const countKey = `${kpiInfo.name}_count`;
-            const totalValue = dataPoint[valueKey];
-            const count = dataPoint[countKey];
+  const getTimeframeLabel = () => {
+    switch (timeframe) {
+      case 'thisWeek': return 'This Week';
+      case 'thisMonth': return 'This Month';
+      case 'last6weeks': return 'Last 6 Weeks';
+      case 'allTime': return 'All Time';
+    }
+  };
 
-            if (totalValue !== undefined && count > 0) {
-                 let finalValue: number;
-                 if (selectedAgentId === 'all') {
-                    // Always average if "All Agents" is selected
-                    finalValue = totalValue / count;
-                } else {
-                    // Use the direct sum if a single agent is selected
-                    finalValue = totalValue;
-                }
-                 // Round to 2 decimal places
-                 processedDataPoint[valueKey] = parseFloat(finalValue.toFixed(2));
-            }
-        });
-        return processedDataPoint;
-    }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const finalPercentageKpis = kpisToProcess.filter(k => k.type === 'percentage');
-    const finalNumberKpis = kpisToProcess.filter(k => k.type !== 'percentage');
-
-    // Calculate max value for the right axis
-    let maxRightAxisValue = 0;
-    finalChartData.forEach(dataPoint => {
-        finalNumberKpis.forEach(kpi => {
-            const value = dataPoint[kpi.name];
-            if (typeof value === 'number' && value > maxRightAxisValue) {
-                maxRightAxisValue = value;
-            }
-        });
-    });
-    const finalRightAxisMax = Math.ceil(maxRightAxisValue);
-
-    return { chartData: finalChartData, tableData: relevantLogs, percentageKpis: finalPercentageKpis, numberKpis: finalNumberKpis, rightAxisMax: finalRightAxisMax > 0 ? finalRightAxisMax : 100 };
-
-  }, [selectedPodId, selectedKpiId, selectedAgentId, timeframe, logs, kpis, podAgents]);
-
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48 mt-2" />
+        </div>
+        <div className="flex gap-4">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-48" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Performance Dashboard</h1>
+        <p className="text-muted-foreground">KPI Performance Leaderboards</p>
+      </div>
+
       <Card className="frosted-glass">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Chart Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="grid gap-2">
               <Label>Pod</Label>
-              <Select onValueChange={handlePodChange} value={selectedPodId} disabled={isLoading}>
-                <SelectTrigger><SelectValue placeholder="Select Pod" /></SelectTrigger>
+              <Select onValueChange={handlePodChange} value={selectedPodId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Pod" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Pods</SelectItem>
-                  {pods.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {pods.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2"><Label>Agent</Label><Select onValueChange={handleAgentChange} value={selectedAgentId} disabled={isLoading || !selectedPodId || selectedPodId === 'all'}><SelectTrigger><SelectValue placeholder="Select Agent" /></SelectTrigger><SelectContent><SelectItem value="all">All Agents (Aggregated)</SelectItem>{podAgents.map(a => <SelectItem key={a.id!} value={a.id!}>{a.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-2"><Label>KPI</Label><Select onValueChange={handleKpiChange} value={selectedKpiId} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select KPI" /></SelectTrigger><SelectContent><SelectItem value="all">All KPIs</SelectItem>{kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-2"><Label>Timeframe</Label><Select onValueChange={handleTimeframeChange} value={timeframe} disabled={isLoading}><SelectTrigger><SelectValue placeholder="Select Timeframe" /></SelectTrigger><SelectContent><SelectItem value="thisWeek">This Week</SelectItem><SelectItem value="thisMonth">This Month</SelectItem><SelectItem value="last6weeks">Last 6 Weeks</SelectItem><SelectItem value="allTime">All Time</SelectItem></SelectContent></Select></div>
+            <div className="grid gap-2">
+              <Label>Timeframe</Label>
+              <Select onValueChange={handleTimeframeChange} value={timeframe}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Timeframe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="thisWeek">This Week</SelectItem>
+                  <SelectItem value="thisMonth">This Month</SelectItem>
+                  <SelectItem value="last6weeks">Last 6 Weeks</SelectItem>
+                  <SelectItem value="allTime">All Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="frosted-glass">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><LineChart className="h-5 w-5" /> KPI Performance Chart</CardTitle>
-          <CardDescription>
-            Visualizing <span className="font-semibold">{selectedKpiId === 'all' ? 'All KPIs' : kpis.find(k=>k.id === selectedKpiId)?.name}</span> for <span className="font-semibold">{selectedAgentId === 'all' ? 'All Agents' : agents.find(a=>a.id===selectedAgentId)?.name}</span>
-            {selectedPodId !== 'all' && ` in ${pods.find(p=>p.id===selectedPodId)?.name || '...'}`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-[350px] w-full" />
-          ) : !selectedKpiId ? (
-              <div className="h-[350px] flex items-center justify-center text-muted-foreground"><AlertCircle className="mr-2"/>Please select a KPI to view the chart.</div>
-          ) : chartData.length === 0 ? (
-              <div className="h-[350px] flex items-center justify-center text-muted-foreground"><AlertCircle className="mr-2"/>No data available for the selected filters.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <RechartsLineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis yAxisId="left" stroke={LINE_COLORS[1]} fontSize={12} domain={[0, 100]} tickFormatter={(value) => `${value}%`} hide={percentageKpis.length === 0} />
-                <YAxis yAxisId="right" orientation="right" stroke={LINE_COLORS[0]} fontSize={12} hide={numberKpis.length === 0} domain={[0, rightAxisMax]} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
-                <Legend />
-                {percentageKpis.map((kpi, index) => (
-                   <Line 
-                     key={`pct-${kpi.id}`}
-                     yAxisId="left"
-                     type="monotone" 
-                     dataKey={kpi.name} 
-                     stroke={LINE_COLORS[(index + numberKpis.length) % LINE_COLORS.length]} // Offset color index
-                     strokeWidth={2} 
-                     dot={{ r: 4 }} 
-                     activeDot={{ r: 6 }} 
-                   />
-                ))}
-                {numberKpis.map((kpi, index) => (
-                   <Line 
-                     key={`num-${kpi.id}`}
-                     yAxisId="right"
-                     type="monotone" 
-                     dataKey={kpi.name} 
-                     stroke={LINE_COLORS[index % LINE_COLORS.length]} 
-                     strokeWidth={2} 
-                     dot={{ r: 4 }} 
-                     activeDot={{ r: 6 }} 
-                   />
-                ))}
-              </RechartsLineChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Card className="frosted-glass">
-        <CardHeader><CardTitle>Chart Data</CardTitle></CardHeader>
-        <CardContent>
-           <div className="overflow-x-auto max-h-80">
-            <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Agent</TableHead><TableHead>KPI</TableHead><TableHead>Value</TableHead></TableRow></TableHeader>
-                <TableBody>
-                    {isLoading ? (
-                        Array.from({length: 3}).map((_, i) => <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-6 w-full"/></TableCell></TableRow>)
-                    ) : tableData.length === 0 ? (
-                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data</TableCell></TableRow>
+      {kpis.length === 0 ? (
+        <Card className="frosted-glass">
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium">No KPIs Configured</p>
+              <p className="text-sm">Add KPIs in the Additional KPIs section to see leaderboards.</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {kpiLeaderboards.map(({ kpi, entries }) => (
+            <Card key={kpi.id} className="frosted-glass overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <span className="text-lg font-bold">{kpi.initials || '📋'}</span>
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{kpi.name}</CardTitle>
+                      {kpi.type === 'percentage' && (
+                        <span className="text-xs text-muted-foreground">{kpi.type}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                    kpi.sortOrder === 'asc'
+                      ? 'bg-blue-500/10 text-blue-500'
+                      : 'bg-green-500/10 text-green-500'
+                  )}>
+                    {kpi.sortOrder === 'asc' ? (
+                      <>
+                        <TrendingDown className="h-3 w-3" />
+                        <span>Lower is better</span>
+                      </>
                     ) : (
-                        tableData.map(log => (
-                            <TableRow key={log.id}>
-                                <TableCell>{format(log.date.toDate(), 'PPP')}</TableCell>
-                                <TableCell>{agents.find(a => a.id === log.agentId)?.name || 'Unknown'}</TableCell>
-                                <TableCell>{kpis.find(k => k.id === log.kpiId)?.name || 'Unknown'}</TableCell>
-                                <TableCell>{log.value}</TableCell>
-                            </TableRow>
-                        ))
+                      <>
+                        <TrendingUp className="h-3 w-3" />
+                        <span>Higher is better</span>
+                      </>
                     )}
-                </TableBody>
-            </Table>
-           </div>
-        </CardContent>
-      </Card>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-2">
+                {entries.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No data for this KPI</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {entries.map((entry) => (
+                      <div
+                        key={entry.agentId}
+                        className={cn(
+                          "flex items-center gap-3 p-2 rounded-lg transition-colors",
+                          entry.rank <= 3 ? 'bg-muted/50' : 'hover:bg-muted/30'
+                        )}
+                      >
+                        <div className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border",
+                          getMedalStyle(entry.rank)
+                        )}>
+                          {entry.rank <= 3 ? entry.rank : entry.rank}
+                        </div>
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className="text-xs">
+                            {generateInitials(entry.agentName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate block">
+                            {entry.agentName}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className={cn(
+                            "font-bold tabular-nums",
+                            entry.rank <= 3 ? 'text-foreground' : 'text-primary'
+                          )}>
+                            {kpi.type === 'percentage'
+                              ? `${entry.score.toFixed(1)}%`
+                              : entry.score.toLocaleString()
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {kpis.length > 0 && kpiLeaderboards.every(lb => lb.entries.length === 0) && (
+        <Card className="frosted-glass">
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <Filter className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium">No Data for {getTimeframeLabel()}</p>
+              <p className="text-sm">No KPI logs recorded for the selected timeframe and pod.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
