@@ -1,132 +1,234 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gamepad2, Swords, Trophy, Zap } from "lucide-react";
-import Link from "next/link";
+import { Gamepad2, Swords, Trophy } from "lucide-react";
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { generateInitials, cn } from '@/lib/utils';
+import type { AppUser } from '@/services/user';
+
+type Throw = 'rock' | 'paper' | 'scissors';
+type Result = 'win' | 'loss' | 'draw';
+
+interface GameResult {
+  userId: string | null;
+  userThrow: Throw;
+  opponentThrow: Throw;
+  result: Result;
+  timestamp: any;
+}
+
+interface LeaderboardEntry {
+  userId: string;
+  name: string;
+  wins: number;
+  rank: number;
+}
+
+interface GameLeaderboard {
+  id: string;
+  name: string;
+  icon: typeof Swords;
+  color: string;
+  bgColor: string;
+  href: string;
+  entries: LeaderboardEntry[];
+}
+
+const getMedalStyle = (rank: number) => {
+  switch (rank) {
+    case 1: return 'bg-yellow-500/30 text-yellow-400 border-yellow-500/50';
+    case 2: return 'bg-gray-400/30 text-gray-300 border-gray-400/50';
+    case 3: return 'bg-orange-400/30 text-orange-400 border-orange-400/50';
+    default: return 'bg-muted/30 text-muted-foreground border-muted';
+  }
+};
+
+const getMedalEmoji = (rank: number) => {
+  switch (rank) {
+    case 1: return '🥇';
+    case 2: return '🥈';
+    case 3: return '🥉';
+    default: return null;
+  }
+};
 
 export default function MiniGamesDashboard() {
-  const games = [
+  const [agents, setAgents] = useState<AppUser[]>([]);
+  const [rpsGames, setRpsGames] = useState<GameResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribes = [
+      onSnapshot(query(collection(db, 'users'), orderBy('name')), (snap) => {
+        setAgents(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppUser)));
+      }),
+      onSnapshot(query(collection(db, 'rpsGames'), orderBy('timestamp', 'desc')), (snap) => {
+        setRpsGames(snap.docs.map(d => d.data() as GameResult));
+        setIsLoading(false);
+      }),
+    ];
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, []);
+
+  const rpsLeaderboard = useMemo((): LeaderboardEntry[] => {
+    const agentWins: Record<string, number> = {};
+    
+    rpsGames.forEach(game => {
+      if (game.result === 'win' && game.userId) {
+        agentWins[game.userId] = (agentWins[game.userId] || 0) + 1;
+      }
+    });
+
+    const leaderboard = Object.entries(agentWins)
+      .map(([userId, wins]) => {
+        const agent = agents.find(a => a.id === userId);
+        return {
+          userId,
+          name: agent?.name || 'Unknown',
+          wins,
+          email: agent?.email || '',
+        };
+      })
+      .filter(entry => !entry.email.toLowerCase().endsWith('@test.com'))
+      .sort((a, b) => b.wins - a.wins)
+      .slice(0, 10);
+
+    return leaderboard.map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
+  }, [rpsGames, agents]);
+
+  const gameLeaderboards: GameLeaderboard[] = [
     {
-      title: "Rock Paper Scissors",
-      description: "Challenge your teammates in the classic game of Rock Paper Scissors!",
-      href: "/mini-games/rps",
+      id: 'rps',
+      name: 'Rock Paper Scissors',
       icon: Swords,
-      color: "text-orange-500",
-      bgColor: "bg-orange-500/20",
-      players: "2 players",
-      status: "Available",
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/20',
+      href: '/mini-games/rps',
+      entries: rpsLeaderboard,
     },
   ];
 
-  const upcomingGames = [
-    {
-      title: "Trivia Challenge",
-      description: "Test your knowledge with fun trivia questions",
-      icon: Zap,
-      comingSoon: true,
-    },
-    {
-      title: "Speed Quiz",
-      description: "Race against time in this fast-paced quiz game",
-      icon: Trophy,
-      comingSoon: true,
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48 mt-2" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Mini Games</h1>
-          <p className="text-muted-foreground">Fun games and activities for your team</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Mini Games</h1>
+        <p className="text-muted-foreground">Game Leaderboards</p>
       </div>
 
-      {/* Available Games */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Available Games</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {games.map((game) => {
-            const Icon = game.icon;
-            return (
-              <Link key={game.href} href={game.href}>
-                <Card variant="glass" className="glass-card-hover h-full cursor-pointer">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className={`p-3 rounded-lg ${game.bgColor}`}>
-                      <Icon className={`h-6 w-6 ${game.color}`} />
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-500">
-                      {game.status}
-                    </span>
-                  </CardHeader>
-                  <CardContent>
-                    <CardTitle className="text-lg">{game.title}</CardTitle>
-                    <CardDescription className="mt-1">{game.description}</CardDescription>
-                    <p className="text-xs text-muted-foreground mt-3">{game.players}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Coming Soon */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Coming Soon</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {upcomingGames.map((game) => {
-            const Icon = game.icon;
-            return (
-              <Card key={game.title} variant="glass" className="opacity-60">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="p-3 rounded-lg bg-muted">
-                    <Icon className="h-6 w-6 text-muted-foreground" />
+      {gameLeaderboards.map((game) => {
+        const Icon = game.icon;
+        return (
+          <Card key={game.id} className="frosted-glass overflow-hidden">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${game.bgColor}`}>
+                    <Icon className={`h-6 w-6 ${game.color}`} />
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-500">
-                    Coming Soon
-                  </span>
-                </CardHeader>
-                <CardContent>
-                  <CardTitle className="text-lg">{game.title}</CardTitle>
-                  <CardDescription className="mt-1">{game.description}</CardDescription>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+                  <div>
+                    <CardTitle className="text-xl">{game.name}</CardTitle>
+                    <CardDescription>
+                      {game.entries.length > 0 
+                        ? `Top ${game.entries.length} players by total wins`
+                        : 'No games played yet'}
+                    </CardDescription>
+                  </div>
+                </div>
+                <a 
+                  href={game.href}
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  Play Game
+                </a>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {game.entries.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>No games played yet</p>
+                  <p className="text-sm">Be the first to play!</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {game.entries.map((entry) => (
+                    <div
+                      key={entry.userId}
+                      className={cn(
+                        "flex items-center gap-4 p-3 rounded-lg transition-colors",
+                        entry.rank <= 3 ? 'bg-muted/50' : 'hover:bg-muted/30'
+                      )}
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border",
+                        getMedalStyle(entry.rank)
+                      )}>
+                        {getMedalEmoji(entry.rank) || entry.rank}
+                      </div>
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="text-sm">
+                          {generateInitials(entry.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium truncate block">
+                          {entry.name}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className={cn(
+                          "font-bold text-lg tabular-nums",
+                          entry.rank <= 3 ? 'text-foreground' : 'text-primary'
+                        )}>
+                          {entry.wins}
+                        </span>
+                        <span className="text-sm text-muted-foreground ml-1">
+                          {entry.wins === 1 ? 'win' : 'wins'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card variant="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Games Played</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">156</div>
-            <p className="text-xs text-muted-foreground">Total games played</p>
+      {gameLeaderboards.every(g => g.entries.length === 0) && (
+        <Card className="frosted-glass">
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <Gamepad2 className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium">No Games Available</p>
+              <p className="text-sm">Check back later for fun games!</p>
+            </div>
           </CardContent>
         </Card>
-        <Card variant="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Active Players</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">Players online</p>
-          </CardContent>
-        </Card>
-        <Card variant="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Wins</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">89</div>
-            <p className="text-xs text-muted-foreground">Games won today</p>
-          </CardContent>
-        </Card>
-      </div>
+      )}
     </div>
   );
 }
