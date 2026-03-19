@@ -22,8 +22,27 @@ import { Alert, AlertDescription as UIDescription } from "@/components/ui/alert"
 import { AlertCircle } from 'lucide-react';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
+
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    points: number;
+  }>;
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
+}
 
 // Interface for leaderboard entries
 interface LeaderboardEntry {

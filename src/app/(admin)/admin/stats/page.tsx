@@ -34,7 +34,6 @@ import {
 
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import type { RuleFormData } from '@/models/types';
 

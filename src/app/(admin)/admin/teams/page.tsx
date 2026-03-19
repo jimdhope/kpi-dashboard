@@ -30,7 +30,6 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Loader2, Users, Shuffle, Save, AlertCircle, Edit, Filter } from 'lucide-react'; // Added Filter
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import { ManageTeamAgentsDialog } from '@/components/manage-team-agents-dialog';

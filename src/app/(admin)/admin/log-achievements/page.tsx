@@ -32,7 +32,6 @@ import { CalendarIcon, Loader2, AlertCircle, Filter, Send, Info, UserX, Award, M
 import { format, startOfDay, getDay, endOfDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { RuleFormData } from '@/models/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +41,26 @@ import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams
 import { Checkbox } from '@/components/ui/checkbox';
 import { AchievementCard } from '@/components/achievement-card'; // Import the new card
 import { Input } from '@/components/ui/input';
+
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    points: number;
+  }>;
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
+}
 
 // Interface for the data stored in Firestore for achievements
 export interface DailyAchievementLog {

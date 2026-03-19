@@ -8,12 +8,31 @@ import { onSnapshot, doc, getDoc, query, collection, where, orderBy } from 'fire
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import type { AppUser } from '@/services/user';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { DailyAchievementLog } from '@/app/(admin)/admin/log-achievements/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { format } from 'date-fns';
+
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    points: number;
+  }>;
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
+}
 
 interface Team {
   id: string;

@@ -13,7 +13,26 @@ import { AppUser } from '@/services/user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
+
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    points: number;
+  }>;
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
+}
 
 type Throw = 'rock' | 'paper' | 'scissors';
 type Result = 'win' | 'loss' | 'draw';

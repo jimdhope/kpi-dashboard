@@ -25,7 +25,6 @@ import { Label } from '@/components/ui/label';
 import { CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import type { AppUser } from '@/services/user';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { RuleFormData } from '@/components/manage-campaign-rules-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';

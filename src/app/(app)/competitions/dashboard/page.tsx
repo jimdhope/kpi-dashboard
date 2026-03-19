@@ -220,20 +220,6 @@ export default function CompetitionsDashboard() {
                 </div>
                 <p className="text-xs text-muted-foreground ml-6">Record daily achievements</p>
               </a>
-              <a href="/competitions/scores" className="block p-3 rounded-lg bg-glass/30 hover:bg-glass/50 transition-colors">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <p className="text-sm font-medium">Daily Scores</p>
-                </div>
-                <p className="text-xs text-muted-foreground ml-6">View team scores</p>
-              </a>
-              <a href="/competitions/leaderboard" className="block p-3 rounded-lg bg-glass/30 hover:bg-glass/50 transition-colors">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4" />
-                  <p className="text-sm font-medium">Leaderboard</p>
-                </div>
-                <p className="text-xs text-muted-foreground ml-6">View rankings</p>
-              </a>
               <a href="/competitions/setup" className="block p-3 rounded-lg bg-glass/30 hover:bg-glass/50 transition-colors">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />

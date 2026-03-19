@@ -31,7 +31,6 @@ import { CalendarIcon, Loader2, Send, Filter, Minus, Plus } from 'lucide-react';
 import { format, startOfDay, getDay } from 'date-fns';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { RuleFormData } from '@/models/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +39,26 @@ import type { DailyTargetData } from '@/app/(admin)/admin/pod-targets/page';
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type TeamBonusSummary, type TeamTotalScore } from '@/services/teamsWebhook';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    points: number;
+  }>;
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
+}
 
 export interface DailyAchievementLog {
   id?: string;

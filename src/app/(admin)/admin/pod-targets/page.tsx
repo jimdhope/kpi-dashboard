@@ -24,11 +24,30 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Save, AlertCircle, Target, Filter } from 'lucide-react'; // Added Filter icon
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { RuleFormData } from '@/models/types';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    points: number;
+  }>;
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
+}
 
 // Define the structure for daily targets
 export interface DailyTargetData {

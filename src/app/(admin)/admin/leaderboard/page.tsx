@@ -23,7 +23,6 @@ import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, Trophy, Users, Medal, Filter } from 'lucide-react'; // Added Filter
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
-import type { Competition } from '@/app/(admin)/admin/competitions/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -40,6 +39,25 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Leaderboard } from '@/components/leaderboard';
 import type { TeamBonusLog } from '@/app/(admin)/admin/log-achievements/page';
 
+interface Competition {
+  id: string;
+  name: string;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+  podIds?: string[];
+  rules?: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    points: number;
+  }>;
+  teams?: Array<{
+    id: string;
+    name: string;
+    agentIds: string[];
+    emoji?: string;
+  }>;
+}
 
 // Interface for daily achievement logs (same as before)
 interface DailyAchievementLog {
