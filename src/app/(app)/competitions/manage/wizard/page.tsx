@@ -334,7 +334,7 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
   };
 
   const handleSuggestedAssignment = async () => {
-    if (formData.podIds.length === 0 || !competitionId) {
+    if (formData.podIds.length === 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select pods first.' });
       return;
     }
