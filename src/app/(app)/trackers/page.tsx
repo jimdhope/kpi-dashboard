@@ -207,13 +207,13 @@ export default function TrackersDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Trackers Leaderboard</h1>
           <p className="text-muted-foreground">Agent rankings by tracker achievements</p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border bg-card">
             <Button
               variant="ghost"
@@ -229,7 +229,7 @@ export default function TrackersDashboard() {
               className={cn("rounded-none border-x", timeFrame === 'thisWeek' && "bg-primary text-primary-foreground")}
               onClick={() => setTimeFrame('thisWeek')}
             >
-              This Week
+              Week
             </Button>
             <Button
               variant="ghost"
@@ -237,7 +237,7 @@ export default function TrackersDashboard() {
               className={cn("rounded-l-none", timeFrame === 'thisMonth' && "bg-primary text-primary-foreground")}
               onClick={() => setTimeFrame('thisMonth')}
             >
-              This Month
+              Month
             </Button>
           </div>
 
@@ -246,7 +246,7 @@ export default function TrackersDashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                className={cn("w-[200px] justify-start text-left font-normal", timeFrame === 'custom' && "bg-primary/10 border-primary")}
+                className={cn("w-[160px] sm:w-[200px] justify-start text-left font-normal", timeFrame === 'custom' && "bg-primary/10 border-primary")}
               >
                 <span className="mr-2">📅</span>
                 {getTimeFrameLabel()}
@@ -326,66 +326,122 @@ export default function TrackersDashboard() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[60px] text-center">#</TableHead>
-                    <TableHead className="w-[200px]">Agent</TableHead>
-                    <TableHead className="w-[150px]">Pod</TableHead>
-                    {trackerKpis.map(kpi => (
-                      <TableHead key={kpi.id} className="text-center min-w-[80px]">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-base">{kpi.initials || '📋'}</span>
-                          <span className="text-[10px] font-normal text-muted-foreground max-w-[60px] truncate" title={kpi.name}>
-                            {kpi.name}
-                          </span>
-                        </div>
-                      </TableHead>
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[60px] text-center">#</TableHead>
+                      <TableHead className="w-[200px]">Agent</TableHead>
+                      <TableHead className="w-[150px]">Pod</TableHead>
+                      {trackerKpis.map(kpi => (
+                        <TableHead key={kpi.id} className="text-center min-w-[80px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-base">{kpi.initials || '📋'}</span>
+                            <span className="text-[10px] font-normal text-muted-foreground max-w-[60px] truncate" title={kpi.name}>
+                              {kpi.name}
+                            </span>
+                          </div>
+                        </TableHead>
+                      ))}
+                      <TableHead className="text-right w-[100px]">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaderboardData.map((entry, index) => (
+                      <TableRow key={entry.agentId} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
+                        <TableCell className="text-center">
+                          <div className={cn(
+                            "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mx-auto",
+                            index === 0 ? 'bg-yellow-500/30 text-yellow-400 border border-yellow-500/50' :
+                            index === 1 ? 'bg-gray-400/30 text-gray-300 border border-gray-400/50' :
+                            index === 2 ? 'bg-orange-400/30 text-orange-400 border border-orange-400/50' :
+                            'bg-muted text-muted-foreground'
+                          )}>
+                            {index + 1}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarFallback className="text-xs">
+                                {generateInitials(entry.agentName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{entry.agentName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">{entry.podName}</span>
+                        </TableCell>
+                        {trackerKpis.map(kpi => (
+                          <TableCell key={kpi.id} className="text-center">
+                            {entry.trackerValues[kpi.id] || '-'}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right font-bold">
+                          {entry.total}
+                        </TableCell>
+                      </TableRow>
                     ))}
-                    <TableHead className="text-right w-[100px]">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leaderboardData.map((entry, index) => (
-                    <TableRow key={entry.agentId} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
-                      <TableCell className="text-center">
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3 max-h-[500px] overflow-y-auto">
+                {leaderboardData.map((entry, index) => (
+                  <div 
+                    key={entry.agentId} 
+                    className={cn(
+                      "p-3 rounded-lg border",
+                      index === 0 && 'border-yellow-500/30 bg-yellow-500/5',
+                      index === 1 && 'border-gray-400/30 bg-gray-400/5',
+                      index === 2 && 'border-orange-400/30 bg-orange-400/5',
+                      index > 2 && 'bg-card'
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
                         <div className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mx-auto",
-                          index === 0 ? 'bg-yellow-500/30 text-yellow-400 border border-yellow-500/50' :
-                          index === 1 ? 'bg-gray-400/30 text-gray-300 border border-gray-400/50' :
-                          index === 2 ? 'bg-orange-400/30 text-orange-400 border border-orange-400/50' :
+                          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                          index === 0 ? 'bg-yellow-500/30 text-yellow-400' :
+                          index === 1 ? 'bg-gray-400/30 text-gray-300' :
+                          index === 2 ? 'bg-orange-400/30 text-orange-400' :
                           'bg-muted text-muted-foreground'
                         )}>
                           {index + 1}
                         </div>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-7 w-7">
+                          <Avatar className="h-8 w-8">
                             <AvatarFallback className="text-xs">
                               {generateInitials(entry.agentName)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{entry.agentName}</span>
+                          <div>
+                            <span className="font-medium text-sm">{entry.agentName}</span>
+                            <span className="text-xs text-muted-foreground block">{entry.podName}</span>
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">{entry.podName}</span>
-                      </TableCell>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-primary">{entry.total}</span>
+                        <span className="text-xs text-muted-foreground block">total</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
                       {trackerKpis.map(kpi => (
-                        <TableCell key={kpi.id} className="text-center">
-                          {entry.trackerValues[kpi.id] || '-'}
-                        </TableCell>
+                        <div key={kpi.id} className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded">
+                          <span>{kpi.initials || '📋'}</span>
+                          <span className="text-muted-foreground">{entry.trackerValues[kpi.id] || '-'}</span>
+                        </div>
                       ))}
-                      <TableCell className="text-right font-bold">
-                        {entry.total}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

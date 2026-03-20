@@ -1,19 +1,8 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarSeparator,
-} from '@/components/ui/sidebar';
-import { Home, Trophy, Target, Settings, CheckSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Home, Settings, CheckSquare } from 'lucide-react';
 
 interface TrackersLayoutProps {
   children: React.ReactNode;
@@ -26,51 +15,16 @@ const trackersMenuItems = [
 ];
 
 export default function TrackersLayout({ children }: TrackersLayoutProps) {
-  const pathname = usePathname();
-
-  const isActive = (href: string) => {
-    if (href === '/trackers') {
-      return pathname === '/trackers';
-    }
-    return pathname.startsWith(href);
-  };
-
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex relative min-h-screen w-full flex-col">
-        <div className="flex flex-1">
-          <Sidebar className="glass-sidebar border-r border-glass-border/40 pt-0 top-[65px] h-[calc(100vh-65px)]">
-            <SidebarContent className="pt-4">
-              <SidebarMenu>
-                {trackersMenuItems.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <Link href={item.href}>
-                        <SidebarMenuButton 
-                          isActive={active}
-                          className={cn(
-                            "mb-1",
-                            active && "bg-primary/20 text-primary border-l-2 border-primary"
-                          )}
-                        >
-                          <Icon className={cn("w-4 h-4", active ? "text-primary" : "")} />
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </Link>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarContent>
-          </Sidebar>
-
-          <main className="flex-1 p-6 overflow-y-auto min-h-[calc(100vh-65px)]">
-            {children}
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+    <div className="flex relative min-h-screen w-full flex-col">
+      {/* Breadcrumbs with section navigation - shown on mobile */}
+      <Breadcrumbs 
+        sectionItems={trackersMenuItems}
+        className="sticky top-[65px] z-40 bg-background/95 backdrop-blur-sm border-b md:hidden"
+      />
+      <main className="flex-1 px-4 md:px-6 pb-6">
+        {children}
+      </main>
+    </div>
   );
 }

@@ -17,10 +17,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Trophy, Users, Target, Medal } from 'lucide-react';
+import { Trophy, Users, Target, Medal, FileText, Clock, Trash2, ArrowRight } from 'lucide-react';
 import { Skeleton as SkeletonComponent } from '@/components/ui/skeleton';
 import type { AppUser } from '@/services/user';
 import { format } from 'date-fns';
+import { subscribeToUserCompetitionDrafts, deleteCompetitionDraft } from '@/services/competition-drafts';
+import type { CompetitionDraft } from '@/models/types';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface Competition {
   id: string;
@@ -68,6 +73,9 @@ export default function AdminCompetitionsDashboard() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [logs, setLogs] = useState<DailyAchievementLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [drafts, setDrafts] = useState<CompetitionDraft[]>([]);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribes: (() => void)[] = [];
@@ -106,12 +114,30 @@ export default function AdminCompetitionsDashboard() {
       );
     };
 
+    // Subscribe to user's competition drafts
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const draftsUnsubscribe = subscribeToUserCompetitionDrafts(currentUser.uid, (userDrafts) => {
+        setDrafts(userDrafts);
+      });
+      unsubscribes.push(draftsUnsubscribe);
+    }
+
     fetchCompetitions();
     fetchPods();
     fetchUsers();
 
     return () => unsubscribes.forEach((unsub) => unsub());
-  }, []);
+  }, [selectedCompetitionId]);
+
+  const handleDeleteDraft = async (draftId: string) => {
+    try {
+      await deleteCompetitionDraft(draftId);
+      toast({ title: 'Draft Deleted', description: 'The draft has been removed.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete draft.' });
+    }
+  };
 
   useEffect(() => {
     if (!selectedCompetitionId) return;
@@ -299,39 +325,113 @@ export default function AdminCompetitionsDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Competition Dashboard</h1>
           <p className="text-muted-foreground">Select a competition to view its standings</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={selectedCompetitionId} onValueChange={handleCompetitionChange}>
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Select competition" />
-            </SelectTrigger>
-            <SelectContent>
-              {competitions.map((comp) => (
-                <SelectItem key={comp.id} value={comp.id}>
-                  {comp.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedPodId} onValueChange={handlePodChange}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter by pod" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Pods</SelectItem>
-              {availablePods.map((pod) => (
-                <SelectItem key={pod.id} value={pod.id}>
-                  {pod.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Drafts Toggle Button */}
+          {drafts.length > 0 && (
+            <Button
+              variant={showDrafts ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowDrafts(!showDrafts)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              My Drafts
+              <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-xs font-medium">
+                {drafts.length}
+              </span>
+            </Button>
+          )}
+          <div className="hidden sm:block">
+            <Select value={selectedCompetitionId} onValueChange={handleCompetitionChange}>
+              <SelectTrigger className="w-[200px] md:w-[250px]">
+                <SelectValue placeholder="Select competition" />
+              </SelectTrigger>
+              <SelectContent>
+                {competitions.map((comp) => (
+                  <SelectItem key={comp.id} value={comp.id}>
+                    {comp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="hidden md:block">
+            <Select value={selectedPodId} onValueChange={handlePodChange}>
+              <SelectTrigger className="w-[150px] lg:w-[200px]">
+                <SelectValue placeholder="Filter by pod" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Pods</SelectItem>
+                {availablePods.map((pod) => (
+                  <SelectItem key={pod.id} value={pod.id}>
+                    {pod.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
+
+      {/* Drafts Section */}
+      {showDrafts && drafts.length > 0 && (
+        <Card className="frosted-glass border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-5 w-5 text-primary" />
+              Saved Drafts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {drafts.map((draft) => (
+                <div
+                  key={draft.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">
+                        {draft.name || 'Untitled Draft'}
+                      </p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {draft.lastSavedAt?.toDate?.() 
+                          ? format(draft.lastSavedAt.toDate(), 'MMM d, h:mm a')
+                          : 'Recently'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
+                      <Link href={`/admin/competitions/manage/wizard?draft=${draft.id}`}>
+                        <ArrowRight className="h-4 w-4" aria-label="Continue draft" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteDraft(draft.id)}
+                    >
+                      <Trash2 className="h-4 w-4" aria-label="Delete draft" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {competition && (
         <>
@@ -365,6 +465,7 @@ export default function AdminCompetitionsDashboard() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
+            {/* Pod Standings - Responsive Card/Table */}
             <Card className="frosted-glass">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -376,36 +477,66 @@ export default function AdminCompetitionsDashboard() {
                 {podStandings.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">No data</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Pod</TableHead>
-                        <TableHead className="text-right">Score</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">#</TableHead>
+                            <TableHead>Pod</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {podStandings.map((pod, index) => (
+                            <TableRow key={pod.id}>
+                              <TableCell className="font-bold">
+                                {index + 1 <= 3 ? (
+                                  <Medal className={`h-5 w-5 ${
+                                    index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
+                                  }`} />
+                                ) : (
+                                  index + 1
+                                )}
+                              </TableCell>
+                              <TableCell className="font-medium">{pod.name}</TableCell>
+                              <TableCell className="text-right font-bold">{pod.score.toLocaleString()}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Mobile Cards */}
+                    <div className="md:hidden space-y-2">
                       {podStandings.map((pod, index) => (
-                        <TableRow key={pod.id}>
-                          <TableCell className="font-bold">
-                            {index + 1 <= 3 ? (
-                              <Medal className={`h-5 w-5 ${
-                                index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
-                              }`} />
-                            ) : (
-                              index + 1
-                            )}
-                          </TableCell>
-                          <TableCell className="font-medium">{pod.name}</TableCell>
-                          <TableCell className="text-right font-bold">{pod.score.toLocaleString()}</TableCell>
-                        </TableRow>
+                        <div key={pod.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                              index === 0 && 'bg-yellow-400/30 text-yellow-400',
+                              index === 1 && 'bg-gray-400/30 text-gray-300',
+                              index === 2 && 'bg-orange-400/30 text-orange-400',
+                              index > 2 && 'bg-muted text-muted-foreground'
+                            )}>
+                              {index + 1 <= 3 ? (
+                                <Medal className="h-4 w-4" />
+                              ) : (
+                                index + 1
+                              )}
+                            </div>
+                            <span className="font-medium text-sm">{pod.name}</span>
+                          </div>
+                          <span className="font-bold text-primary">{pod.score.toLocaleString()}</span>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
 
+            {/* Team Standings - Responsive Card/Table */}
             <Card className="frosted-glass">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -417,38 +548,69 @@ export default function AdminCompetitionsDashboard() {
                 {teamStandings.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">No teams configured</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Team</TableHead>
-                        <TableHead className="text-right">Score</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">#</TableHead>
+                            <TableHead>Team</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {teamStandings.map((team, index) => (
+                            <TableRow key={team.id}>
+                              <TableCell className="font-bold">
+                                {index + 1 <= 3 ? (
+                                  <Medal className={`h-5 w-5 ${
+                                    index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
+                                  }`} />
+                                ) : (
+                                  index + 1
+                                )}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {team.emoji} {team.name}
+                              </TableCell>
+                              <TableCell className="text-right font-bold">{team.score.toLocaleString()}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Mobile Cards */}
+                    <div className="md:hidden space-y-2">
                       {teamStandings.map((team, index) => (
-                        <TableRow key={team.id}>
-                          <TableCell className="font-bold">
-                            {index + 1 <= 3 ? (
-                              <Medal className={`h-5 w-5 ${
-                                index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
-                              }`} />
-                            ) : (
-                              index + 1
-                            )}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {team.emoji} {team.name}
-                          </TableCell>
-                          <TableCell className="text-right font-bold">{team.score.toLocaleString()}</TableCell>
-                        </TableRow>
+                        <div key={team.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                              index === 0 && 'bg-yellow-400/30 text-yellow-400',
+                              index === 1 && 'bg-gray-400/30 text-gray-300',
+                              index === 2 && 'bg-orange-400/30 text-orange-400',
+                              index > 2 && 'bg-muted text-muted-foreground'
+                            )}>
+                              {index + 1 <= 3 ? (
+                                <Medal className="h-4 w-4" />
+                              ) : (
+                                index + 1
+                              )}
+                            </div>
+                            <span className="text-lg">{team.emoji}</span>
+                            <span className="font-medium text-sm">{team.name}</span>
+                          </div>
+                          <span className="font-bold text-primary">{team.score.toLocaleString()}</span>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
 
+            {/* Agent Standings - Responsive Card/Table */}
             <Card className="frosted-glass">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -460,39 +622,81 @@ export default function AdminCompetitionsDashboard() {
                 {agentStandings.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">No data</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Agent</TableHead>
-                        <TableHead className="text-right">Score</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">#</TableHead>
+                            <TableHead>Agent</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {agentStandings.slice(0, 20).map((agent, index) => {
+                            const isCurrentUser = agent.id === currentUser?.uid;
+                            return (
+                              <TableRow key={agent.id} className={isCurrentUser ? 'bg-primary/10' : ''}>
+                                <TableCell className="font-bold">
+                                  {index + 1 <= 3 ? (
+                                    <Medal className={`h-5 w-5 ${
+                                      index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
+                                    }`} />
+                                  ) : (
+                                    index + 1
+                                  )}
+                                </TableCell>
+                                <TableCell className={`font-medium ${isCurrentUser ? 'text-primary' : ''}`}>
+                                  {isCurrentUser ? 'You' : agent.name}
+                                </TableCell>
+                                <TableCell className={`text-right font-bold ${isCurrentUser ? 'text-primary' : ''}`}>
+                                  {agent.score.toLocaleString()}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Mobile Cards */}
+                    <div className="md:hidden space-y-2 max-h-[300px] overflow-y-auto">
                       {agentStandings.slice(0, 20).map((agent, index) => {
                         const isCurrentUser = agent.id === currentUser?.uid;
                         return (
-                          <TableRow key={agent.id} className={isCurrentUser ? 'bg-primary/10' : ''}>
-                            <TableCell className="font-bold">
-                              {index + 1 <= 3 ? (
-                                <Medal className={`h-5 w-5 ${
-                                  index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
-                                }`} />
-                              ) : (
-                                index + 1
-                              )}
-                            </TableCell>
-                            <TableCell className={`font-medium ${isCurrentUser ? 'text-primary' : ''}`}>
-                              {isCurrentUser ? 'You' : agent.name}
-                            </TableCell>
-                            <TableCell className={`text-right font-bold ${isCurrentUser ? 'text-primary' : ''}`}>
+                          <div 
+                            key={agent.id} 
+                            className={cn(
+                              "flex items-center justify-between p-2 rounded-lg",
+                              isCurrentUser ? 'bg-primary/10' : 'bg-muted/30'
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className={cn(
+                                "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                                index === 0 && 'bg-yellow-400/30 text-yellow-400',
+                                index === 1 && 'bg-gray-400/30 text-gray-300',
+                                index === 2 && 'bg-orange-400/30 text-orange-400',
+                                index > 2 && 'bg-muted text-muted-foreground'
+                              )}>
+                                {index + 1 <= 3 ? (
+                                  <Medal className="h-4 w-4" />
+                                ) : (
+                                  index + 1
+                                )}
+                              </div>
+                              <span className={cn("font-medium text-sm truncate", isCurrentUser && 'text-primary')}>
+                                {isCurrentUser ? 'You' : agent.name}
+                              </span>
+                            </div>
+                            <span className={cn("font-bold text-sm shrink-0 ml-2", isCurrentUser ? 'text-primary' : 'text-primary')}>
                               {agent.score.toLocaleString()}
-                            </TableCell>
-                          </TableRow>
+                            </span>
+                          </div>
                         );
                       })}
-                    </TableBody>
-                  </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

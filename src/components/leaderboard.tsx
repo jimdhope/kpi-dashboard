@@ -44,6 +44,73 @@ const getRankHighlightStyle = (rank: number): React.CSSProperties => {
   }
 };
 
+// Mobile Card Component for individual entries
+function LeaderboardCardEntry({ entry }: { entry: LeaderboardEntry & { rank: number } }) {
+  const style = getRankHighlightStyle(entry.rank);
+  const isTopThree = entry.rank <= 3;
+  
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between p-3 rounded-lg transition-colors",
+        isTopThree ? 'hover:brightness-105' : 'hover:bg-muted/30',
+        entry.isUser && !isTopThree ? 'bg-accent/50' : ''
+      )}
+      style={style}
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
+          entry.rank === 1 && 'bg-yellow-400/30 text-yellow-400',
+          entry.rank === 2 && 'bg-gray-400/30 text-gray-300',
+          entry.rank === 3 && 'bg-orange-400/30 text-orange-400',
+          entry.rank > 3 && 'bg-muted text-muted-foreground'
+        )}>
+          {entry.rank <= 3 ? (
+            <Medal className={cn("h-5 w-5", getMedalColor(entry.rank))} />
+          ) : (
+            entry.rank
+          )}
+        </div>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {entry.emoji ? (
+            <span className="text-xl shrink-0">{entry.emoji}</span>
+          ) : (
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarFallback
+                initials={entry.avatarInitials || generateInitials(entry.name)}
+                backgroundColor={entry.avatarBgColor}
+                className={cn(entry.rank <= 3 ? 'text-gray-900' : '')}
+              >
+                {!entry.avatarInitials && generateInitials(entry.name)}
+              </AvatarFallback>
+            </Avatar>
+          )}
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className={cn("font-medium truncate", isTopThree ? 'text-white' : '')}>
+              {entry.name}
+            </span>
+            {entry.isUser && (
+              <Badge 
+                variant={isTopThree ? "secondary" : "outline"} 
+                className={cn("text-[10px] h-4 w-fit", isTopThree ? "border-white/50 text-white/90" : "")}
+              >
+                You
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className={cn(
+        "text-lg font-bold tabular-nums shrink-0 ml-2",
+        isTopThree ? 'text-white' : 'text-primary'
+      )}>
+        {(entry.score ?? 0).toLocaleString()}
+      </div>
+    </div>
+  );
+}
+
 export function Leaderboard({ title, description, entries, isStickyHeader = true }: LeaderboardProps) {
     const sortedEntries = [...entries].sort((a, b) => (b.score || 0) - (a.score || 0));
 
@@ -77,61 +144,74 @@ export function Leaderboard({ title, description, entries, isStickyHeader = true
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className={cn(isStickyHeader && "overflow-y-auto max-h-[calc(100vh-380px)]")}>
-        <Table>
-          <TableHeader className={cn(isStickyHeader && "sticky top-0 z-10 bg-background")}>
-            <TableRow>
-              <TableHead className="w-[50px]">Rank</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead className="text-right">Score</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rankedEntries.map((entry) => (
-              <TableRow
-                key={`${entry.id}-${entry.name}`}
-                style={getRankHighlightStyle(entry.rank ?? 0)}
-                className={cn(
-                    entry.isUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
-                    (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
-                )}
-              >
-                <TableCell className="font-medium text-center align-middle">
-                  {(entry.rank ?? 0) <= 3 ? (
-                    <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
-                  ) : (
-                    entry.rank
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    {entry.emoji ? (
-                        <span className="text-xl">{entry.emoji}</span>
-                    ) : (
-                        <Avatar className="h-8 w-8">
-                        <AvatarFallback
-                            initials={entry.avatarInitials || generateInitials(entry.name)}
-                            backgroundColor={entry.avatarBgColor}
-                            className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
-                        >
-                            {!entry.avatarInitials && generateInitials(entry.name)}
-                        </AvatarFallback>
-                        </Avatar>
-                    )}
-                    <span className={cn("font-medium truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
-                     {entry.isUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
-                  </div>
-                </TableCell>
-                <TableCell className={cn(
-                    "text-right font-semibold",
-                    (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary'
+        {/* Desktop Table View - hidden on mobile */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader className={cn(isStickyHeader && "sticky top-0 z-10 bg-background")}>
+              <TableRow>
+                <TableHead className="w-[50px]">Rank</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-right">Score</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rankedEntries.map((entry) => (
+                <TableRow
+                  key={`${entry.id}-${entry.name}`}
+                  style={getRankHighlightStyle(entry.rank ?? 0)}
+                  className={cn(
+                      entry.isUser && (entry.rank ?? 0) > 3 ? 'bg-accent' : '',
+                      (entry.rank ?? 0) <= 3 ? 'hover:brightness-110' : 'hover:bg-muted/50'
                   )}
                 >
-                    {(entry.score ?? 0).toLocaleString()}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  <TableCell className="font-medium text-center align-middle">
+                    {(entry.rank ?? 0) <= 3 ? (
+                      <Medal className={cn("inline-block h-5 w-5", getMedalColor(entry.rank ?? 0))} />
+                    ) : (
+                      entry.rank
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      {entry.emoji ? (
+                          <span className="text-xl">{entry.emoji}</span>
+                      ) : (
+                          <Avatar className="h-8 w-8">
+                          <AvatarFallback
+                              initials={entry.avatarInitials || generateInitials(entry.name)}
+                              backgroundColor={entry.avatarBgColor}
+                              className={cn((entry.rank ?? 0) <= 3 ? 'text-gray-900' : '')}
+                          >
+                              {!entry.avatarInitials && generateInitials(entry.name)}
+                          </AvatarFallback>
+                          </Avatar>
+                      )}
+                      <span className={cn("font-medium truncate", (entry.rank ?? 0) <= 3 ? 'text-white' : '')}>{entry.name}</span>
+                       {entry.isUser && <Badge variant={(entry.rank ?? 0) <= 3 ? "secondary" : "outline"} className={cn("ml-2", (entry.rank ?? 0) <= 3 ? "border-white/50 text-white/90" : "")}>You</Badge>}
+                    </div>
+                  </TableCell>
+                  <TableCell className={cn(
+                      "text-right font-semibold",
+                      (entry.rank ?? 0) <= 3 ? 'text-white' : 'text-primary'
+                    )}
+                  >
+                      {(entry.score ?? 0).toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile Card View - hidden on desktop */}
+        <div className="md:hidden space-y-2">
+          {rankedEntries.map((entry) => (
+            <LeaderboardCardEntry key={`mobile-${entry.id}-${entry.name}`} entry={entry} />
+          ))}
+          {rankedEntries.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">No entries</p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

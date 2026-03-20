@@ -1,14 +1,11 @@
 
-import { collection, addDoc, getDocs, query, where, doc, setDoc, orderBy, onSnapshot, updateDoc, getDoc } from 'firebase/firestore'; // Added getDoc
-import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'; // Added signInWithEmailAndPassword, signOut
-import { db, app } from '@/lib/firebase'; // Import Firestore and Auth instances
+import { collection, getDocs, query, doc, setDoc, orderBy, updateDoc, getDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from '@/lib/firebase'; // Import Firestore and Auth instances
 import { USER_ROLES, UserRole } from '@/components/user-form'; // Import roles definitions
-import { initializeApp, deleteApp } from 'firebase/app';
-import { firebaseConfig } from '@/lib/firebase-config';
 
 
 const usersCollectionRef = collection(db, 'users');
-const auth = getAuth(app);
 
 // Define the AppUser type for use across the application
 export interface AppUser {
@@ -82,15 +79,13 @@ export async function createUser(name: string, email: string, password: string, 
         console.error("Initial error creating user:", error.code);
         
         // --- Orphaned User Recovery Logic ---
+        // Use the existing auth instance instead of creating a temporary app
         if (error.code === 'auth/email-already-in-use') {
-             console.log(`Email ${email} already exists in Auth. Attempting to recover orphaned user...`);
-             const tempAppName = `temp-auth-app-${Date.now()}`;
-             const tempApp = initializeApp(firebaseConfig, tempAppName);
-             const tempAuth = getAuth(tempApp);
+            console.log(`Email ${email} already exists in Auth. Attempting to recover orphaned user...`);
 
-             try {
+            try {
                 // Try to sign in with the provided credentials to get the UID
-                const userCredential = await signInWithEmailAndPassword(tempAuth, email, password);
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const existingUser = userCredential.user;
                 const userDocRef = doc(db, 'users', existingUser.uid);
                 const userDocSnap = await getDoc(userDocRef);
@@ -115,18 +110,12 @@ export async function createUser(name: string, email: string, password: string, 
                     // User exists in both Auth and Firestore. This is a true duplicate.
                     throw new Error(`The email address ${email} is already in use by another account.`);
                 }
-
-             } catch (signInError: any) {
-                 // This catch block handles errors from the temporary sign-in attempt.
-                 console.error(`Error during orphan recovery for ${email}:`, signInError.code);
-                 // If sign-in failed (e.g., wrong password for existing user), throw the original error.
-                 throw new Error(`The email address ${email} is already in use. If you are trying to repair a user, ensure the password is correct.`);
-             } finally {
-                // Always clean up the temporary app instance
-                await signOut(tempAuth);
-                await deleteApp(tempApp);
-                console.log(`Temporary app instance ${tempAppName} cleaned up.`);
-             }
+            } catch (signInError: any) {
+                // This catch block handles errors from the sign-in attempt.
+                console.error(`Error during orphan recovery for ${email}:`, signInError.code);
+                // If sign-in failed (e.g., wrong password for existing user), throw the original error.
+                throw new Error(`The email address ${email} is already in use. If you are trying to repair a user, ensure the password is correct.`);
+            }
         }
         
         // Provide more specific error messages for other cases

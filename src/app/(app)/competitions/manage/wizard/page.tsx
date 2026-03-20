@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   collection,
@@ -15,8 +15,8 @@ import {
   orderBy,
   where,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { db, auth } from '@/lib/firebase';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +53,13 @@ import {
   ArrowRight,
   Check,
   Loader2,
+  FileText,
+  SaveIcon,
+  Upload,
+  X,
+  Eye,
+  Copy,
+  Clock,
 } from 'lucide-react';
 import { format, addDays, startOfDay, isValid as isDateValid } from 'date-fns';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
@@ -72,7 +79,13 @@ import {
 import type { Campaign } from '@/app/(app)/settings/campaigns/page';
 import type { Pod } from '@/app/(app)/settings/pods/page';
 import type { AppUser } from '@/services/user';
-import type { RuleFormData } from '@/models/types';
+import type { RuleFormData, CompetitionRuleTemplate, CompetitionDraft } from '@/models/types';
+import { saveCompetitionDraft, getCompetitionDraft } from '@/services/competition-drafts';
+import { 
+  getCompetitionRuleTemplates, 
+  createCompetitionRuleTemplate,
+  subscribeToCompetitionRuleTemplates 
+} from '@/services/competition-templates';
 
 interface Competition {
   id: string;
@@ -124,16 +137,18 @@ interface CompetitionFormData {
   rules: Rule[];
 }
 
-function WizardContent({ competitionId }: { competitionId?: string }) {
+function WizardContent({ competitionId, draftId }: { competitionId?: string; draftId?: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const isEditMode = !!competitionId;
+  const isDraftMode = !!draftId;
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [pods, setPods] = useState<Pod[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const [formData, setFormData] = useState<CompetitionFormData>({
     name: '',
@@ -157,6 +172,25 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
   const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
   const [openEmojiPickerId, setOpenEmojiPickerId] = useState<string | null>(null);
   const [selectedAgentForTeam, setSelectedAgentForTeam] = useState<{ id: string; name: string } | null>(null);
+
+  // Draft state
+  const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftId);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Template state
+  const [templates, setTemplates] = useState<CompetitionRuleTemplate[]>([]);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateDescription, setNewTemplateDescription] = useState('');
+
+  // Load templates subscription
+  useEffect(() => {
+    const unsubscribe = subscribeToCompetitionRuleTemplates((loadedTemplates) => {
+      setTemplates(loadedTemplates);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const unsubscribes: (() => void)[] = [];
@@ -190,6 +224,34 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
           })
         );
 
+        // Load draft if draftId is provided
+        if (draftId) {
+          const draft = await getCompetitionDraft(draftId);
+          if (draft) {
+            setFormData({
+              name: draft.name || '',
+              campaignId: draft.campaignId || '',
+              podIds: draft.selectedPods || [],
+              startDate: draft.startDate?.toDate?.() || new Date(),
+              endDate: draft.endDate?.toDate?.() || addDays(new Date(), 6),
+              rules: draft.rules || [],
+            });
+            if (draft.teams && draft.teams.length > 0) {
+              setTeams(draft.teams.map((t, i) => ({
+                ...t,
+                id: t.id || `team-${i + 1}`,
+                agentIds: t.agentIds || [],
+              })));
+            }
+            if (draft.dailyTargets) {
+              setDailyTargets(draft.dailyTargets);
+            }
+            setActiveTab(draft.currentStep === 0 ? 'basics' : 'teams');
+            setLastSaved(draft.lastSavedAt?.toDate?.() || null);
+          }
+        }
+
+        // Load competition if editing
         if (competitionId) {
           const compDoc = await getDoc(doc(db, 'competitions', competitionId));
           if (compDoc.exists()) {
@@ -231,7 +293,88 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
 
     fetchData();
     return () => unsubscribes.forEach((unsub) => unsub());
-  }, [competitionId, toast]);
+  }, [competitionId, draftId, toast]);
+
+  // Auto-save draft on step change
+  useEffect(() => {
+    if (!isLoading && !isEditMode && formData.name) {
+      const autoSaveTimeout = setTimeout(() => {
+        handleSaveDraft();
+      }, 2000);
+      return () => clearTimeout(autoSaveTimeout);
+    }
+  }, [formData, teams, activeTab, isLoading, isEditMode]);
+
+  const handleSaveDraft = useCallback(async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    setIsSavingDraft(true);
+    try {
+      const draftData = {
+        name: formData.name,
+        campaignId: formData.campaignId,
+        selectedPods: formData.podIds,
+        rules: formData.rules,
+        teams: teams.filter(t => t.name.trim()),
+        dailyTargets,
+        startDate: Timestamp.fromDate(startOfDay(formData.startDate)),
+        endDate: Timestamp.fromDate(startOfDay(formData.endDate)),
+        currentStep: activeTab === 'basics' ? 0 : 1,
+      };
+
+      const savedDraft = await saveCompetitionDraft(currentUser.uid, draftData, currentDraftId);
+      if (!currentDraftId) {
+        setCurrentDraftId(savedDraft.id);
+      }
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [formData, teams, dailyTargets, activeTab, currentDraftId]);
+
+  const handleApplyTemplate = (template: CompetitionRuleTemplate) => {
+    const newRules = template.rules.map((rule, index) => ({
+      id: `rule-${Date.now()}-${index}`,
+      name: rule.name,
+      emoji: rule.emoji || '',
+      points: rule.points,
+      type: rule.type,
+    }));
+    setFormData((prev) => ({ ...prev, rules: newRules }));
+    setIsTemplateDialogOpen(false);
+    toast({ 
+      title: 'Template Applied', 
+      description: `Applied ${template.rules.length} rules from "${template.name}"` 
+    });
+  };
+
+  const handleSaveAsTemplate = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser || !newTemplateName.trim()) return;
+
+    try {
+      await createCompetitionRuleTemplate(
+        newTemplateName.trim(),
+        formData.rules.map(r => ({
+          name: r.name,
+          type: r.type,
+          points: r.points,
+          emoji: r.emoji,
+        })),
+        currentUser.uid,
+        newTemplateDescription.trim()
+      );
+      setIsSaveTemplateDialogOpen(false);
+      setNewTemplateName('');
+      setNewTemplateDescription('');
+      toast({ title: 'Template Saved', description: 'Your template has been saved.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save template.' });
+    }
+  };
 
   const filteredPods = useMemo(() => {
     if (!formData.campaignId) return [];
@@ -460,6 +603,12 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
           await setDoc(doc(db, 'dailyPodTargets', targetsDocId), dailyTargets);
         }
 
+        // Delete draft after successful creation
+        if (currentDraftId) {
+          const { deleteCompetitionDraft } = await import('@/services/competition-drafts');
+          await deleteCompetitionDraft(currentDraftId);
+        }
+
         toast({ title: 'Competition Created', description: 'Your new competition has been saved.' });
       }
 
@@ -486,6 +635,22 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Draft Status Bar */}
+      {currentDraftId && !isEditMode && (
+        <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
+          <div className="flex items-center gap-2 text-sm text-primary">
+            <FileText className="h-4 w-4" />
+            <span>Draft saved{lastSaved && ` • Last saved ${format(lastSaved, 'h:mm a')}`}</span>
+          </div>
+          {isSavingDraft && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Saving...
+            </div>
+          )}
+        </div>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold">{isEditMode ? 'Edit Competition' : 'Create Competition'}</h1>
         <p className="text-muted-foreground">
@@ -649,16 +814,41 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Achievements & Tasks</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={handleAddRule}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle>Achievements & Tasks</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Define the achievements agents can log during this competition
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsTemplateDialogOpen(true)}
+                    className="gap-1"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span className="hidden sm:inline">Load Template</span>
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsSaveTemplateDialogOpen(true)}
+                    disabled={formData.rules.length === 0}
+                    className="gap-1"
+                  >
+                    <SaveIcon className="h-4 w-4" />
+                    <span className="hidden sm:inline">Save as Template</span>
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddRule} className="gap-1">
+                    <Plus className="h-4 w-4" />
+                    Add Item
+                  </Button>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Define the achievements agents can log during this competition
-              </p>
             </CardHeader>
             <CardContent>
               {formData.rules.length === 0 ? (
@@ -899,24 +1089,42 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
             </CardContent>
           </Card>
 
-          <div className="flex justify-between">
+          <div className="flex flex-col sm:flex-row justify-between gap-3">
             <Button type="button" variant="outline" onClick={() => setActiveTab('basics')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  {isEditMode ? 'Update Competition' : 'Create Competition'}
-                </>
+            <div className="flex items-center gap-2">
+              {!isEditMode && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleSaveDraft}
+                  disabled={isSavingDraft || isSaving || !formData.name.trim()}
+                  className="gap-1"
+                >
+                  {isSavingDraft ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <SaveIcon className="h-4 w-4" />
+                  )}
+                  Save Draft
+                </Button>
               )}
-            </Button>
+              <Button onClick={handleSave} disabled={isSaving} className="gap-1">
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    {isEditMode ? 'Update Competition' : 'Create Competition'}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
@@ -952,12 +1160,132 @@ function WizardContent({ competitionId }: { competitionId?: string }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Load Template Dialog */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Load Rule Template
+            </DialogTitle>
+            <DialogDescription>
+              Select a template to load predefined rules
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            {templates.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>No templates saved yet</p>
+                <p className="text-sm">Create rules and save them as a template to reuse them</p>
+              </div>
+            ) : (
+              <div className="space-y-3 py-2">
+                {templates.map((template) => (
+                  <div
+                    key={template.id}
+                    className="flex items-start justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{template.name}</h4>
+                        <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                          {template.rules.length} rules
+                        </span>
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-muted-foreground mt-1 truncate">
+                          {template.description}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {template.rules.slice(0, 4).map((rule, index) => (
+                          <span key={index} className="text-xs bg-muted px-2 py-0.5 rounded">
+                            {rule.emoji} {rule.name}
+                          </span>
+                        ))}
+                        {template.rules.length > 4 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{template.rules.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button size="sm" onClick={() => handleApplyTemplate(template)} className="shrink-0 gap-1">
+                      <Copy className="h-4 w-4" />
+                      Apply
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={isSaveTemplateDialogOpen} onOpenChange={setIsSaveTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SaveIcon className="h-5 w-5" />
+              Save as Template
+            </DialogTitle>
+            <DialogDescription>
+              Save the current rules as a reusable template
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="templateName">Template Name</Label>
+              <Input
+                id="templateName"
+                placeholder="e.g., Weekly Sprint Rules"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="templateDescription">Description (optional)</Label>
+              <Input
+                id="templateDescription"
+                placeholder="Describe when to use this template"
+                value={newTemplateDescription}
+                onChange={(e) => setNewTemplateDescription(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Rules to save ({formData.rules.length})</Label>
+              <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto">
+                {formData.rules.map((rule, index) => (
+                  <div key={index} className="flex items-center gap-2 py-1">
+                    <span className="text-lg">{rule.emoji || '📋'}</span>
+                    <span className="flex-1 truncate">{rule.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {rule.points} pts • {rule.type}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSaveTemplateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAsTemplate} disabled={!newTemplateName.trim()}>
+              Save Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function WizardPageContent({ competitionId }: { competitionId?: string }) {
-  return <WizardContent competitionId={competitionId} />;
+function WizardPageContent({ competitionId, draftId }: { competitionId?: string; draftId?: string }) {
+  return <WizardContent competitionId={competitionId} draftId={draftId} />;
 }
 
 export default function CompetitionWizard() {
@@ -971,5 +1299,6 @@ export default function CompetitionWizard() {
 function WizardPageContentWrapper() {
   const searchParams = useSearchParams();
   const competitionId = searchParams.get('edit') || undefined;
-  return <WizardPageContent competitionId={competitionId} />;
+  const draftId = searchParams.get('draft') || undefined;
+  return <WizardPageContent competitionId={competitionId} draftId={draftId} />;
 }

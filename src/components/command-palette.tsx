@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Trophy, Target, BarChart3, Gamepad2, Settings, Shield, Home, Command, ArrowRight } from 'lucide-react';
+import { Search, Trophy, Target, BarChart3, Gamepad2, Settings, Shield, Home, Command, ArrowRight, CheckSquare, Award, LineChart, Megaphone, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Search result type
@@ -22,8 +22,9 @@ interface SearchProvider {
   search: (query: string) => Promise<SearchResult[]>;
 }
 
-// Navigation routes that are always available
+// Navigation routes with all dropdown items
 const navigationRoutes: SearchResult[] = [
+  // Main section items
   {
     id: 'nav-competitions',
     label: 'Competitions',
@@ -61,7 +62,7 @@ const navigationRoutes: SearchResult[] = [
     label: 'Settings',
     description: 'App configuration',
     icon: Settings,
-    href: '/settings',
+    href: '/settings/general',
     category: 'navigation',
   },
   {
@@ -70,6 +71,160 @@ const navigationRoutes: SearchResult[] = [
     description: 'Administrative tools',
     icon: Shield,
     href: '/admin',
+    category: 'navigation',
+  },
+  
+  // Competitions sub-items
+  {
+    id: 'comp-dashboard',
+    label: 'Competitions > Dashboard',
+    description: 'View competitions overview',
+    icon: Home,
+    href: '/competitions',
+    category: 'navigation',
+  },
+  {
+    id: 'comp-log',
+    label: 'Competitions > Log Scores',
+    description: 'Log your competition scores',
+    icon: CheckSquare,
+    href: '/competitions/log',
+    category: 'navigation',
+  },
+  {
+    id: 'comp-manage',
+    label: 'Competitions > Manage',
+    description: 'Manage competitions',
+    icon: Trophy,
+    href: '/competitions/manage',
+    category: 'navigation',
+  },
+  {
+    id: 'comp-certificates',
+    label: 'Competitions > Certificates',
+    description: 'View earned certificates',
+    icon: Award,
+    href: '/competitions/certificates',
+    category: 'navigation',
+  },
+  
+  // Trackers sub-items
+  {
+    id: 'trackers-dashboard',
+    label: 'Trackers > Dashboard',
+    description: 'View trackers overview',
+    icon: Home,
+    href: '/trackers',
+    category: 'navigation',
+  },
+  {
+    id: 'trackers-setup',
+    label: 'Trackers > Setup Trackers',
+    description: 'Configure your trackers',
+    icon: Settings,
+    href: '/trackers/setup',
+    category: 'navigation',
+  },
+  {
+    id: 'trackers-log',
+    label: 'Trackers > Log Scores',
+    description: 'Log tracker scores',
+    icon: CheckSquare,
+    href: '/trackers/log',
+    category: 'navigation',
+  },
+  
+  // Performance sub-items
+  {
+    id: 'perf-dashboard',
+    label: 'Performance > Dashboard',
+    description: 'View performance overview',
+    icon: Home,
+    href: '/performance',
+    category: 'navigation',
+  },
+  {
+    id: 'perf-kpis',
+    label: 'Performance > Setup KPIs',
+    description: 'Configure KPI definitions',
+    icon: Settings,
+    href: '/performance/kpis',
+    category: 'navigation',
+  },
+  {
+    id: 'perf-log',
+    label: 'Performance > Log Scores',
+    description: 'Log performance scores',
+    icon: CheckSquare,
+    href: '/performance/log',
+    category: 'navigation',
+  },
+  {
+    id: 'perf-breakdown',
+    label: 'Performance > KPI Breakdown',
+    description: 'Detailed KPI analysis',
+    icon: BarChart3,
+    href: '/performance/breakdown',
+    category: 'navigation',
+  },
+  {
+    id: 'perf-charts',
+    label: 'Performance > Performance Charts',
+    description: 'View performance visualizations',
+    icon: LineChart,
+    href: '/performance/charts',
+    category: 'navigation',
+  },
+  
+  // Settings sub-items
+  {
+    id: 'settings-general',
+    label: 'Settings > General',
+    description: 'General settings',
+    icon: Settings,
+    href: '/settings/general',
+    category: 'navigation',
+  },
+  {
+    id: 'settings-campaigns',
+    label: 'Settings > Campaigns',
+    description: 'Manage campaigns',
+    icon: Megaphone,
+    href: '/settings/campaigns',
+    category: 'navigation',
+  },
+  {
+    id: 'settings-pods',
+    label: 'Settings > Pods',
+    description: 'Manage pods',
+    icon: Shield,
+    href: '/settings/pods',
+    category: 'navigation',
+  },
+  {
+    id: 'settings-users',
+    label: 'Settings > Users',
+    description: 'Manage users',
+    icon: Users,
+    href: '/settings/users',
+    category: 'navigation',
+  },
+  
+  // Mini Games sub-items
+  {
+    id: 'minigames-dashboard',
+    label: 'Mini Games > Dashboard',
+    description: 'View mini games overview',
+    icon: Home,
+    href: '/mini-games',
+    category: 'navigation',
+  },
+  {
+    id: 'minigames-rps',
+    label: 'Mini Games > RPS Game',
+    description: 'Play Rock Paper Scissors',
+    icon: Gamepad2,
+    href: '/mini-games/rps',
     category: 'navigation',
   },
 ];

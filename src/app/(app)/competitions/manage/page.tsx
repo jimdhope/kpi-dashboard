@@ -10,10 +10,10 @@ import {
   onSnapshot,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, PlusCircle, Loader2, Edit, Trash2, Eye, ExternalLink } from 'lucide-react';
+import { Trophy, PlusCircle, Loader2, Edit, Trash2, Eye, ExternalLink, FileText, Clock, Trash, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -28,6 +28,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { subscribeToUserCompetitionDrafts, deleteCompetitionDraft } from '@/services/competition-drafts';
+import type { CompetitionDraft } from '@/models/types';
 
 interface Competition {
   id: string;
@@ -64,6 +66,8 @@ export default function ManageCompetitionsPage() {
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [drafts, setDrafts] = useState<CompetitionDraft[]>([]);
+  const [showDrafts, setShowDrafts] = useState(false);
 
   const { toast } = useToast();
 
@@ -103,8 +107,26 @@ export default function ManageCompetitionsPage() {
     });
     unsubscribes.push(campaignsUnsub);
 
+    // Subscribe to user's competition drafts
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const draftsUnsubscribe = subscribeToUserCompetitionDrafts(currentUser.uid, (userDrafts) => {
+        setDrafts(userDrafts);
+      });
+      unsubscribes.push(draftsUnsubscribe);
+    }
+
     return () => unsubscribes.forEach((unsub) => unsub());
-  }, []);
+  }, [campaigns, pods]);
+
+  const handleDeleteDraft = async (draftId: string) => {
+    try {
+      await deleteCompetitionDraft(draftId);
+      toast({ title: 'Draft Deleted', description: 'The draft has been removed.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete draft.' });
+    }
+  };
 
   const handleDeleteClick = (competition: Competition) => {
     setSelectedCompetition(competition);
@@ -148,18 +170,99 @@ export default function ManageCompetitionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Manage Competitions</h1>
           <p className="text-muted-foreground">Create, edit, or delete competitions</p>
         </div>
-        <Link href="/admin/competitions/manage/wizard">
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Competition
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Drafts Toggle Button */}
+          {drafts.length > 0 && (
+            <Button
+              variant={showDrafts ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowDrafts(!showDrafts)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              My Drafts
+              <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-xs font-medium">
+                {drafts.length}
+              </span>
+            </Button>
+          )}
+          <Link href="/admin/competitions/manage/wizard">
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Competition
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Drafts Section */}
+      {showDrafts && drafts.length > 0 && (
+        <Card className="frosted-glass border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-5 w-5 text-primary" />
+              Saved Drafts
+            </CardTitle>
+            <CardDescription>
+              Continue working on your competition drafts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {drafts.map((draft) => (
+                <div
+                  key={draft.id}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">
+                        {draft.name || 'Untitled Draft'}
+                      </p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Step {draft.currentStep + 1} • {draft.lastSavedAt?.toDate?.() 
+                          ? format(draft.lastSavedAt.toDate(), 'MMM d, h:mm a')
+                          : 'Recently'
+                        }
+                      </p>
+                      {draft.rules && (
+                        <p className="text-xs text-muted-foreground">
+                          {draft.rules.length} rule{draft.rules.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 w-full sm:w-auto">
+                    <Button variant="ghost" size="sm" className="flex-1 sm:flex-initial gap-1" asChild>
+                      <Link href={`/admin/competitions/manage/wizard?draft=${draft.id}`}>
+                        Continue
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => handleDeleteDraft(draft.id)}
+                    >
+                      <Trash2 className="h-4 w-4" aria-label="Delete draft" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {competitions.length === 0 ? (
         <div className="text-center py-12">

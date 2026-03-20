@@ -4,7 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, Crown, Activity, Search } from 'lucide-react';
+import { 
+  Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
+  Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
+  Award, LineChart, SettingsIcon, Users
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getAuth } from 'firebase/auth';
@@ -21,21 +25,87 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { useIsMobile } from '@/hooks/use-mobile';
+import { NavDropdown, NavigationProvider, type NavDropdownItem } from './nav-dropdown';
 
-interface NavItem {
+interface NavItemConfig {
   key: string;
   label: string;
-  adminHref: string;
-  agentHref: string;
+  href: string;
   icon: React.ElementType;
+  items: NavDropdownItem[];
 }
 
-const navItems: NavItem[] = [
-  { key: 'competitions', label: 'Competitions', adminHref: '/competitions', agentHref: '/agent/competitions', icon: Trophy },
-  { key: 'trackers', label: 'Trackers', adminHref: '/trackers', agentHref: '/agent/trackers', icon: Target },
-  { key: 'performance', label: 'Performance', adminHref: '/performance', agentHref: '/agent/performance', icon: BarChart3 },
-  { key: 'miniGames', label: 'Mini Games', adminHref: '/mini-games', agentHref: '/agent/mini-games', icon: Gamepad2 },
+const navItems: NavItemConfig[] = [
+  { 
+    key: 'competitions',
+    label: 'Competitions', 
+    href: '/competitions', 
+    icon: Trophy,
+    items: [
+      { label: 'Dashboard', href: '/competitions', icon: Home },
+      { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare },
+      { label: 'Manage', href: '/competitions/manage', icon: Trophy },
+      { label: 'Certificates', href: '/competitions/certificates', icon: Award },
+    ]
+  },
+  { 
+    key: 'trackers',
+    label: 'Trackers', 
+    href: '/trackers', 
+    icon: Target,
+    items: [
+      { label: 'Dashboard', href: '/trackers', icon: Home },
+      { label: 'Setup Trackers', href: '/trackers/setup', icon: Settings },
+      { label: 'Log Scores', href: '/trackers/log', icon: CheckSquare },
+    ]
+  },
+  { 
+    key: 'performance',
+    label: 'Performance', 
+    href: '/performance', 
+    icon: BarChart3,
+    items: [
+      { label: 'Dashboard', href: '/performance', icon: Home },
+      { label: 'Setup KPIs', href: '/performance/kpis', icon: Settings },
+      { label: 'Log Scores', href: '/performance/log', icon: CheckSquare },
+      { label: 'KPI Breakdown', href: '/performance/breakdown', icon: BarChart3 },
+      { label: 'Performance Charts', href: '/performance/charts', icon: LineChart },
+    ]
+  },
+  { 
+    key: 'miniGames',
+    label: 'Mini Games', 
+    href: '/mini-games', 
+    icon: Gamepad2,
+    items: [
+      { label: 'Dashboard', href: '/mini-games', icon: Home },
+      { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
+    ]
+  },
+  { 
+    key: 'settings',
+    label: 'Settings', 
+    href: '/settings/general', 
+    icon: SettingsIcon,
+    items: [
+      { label: 'General', href: '/settings/general', icon: SettingsIcon },
+      { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
+      { label: 'Pods', href: '/settings/pods', icon: Shield },
+      { label: 'Users', href: '/settings/users', icon: Users },
+    ]
+  },
 ];
+
+// Exported for use in breadcrumbs
+export const appMenuItems = navItems.map(item => ({
+  key: item.key,
+  label: item.label,
+  href: item.href,
+  icon: item.icon,
+  items: item.items,
+}));
 
 const rolePermissions: Record<UserRole, Record<string, 'admin' | 'agent' | 'none'>> = {
   admin: {
@@ -43,36 +113,42 @@ const rolePermissions: Record<UserRole, Record<string, 'admin' | 'agent' | 'none
     trackers: 'admin',
     performance: 'admin',
     miniGames: 'admin',
+    settings: 'admin',
   },
   campaignManager: {
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
     miniGames: 'admin',
+    settings: 'admin',
   },
   podManager: {
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
     miniGames: 'admin',
+    settings: 'admin',
   },
   teamLeader: {
     competitions: 'admin',
     trackers: 'admin',
     performance: 'agent',
     miniGames: 'agent',
+    settings: 'admin',
   },
   competitionRunner: {
     competitions: 'admin',
     trackers: 'agent',
     performance: 'agent',
     miniGames: 'agent',
+    settings: 'admin',
   },
   agent: {
     competitions: 'agent',
     trackers: 'agent',
     performance: 'agent',
     miniGames: 'agent',
+    settings: 'none',
   },
 };
 
@@ -123,6 +199,8 @@ const rolesWithSettingsAccess: UserRole[] = [
 export function AppNavBar({ className }: { className?: string }) {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = React.useState<AppUser | null>(null);
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
     const auth = getAuth(app);
@@ -168,10 +246,10 @@ export function AppNavBar({ className }: { className?: string }) {
     return highest;
   };
 
-  const getNavHref = (item: NavItem): string | null => {
+  const getNavHref = (item: NavItemConfig): string | null => {
     const access = getHighestAccess(item.key);
     if (access === 'none') return null;
-    return access === 'admin' ? item.adminHref : item.agentHref;
+    return access === 'admin' ? item.href : `/agent/${item.key}`;
   };
 
   const visibleNavItems = navItems.filter(item => getNavHref(item) !== null);
@@ -203,16 +281,117 @@ export function AppNavBar({ className }: { className?: string }) {
   }
 
   return (
-    <nav className={cn("glass-sidebar sticky top-0 z-50 flex items-center justify-between px-6 py-3", className)}>
+    <nav className={cn("glass-sidebar sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 py-3", className)}>
       <div className="flex items-center gap-2">
-        <Link href={dashboardHref} className="flex items-center gap-2 mr-4">
+        {/* Mobile Menu Trigger */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild className="lg:hidden">
+            <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Open menu">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[280px] p-0 pt-4">
+            <div className="px-4 pb-4 border-b">
+              <Link 
+                href={dashboardHref} 
+                className="flex items-center gap-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <span className="text-xl font-bold">KPI Quest</span>
+              </Link>
+            </div>
+            <div className="flex flex-col gap-1 p-2">
+              <SheetClose asChild>
+                <Link href={dashboardHref}>
+                  <Button
+                    variant={isActive(dashboardHref) ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-2 h-11"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>{dashboardLabel}</span>
+                  </Button>
+                </Link>
+              </SheetClose>
+              {visibleNavItems.map((item) => {
+                const Icon = item.icon;
+                const href = getNavHref(item);
+                if (!href) return null;
+                return (
+                  <div key={item.key}>
+                    <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {item.label}
+                    </p>
+                    {item.items.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      return (
+                        <SheetClose asChild key={subItem.href}>
+                          <Link href={subItem.href}>
+                            <Button
+                              variant={isActive(subItem.href) ? "secondary" : "ghost"}
+                              className="w-full justify-start gap-2 h-11 ml-2"
+                            >
+                              {SubIcon && <SubIcon className="h-4 w-4" />}
+                              <span>{subItem.label}</span>
+                            </Button>
+                          </Link>
+                        </SheetClose>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+              {hasSettingsAccess && (
+                <>
+                  <div className="h-px bg-border my-2" />
+                  <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Settings
+                  </p>
+                  {navItems.find(item => item.key === 'settings')?.items.map((subItem) => {
+                    const SubIcon = subItem.icon;
+                    return (
+                      <SheetClose asChild key={subItem.href}>
+                        <Link href={subItem.href}>
+                          <Button
+                            variant={isActive(subItem.href) ? "secondary" : "ghost"}
+                            className="w-full justify-start gap-2 h-11 ml-2"
+                          >
+                            {SubIcon && <SubIcon className="h-4 w-4" />}
+                            <span>{subItem.label}</span>
+                          </Button>
+                        </Link>
+                      </SheetClose>
+                    );
+                  })}
+                </>
+              )}
+              <div className="h-px bg-border my-2" />
+              <SheetClose asChild>
+                <Link href="/agent/profile">
+                  <Button
+                    variant={isActive('/agent/profile') ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-2 h-11"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>Profile</span>
+                  </Button>
+                </Link>
+              </SheetClose>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Desktop Logo */}
+        <Link href={dashboardHref} className="hidden lg:flex items-center gap-2 mr-4">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Trophy className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold">KPI Quest</span>
         </Link>
 
-        <div className="flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-1">
           <Link href={dashboardHref}>
             <Button
               variant="ghost"
@@ -228,33 +407,46 @@ export function AppNavBar({ className }: { className?: string }) {
             </Button>
           </Link>
 
-          {visibleNavItems.map((item) => {
-            const Icon = item.icon;
-            const href = getNavHref(item);
-            if (!href) return null;
-            const active = isActive(href);
-            return (
-              <Link key={item.key} href={href}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200",
-                    active 
-                      ? "bg-primary/20 text-primary border border-primary/30" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-glass/50"
-                  )}
-                >
-                  <Icon className={cn("w-4 h-4", active ? "text-primary" : "")} />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </Button>
-              </Link>
-            );
-          })}
+          <NavigationProvider>
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon;
+              const href = getNavHref(item);
+              const access = getHighestAccess(item.key);
+              if (!href) return null;
+              
+              // Adjust items to use correct href based on access level
+              const adjustedItems = item.items.map(subItem => {
+                // If agent access, prefix with /agent
+                if (access === 'agent' && href.startsWith('/agent')) {
+                  return {
+                    ...subItem,
+                    href: subItem.href.replace(/^\/(competitions|trackers|performance|mini-games)/, '/agent/$1')
+                  };
+                }
+                return subItem;
+              });
+
+              return (
+                <NavDropdown
+                  key={item.key}
+                  dropdownKey={item.key}
+                  items={adjustedItems}
+                  href={href}
+                  trigger={
+                    <span className="flex items-center gap-2">
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </span>
+                  }
+                />
+              );
+            })}
+          </NavigationProvider>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Search shortcut hint */}
+      <div className="flex items-center gap-2 md:gap-3">
+        {/* Search shortcut hint - hidden on mobile */}
         <Button
           variant="ghost"
           size="sm"
@@ -302,6 +494,7 @@ export function AppNavBar({ className }: { className?: string }) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="cursor-pointer">
+                      <SettingsIcon className="w-4 h-4 mr-2" />
                       Settings
                     </Link>
                   </DropdownMenuItem>
