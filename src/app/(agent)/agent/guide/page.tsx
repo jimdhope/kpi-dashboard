@@ -4,12 +4,11 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckSquare, Trophy, Users, ListChecks, Target, MessageSquare, User, Settings, BarChart, Zap, Plus, Minus } from 'lucide-react';
-import Link from 'next/link';
-import { MockupProgressTracking } from '@/components/landing-mockup-progress';
+import { Trophy, Users, ListChecks, Target, User, Settings, BarChart, Zap, Plus, Minus } from 'lucide-react';
 import { MockupLeaderboardSnippet } from '@/components/landing-mockup-leaderboard';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { generateInitials } from '@/lib/utils';
 
 // Mock Card for "Your Scores"
 const MockYourScoresCard = () => (
@@ -56,25 +55,12 @@ const MockPodTargetsCard = () => (
   </Card>
 );
 
-// Mock Card for Message of the Day
-const MockMessageOfTheDay = () => (
-  <Card className="frosted-glass shadow-md">
-    <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-       <MessageSquare className="h-6 w-6 text-primary mr-3"/>
-      <CardTitle className="text-base font-medium">Message of the Day</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-sm">🚀 Let's crush those targets today team! Remember, every call counts! 🚀</p>
-    </CardContent>
-  </Card>
-);
-
 // Mock Profile Snippet
 const MockProfileSnippet = () => (
   <Card className="frosted-glass shadow-md p-4">
     <div className="flex items-center gap-4">
       <Avatar className="h-16 w-16">
-        <AvatarFallback initials="JD" backgroundColor="#3B82F6" />
+        <AvatarFallback className="bg-blue-500 text-white">JD</AvatarFallback>
       </Avatar>
       <div>
         <p className="text-lg font-semibold">Jane Doe</p>
@@ -111,38 +97,20 @@ export default function AgentGuidePage() {
             </p>
           </div>
 
-          {/* Section 1: Logging Achievements */}
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div className="order-2 md:order-1 space-y-4">
-              <h3 className="text-xl font-semibold flex items-center gap-2"><CheckSquare className="h-6 w-6 text-primary" /> Log Your Daily Achievements</h3>
-              <p className="text-muted-foreground">
-                The "Today's Achievements" section is where you'll log your progress for each KPI.
-                Use the <Button size="sm" variant="ghost" className="p-1 h-auto inline-block"><Plus className="h-4 w-4"/></Button> button to increment your count for a specific achievement, and the <Button size="sm" variant="ghost" className="p-1 h-auto inline-block"><Minus className="h-4 w-4"/></Button> button to decrease it.
-                Your scores are saved automatically as you make changes!
-              </p>
-            </div>
-            <div className="order-1 md:order-2 flex justify-center">
-              <div className="w-full max-w-md">
-                 <MockupProgressTracking />
-              </div>
-            </div>
-          </div>
-          <hr className="border-border/50"/>
-
-          {/* Section 2: Dashboard Overview */}
+          {/* Section 1: Dashboard Overview */}
            <div className="grid md:grid-cols-2 gap-10 items-center">
             <div className="flex justify-center items-center">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
-                <MockMessageOfTheDay/>
                 <MockYourScoresCard />
                 <MockPodTargetsCard />
-                <MockupLeaderboardSnippet />
+                <div className="sm:col-span-2">
+                  <MockupLeaderboardSnippet />
+                </div>
               </div>
             </div>
             <div className="space-y-4">
               <h3 className="text-xl font-semibold flex items-center gap-2"><BarChart className="h-6 w-6 text-primary" /> Understanding Your Dashboard</h3>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                <li><strong>Message of the Day:</strong> Important updates or motivational messages from your admin/manager.</li>
                 <li><strong>Your Scores:</strong> Shows your total points for today and for the entire current competition, broken down by achievement.</li>
                 <li><strong>Pod Targets Today:</strong> Tracks your pod's collective progress towards its daily goals for each KPI.</li>
                 <li><strong>Leaderboards:</strong> See how you and your team rank against others in the current competition.</li>
@@ -151,13 +119,13 @@ export default function AgentGuidePage() {
           </div>
           <hr className="border-border/50"/>
 
-          {/* Section 3: Profile */}
+          {/* Section 2: Profile */}
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="order-2 md:order-1 space-y-4">
               <h3 className="text-xl font-semibold flex items-center gap-2"><User className="h-6 w-6 text-primary" /> Managing Your Profile</h3>
               <p className="text-muted-foreground">
-                Click the <Button variant="ghost" size="icon" className="inline-flex align-middle h-7 w-7"><Settings className="h-4 w-4"/></Button> icon at the bottom of the sidebar to go to your profile.
-                Here you can update your name and customize your avatar's initials and background color.
+                Go to your profile to update your display name and security settings.
+                Here you can update your name and see your current pod assignment.
               </p>
             </div>
             <div className="order-1 md:order-2 flex justify-center">

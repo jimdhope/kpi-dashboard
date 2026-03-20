@@ -2,9 +2,19 @@
 
 ## Core Features:
 
-- KPI Tracking: Capture and store KPIs across campaigns, pods, and teams with user roles and permissions.
-- Achievement Visualization: Visualize individual and team achievements with leaderboards and progress bars.
-- AI-Powered Motivation: Generate personalized encouragement messages based on user progress toward their KPIs. The tool will use reasoning to decide what information to incorporate to the message.
+- **KPI Tracking**: Capture and store KPIs across campaigns, pods, and teams with user roles and permissions.
+- **Achievement Visualization**: Visualize individual and team achievements with leaderboards and progress bars.
+- **Competition Engine**: Create, manage, and track time-bound challenges with custom rules and points.
+- **Performance Reporting**: Detailed charts and breakdowns for agents and managers to monitor progress over time.
+- **Teams Integration**: Real-time notifications and daily score summaries sent to Microsoft Teams via Adaptive Cards.
+- **Daily Pod Targets**: Define daily goals for pods to track progress against specific KPI targets.
+
+## V2 Enhancements:
+
+- **Simplified Targets**: Transitioned from complex day-of-week targets to a streamlined daily numeric target system.
+- **Team Bonuses**: Capability for managers to add manual bonuses or adjustments to team competition scores.
+- **Advanced Leaderboards**: Real-time individual and team rankings at multiple organizational levels.
+- **Admin Logging**: Centralized logging interface for Admins and Managers to record daily achievements and rolling trackers for all agents.
 
 ## Style Guidelines:
 

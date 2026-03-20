@@ -4,7 +4,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Settings, Home, Users, Trophy, BarChart, CheckSquare, ClipboardList, Target, Megaphone, ShieldCheck, UsersRound, Award, PlusCircle, Edit, ListChecks, UserPlus, Shuffle, MessageSquare, Filter, CalendarIcon, User } from 'lucide-react'; // Added User icon
+import { Settings, Home, Users, Trophy, BarChart, CheckSquare, ClipboardList, Target, Megaphone, ShieldCheck, UsersRound, Award, PlusCircle, Edit, ListChecks, UserPlus, Shuffle, MessageSquare, Filter, CalendarIcon, User } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -135,24 +135,6 @@ const MockLogAchievementsAdminSnippet = () => (
   </Card>
 );
 
-const MockMessageOfTheDayAdminSnippet = () => (
-  <Card className="frosted-glass p-3">
-    <CardTitle className="text-sm mb-2">Message of the Day</CardTitle>
-    <div className="flex items-center gap-2 mb-2">
-      <Button variant="outline" size="sm" className="text-lg p-1 h-7 w-7" disabled>🎉</Button>
-      <Input defaultValue="Great work this week!" className="h-7 text-xs flex-grow bg-background/50" disabled/>
-    </div>
-    <div className="h-16 border rounded bg-background/30 p-1 text-xs text-muted-foreground italic">Rich text editor area...</div>
-    <div className="flex justify-between items-center mt-2">
-        <div className="flex items-center space-x-2">
-            <Checkbox id="mock-motd-enable" checked disabled/>
-            <Label htmlFor="mock-motd-enable" className="text-xs">Enable</Label>
-        </div>
-        <Button size="xs" className="h-7" disabled>Save</Button>
-    </div>
-  </Card>
-);
-
 
 export default function AdminGuidePage() {
   const sections = [
@@ -165,7 +147,6 @@ export default function AdminGuidePage() {
     { id: "log-achievements", title: "Logging Achievements (Admin)", icon: <CheckSquare/>, description: "Manually log or adjust achievements for any agent in a selected pod.", mockUi: <MockLogAchievementsAdminSnippet/> },
     { id: "pod-targets", title: "Pod Daily Targets", icon: <Target/>, description: "Set specific daily targets for each rule within a pod for a competition.", mockUi: <Card className="frosted-glass p-3"><CardTitle className="text-sm">Pod Targets Snippet...</CardTitle></Card> },
     { id: "certificates", title: "Generating Certificates", icon: <Award/>, description: "Create and download certificates for top-performing agents and teams.", mockUi: <Card className="frosted-glass p-3"><CardTitle className="text-sm">Certificates Snippet...</CardTitle></Card> },
-    { id: "message-of-day", title: "Message of the Day", icon: <MessageSquare/>, description: "Set a daily message to motivate and inform your agents.", mockUi: <MockMessageOfTheDayAdminSnippet/> },
     { id: "profile", title: "Profile Management", icon: <User/>, description: "Update your own administrator profile details.", mockUi: <Card className="frosted-glass p-3"><CardTitle className="text-sm">Profile Snippet...</CardTitle></Card> },
   ];
 
@@ -240,6 +221,3 @@ export default function AdminGuidePage() {
     </div>
   );
 }
-    
-
-    

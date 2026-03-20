@@ -1,98 +1,84 @@
-# KPI Quest
+# KPI Quest 2
 
-KPI Quest is a comprehensive gamification platform designed to boost team engagement and productivity. It combines KPI tracking, friendly competitions, and team activities to create an motivating work environment.
+> A comprehensive gamification platform for boosting team engagement and productivity through KPI tracking, friendly competitions, and real-time performance analytics.
 
-## Features
+[![Framework: Next.js 14](https://img.shields.io/badge/Framework-Next.js%2014-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![UI: Tailwind CSS](https://img.shields.io/badge/UI-Tailwind%20CSS-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![Database: Firebase](https://img.shields.io/badge/Database-Firebase-FFCA28?style=flat-square&logo=firebase)](https://firebase.google.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-- **Competitions** - Create and manage KPI competitions with custom rules, team challenges, and achievement logging
-- **Leaderboards** - Real-time rankings for individuals, teams, and pods
-- **Trackers** - Campaign-wide tracking and monitoring with daily targets
-- **Performance Analytics** - Comprehensive KPI breakdowns with exportable reports
-- **Mini Games** - Fun team activities like Rock-Paper-Scissors
-- **Role-Based Access** - Tailored experiences for Admin, Campaign Manager, Pod Manager, Team Leader, Competition Runner, and Agent roles
+## Why KPI Quest?
+
+Maintaining high productivity and engagement in a performance-driven environment is challenging. KPI Quest solves this by transforming standard KPI monitoring into an interactive experience. By introducing competitions, leaderboards, and real-time feedback, it creates a motivating environment while minimizing the overhead of manual tracking.
+
+## Core Features
+
+- **🏆 Competitions** - Create time-bound challenges with custom rules, points, and team-based goals.
+- **📊 Real-time Leaderboards** - Instantly see where you or your team stand at the Pod, Team, or Individual level.
+- **📈 Advanced Trackers** - Monitor campaign-wide progress with granular daily targets and automated updates.
+- **🎯 Performance Analytics** - Deep-dive into KPI breakdowns with exportable data for performance reviews.
+- **🎮 Mini Games** - Integrated activities like Rock-Paper-Scissors to foster team spirit and break the routine.
+- **🔒 Role-Based Access Control** - Granular permissions ensuring everyone sees only what they need to.
 
 ## Tech Stack
 
-- **Framework:** Next.js 14 (App Router)
-- **UI:** React 18 + Tailwind CSS + shadcn/ui
-- **Database:** Firebase Firestore
-- **Auth:** Firebase Authentication
-- **Rich Text:** Lexical Editor
-- **Charts:** Recharts
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript
+- **Styling**: Tailwind CSS, shadcn/ui components
+- **Backend-as-a-Service**: Firebase (Firestore, Authentication, Storage, Analytics)
+- **Rich Text**: Lexical Editor for competition rules
+- **Charts**: Recharts for performance visualization
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 20+
-- Firebase project with Firestore and Authentication enabled
+- **Node.js**: 20.0.0 or higher
+- **Firebase Project**: A project set up at [Firebase Console](https://console.firebase.google.com/) with Firestore and Auth enabled.
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-org/kpi-quest-2.git
+   cd kpi-quest-2
+   ```
+
+2. **Install dependencies**:
    ```bash
    npm install
    ```
-3. Create a `.env.local` file with your Firebase configuration:
+
+3. **Environment Setup**:
+   Create a `.env.local` file in the root directory:
    ```env
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_key
    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
    NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
    NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_id
+   # Optional: Set to 'true' to use Firebase Emulators locally
+   NEXT_PUBLIC_USE_EMULATORS=false
    ```
-4. Start the development server:
+
+4. **Run for development**:
    ```bash
    npm run dev
    ```
-   The app will be available at http://localhost:9002
+   Access the application at [http://localhost:9002](http://localhost:9002).
 
-### Available Scripts
+## Documentation
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Run TypeScript checks |
+- [Architecture Overview](docs/developer/architecture.md)
+- [RBAC & User Roles](docs/developer/rbac.md)
+- [Admin & Management Guide](docs/tutorials/admin-guide.md)
+- [Agent Guide & Tutorials](docs/tutorials/agent-guide.md)
 
-## Project Structure
+## Contributing
 
-```
-src/
-├── app/               # Next.js App Router pages
-│   ├── (admin)/      # Admin dashboard routes
-│   ├── (agent)/      # Agent dashboard routes
-│   ├── (app)/         # Main app routes
-│   ├── (auth)/        # Authentication routes
-│   └── (public)/       # Public pages
-├── components/         # React components
-│   └── ui/           # shadcn/ui components
-├── hooks/            # Custom React hooks
-├── lib/              # Utilities and Firebase config
-├── models/           # TypeScript types
-└── services/        # Business logic services
-```
-
-## User Roles
-
-| Role | Description |
-|------|-------------|
-| Admin | Full access to all features and settings |
-| Campaign Manager | Full access to all features |
-| Pod Manager | Full access to all features |
-| Team Leader | Admin access for Competitions and Trackers |
-| Competition Runner | Admin access for Competitions only |
-| Agent | Access to personal dashboard and agent-facing features |
-
-## Planned Features
-
-- Knowledge Base / Wiki for team resources
-- Contact Book for agent directories
-- Useful Tools for daily agent workflows
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

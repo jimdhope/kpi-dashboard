@@ -16,6 +16,9 @@ export function PublicNavbar() {
             <span className="font-bold sm:inline-block">KPI Quest</span>
           </Link>
           <nav className="flex items-center space-x-4">
+            <Link href="/docs" className="text-sm font-medium hover:text-primary transition-colors">
+              Docs
+            </Link>
             <ThemeToggle />
             <Link href="/login" passHref>
               <Button variant="outline" size="sm">Login</Button>
