@@ -4,13 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, Crown, Activity, Sun, Moon } from 'lucide-react';
+import { Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, Crown, Activity, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { generateInitials } from '@/lib/utils';
-import { useTheme } from 'next-themes';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { AppUser, UserRole } from '@/services/user';
@@ -123,7 +122,6 @@ const rolesWithSettingsAccess: UserRole[] = [
 
 export function AppNavBar({ className }: { className?: string }) {
   const pathname = usePathname();
-  const { setTheme } = useTheme();
   const [currentUser, setCurrentUser] = React.useState<AppUser | null>(null);
 
   React.useEffect(() => {
@@ -256,6 +254,24 @@ export function AppNavBar({ className }: { className?: string }) {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Search shortcut hint */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            // Dispatch keyboard shortcut to open command palette
+            const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true });
+            document.dispatchEvent(event);
+          }}
+        >
+          <Search className="w-4 h-4" />
+          <span className="text-xs">Search</span>
+          <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded border border-glass-border bg-glass/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
+        
         {currentUser && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -291,16 +307,6 @@ export function AppNavBar({ className }: { className?: string }) {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
-                <Sun className="w-4 h-4 mr-2" />
-                Light
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
-                <Moon className="w-4 h-4 mr-2" />
-                Dark
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={handleLogout} 

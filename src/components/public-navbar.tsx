@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { AppLogo } from './app-logo';
 
 export function PublicNavbar() {
@@ -19,7 +18,6 @@ export function PublicNavbar() {
             <Link href="/docs" className="text-sm font-medium hover:text-primary transition-colors">
               Docs
             </Link>
-            <ThemeToggle />
             <Link href="/login" passHref>
               <Button variant="outline" size="sm">Login</Button>
             </Link>
