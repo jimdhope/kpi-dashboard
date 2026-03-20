@@ -42,3 +42,4 @@ next-env.d.ts
 
 # local documentation planning
 conductor/
+scripts/service-account.json
