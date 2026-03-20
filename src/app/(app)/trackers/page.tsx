@@ -320,7 +320,10 @@ export default function TrackersDashboard() {
             <div className="text-center py-12">
               <Trophy className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
               <p className="text-muted-foreground">No tracker achievements for this period</p>
-              <p className="text-sm text-muted-foreground/60">Log scores to see agents here</p>
+              <p className="text-sm text-muted-foreground/60 mb-4">Log scores to see agents here</p>
+              <Button asChild variant="secondary">
+                <a href="/trackers/log">Log Daily Trackers</a>
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">

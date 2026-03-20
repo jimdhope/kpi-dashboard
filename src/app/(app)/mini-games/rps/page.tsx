@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Hand, Hourglass, BarChart2, Swords, Trophy, Users } from 'lucide-react';
@@ -66,6 +66,7 @@ interface TeamStats {
     rank?: number;
 }
 
+const THROWS: Throw[] = ['rock', 'paper', 'scissors'];
 
 const RPS_COOLDOWN_KEY = 'rps_next_playable_time';
 
@@ -84,7 +85,64 @@ export default function RpsGamePage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [podGameResults, setPodGameResults] = useState<GameResult[]>([]);
 
+  // Keyboard navigation state
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const throwRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
   const { toast } = useToast();
+
+  // Handle keyboard navigation for throw selection
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, throwChoice: Throw) => {
+    if (isLoading || cooldown > 0) return;
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const newIndex = prev === 0 ? THROWS.length - 1 : prev - 1;
+          throwRefs.current[newIndex]?.focus();
+          return newIndex;
+        });
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const newIndex = (prev + 1) % THROWS.length;
+          throwRefs.current[newIndex]?.focus();
+          return newIndex;
+        });
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const newIndex = prev === 0 ? THROWS.length - 1 : prev - 1;
+          throwRefs.current[newIndex]?.focus();
+          return newIndex;
+        });
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const newIndex = (prev + 1) % THROWS.length;
+          throwRefs.current[newIndex]?.focus();
+          return newIndex;
+        });
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        handleThrow(throwChoice);
+        break;
+    }
+  }, [isLoading, cooldown]);
+
+  // Reset selection when game becomes available
+  useEffect(() => {
+    if (cooldown === 0 && !isLoading) {
+      setSelectedIndex(0);
+      setTimeout(() => throwRefs.current[0]?.focus(), 100);
+    }
+  }, [cooldown, isLoading]);
 
   const getThrowIcon = (hand: Throw | null) => {
     switch (hand) {
@@ -314,10 +372,79 @@ export default function RpsGamePage() {
             <CardDescription>Win bonus points for your team!</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex justify-around">
-              <Button variant="outline" size="lg" className="text-4xl p-6 h-24 w-24" onClick={() => handleThrow('rock')} disabled={isLoading || cooldown > 0}>✊</Button>
-              <Button variant="outline" size="lg" className="text-4xl p-6 h-24 w-24" onClick={() => handleThrow('paper')} disabled={isLoading || cooldown > 0}>✋</Button>
-              <Button variant="outline" size="lg" className="text-4xl p-6 h-24 w-24" onClick={() => handleThrow('scissors')} disabled={isLoading || cooldown > 0}>✌️</Button>
+            <div 
+              className="flex justify-around"
+              role="radiogroup"
+              aria-label="Choose your throw"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  const direction = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
+                  setSelectedIndex((prev) => {
+                    const newIndex = (prev + direction + THROWS.length) % THROWS.length;
+                    setTimeout(() => throwRefs.current[newIndex]?.focus(), 10);
+                    return newIndex;
+                  });
+                }
+              }}
+            >
+              <Button 
+                ref={(el) => { throwRefs.current[0] = el; }} 
+                variant="outline" 
+                size="lg" 
+                className={cn(
+                  "text-4xl p-6 h-24 w-24 transition-all",
+                  selectedIndex === 0 && !isLoading && cooldown === 0 && "ring-2 ring-primary ring-offset-2 bg-primary/10"
+                )} 
+                onClick={() => handleThrow('rock')} 
+                onKeyDown={(e) => handleKeyDown(e, 'rock')}
+                disabled={isLoading || cooldown > 0}
+                role="radio"
+                aria-checked={selectedIndex === 0}
+                aria-label="Rock"
+                tabIndex={selectedIndex === 0 ? 0 : -1}
+              >
+                ✊
+                <span className="sr-only">Rock</span>
+              </Button>
+              <Button 
+                ref={(el) => { throwRefs.current[1] = el; }} 
+                variant="outline" 
+                size="lg" 
+                className={cn(
+                  "text-4xl p-6 h-24 w-24 transition-all",
+                  selectedIndex === 1 && !isLoading && cooldown === 0 && "ring-2 ring-primary ring-offset-2 bg-primary/10"
+                )} 
+                onClick={() => handleThrow('paper')} 
+                onKeyDown={(e) => handleKeyDown(e, 'paper')}
+                disabled={isLoading || cooldown > 0}
+                role="radio"
+                aria-checked={selectedIndex === 1}
+                aria-label="Paper"
+                tabIndex={selectedIndex === 1 ? 0 : -1}
+              >
+                ✋
+                <span className="sr-only">Paper</span>
+              </Button>
+              <Button 
+                ref={(el) => { throwRefs.current[2] = el; }} 
+                variant="outline" 
+                size="lg" 
+                className={cn(
+                  "text-4xl p-6 h-24 w-24 transition-all",
+                  selectedIndex === 2 && !isLoading && cooldown === 0 && "ring-2 ring-primary ring-offset-2 bg-primary/10"
+                )} 
+                onClick={() => handleThrow('scissors')} 
+                onKeyDown={(e) => handleKeyDown(e, 'scissors')}
+                disabled={isLoading || cooldown > 0}
+                role="radio"
+                aria-checked={selectedIndex === 2}
+                aria-label="Scissors"
+                tabIndex={selectedIndex === 2 ? 0 : -1}
+              >
+                ✌️
+                <span className="sr-only">Scissors</span>
+              </Button>
             </div>
 
             <div className="min-h-[80px] flex flex-col items-center justify-center text-center p-4 border rounded-lg bg-muted/50 space-y-2">
@@ -334,7 +461,11 @@ export default function RpsGamePage() {
                   Play again in {Math.floor(cooldown / 60)}:{(cooldown % 60).toString().padStart(2, '0')}
                 </div>
               )}
-              {!isLoading && !result && cooldown === 0 && (<p className="text-muted-foreground">Make your throw!</p>)}
+              {!isLoading && !result && cooldown === 0 && (
+                <p className="text-muted-foreground">
+                  Make your throw! <span className="text-xs">(Use arrow keys or Tab to select, Enter to confirm)</span>
+                </p>
+              )}
             </div>
 
             <Card>

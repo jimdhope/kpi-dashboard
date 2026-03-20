@@ -308,11 +308,23 @@ export default function AdditionalScoresPage() {
                 <Skeleton className="h-12 w-full" />
             </div>
           ) : !selectedPodId ? (
-            <p className="text-muted-foreground text-center py-6">Please select a pod to begin.</p>
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">Please select a pod to begin.</p>
+            </div>
           ) : kpis.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">No additional KPIs have been set up yet.</p>
+            <div className="text-center py-6">
+              <p className="text-muted-foreground mb-3">No additional KPIs have been set up yet.</p>
+              <Button asChild size="sm">
+                <a href="/admin/additional-kpis">Set Up KPIs</a>
+              </Button>
+            </div>
           ) : agents.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">No agents found in the selected pod.</p>
+            <div className="text-center py-6">
+              <p className="text-muted-foreground mb-3">No agents found in the selected pod.</p>
+              <Button asChild size="sm" variant="secondary">
+                <a href="/settings/pods">Manage Pods</a>
+              </Button>
+            </div>
           ) : (
             <div className="overflow-x-auto">
                 <Table>

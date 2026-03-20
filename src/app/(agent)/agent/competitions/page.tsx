@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Trophy, Users, Star, Target, User, ArrowRight } from "lucide-react";
 import { onSnapshot, doc, getDoc, query, collection, where, orderBy, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -450,7 +451,11 @@ export default function AgentCompetitionsPage() {
           </CardHeader>
           <CardContent>
             {teamLeaderboard.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No teams yet</p>
+              <div className="text-center py-8">
+                <Trophy className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">No teams yet</p>
+                <p className="text-sm text-muted-foreground/60 mt-1">Join a competition to be placed on a team</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {teamLeaderboard.map((team, index) => (
@@ -504,7 +509,10 @@ export default function AgentCompetitionsPage() {
           </CardHeader>
           <CardContent className="p-0">
             {agentLeaderboard.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4 text-sm">No agents yet</p>
+              <div className="text-center py-6">
+                <Users className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                <p className="text-muted-foreground text-sm">No agents yet</p>
+              </div>
             ) : (
               <div className="max-h-[400px] overflow-y-auto">
                 {agentLeaderboard.slice(0, 15).map((agent, index) => {
@@ -556,7 +564,14 @@ export default function AgentCompetitionsPage() {
         </h2>
         {agentScoreBreakdown.length === 0 ? (
           <Card variant="glass" className="p-6">
-            <p className="text-muted-foreground text-center">No achievements logged yet</p>
+            <div className="text-center">
+              <Target className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground">No achievements logged yet</p>
+              <p className="text-sm text-muted-foreground/60 mt-1 mb-3">Log your daily achievements to earn points</p>
+              <Button asChild size="sm">
+                <a href="/performance/log">Log Achievements</a>
+              </Button>
+            </div>
           </Card>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

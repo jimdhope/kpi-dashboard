@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Trophy, Users, Target, Medal } from 'lucide-react';
 import { Skeleton as SkeletonComponent } from '@/components/ui/skeleton';
 import type { AppUser } from '@/services/user';
@@ -287,7 +288,10 @@ export default function AdminCompetitionsDashboard() {
         <div className="text-center py-12">
           <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold">No Competitions Yet</h2>
-          <p className="text-muted-foreground">Create a competition to get started.</p>
+          <p className="text-muted-foreground mb-4">Create a competition to get started.</p>
+          <Button asChild>
+            <a href="/admin/competitions">Create Competition</a>
+          </Button>
         </div>
       </div>
     );

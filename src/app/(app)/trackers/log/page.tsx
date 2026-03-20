@@ -11,6 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CalendarIcon, Loader2, Filter, Save, Send, ListFilter, Settings, Minus, Plus } from 'lucide-react';
+import { AutoSaveStatus } from '@/components/ui/auto-save-status';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -415,7 +416,7 @@ export default function LogTrackerPage() {
                  </Button>
                  <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="outline" size="icon" title="Settings">
+                        <Button variant="outline" size="icon" aria-label="Settings">
                             <Settings className="h-4 w-4" />
                         </Button>
                     </DialogTrigger>
@@ -463,11 +464,23 @@ export default function LogTrackerPage() {
               </CardContent>
             </Card>
         ) : selectedPodIds.length === 0 ? (
-            <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">Please select one or more pods to begin.</p></CardContent></Card>
+            <Card className="frosted-glass"><CardContent className="text-center py-10">
+              <p className="text-muted-foreground mb-4">Please select one or more pods to begin.</p>
+            </CardContent></Card>
         ) : kpis.length === 0 ? (
-            <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">No trackers have been set up yet.</p></CardContent></Card>
+            <Card className="frosted-glass"><CardContent className="text-center py-10">
+              <p className="text-muted-foreground mb-4">No trackers have been set up yet.</p>
+              <Button asChild variant="secondary">
+                <a href="/trackers/setup">Set Up Trackers</a>
+              </Button>
+            </CardContent></Card>
         ) : agents.length === 0 ? (
-            <Card className="frosted-glass"><CardContent><p className="text-muted-foreground text-center py-10">No agents found in the selected pod(s).</p></CardContent></Card>
+            <Card className="frosted-glass"><CardContent className="text-center py-10">
+              <p className="text-muted-foreground mb-4">No agents found in the selected pod(s).</p>
+              <Button asChild variant="secondary">
+                <a href="/settings/pods">Manage Pods</a>
+              </Button>
+            </CardContent></Card>
         ) : (
             <Card className="frosted-glass">
               <CardHeader>
@@ -526,6 +539,7 @@ export default function LogTrackerPage() {
                                       className="h-4 w-6 text-xs"
                                       onClick={() => handleIncrement(agent.id!, kpi.id!, inputs[agent.id!]?.[kpi.id!]?.value ?? '0')}
                                       disabled={isSavingThis}
+                                      aria-label={`Increment ${kpi.name} for ${agent.name}`}
                                     >
                                       <Plus className="h-3 w-3" />
                                     </Button>
@@ -536,11 +550,15 @@ export default function LogTrackerPage() {
                                       className="h-4 w-6 text-xs"
                                       onClick={() => handleDecrement(agent.id!, kpi.id!, inputs[agent.id!]?.[kpi.id!]?.value ?? '0')}
                                       disabled={isSavingThis || parseInt(inputs[agent.id!]?.[kpi.id!]?.value ?? '0') <= 0}
+                                      aria-label={`Decrement ${kpi.name} for ${agent.name}`}
                                     >
                                       <Minus className="h-3 w-3" />
                                     </Button>
                                   </div>
-                                  {isSavingThis && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                                  <AutoSaveStatus 
+                                    status={isSavingThis ? 'saving' : 'idle'} 
+                                    className="ml-1" 
+                                  />
                                 </div>
                               </TableCell>
                             );

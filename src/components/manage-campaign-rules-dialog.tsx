@@ -39,7 +39,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Trash2, PlusCircle, Loader2 } from 'lucide-react';
+import { Trash2, PlusCircle, Loader2, ClipboardList } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/app/(admin)/admin/campaigns/page';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -181,11 +181,13 @@ export function ManageCampaignRulesDialog({ campaign, onClose }: ManageCampaignR
                        </div>
                    ))}
                </div>
-            ) : fields.length === 0 ? (
-               <div className="text-center text-muted-foreground py-6">
-                  No rules defined yet. Click "Add Rule" to start.
-               </div>
-            ) : (
+             ) : fields.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                   <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                   <p className="mb-2">No rules defined yet.</p>
+                   <p className="text-sm">Click "Add Rule" to start building your competition.</p>
+                </div>
+             ) : (
               <div className="space-y-4 p-4">
                  <div className="flex items-end gap-2 px-3 pb-1 text-xs font-medium text-muted-foreground">
                     <Label className="w-12 text-left">Emoji</Label>

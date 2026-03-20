@@ -265,12 +265,12 @@ export default function AdditionalKpisPage() {
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
                             <DialogTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(kpi)} title={`Edit ${kpi.name}`}>
+                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(kpi)} title={`Edit ${kpi.name}`} aria-label={`Edit ${kpi.name}`}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80 hover:bg-destructive/10" onClick={() => openDeleteAlert(kpi)} title={`Delete ${kpi.name}`}>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80 hover:bg-destructive/10" onClick={() => openDeleteAlert(kpi)} title={`Delete ${kpi.name}`} aria-label={`Delete ${kpi.name}`}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
