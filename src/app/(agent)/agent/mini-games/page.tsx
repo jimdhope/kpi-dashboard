@@ -21,7 +21,7 @@ export default function AgentMiniGamesPage() {
     {
       title: "Rock Paper Scissors",
       description: "Challenge your teammates in the classic game of Rock Paper Scissors!",
-      href: "/agent/rps",
+      href: "/mini-games/rps",
       icon: Swords,
       color: "text-orange-500",
       bgColor: "bg-orange-500/20",

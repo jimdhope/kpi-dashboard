@@ -18,7 +18,6 @@ const nextConfig = {
       },
     ],
   },
-  // Required for Genkit flow server actions, might be needed if interacting with Firebase Functions via actions
   experimental: {
     serverActions: {
         // Add your Firebase project's auth domain if needed for server actions interacting with Firebase
