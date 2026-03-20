@@ -3,6 +3,7 @@
 import React from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Home, Settings, CheckSquare } from 'lucide-react';
+import { OfflineIndicator } from '@/components/offline-indicator';
 
 interface TrackersLayoutProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ const trackersMenuItems = [
 export default function TrackersLayout({ children }: TrackersLayoutProps) {
   return (
     <div className="flex relative min-h-screen w-full flex-col">
+      <OfflineIndicator />
       {/* Breadcrumbs with section navigation - shown on mobile */}
       <Breadcrumbs 
         sectionItems={trackersMenuItems}

@@ -33,6 +33,7 @@ const routeLabels: Record<string, string> = {
   charts: 'Charts',
   kpis: 'KPIs',
   leaderboard: 'Leaderboard',
+  reports: 'Reports',
   settings: 'Settings',
   profile: 'Profile',
   general: 'General',
@@ -50,6 +51,7 @@ const routeLabels: Record<string, string> = {
   manageTeam: 'Manage Team',
   managePods: 'Manage Pods',
   manageCampaigns: 'Manage Campaigns',
+  activity: 'Activity History',
 };
 
 // Map of parent routes to their labels

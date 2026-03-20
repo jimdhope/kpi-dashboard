@@ -17,6 +17,7 @@ import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { logKpiUpdated, getCurrentUserAsync } from '@/lib/firestore/activities';
 import type { Pod } from '@/app/(admin)/admin/pods/page';
 import type { AppUser } from '@/services/user';
 import type { AdditionalKpi } from '@/app/(admin)/admin/additional-kpis/page';
@@ -151,6 +152,16 @@ export default function AdditionalScoresPage() {
     const logsCollectionRef = collection(db, 'additionalKpiLogs');
     const batch = writeBatch(db);
     let hasError = false;
+    
+    // Track changes for activity logging
+    const changes: Array<{
+      agentId: string;
+      agentName: string;
+      kpiId: string;
+      kpiName: string;
+      previousValue: number;
+      newValue: number;
+    }> = [];
 
     try {
         for (const agentId in inputs) {
@@ -189,6 +200,17 @@ export default function AdditionalScoresPage() {
                     if (existingLogDoc) {
                         batch.delete(logDocRef);
                     }
+                    // Track change for activity logging (delete = 0)
+                    const agent = agents.find(a => a.id === agentId);
+                    const previousValue = parseFloat(entry.initialValue) || 0;
+                    changes.push({
+                      agentId,
+                      agentName: agent?.name || 'Unknown Agent',
+                      kpiId,
+                      kpiName: kpi.name,
+                      previousValue,
+                      newValue: 0,
+                    });
                 } else {
                     // Otherwise, create or update the log.
                     const logEntry: Omit<AdditionalKpiLog, 'id' | 'loggedAt'> & { loggedAt: any } = {
@@ -205,6 +227,18 @@ export default function AdditionalScoresPage() {
                     }
                     
                     batch.set(logDocRef, logEntry, { merge: true });
+                    
+                    // Track change for activity logging
+                    const agent = agents.find(a => a.id === agentId);
+                    const previousValue = parseFloat(entry.initialValue) || 0;
+                    changes.push({
+                      agentId,
+                      agentName: agent?.name || 'Unknown Agent',
+                      kpiId,
+                      kpiName: kpi.name,
+                      previousValue,
+                      newValue: value,
+                    });
                 }
             }
         }
@@ -213,6 +247,34 @@ export default function AdditionalScoresPage() {
              toast({ title: "Save Incomplete", description: "Please fix the validation errors before saving.", variant: "destructive" });
         } else {
              await batch.commit();
+             
+             // Log activities for each KPI update
+             if (changes.length > 0) {
+               // Get current user info for recorder attribution
+               const currentUser = await getCurrentUserAsync();
+               
+               // Log activities for each changed KPI
+               await Promise.all(
+                 changes.map(async (change) => {
+                   try {
+                     // Only set recorder info if the current user is different from the agent
+                     const isSelfLogging = currentUser?.id === change.agentId;
+                     await logKpiUpdated(
+                       change.agentId,
+                       change.agentName,
+                       change.kpiId,
+                       change.kpiName,
+                       change.previousValue,
+                       change.newValue
+                     );
+                   } catch (activityError) {
+                     // Log error but don't fail the save operation
+                     console.error('[Performance Log] Failed to log activity:', activityError);
+                   }
+                 })
+               );
+             }
+             
              toast({
                  title: "Scores Saved",
                  description: "All changes have been successfully saved.",
@@ -225,7 +287,7 @@ export default function AdditionalScoresPage() {
     } finally {
         setIsSaving(false);
     }
-};
+  };
 
 
   const handleInputChange = (agentId: string, kpiId: string, value: string) => {

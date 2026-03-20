@@ -13,7 +13,9 @@ import {
   orderBy,
   Unsubscribe,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { db, auth } from '@/lib/firebase';
+import { logTrackerCreated } from '@/lib/firestore/activities';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -61,6 +63,10 @@ export default function TrackerSetupPage() {
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
   const { toast } = useToast();
 
+  // Current user state for activity logging
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
+
   useEffect(() => {
     setIsLoading(true);
     const q = query(kpisCollectionRef, orderBy('name'));
@@ -86,6 +92,20 @@ export default function TrackerSetupPage() {
 
     return () => unsubscribe();
   }, [toast]);
+
+  // Listen for auth state changes to get current user
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserId(user.uid);
+        setCurrentUserName(user.displayName || user.email || 'Unknown User');
+      } else {
+        setCurrentUserId(null);
+        setCurrentUserName(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const openAddDialog = () => {
     setSelectedKpi(null);
@@ -113,7 +133,23 @@ export default function TrackerSetupPage() {
   
     try {
       if (dialogMode === 'add') {
-        await addDoc(kpisCollectionRef, kpiDataToSave);
+        const newKpiRef = await addDoc(kpisCollectionRef, kpiDataToSave);
+        
+        // Log activity for tracker creation
+        if (currentUserId && currentUserName) {
+          try {
+            await logTrackerCreated(
+              currentUserId,
+              currentUserName,
+              newKpiRef.id,
+              data.name
+            );
+          } catch (logError) {
+            // Activity logging failure should not break the save operation
+            console.error('Failed to log tracker creation activity:', logError);
+          }
+        }
+        
         toast({ title: "Tracker KPI Added", description: `"${data.name}" has been successfully added.` });
       } else if (selectedKpi) {
         await updateDoc(doc(db, 'trackerKpis', selectedKpi.id), kpiDataToSave);

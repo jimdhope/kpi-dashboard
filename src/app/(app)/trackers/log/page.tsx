@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { collection, query, where, Timestamp, doc, onSnapshot, Unsubscribe, serverTimestamp, orderBy, setDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { db, auth } from '@/lib/firebase';
+import { logTrackerEntryLogged } from '@/lib/firestore/activities';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -84,6 +86,10 @@ export default function LogTrackerPage() {
   const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
+  
+  // Current user state for activity logging
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -109,6 +115,20 @@ export default function LogTrackerPage() {
       setWebhookUrl(savedWebhookUrl);
       setTempWebhookUrl(savedWebhookUrl);
     }
+  }, []);
+
+  // Listen for auth state changes to get current user
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserId(user.uid);
+        setCurrentUserName(user.displayName || user.email || 'Unknown User');
+      } else {
+        setCurrentUserId(null);
+        setCurrentUserName(null);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleSelectAllPods = () => {
@@ -258,6 +278,26 @@ export default function LogTrackerPage() {
             const logDocRef = existingLogId ? doc(logsCollectionRef, existingLogId) : doc(logsCollectionRef);
             await setDoc(logDocRef, logEntry, { merge: true });
 
+            // Log activity for tracker entry
+            const trackerKpi = kpis.find(k => k.id === kpiId);
+            const trackerName = trackerKpi?.name || 'Unknown Tracker';
+            const agentName = agent.name || 'Unknown Agent';
+            
+            try {
+                await logTrackerEntryLogged(
+                    agentId,
+                    agentName,
+                    kpiId,
+                    trackerName,
+                    value,
+                    currentUserId && currentUserId !== agentId ? currentUserId : undefined,
+                    currentUserName && currentUserId !== agentId ? currentUserName : undefined
+                );
+            } catch (logError) {
+                // Activity logging failure should not break the save operation
+                console.error('Failed to log tracker entry activity:', logError);
+            }
+
             if (!existingLogId) {
                 setInputs(prev => ({ ...prev, [agentId]: { ...prev[agentId], [kpiId]: { ...prev[agentId][kpiId], logId: logDocRef.id }}}));
             }
@@ -267,7 +307,7 @@ export default function LogTrackerPage() {
     } finally {
         setIsSaving(prev => ({...prev, [savingKey]: false }));
     }
-  }, [agents, inputs, selectedDate, toast]);
+  }, [agents, inputs, kpis, selectedDate, toast, currentUserId, currentUserName]);
   
   const debouncedSave = useMemo(() => debounce(handleSaveTrackerScore, 1000), [handleSaveTrackerScore]);
 

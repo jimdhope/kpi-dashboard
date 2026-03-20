@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { 
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
   Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
-  Award, LineChart, SettingsIcon, Users
+  Award, LineChart, SettingsIcon, Users, Bell, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -28,6 +28,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { NavDropdown, NavigationProvider, type NavDropdownItem } from './nav-dropdown';
+import { NotificationBell } from '@/components/notifications';
 
 interface NavItemConfig {
   key: string;
@@ -68,6 +69,7 @@ const navItems: NavItemConfig[] = [
     icon: BarChart3,
     items: [
       { label: 'Dashboard', href: '/performance', icon: Home },
+      { label: 'Reports', href: '/reports', icon: FileText },
       { label: 'Setup KPIs', href: '/performance/kpis', icon: Settings },
       { label: 'Log Scores', href: '/performance/log', icon: CheckSquare },
       { label: 'KPI Breakdown', href: '/performance/breakdown', icon: BarChart3 },
@@ -82,6 +84,15 @@ const navItems: NavItemConfig[] = [
     items: [
       { label: 'Dashboard', href: '/mini-games', icon: Home },
       { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
+    ]
+  },
+  { 
+    key: 'activity',
+    label: 'Activity', 
+    href: '/agent/activity', 
+    icon: Activity,
+    items: [
+      { label: 'Activity History', href: '/agent/activity', icon: Activity },
     ]
   },
   { 
@@ -112,42 +123,54 @@ const rolePermissions: Record<UserRole, Record<string, 'admin' | 'agent' | 'none
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
+    reports: 'admin',
     miniGames: 'admin',
+    activity: 'admin',
     settings: 'admin',
   },
   campaignManager: {
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
+    reports: 'admin',
     miniGames: 'admin',
+    activity: 'admin',
     settings: 'admin',
   },
   podManager: {
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
+    reports: 'admin',
     miniGames: 'admin',
+    activity: 'admin',
     settings: 'admin',
   },
   teamLeader: {
     competitions: 'admin',
     trackers: 'admin',
     performance: 'agent',
+    reports: 'agent',
     miniGames: 'agent',
+    activity: 'agent',
     settings: 'admin',
   },
   competitionRunner: {
     competitions: 'admin',
     trackers: 'agent',
     performance: 'agent',
+    reports: 'agent',
     miniGames: 'agent',
+    activity: 'agent',
     settings: 'admin',
   },
   agent: {
     competitions: 'agent',
     trackers: 'agent',
     performance: 'agent',
+    reports: 'none',
     miniGames: 'agent',
+    activity: 'agent',
     settings: 'none',
   },
 };
@@ -463,6 +486,9 @@ export function AppNavBar({ className }: { className?: string }) {
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>
+        
+        {/* Notification Bell */}
+        <NotificationBell />
         
         {currentUser && (
           <DropdownMenu>

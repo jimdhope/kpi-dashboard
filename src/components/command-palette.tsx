@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Trophy, Target, BarChart3, Gamepad2, Settings, Shield, Home, Command, ArrowRight, CheckSquare, Award, LineChart, Megaphone, Users } from 'lucide-react';
+import { Search, Trophy, Target, BarChart3, Gamepad2, Settings, Shield, Home, Command, ArrowRight, CheckSquare, Award, LineChart, Megaphone, Users, BookOpen, UserCircle, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Search result type
@@ -12,7 +12,7 @@ interface SearchResult {
   description?: string;
   icon: React.ElementType;
   href: string;
-  category: 'navigation' | 'action' | 'data';
+  category: 'navigation' | 'action' | 'data' | 'wiki' | 'contacts';
 }
 
 // Search providers interface - allows for future extensibility
@@ -219,12 +219,22 @@ const navigationRoutes: SearchResult[] = [
     href: '/mini-games',
     category: 'navigation',
   },
-  {
+    {
     id: 'minigames-rps',
     label: 'Mini Games > RPS Game',
     description: 'Play Rock Paper Scissors',
     icon: Gamepad2,
     href: '/mini-games/rps',
+    category: 'navigation',
+  },
+  
+  // Activity History
+  {
+    id: 'agent-activity',
+    label: 'Activity History',
+    description: 'View your activity timeline',
+    icon: Activity,
+    href: '/agent/activity',
     category: 'navigation',
   },
 ];
@@ -246,6 +256,167 @@ const defaultSearchProvider: SearchProvider = {
     );
   },
 };
+
+// Wiki search provider - placeholder stub for future implementation
+const wikiSearchProvider: SearchProvider = {
+  id: 'wiki',
+  name: 'Wiki',
+  search: async (query: string): Promise<SearchResult[]> => {
+    if (!query.trim()) {
+      // Show placeholder items when no query
+      return [
+        {
+          id: 'wiki-placeholder',
+          label: 'Wiki Articles',
+          description: 'Search knowledge base articles',
+          icon: BookOpen,
+          href: '/wiki',
+          category: 'wiki',
+        },
+      ];
+    }
+    
+    const lowerQuery = query.toLowerCase();
+    
+    // Placeholder articles - replace with actual API call when backend is ready
+    const wikiPlaceholders: SearchResult[] = [
+      {
+        id: 'wiki-getting-started',
+        label: 'Getting Started Guide',
+        description: 'Learn how to use KPI Quest',
+        icon: BookOpen,
+        href: '/wiki/getting-started',
+        category: 'wiki',
+      },
+      {
+        id: 'wiki-kpi-setup',
+        label: 'Setting Up KPIs',
+        description: 'How to configure and track KPIs',
+        icon: BookOpen,
+        href: '/wiki/kpi-setup',
+        category: 'wiki',
+      },
+      {
+        id: 'wiki-competitions',
+        label: 'Running Competitions',
+        description: 'Tips for successful competitions',
+        icon: BookOpen,
+        href: '/wiki/competitions',
+        category: 'wiki',
+      },
+    ];
+    
+    return wikiPlaceholders.filter(
+      (article) =>
+        article.label.toLowerCase().includes(lowerQuery) ||
+        article.description?.toLowerCase().includes(lowerQuery)
+    );
+  },
+};
+
+// Contacts search provider - placeholder stub for future implementation
+const contactsSearchProvider: SearchProvider = {
+  id: 'contacts',
+  name: 'Contacts',
+  search: async (query: string): Promise<SearchResult[]> => {
+    if (!query.trim()) {
+      // Show placeholder item when no query
+      return [
+        {
+          id: 'contacts-placeholder',
+          label: 'Team Contacts',
+          description: 'Search team members and contacts',
+          icon: UserCircle,
+          href: '/contacts',
+          category: 'contacts',
+        },
+      ];
+    }
+    
+    const lowerQuery = query.toLowerCase();
+    
+    // Placeholder contacts - replace with actual API call when backend is ready
+    const contactsPlaceholders: SearchResult[] = [
+      {
+        id: 'contacts-team',
+        label: 'Team Directory',
+        description: 'Browse all team members',
+        icon: UserCircle,
+        href: '/contacts/team',
+        category: 'contacts',
+      },
+      {
+        id: 'contacts-admin',
+        label: 'Contact Admin',
+        description: 'Reach out to your team admin',
+        icon: UserCircle,
+        href: '/contacts/admin',
+        category: 'contacts',
+      },
+    ];
+    
+    return contactsPlaceholders.filter(
+      (contact) =>
+        contact.label.toLowerCase().includes(lowerQuery) ||
+        contact.description?.toLowerCase().includes(lowerQuery)
+    );
+  },
+};
+
+// Category display names and order
+const categoryConfig: Record<SearchResult['category'], { label: string; order: number }> = {
+  navigation: { label: 'Navigation', order: 1 },
+  action: { label: 'Actions', order: 2 },
+  data: { label: 'Data', order: 3 },
+  wiki: { label: 'Wiki', order: 4 },
+  contacts: { label: 'Contacts', order: 5 },
+};
+
+// Group results by category with section headers
+interface GroupedResults {
+  type: 'header' | 'result';
+  category?: SearchResult['category'];
+  label?: string;
+  result?: SearchResult;
+  index?: number;
+}
+
+function groupResultsByCategory(results: SearchResult[]): GroupedResults[] {
+  const grouped: Map<SearchResult['category'], SearchResult[]> = new Map();
+  
+  // Group results by category
+  results.forEach(result => {
+    const existing = grouped.get(result.category) || [];
+    grouped.set(result.category, [...existing, result]);
+  });
+  
+  // Sort categories and build flat list with headers
+  const sortedCategories = [...grouped.entries()]
+    .sort((a, b) => categoryConfig[a[0]].order - categoryConfig[b[0]].order);
+  
+  const flatList: GroupedResults[] = [];
+  let globalIndex = 0;
+  
+  sortedCategories.forEach(([category, categoryResults]) => {
+    // Add section header
+    flatList.push({
+      type: 'header',
+      category,
+      label: categoryConfig[category].label,
+    });
+    
+    // Add results in this category
+    categoryResults.forEach(result => {
+      flatList.push({
+        type: 'result',
+        result,
+        index: globalIndex++,
+      });
+    });
+  });
+  
+  return flatList;
+}
 
 // Command palette state management
 interface CommandPaletteState {
@@ -270,7 +441,11 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   
   // Registered search providers
-  const [providers] = useState<SearchProvider[]>([defaultSearchProvider]);
+  const [providers] = useState<SearchProvider[]>([
+    defaultSearchProvider,
+    wikiSearchProvider,
+    contactsSearchProvider,
+  ]);
   
   // Search across all providers
   const performSearch = useCallback(async (query: string) => {
@@ -396,7 +571,7 @@ export function CommandPalette() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search navigation, actions..."
+              placeholder="Search navigation, wiki, contacts..."
               value={state.query}
               onChange={handleQueryChange}
               onKeyDown={handleKeyDown}
@@ -418,21 +593,39 @@ export function CommandPalette() {
               </div>
             ) : (
               <div className="space-y-1">
-                {state.results.map((result, index) => {
+                {groupResultsByCategory(state.results).map((item, idx) => {
+                  // Render section header
+                  if (item.type === 'header') {
+                    return (
+                      <div
+                        key={`header-${item.category}`}
+                        className="px-3 py-1.5 mt-2 first:mt-0 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                      >
+                        {item.label}
+                      </div>
+                    );
+                  }
+                  
+                  // Render result item
+                  const result = item.result!;
                   const Icon = result.icon;
-                  const isSelected = index === state.selectedIndex;
+                  const isSelected = item.index === state.selectedIndex;
+                  
+                  // Add visual distinction for placeholder/wip categories
+                  const isPlaceholder = result.category === 'wiki' || result.category === 'contacts';
                   
                   return (
                     <button
                       key={result.id}
-                      data-index={index}
+                      data-index={item.index}
                       onClick={() => handleSelect(result)}
-                      onMouseEnter={() => setState(prev => ({ ...prev, selectedIndex: index }))}
+                      onMouseEnter={() => setState(prev => ({ ...prev, selectedIndex: item.index! }))}
                       className={cn(
                         'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-left',
                         isSelected 
                           ? 'bg-primary/20 text-primary' 
-                          : 'text-foreground hover:bg-glass/50'
+                          : 'text-foreground hover:bg-glass/50',
+                        isPlaceholder && !isSelected && 'opacity-70'
                       )}
                     >
                       <div className={cn(
@@ -444,6 +637,9 @@ export function CommandPalette() {
                       <div className="flex-1 min-w-0">
                         <p className={cn('font-medium truncate', isSelected ? 'text-primary' : '')}>
                           {result.label}
+                          {isPlaceholder && (
+                            <span className="ml-2 text-xs text-muted-foreground/50">(coming soon)</span>
+                          )}
                         </p>
                         {result.description && (
                           <p className="text-xs text-muted-foreground truncate">
@@ -486,7 +682,11 @@ export function CommandPalette() {
 
 // Hook to register additional search providers
 export function useSearchProviders() {
-  const [providers, setProviders] = useState<SearchProvider[]>([defaultSearchProvider]);
+  const [providers, setProviders] = useState<SearchProvider[]>([
+    defaultSearchProvider,
+    wikiSearchProvider,
+    contactsSearchProvider,
+  ]);
   
   const registerProvider = useCallback((provider: SearchProvider) => {
     setProviders(prev => {

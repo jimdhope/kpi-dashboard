@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
+import { NotificationProvider } from "@/components/notifications";
 
 export const metadata: Metadata = {
   title: 'KPI Quest',
@@ -23,7 +24,12 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-        >{children}<Toaster /></ThemeProvider>
+        >
+          <NotificationProvider>
+            {children}
+            <Toaster />
+          </NotificationProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

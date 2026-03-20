@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
+import { OfflineIndicator } from '@/components/offline-indicator';
 import type { AppUser, UserRole } from '@/services/user';
 
 interface SettingsLayoutProps {
@@ -100,6 +101,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   return (
     <div className="flex relative min-h-screen w-full flex-col">
+      <OfflineIndicator />
       {/* Breadcrumbs with section navigation - shown on mobile */}
       <Breadcrumbs 
         sectionItems={settingsMenuItems}

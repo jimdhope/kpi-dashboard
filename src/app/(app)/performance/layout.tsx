@@ -3,6 +3,7 @@
 import React from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Home, Settings, CheckSquare, BarChart3, LineChart } from 'lucide-react';
+import { OfflineIndicator } from '@/components/offline-indicator';
 
 interface PerformanceLayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ const performanceMenuItems = [
 export default function PerformanceLayout({ children }: PerformanceLayoutProps) {
   return (
     <div className="flex relative min-h-screen w-full flex-col">
+      <OfflineIndicator />
       {/* Breadcrumbs with section navigation - shown on mobile */}
       <Breadcrumbs 
         sectionItems={performanceMenuItems}

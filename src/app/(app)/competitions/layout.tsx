@@ -3,6 +3,7 @@
 import React from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Home, Trophy, Award, CheckSquare } from 'lucide-react';
+import { OfflineIndicator } from '@/components/offline-indicator';
 
 interface CompetitionsLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ const competitionsMenuItems = [
 export default function CompetitionsLayout({ children }: CompetitionsLayoutProps) {
   return (
     <div className="flex relative min-h-screen w-full flex-col">
+      <OfflineIndicator />
       {/* Breadcrumbs with section navigation - shown on mobile */}
       <Breadcrumbs 
         sectionItems={competitionsMenuItems}

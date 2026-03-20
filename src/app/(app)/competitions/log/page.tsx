@@ -42,6 +42,7 @@ interface DailyTargetData {
 import { sendTeamsUpdate, type AgentScoreForTeams, type PodTargetSummaryForTeams, type TeamBonusSummary, type TeamTotalScore } from '@/services/teamsWebhook';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { logCompetitionScoreLogged, logCompetitionAbsent } from '@/lib/firestore/activities';
 
 interface Competition {
   id: string;
@@ -169,7 +170,9 @@ export default function LogScoresPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
+  const [activeCompetitionName, setActiveCompetitionName] = useState<string>('');
 
   const isLoading = isLoadingPods || isLoadingAgentsAndComp || isLoadingDailyData;
 
@@ -186,6 +189,7 @@ export default function LogScoresPage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       setCurrentUserUid(user?.uid || null);
+      setCurrentUserName(user?.displayName || user?.email || null);
     });
     return () => unsubscribe();
   }, []);
@@ -259,6 +263,7 @@ export default function LogScoresPage() {
         }
 
         setActiveCompetitionId(competitionForLogging?.id || null);
+        setActiveCompetitionName(competitionForLogging?.name || '');
         setCompetitionRules(competitionForLogging?.rules || []);
         setTeams(competitionForLogging?.teams?.filter(team => team.agentIds.some(agentId => fetchedAgents.some(agent => agent.id === agentId))) || []);
 
@@ -409,6 +414,23 @@ export default function LogScoresPage() {
           });
         } else {
           await setDoc(docRef, logEntry, { merge: true });
+          // Log activity for score update
+          const agent = agents.find(a => a.id === agentId);
+          if (agent && agent.name) {
+            try {
+              await logCompetitionScoreLogged(
+                agentId,
+                agent.name,
+                activeCompetitionId,
+                activeCompetitionName,
+                points,
+                currentUserUid !== agentId ? currentUserUid : undefined,
+                currentUserUid !== agentId ? currentUserName || undefined : undefined
+              );
+            } catch (logErr) {
+              console.error("Failed to log activity:", logErr);
+            }
+          }
         }
       } else if (numericValue > 0) {
         const newDocRef = doc(collection(db, "dailyAchievements"));
@@ -420,6 +442,23 @@ export default function LogScoresPage() {
           else { newState[agentId][ruleId].existingLogId = newDocRef.id; }
           return newState;
         });
+        // Log activity for new score entry
+        const agent = agents.find(a => a.id === agentId);
+        if (agent && agent.name) {
+          try {
+            await logCompetitionScoreLogged(
+              agentId,
+              agent.name,
+              activeCompetitionId,
+              activeCompetitionName,
+              points,
+              currentUserUid !== agentId ? currentUserUid : undefined,
+              currentUserUid !== agentId ? currentUserName || undefined : undefined
+            );
+          } catch (logErr) {
+            console.error("Failed to log activity:", logErr);
+          }
+        }
       }
     } catch (err) {
       console.error("Error auto-saving achievement:", err);
@@ -427,7 +466,7 @@ export default function LogScoresPage() {
     } finally {
       setIsSaving(prev => ({ ...prev, [savingKey]: false }));
     }
-  }, [selectedPodId, currentUserUid, activeCompetitionId, competitionRules, selectedDate, toast]);
+  }, [selectedPodId, currentUserUid, currentUserName, activeCompetitionId, activeCompetitionName, competitionRules, selectedDate, agents, toast]);
 
   const debouncedSave = useMemo(() => debounce(handleSaveAchievement, 1000), [handleSaveAchievement]);
 
@@ -504,6 +543,25 @@ export default function LogScoresPage() {
         ...prev,
         [agentId]: { ...(prev[agentId] || {}), isPresent: isPresent, naLogId: !isPresent ? (naLogId || 'temp-id') : undefined }
       }));
+
+      // Log activity when agent is marked absent
+      if (!isPresent) {
+        const agent = agents.find(a => a.id === agentId);
+        if (agent && agent.name) {
+          try {
+            await logCompetitionAbsent(
+              agentId,
+              agent.name,
+              activeCompetitionId,
+              activeCompetitionName,
+              currentUserUid !== agentId ? currentUserUid : undefined,
+              currentUserUid !== agentId ? currentUserName || undefined : undefined
+            );
+          } catch (logErr) {
+            console.error("Failed to log absence activity:", logErr);
+          }
+        }
+      }
 
     } catch (error) {
       console.error("Error changing presence status:", error);

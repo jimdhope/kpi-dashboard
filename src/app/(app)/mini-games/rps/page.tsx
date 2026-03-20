@@ -10,6 +10,7 @@ import { collection, addDoc, query, where, Timestamp, getDocs, orderBy, limit, d
 import { db, auth } from '@/lib/firebase';
 import { startOfDay, endOfDay } from 'date-fns';
 import { AppUser } from '@/services/user';
+import { activityLoggers } from '@/lib/firestore/activities';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
@@ -344,6 +345,18 @@ export default function RpsGamePage() {
       await addDoc(collection(db, 'rpsGames'), gameDoc);
 
       setPodGameResults(prev => [...prev, gameDoc as GameResult]); // Optimistically update standings
+
+      // Log activity for the game
+      try {
+        if (gameResult === 'win') {
+          await activityLoggers.logGameWon(user.uid, 'rps', 'Rock Paper Scissors', 10);
+        } else {
+          await activityLoggers.logGamePlayed(user.uid, 'rps', 'Rock Paper Scissors', gameResult, 0);
+        }
+      } catch (activityError) {
+        // Don't fail the game if activity logging fails
+        console.error('Failed to log game activity:', activityError);
+      }
 
       const nextPlayableTime = new Date().getTime() + 15 * 60 * 1000;
       localStorage.setItem(RPS_COOLDOWN_KEY, nextPlayableTime.toString());
