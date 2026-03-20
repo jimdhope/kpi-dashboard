@@ -94,7 +94,6 @@ export default function AdminDashboard() {
   const [trackerLogs, setTrackerLogs] = useState<TrackerLog[]>([]);
   
   const [rpsGames, setRpsGames] = useState<RpsGame[]>([]);
-  const [teams, setTeams] = useState<Competition['teams']>([]);
 
   useEffect(() => {
     const unsubscribes: (() => void)[] = [];
@@ -163,13 +162,14 @@ export default function AdminDashboard() {
       const start = comp.startDate?.toDate();
       const end = comp.endDate?.toDate();
       if (start && end && start <= now && end >= now) {
-        if (comp.teams) setTeams(comp.teams);
         return comp;
       }
     }
-    if (competitions[0]) {
-      if (competitions[0].teams) setTeams(competitions[0].teams);
-      return competitions[0];
+    const pastCompetitions = competitions
+      .filter(comp => comp.endDate)
+      .sort((a, b) => (b.endDate?.toMillis() || 0) - (a.endDate?.toMillis() || 0));
+    if (pastCompetitions.length > 0) {
+      return pastCompetitions[0];
     }
     return null;
   }, [competitions]);
@@ -183,35 +183,46 @@ export default function AdminDashboard() {
     });
   }, [achievementLogs]);
 
+  const competitionLogs = useMemo(() => {
+    if (!latestCompetition) return [];
+    const start = latestCompetition.startDate?.toDate();
+    const end = latestCompetition.endDate?.toDate();
+    return achievementLogs.filter(log => {
+      const logDate = log.date?.toDate();
+      if (!logDate || !start || !end) return false;
+      return logDate >= start && logDate <= end;
+    });
+  }, [latestCompetition, achievementLogs]);
+
   const competitionPodStandings = useMemo(() => {
-    if (!latestCompetition || todayLogs.length === 0) return [];
+    if (!latestCompetition || competitionLogs.length === 0) return [];
     const availablePods = pods.filter(p => latestCompetition.podIds?.includes(p.id));
     const podScores: Record<string, { id: string; name: string; score: number }> = {};
     availablePods.forEach(pod => {
       podScores[pod.id] = { id: pod.id, name: pod.name, score: 0 };
     });
-    todayLogs.forEach(log => {
+    competitionLogs.forEach(log => {
       if (podScores[log.podId]) {
         podScores[log.podId].score += log.points || 0;
       }
     });
     return Object.values(podScores).sort((a, b) => b.score - a.score);
-  }, [latestCompetition, todayLogs, pods]);
+  }, [latestCompetition, competitionLogs, pods]);
 
   const competitionTeamStandings = useMemo(() => {
-    if (!latestCompetition?.teams || todayLogs.length === 0) return [];
+    if (!latestCompetition?.teams || competitionLogs.length === 0) return [];
     const teamScores: Record<string, { id: string; name: string; emoji?: string; score: number }> = {};
     latestCompetition.teams.forEach(team => {
       teamScores[team.id] = { id: team.id, name: team.name, emoji: team.emoji, score: 0 };
     });
-    todayLogs.forEach(log => {
+    competitionLogs.forEach(log => {
       const team = latestCompetition.teams?.find(t => t.agentIds?.includes(log.agentId));
       if (team && teamScores[team.id]) {
         teamScores[team.id].score += log.points || 0;
       }
     });
     return Object.values(teamScores).sort((a, b) => b.score - a.score);
-  }, [latestCompetition, todayLogs]);
+  }, [latestCompetition, competitionLogs]);
 
   const todayTrackerLogs = useMemo(() => {
     const today = new Date();
@@ -324,7 +335,7 @@ export default function AdminDashboard() {
             </div>
             {latestCompetition && (
               <CardDescription>
-                {latestCompetition.name} - {latestCompetition.startDate?.toDate && format(latestCompetition.startDate.toDate(), 'MMM d')} - {latestCompetition.endDate?.toDate && format(latestCompetition.endDate.toDate(), 'MMM d, yyyy')}
+                {latestCompetition.name} ({latestCompetition.startDate ? format(latestCompetition.startDate.toDate(), 'MMM d') : '?'} - {latestCompetition.endDate ? format(latestCompetition.endDate.toDate(), 'MMM d, yyyy') : '?'})
               </CardDescription>
             )}
           </CardHeader>
@@ -335,7 +346,7 @@ export default function AdminDashboard() {
               <div className="space-y-4">
                 {competitionPodStandings.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium mb-2 text-muted-foreground">Pod Standings - Today</h4>
+                    <h4 className="text-sm font-medium mb-2 text-muted-foreground">Pod Standings - Competition Total</h4>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -360,7 +371,7 @@ export default function AdminDashboard() {
                 )}
                 {competitionTeamStandings.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium mb-2 text-muted-foreground">Team Standings - Today</h4>
+                    <h4 className="text-sm font-medium mb-2 text-muted-foreground">Team Standings - Competition Total</h4>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -384,7 +395,7 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 {competitionPodStandings.length === 0 && competitionTeamStandings.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">No achievements logged today</p>
+                  <p className="text-center text-muted-foreground py-8">No achievements logged for this competition</p>
                 )}
               </div>
             )}
