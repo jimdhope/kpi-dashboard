@@ -3,7 +3,19 @@ import { errorResponse, ok } from "@/server/http";
 import { performanceService } from "@/server/services/performance-service";
 import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
-import { startOfDay, endOfDay } from "date-fns";
+
+// UTC-based start/end of day (data stored in UTC)
+function startOfDayUTC(dateStr: string): Date {
+  const date = new Date(dateStr);
+  // Create date at midnight UTC (12:00:00.000 UTC = start of that day in UTC)
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+}
+
+function endOfDayUTC(dateStr: string): Date {
+  const date = new Date(dateStr);
+  // Create date at 23:59:59.999 UTC (end of that day in UTC)
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+}
 
 const schema = z.object({
   trackerKpiId: z.string().min(1),
@@ -20,7 +32,6 @@ export async function GET(request: Request) {
 
     // Filtered query for the log matrix form
     if (podId && dateStr) {
-      const date = new Date(dateStr);
       const memberships = await prisma.podMembership.findMany({
         where: { podId },
         select: { userId: true },
@@ -29,11 +40,11 @@ export async function GET(request: Request) {
       const logs = await prisma.trackerLog.findMany({
         where: {
           userId: { in: userIds },
-          loggedAt: { gte: startOfDay(date), lte: endOfDay(date) },
+          loggedAt: { gte: startOfDayUTC(dateStr), lte: endOfDayUTC(dateStr) },
         },
         select: { userId: true, trackerKpiId: true, value: true },
       });
-      return ok(logs.map((l) => ({ ...l, value: Number(l.value) })));
+      return ok({ logs: logs.map((l) => ({ ...l, value: Number(l.value) })) });
     }
 
     return ok(await performanceService.listLogs());

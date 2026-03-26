@@ -11,7 +11,8 @@ const schema = z.object({
 
 export async function GET() {
   try {
-    return ok(await trackerService.listTrackers());
+    const trackers = await trackerService.listTrackers();
+    return ok({ kpis: trackers });
   } catch {
     return errorResponse(401, "Unauthorized");
   }
