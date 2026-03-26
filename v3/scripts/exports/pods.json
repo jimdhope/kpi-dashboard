@@ -1,0 +1,81 @@
+[
+  {
+    "id": "Iof0gX7lyE0k7bqbalZ9",
+    "name": "Team Fernando",
+    "logoUrl": "",
+    "logoInitials": "TF",
+    "logoBgColor": "#6a8000",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "teamLeaderId": "zMC1rnMPTRXnUwe6qYMNC9eD4bn2",
+    "teamsWebhookUrl": "",
+    "podManagerId": "YpgAYZQ7Ebbx6CHbQKHOWtarsIJ2",
+    "agentIds": [
+      "sshCwRILYhWkPkoddG2vgqAAnoh1",
+      "snZqVJTsY5hqgy0Ljk1iwiacGzR2",
+      "D7wCpgSguKOU5JCAuqZFtWH7PKr1",
+      "9eJRGNpnkAX5oZ5qbtpnonVJPCC2",
+      "zJ7Czyfdt0PNOPsYvaRBDhg52oI2",
+      "ckkYy9MR2Ac4Qgn4p8WaTo83guD2",
+      "bZOSCFaKtBREzaItMoTWmRsQpt93",
+      "hzQ2N1wRF9V1oWbBAy405brkFlW2",
+      "HjvG2UkMqeaQrzEvEHfKi7plJcS2",
+      "ZcfrDV19bnfptZd3mrTLlvleiNs1",
+      "crhVcz54xlbNp5x4xOerkTVX9nI3",
+      "lSUVBHEFnTUYtLVUKZxwTGeUWwK2",
+      "rzHvFEXN5KVfOvIBibpz3K5n5WV2",
+      "nVQrf9rPmbd9KlIqyIUTnXRl7PA2"
+    ]
+  },
+  {
+    "id": "mlq1IKFqmkUxSZXWwQBK",
+    "name": "Team Gulshan",
+    "logoUrl": "",
+    "logoInitials": "TG",
+    "logoBgColor": "#260080",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podManagerId": "YpgAYZQ7Ebbx6CHbQKHOWtarsIJ2",
+    "teamLeaderId": "zMC1rnMPTRXnUwe6qYMNC9eD4bn2",
+    "teamsWebhookUrl": "",
+    "agentIds": [
+      "ePstjvSTNbgWXj9yjbHgUwh0ufn1",
+      "ocaIwOVychWdKAqQvYkWivumyLo1",
+      "R6XeaF0zeBTZvyW2XDuJDJKXsQT2",
+      "QbGAOZlFw3b6IhtnQzvoDOwjBkH2",
+      "oVuGNOcPSNU5uWeNWdMo3aqbBiT2",
+      "24OVYFFzNSYD14wgwSR6Pbhy1mp1",
+      "Kzlr0i9vVLcFbWpzvYstte7sQnk1",
+      "lOYkjlDBjEPcXp34UrtTkePkjSb2",
+      "fG5Jj26CDpRjrSKG0eS4WnBwmUt1",
+      "poKrhzmTaXRBOtZiQPG0XZXfgRm2",
+      "j6r4rl3BgEVlib3M7Di0zPDLj282"
+    ]
+  },
+  {
+    "id": "um7ZRZ3Vs4pzw9oYZLrc",
+    "name": "Team Harvey",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "logoUrl": "",
+    "logoBgColor": "#669c35",
+    "logoInitials": "H",
+    "teamLeaderId": "zMC1rnMPTRXnUwe6qYMNC9eD4bn2",
+    "podManagerId": "9UErCwhuzfUYX0FfdraZv0s2kgo2",
+    "teamsWebhookUrl": "https://defaultb499b480b4b041fda7ad3f60256e9e.f8.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a004b4c69f0e445aa5007130463e14b1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ppcJaNQnoopLwacjTvjAqWWwdD8AVc6cv5sLrj_wqVo",
+    "agentIds": [
+      "c9akTnPLp4XmGcwwZtuT3ox44vs1",
+      "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+      "qbUgAQIearW1YvVRd34vIJAUiEU2",
+      "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+      "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+      "2b2X24TeHiWxgAwsisID7tYXzXi1",
+      "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+      "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+      "n4813w7X36PGcfVDGfO7FbgyZXH3",
+      "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+      "coEVh7UkWCaseDE2c280xZ6oGE02",
+      "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+      "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+      "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+      "wMrHem04HjhOdXuAxnM37nEcRx52"
+    ]
+  }
+]

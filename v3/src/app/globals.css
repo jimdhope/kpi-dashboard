@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root, .dark {
+    /* Required Core Scheme */
+    --onyx: #0d0a0bff;
+    --bright-snow: #f8f8f8ff;
+    --green: #3f7d20ff;
+    --cerulean: #4281a4ff;
+    --goldenrod: #d5a021ff;
+
+    /* Shadcn system mapped to Dark Theme by default */
+    --background: var(--onyx);
+    --foreground: var(--bright-snow);
+    
+    --card: #151213; /* slightly lighter than onyx */
+    --card-foreground: var(--bright-snow);
+    
+    --popover: #151213;
+    --popover-foreground: var(--bright-snow);
+    
+    --primary: var(--cerulean);
+    --primary-foreground: #ffffff;
+    
+    --secondary: #1a1718;
+    --secondary-foreground: var(--bright-snow);
+    
+    --muted: #2a2728;
+    --muted-foreground: #a09f9f;
+    
+    --accent: #1a1718;
+    --accent-foreground: var(--bright-snow);
+    
+    --destructive: #7f1d1d;
+    --destructive-foreground: #ffffff;
+    
+    --border: #2a2728;
+    --input: #2a2728;
+    --ring: var(--cerulean);
+    
+    --radius: 0.5rem;
+    
+    /* Variables for glassmorphism */
+    --glass: rgba(21, 18, 19, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-hover: rgba(21, 18, 19, 0.9);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Glassmorphic Base */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-card {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.glass-sidebar {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid var(--glass-border);
+}
+
+/* Frosted Glass effect for cards */
+.frosted-glass {
+  @apply bg-card border border-gray-200 shadow-lg;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.dark .frosted-glass {
+  @apply border-gray-700;
+}

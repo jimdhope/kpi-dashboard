@@ -1,0 +1,24 @@
+[
+  {
+    "id": "Ipq7NNjw7HJY9LRH3R4W",
+    "teamId": "team-1-1755763562105",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "2ZprNcAJmQkZgzZ9ojP8",
+    "points": 15,
+    "reason": "RPS Bonus",
+    "date": "2025-08-21T23:00:00.000Z",
+    "loggedBy": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "loggedAt": "2025-08-26T09:03:25.746Z"
+  },
+  {
+    "id": "ZbFeAXKbdgBiQ0dhINFI",
+    "teamId": "team-3-1766044242109",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "omi6XrUItljL95dtW33c",
+    "reason": "Manual Adjustment",
+    "date": "2025-12-23T00:00:00.000Z",
+    "loggedBy": "YpgAYZQ7Ebbx6CHbQKHOWtarsIJ2",
+    "loggedAt": "2025-12-23T17:24:05.157Z",
+    "points": 5
+  }
+]
