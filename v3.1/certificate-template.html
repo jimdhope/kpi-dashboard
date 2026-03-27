@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPI Quest Certificate Template</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Mr+Dafoe&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+      background: #1e293b;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .controls {
+      background: #334155;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .controls h2 {
+      color: #f8fafc;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+    }
+    
+    .control-group {
+      margin-bottom: 1rem;
+    }
+    
+    .control-group label {
+      display: block;
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-group input,
+    .control-group select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #f8fafc;
+      font-size: 0.875rem;
+    }
+    
+    .control-group input:focus,
+    .control-group select:focus {
+      outline: none;
+      border-color: #60a5fa;
+    }
+    
+    .color-options {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .color-option {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+    
+    .color-option.selected {
+      border-color: #f8fafc;
+    }
+    
+    .color-option.gold {
+      background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728);
+      color: #1e293b;
+      font-weight: bold;
+    }
+    
+    .color-option.silver {
+      background: linear-gradient(135deg, #c0c0c0, #e8e8e8, #a8a8a8);
+      color: #1e293b;
+      font-weight: bold;
+    }
+    
+    .color-option.bronze {
+      background: linear-gradient(135deg, #cd7f32, #daa520, #b87333);
+      color: white;
+      font-weight: bold;
+    }
+    
+    .certificate-wrapper {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .certificate-container {
+      background: #0f172a;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    
+    .certificate-container.full-size {
+      width: 1200px;
+      aspect-ratio: 1200 / 848;
+    }
+    
+    .certificate-container.preview {
+      width: 600px;
+    }
+    
+    .certificate-container.compact {
+      width: 400px;
+    }
+    
+    .certificate {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    /* Outer border */
+    .cert-outer-border {
+      position: absolute;
+      top: 30px;
+      bottom: 30px;
+      left: 30px;
+      right: 30px;
+      border: 3px solid #d4af37;
+      pointer-events: none;
+    }
+    
+    /* Inner border */
+    .cert-inner-border {
+      position: absolute;
+      top: 42px;
+      bottom: 42px;
+      left: 42px;
+      right: 42px;
+      border: 1px solid #d4af37;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    
+    .cert-content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 60px;
+    }
+    
+    .cert-trophy {
+      font-size: 4.5rem;
+    }
+    
+    .cert-header {
+      font-size: 1.25rem;
+      letter-spacing: 0.375em;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-top: 1rem;
+      font-family: 'Lexend', sans-serif;
+    }
+    
+    .cert-title {
+      font-size: 2.75rem;
+      font-weight: 800;
+      color: #f8fafc;
+      text-align: center;
+      margin-top: 1.5rem;
+      font-family: 'Lexend', sans-serif;
+    }
+    
+    .cert-recognition {
+      font-size: 1.375rem;
+      font-style: italic;
+      color: #94a3b8;
+      margin-top: 3rem;
+      font-family: 'Lexend', sans-serif;
+    }
+    
+    .cert-team {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 2rem;
+      font-family: 'Lexend', sans-serif;
+    }
+    
+    .cert-team-label {
+      font-size: 0.875rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.125em;
+    }
+    
+    .cert-team-members {
+      font-size: 1.125rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+    }
+    
+    .cert-signatures {
+      display: flex;
+      justify-content: space-between;
+      width: 80%;
+      max-width: 700px;
+      margin-top: auto;
+      padding-top: 1.5rem;
+    }
+    
+    .cert-signature {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: 'Lexend', sans-serif;
+    }
+    
+    .cert-signature-value {
+      font-size: 1.5rem;
+      color: #e2e8f0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #475569;
+      min-width: 220px;
+      text-align: center;
+      font-family: 'Mr Dafoe', cursive;
+    }
+    
+    .cert-signature-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.0625em;
+    }
+    
+    .cert-header {
+      font-size: 1.25rem;
+      letter-spacing: 0.375em;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-top: 1rem;
+    }
+    
+    .cert-title {
+      font-size: 2.75rem;
+      font-weight: 800;
+      color: #f8fafc;
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    
+    .cert-recognition {
+      font-size: 1.375rem;
+      font-style: italic;
+      color: #94a3b8;
+      margin-top: 3rem;
+    }
+    
+    .cert-name {
+      font-size: 4.5rem;
+      font-weight: 400;
+      font-family: 'Mr Dafoe', cursive;
+      margin-top: 1.5rem;
+      padding: 0 3rem 0.75rem;
+      border-bottom: 2px solid #334155;
+    }
+    
+    .cert-achievement {
+      display: flex;
+      align-items: center;
+      margin-top: 2rem;
+      font-family: 'Lexend', sans-serif;
+      font-size: 1.25rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .cert-achievement-label {
+      color: #64748b;
+    }
+    
+    .cert-achievement-position {
+      font-weight: 600;
+      margin: 0 0.75rem;
+    }
+    
+    .cert-achievement-during {
+      color: #64748b;
+    }
+    
+    .cert-team {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 2rem;
+    }
+    
+    .cert-team-label {
+      font-size: 0.875rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.125em;
+    }
+    
+    .cert-team-members {
+      font-size: 1.125rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+    }
+    
+    .cert-signatures {
+      display: flex;
+      justify-content: space-between;
+      width: 80%;
+      max-width: 700px;
+      margin-top: auto;
+      padding-top: 1.5rem;
+    }
+    
+    .cert-signature {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .cert-signature-value {
+      font-size: 1.5rem;
+      color: #e2e8f0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #475569;
+      min-width: 220px;
+      text-align: center;
+      font-family: 'Mr Dafoe', cursive;
+    }
+    
+    .cert-signature-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.0625em;
+    }
+    
+    /* Rank colors */
+    .rank-1 .cert-outer-border,
+    .rank-1 .cert-inner-border,
+    .rank-1 .cert-name,
+    .rank-1 .cert-achievement-position {
+      color: #d4af37;
+      border-color: #d4af37;
+    }
+    
+    .rank-1 .cert-achievement-position {
+      background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .rank-2 .cert-outer-border,
+    .rank-2 .cert-inner-border,
+    .rank-2 .cert-name,
+    .rank-2 .cert-achievement-position {
+      color: #c0c0c0;
+      border-color: #c0c0c0;
+    }
+    
+    .rank-2 .cert-achievement-position {
+      background: linear-gradient(to right, #c0c0c0, #e8e8e8, #a8a8a8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .rank-3 .cert-outer-border,
+    .rank-3 .cert-inner-border,
+    .rank-3 .cert-name,
+    .rank-3 .cert-achievement-position {
+      color: #cd7f32;
+      border-color: #cd7f32;
+    }
+    
+    .rank-3 .cert-achievement-position {
+      background: linear-gradient(to right, #cd7f32, #daa520, #b87333);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .size-label {
+      color: #64748b;
+      font-size: 0.75rem;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h2>Certificate Preview</h2>
+    
+    <div class="control-group">
+      <label>Winner Name</label>
+      <input type="text" id="winnerName" value="John Doe" oninput="updateCertificate()">
+    </div>
+    
+    <div class="control-group">
+      <label>Pod Name</label>
+      <input type="text" id="podName" value="Alpha Pod" oninput="updateCertificate()">
+    </div>
+    
+    <div class="control-group">
+      <label>Competition Name</label>
+      <input type="text" id="competitionName" value="Weekly KPI" oninput="updateCertificate()">
+    </div>
+    
+    <div class="control-group">
+      <label>Manager Name</label>
+      <input type="text" id="managerName" value="Jane Smith" oninput="updateCertificate()">
+    </div>
+    
+    <div class="control-group">
+      <label>Rank</label>
+      <div class="color-options">
+        <button class="color-option gold selected" onclick="setRank(1)">1st</button>
+        <button class="color-option silver" onclick="setRank(2)">2nd</button>
+        <button class="color-option bronze" onclick="setRank(3)">3rd</button>
+      </div>
+    </div>
+    
+    <div class="control-group">
+      <label>Certificate Type</label>
+      <select id="certType" onchange="updateCertificate()">
+        <option value="individual">Individual</option>
+        <option value="team">Team</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="certificate-wrapper">
+    <!-- Full Size -->
+    <div>
+      <div class="certificate-container full-size rank-1" id="cert1">
+        <div class="certificate">
+          <div class="cert-outer-border"></div>
+          <div class="cert-inner-border"></div>
+          <div class="cert-content">
+            <div class="cert-trophy">🏆</div>
+            <div class="cert-header">Certificate of Excellence</div>
+            <div class="cert-title" id="title1">Alpha Pod KPI Competition</div>
+            <div class="cert-recognition">This is to officially recognize</div>
+            <div class="cert-name" id="name1">John Doe</div>
+            <div class="cert-achievement">
+              <span class="cert-achievement-label">for achieving</span>
+              <span class="cert-achievement-position" id="pos1">1st Place</span>
+              <span class="cert-achievement-label">during</span>
+              <span class="cert-achievement-during" id="compWeek1">Weekly KPI Week</span>
+            </div>
+            <div class="cert-team" id="teamSection1" style="display: none;">
+              <div class="cert-team-label">Team Members</div>
+              <div class="cert-team-members">Alice • Bob • Charlie • David • Edward</div>
+            </div>
+            <div class="cert-signatures">
+              <div class="cert-signature">
+                <div class="cert-signature-value" id="date1">25 Mar 2026</div>
+                <div class="cert-signature-label">Date</div>
+              </div>
+              <div class="cert-signature">
+                <div class="cert-signature-value" id="manager1">Jane Smith</div>
+                <div class="cert-signature-label">Team Manager</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="size-label">Full Size (1200 x 848)</div>
+    </div>
+    
+    <!-- Preview Size -->
+    <div>
+      <div class="certificate-container preview rank-1" id="cert2">
+        <div class="certificate">
+          <div class="cert-outer-border"></div>
+          <div class="cert-inner-border"></div>
+          <div class="cert-content">
+            <div class="cert-trophy">🏆</div>
+            <div class="cert-header">Certificate of Excellence</div>
+            <div class="cert-title" id="title2">Alpha Pod KPI Competition</div>
+            <div class="cert-recognition">This is to officially recognize</div>
+            <div class="cert-name" id="name2">John Doe</div>
+            <div class="cert-achievement">
+              <span class="cert-achievement-label">for achieving</span>
+              <span class="cert-achievement-position" id="pos2">1st Place</span>
+              <span class="cert-achievement-label">during</span>
+              <span class="cert-achievement-during" id="compWeek2">Weekly KPI Week</span>
+            </div>
+            <div class="cert-team" id="teamSection2" style="display: none;">
+              <div class="cert-team-label">Team Members</div>
+              <div class="cert-team-members">Alice • Bob • Charlie</div>
+            </div>
+            <div class="cert-signatures">
+              <div class="cert-signature">
+                <div class="cert-signature-value" id="date2">25 Mar 2026</div>
+                <div class="cert-signature-label">Date</div>
+              </div>
+              <div class="cert-signature">
+                <div class="cert-signature-value" id="manager2">Jane Smith</div>
+                <div class="cert-signature-label">Team Manager</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="size-label">Preview (600px)</div>
+    </div>
+    
+    <!-- Compact Size -->
+    <div>
+      <div class="certificate-container compact rank-1" id="cert3">
+        <div class="certificate">
+          <div class="cert-outer-border"></div>
+          <div class="cert-inner-border"></div>
+          <div class="cert-content">
+            <div class="cert-trophy">🏆</div>
+            <div class="cert-header">Certificate</div>
+            <div class="cert-title" id="title3">Alpha Pod</div>
+            <div class="cert-recognition">Recognizing</div>
+            <div class="cert-name" id="name3">John</div>
+            <div class="cert-achievement">
+              <span class="cert-achievement-position" id="pos3">1st</span>
+            </div>
+            <div class="cert-signatures">
+              <div class="cert-signature">
+                <div class="cert-signature-value" id="date3">25 Mar</div>
+                <div class="cert-signature-label">Date</div>
+              </div>
+              <div class="cert-signature">
+                <div class="cert-signature-value" id="manager3">Jane</div>
+                <div class="cert-signature-label">Manager</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="size-label">Compact (400px)</div>
+    </div>
+  </div>
+  
+  <script>
+    let currentRank = 1;
+    const positions = { 1: '1st', 2: '2nd', 3: '3rd' };
+    
+    function setRank(rank) {
+      currentRank = rank;
+      
+      // Update button states
+      document.querySelectorAll('.color-option').forEach(btn => btn.classList.remove('selected'));
+      document.querySelector(`.color-option:nth-child(${rank})`).classList.add('selected');
+      
+      // Update certificate classes
+      document.querySelectorAll('.certificate-container').forEach(cert => {
+        cert.classList.remove('rank-1', 'rank-2', 'rank-3');
+        cert.classList.add(`rank-${rank}`);
+      });
+      
+      // Update position labels
+      document.getElementById('pos1').textContent = `${positions[rank]} Place`;
+      document.getElementById('pos2').textContent = `${positions[rank]} Place`;
+      document.getElementById('pos3').textContent = positions[rank];
+    }
+    
+    function updateCertificate() {
+      const name = document.getElementById('winnerName').value || 'Winner';
+      const pod = document.getElementById('podName').value || 'Team';
+      const comp = document.getElementById('competitionName').value || 'KPI';
+      const manager = document.getElementById('managerName').value || 'Manager';
+      const isTeam = document.getElementById('certType').value === 'team';
+      
+      // Update all instances
+      document.getElementById('name1').textContent = name;
+      document.getElementById('name2').textContent = name;
+      document.getElementById('name3').textContent = name.length > 10 ? name.substring(0, 10) + '...' : name;
+      
+      document.getElementById('title1').textContent = `${pod} KPI Competition`;
+      document.getElementById('title2').textContent = `${pod} KPI Competition`;
+      document.getElementById('title3').textContent = pod;
+      
+      document.getElementById('compWeek1').textContent = `${comp} Week`;
+      document.getElementById('compWeek2').textContent = `${comp} Week`;
+      
+      document.getElementById('manager1').textContent = manager;
+      document.getElementById('manager2').textContent = manager;
+      document.getElementById('manager3').textContent = manager.length > 8 ? manager.substring(0, 8) : manager;
+      
+      document.getElementById('teamSection1').style.display = isTeam ? 'flex' : 'none';
+      document.getElementById('teamSection2').style.display = isTeam ? 'flex' : 'none';
+    }
+    
+    // Initialize
+    updateCertificate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+[
+  {
+    "id": "0FpOFu6lFUtkBf0PC0ET",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "scissors",
+    "opponentThrow": "scissors",
+    "result": "draw",
+    "timestamp": "2025-08-21T08:58:12.304Z"
+  },
+  {
+    "id": "2LRuwwD94lyTbbZXPEdl",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "rock",
+    "opponentThrow": "scissors",
+    "result": "win",
+    "timestamp": "2025-08-21T08:21:20.872Z"
+  },
+  {
+    "id": "7qeL9nc0imtiAadFdaxc",
+    "userId": null,
+    "userThrow": "paper",
+    "opponentThrow": "scissors",
+    "result": "loss",
+    "timestamp": "2025-08-21T08:44:32.285Z"
+  },
+  {
+    "id": "8KcHvbyO7EaiVYZDlbmo",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "rock",
+    "opponentThrow": "rock",
+    "result": "draw",
+    "timestamp": "2025-08-21T08:43:43.597Z"
+  },
+  {
+    "id": "EL9nDCdd6mRmHf7fOP8x",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "scissors",
+    "opponentThrow": "rock",
+    "result": "loss",
+    "timestamp": "2025-08-21T09:08:10.311Z"
+  },
+  {
+    "id": "GOpstjGxigvmnCgW0R7S",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "paper",
+    "opponentThrow": "rock",
+    "result": "win",
+    "timestamp": "2025-08-21T08:58:09.211Z"
+  },
+  {
+    "id": "GOr5vMYj1nQXggWeFZGo",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "rock",
+    "opponentThrow": "paper",
+    "result": "loss",
+    "timestamp": "2025-08-21T08:58:17.221Z"
+  },
+  {
+    "id": "H2Rx2fNJe0JRm0DfZtUL",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "rock",
+    "opponentThrow": "rock",
+    "result": "draw",
+    "timestamp": "2025-08-21T14:27:45.385Z"
+  },
+  {
+    "id": "JvBPjXIf6rNNTLi0s1Eo",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "paper",
+    "opponentThrow": "paper",
+    "result": "draw",
+    "timestamp": "2025-08-21T13:51:10.264Z"
+  },
+  {
+    "id": "KshlGvs7mIHaEbB0MNz5",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "rock",
+    "opponentThrow": "scissors",
+    "result": "win",
+    "timestamp": "2025-08-21T08:38:53.203Z"
+  },
+  {
+    "id": "OMQHiVXsDFH82vJz6HrO",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "paper",
+    "opponentThrow": "paper",
+    "result": "draw",
+    "timestamp": "2025-08-21T15:40:24.530Z"
+  },
+  {
+    "id": "Tgg3yPmChJPn2EBiZ5dr",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "rock",
+    "opponentThrow": "rock",
+    "result": "draw",
+    "timestamp": "2025-08-21T08:58:15.206Z"
+  },
+  {
+    "id": "TlvMNxq4XglEqq9Ij7OL",
+    "userId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "userThrow": "rock",
+    "opponentThrow": "scissors",
+    "result": "win",
+    "timestamp": "2025-08-22T08:17:11.887Z"
+  },
+  {
+    "id": "Ud4VshURifoJoDoMQ4SI",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "scissors",
+    "opponentThrow": "rock",
+    "result": "loss",
+    "timestamp": "2025-08-21T08:43:49.609Z"
+  },
+  {
+    "id": "WNXztcs1PVeXWsFHZWQi",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "rock",
+    "opponentThrow": "scissors",
+    "result": "win",
+    "timestamp": "2025-08-21T16:09:48.936Z"
+  },
+  {
+    "id": "aEkWU5DugbKhPnSKHMl5",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "rock",
+    "opponentThrow": "paper",
+    "result": "loss",
+    "timestamp": "2025-08-21T08:58:13.515Z"
+  },
+  {
+    "id": "aT2QrLbya1XOcQlumOIG",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "paper",
+    "opponentThrow": "scissors",
+    "result": "loss",
+    "timestamp": "2025-08-21T13:15:30.080Z"
+  },
+  {
+    "id": "ahb8ZhpgZW5zmJW6I8bR",
+    "userId": null,
+    "userThrow": "scissors",
+    "opponentThrow": "rock",
+    "result": "loss",
+    "timestamp": "2025-08-21T08:44:33.212Z"
+  },
+  {
+    "id": "bJGC0IQ6uop0RaJZS9JM",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "paper",
+    "opponentThrow": "scissors",
+    "result": "loss",
+    "timestamp": "2025-08-27T11:55:01.787Z"
+  },
+  {
+    "id": "brv97iAgcP0Pc2OlXxYk",
+    "userId": null,
+    "userThrow": "rock",
+    "opponentThrow": "paper",
+    "result": "loss",
+    "timestamp": "2025-08-21T08:44:29.845Z"
+  },
+  {
+    "id": "cksU8znQgzM2dcVt3Gnt",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "paper",
+    "opponentThrow": "rock",
+    "result": "win",
+    "timestamp": "2025-08-21T12:32:23.527Z"
+  },
+  {
+    "id": "dBOcFXO5rOPVsWJyJnYT",
+    "userId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "userThrow": "scissors",
+    "opponentThrow": "paper",
+    "result": "win",
+    "timestamp": "2025-08-21T12:54:37.785Z"
+  },
+  {
+    "id": "eE6KfGXo2ZCyOlDMp5lF",
+    "userId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "userThrow": "paper",
+    "opponentThrow": "paper",
+    "result": "draw",
+    "timestamp": "2025-08-21T12:39:03.464Z"
+  },
+  {
+    "id": "kpPW2c7lFbxwjr11PlNJ",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "scissors",
+    "opponentThrow": "rock",
+    "result": "loss",
+    "timestamp": "2025-08-21T12:49:33.044Z"
+  },
+  {
+    "id": "nKgCDisq9HQnGToU0Dm5",
+    "userId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "userThrow": "paper",
+    "opponentThrow": "scissors",
+    "result": "loss",
+    "timestamp": "2025-08-22T14:22:07.961Z"
+  },
+  {
+    "id": "rLMpqvuRapNxt2ZkEPPH",
+    "userId": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "userThrow": "paper",
+    "opponentThrow": "paper",
+    "result": "draw",
+    "timestamp": "2025-08-21T09:06:19.835Z"
+  }
+]

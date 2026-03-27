@@ -1,0 +1,101 @@
+[
+  {
+    "id": "7LKoohCkqgfL8E3BuNoQ",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "bZOSCFaKtBREzaItMoTWmRsQpt93",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T12:16:30.709Z",
+    "value": 1,
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "7d5fFrLUhcrkf4OTQrNr",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "R6XeaF0zeBTZvyW2XDuJDJKXsQT2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T12:16:46.657Z",
+    "value": 1,
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "8moJHRLlVz01ebU52UpF",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "zJ7Czyfdt0PNOPsYvaRBDhg52oI2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T16:01:44.578Z",
+    "value": 1,
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "EsvCpg08JqtgGDujYCGS",
+    "date": "2026-02-04T00:00:00.000Z",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-04T09:45:00.992Z",
+    "value": 1,
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "FehbdKIsJwd4GLE3DBWT",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "HjvG2UkMqeaQrzEvEHfKi7plJcS2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T15:30:14.143Z",
+    "value": 1,
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "KdH0T76XIlqktSjJOUg5",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "9eJRGNpnkAX5oZ5qbtpnonVJPCC2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "podId": "Iof0gX7lyE0k7bqbalZ9",
+    "loggedAt": "2026-02-03T17:07:03.038Z",
+    "value": 3
+  },
+  {
+    "id": "SXoon4NRhAeFmNtwhD09",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "9eJRGNpnkAX5oZ5qbtpnonVJPCC2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T12:15:28.080Z",
+    "value": 1,
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "Wz7zVHOgtJqeF2S346IZ",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "rzHvFEXN5KVfOvIBibpz3K5n5WV2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T12:16:19.799Z",
+    "value": 1,
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "ceUrdyeORSmeOEdSyvAD",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "loggedAt": "2026-02-03T14:16:56.614Z",
+    "value": 2
+  },
+  {
+    "id": "fhCTU5M4xSLEjHW3k5K7",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T14:18:14.115Z",
+    "value": 1,
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "ocDNKgPLg4i5cGStQcZD",
+    "date": "2026-02-03T00:00:00.000Z",
+    "agentId": "fG5Jj26CDpRjrSKG0eS4WnBwmUt1",
+    "trackerKpiId": "aT3u6zFTpdj7XIQuf0LU",
+    "loggedAt": "2026-02-03T12:31:06.070Z",
+    "value": 1,
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  }
+]

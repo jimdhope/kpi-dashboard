@@ -1,0 +1,1600 @@
+[
+  {
+    "id": "0SUGzQm9ziwGsWGwLTp2",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:12:04.165Z"
+  },
+  {
+    "id": "0xQmkT862h6d8Yjcy6NT",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T11:23:36.410Z"
+  },
+  {
+    "id": "1WgK2jFLFgrpG7T7uN0v",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T09:03:59.294Z"
+  },
+  {
+    "id": "1fZn6VjLGQBlSsQd0eUI",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:38.695Z"
+  },
+  {
+    "id": "1rGbtXpBIT3na0nvl27o",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:41:23.381Z"
+  },
+  {
+    "id": "2C8k08twSaGfkVbJzB5G",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:07:18.284Z"
+  },
+  {
+    "id": "2MD9gRC2jo4uQ5QBCDWm",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T10:59:41.247Z"
+  },
+  {
+    "id": "2rQkS1TOgkRpfBVdjTvl",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:49.887Z"
+  },
+  {
+    "id": "3GBxWsPjdBS4ZWURD6No",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T11:06:58.238Z"
+  },
+  {
+    "id": "3RnMlsNE5gZowVBMj8tQ",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:26.109Z"
+  },
+  {
+    "id": "401BN55FCsMs6488pcT6",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:46:42.068Z"
+  },
+  {
+    "id": "4rpCrU6Y0oZkvIKWximk",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:21.646Z"
+  },
+  {
+    "id": "5UamXQaH8zkTeOa8veoC",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T10:31:26.538Z"
+  },
+  {
+    "id": "5UjKsTKnHrynIlyUuNv3",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:19.398Z"
+  },
+  {
+    "id": "5b8r78eSf202rUabaOhg",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T09:33:08.186Z"
+  },
+  {
+    "id": "5wodMPm4rhpUqEKjFppZ",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T10:00:25.646Z"
+  },
+  {
+    "id": "61g8fFxFP0xJnTZARkUs",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:21.822Z"
+  },
+  {
+    "id": "6fzHzMt3QeBJYJbKgA5L",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:35.295Z"
+  },
+  {
+    "id": "6h5S9fgSiXJ9GqpOhvQE",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:23.132Z"
+  },
+  {
+    "id": "7quseIBBdRwnyhVqEOJ9",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:26.942Z"
+  },
+  {
+    "id": "8SqhVWQHwdxGZdXaLr7T",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:12:32.406Z"
+  },
+  {
+    "id": "9EvxLubiYHv2rT5DYLFA",
+    "agentId": "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:56.868Z"
+  },
+  {
+    "id": "9F5ADQPwE709F6Wxw6P7",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:55.505Z"
+  },
+  {
+    "id": "B6ZFYXWGuffUwwK5sgLd",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T09:24:12.222Z"
+  },
+  {
+    "id": "BKBtlHs51QZ0aaFOpAIg",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:43.204Z"
+  },
+  {
+    "id": "BgX41U0S8W3solot0eWa",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:28.320Z"
+  },
+  {
+    "id": "Buk0Lmw20hd4S8uukfik",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:48:25.948Z"
+  },
+  {
+    "id": "CTm3qKLt1Zb4t0daccIq",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T08:27:06.333Z"
+  },
+  {
+    "id": "Cy24YSm2RHjD0Jfj0lgE",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:46.377Z"
+  },
+  {
+    "id": "D6fCCr8M1OPVqCbNaXoF",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:42.901Z"
+  },
+  {
+    "id": "DGHgLD3lwUarOU5b15Fl",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:21.619Z"
+  },
+  {
+    "id": "DX88FDz8LP7YqKTCJMzu",
+    "agentId": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:44.218Z"
+  },
+  {
+    "id": "DgUOk2BWbrnLqXOEFQIR",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T10:28:16.846Z"
+  },
+  {
+    "id": "DwoJwjQ68qTmkdgtOCDP",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:22.874Z"
+  },
+  {
+    "id": "EPJ6lLBY68dFsQncXXvU",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T08:52:56.692Z"
+  },
+  {
+    "id": "EdiT3cRDJUQC30usxz0W",
+    "agentId": "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:51.958Z"
+  },
+  {
+    "id": "EjGgTDh5NKE3L3x8K0hO",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T09:13:27.694Z"
+  },
+  {
+    "id": "FU8IEaRx7eMxo0oLquUj",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T13:58:55.191Z"
+  },
+  {
+    "id": "FUjeM66wQcvDjyF3pRjD",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:29.980Z"
+  },
+  {
+    "id": "Fdi6SeacMuBRbiWozk8V",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:20.655Z"
+  },
+  {
+    "id": "Gwz1eA7fWYcloIwhOBvD",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:54.273Z"
+  },
+  {
+    "id": "HL6h3xT4eDV6NY981Hu9",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:07:28.531Z"
+  },
+  {
+    "id": "HSphrjRIiEADlsOhU7bO",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T08:24:52.125Z"
+  },
+  {
+    "id": "HmbL4kcpwg2vVmFWKaPl",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:30:18.422Z"
+  },
+  {
+    "id": "HxELGQPo7I5fwHSiR17T",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:47:17.224Z"
+  },
+  {
+    "id": "JD5oF3x1qgqKKlaPQ0Xs",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T08:35:36.437Z"
+  },
+  {
+    "id": "JFdHXczR7XvxhZdyYnCe",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:54.483Z"
+  },
+  {
+    "id": "JQyXFQ642yDKNw8uJZHw",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T08:27:57.888Z"
+  },
+  {
+    "id": "JigJbM1UkQ49bLfGdfpc",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:43:12.864Z"
+  },
+  {
+    "id": "JnUhx2LetOh9xF3Z5U3N",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:11:53.759Z"
+  },
+  {
+    "id": "JoHbc9WZkUQbST13qhPf",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T08:55:11.658Z"
+  },
+  {
+    "id": "KkgSig7oEICJFHqDz1VV",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:35.486Z"
+  },
+  {
+    "id": "KtTt0RsVpbl6NU8JihSq",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T09:28:16.342Z"
+  },
+  {
+    "id": "KzBQ6EFiSRhjPa9nNLgr",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:22.594Z"
+  },
+  {
+    "id": "LLagVTGw5SvHVk9Y0Ycf",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:40.390Z"
+  },
+  {
+    "id": "LYEoe9f56h8izEtvQSYP",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:42.593Z"
+  },
+  {
+    "id": "LbZ5kNaK8ahlaMaFIJGN",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T09:28:55.727Z"
+  },
+  {
+    "id": "Lg9mJt6jL1xPwPasWjuO",
+    "agentId": "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T14:28:17.525Z"
+  },
+  {
+    "id": "MN57e9Ez4NmcAw2IqXKL",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T09:49:59.024Z"
+  },
+  {
+    "id": "MS4YCZqQjfq6YbpOSF6m",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:32:02.172Z"
+  },
+  {
+    "id": "MwEQIInMvsIta1Mx475j",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:30:04.545Z"
+  },
+  {
+    "id": "NUkrU0hsQkc8hyqcJQJJ",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:42.940Z"
+  },
+  {
+    "id": "Na42fpRyVfw0eMGODljB",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T08:51:30.431Z"
+  },
+  {
+    "id": "Nj4HuQ7q6YfzbAaf7SjH",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:31:43.958Z"
+  },
+  {
+    "id": "OSMIcjKKo5igOyRWMH5m",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:12:00.792Z"
+  },
+  {
+    "id": "OYi5rjORbcqz4LLJafZh",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:17.127Z"
+  },
+  {
+    "id": "OsJDzElNQxY9pHbupp8N",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:47:58.932Z"
+  },
+  {
+    "id": "PEF87Qtw6ZmZaLHH1g5d",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:59.152Z"
+  },
+  {
+    "id": "PGfogrpWsJ89e6BdnCku",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:41.591Z"
+  },
+  {
+    "id": "QEWUOtfgJ1mdxoeAeUYn",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:41:24.711Z"
+  },
+  {
+    "id": "QPEStK1uIOxrp04Oyao4",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T14:21:25.315Z"
+  },
+  {
+    "id": "QREcIO7143ZLFXnp1OLl",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:31:03.912Z"
+  },
+  {
+    "id": "QbQXeT8eCWUz6zeDsoYf",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:12:10.446Z"
+  },
+  {
+    "id": "RhG2j6i063fRZKBN7NCw",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:47.889Z"
+  },
+  {
+    "id": "TTSlrRzD0rJkcaCdq9fj",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T09:12:49.139Z"
+  },
+  {
+    "id": "TUo2YyzifQNJZZKRTdPe",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T08:37:16.614Z"
+  },
+  {
+    "id": "U51yl6V3SXJ4twUK4uE3",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T14:14:17.471Z"
+  },
+  {
+    "id": "UKF7AsghSgewSmuxRID9",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T09:07:45.403Z"
+  },
+  {
+    "id": "Uci9LPg0z63W08KnbJT3",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T09:28:12.132Z"
+  },
+  {
+    "id": "UoDDO6QYcKtIj2nd57ov",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:40.731Z"
+  },
+  {
+    "id": "UtVok5MkcPs8FH2nTEzJ",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:35:35.457Z"
+  },
+  {
+    "id": "VdkVEeDpHMdYN9AnUtqZ",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:31.763Z"
+  },
+  {
+    "id": "W13BGUVtouohoC3t1wDx",
+    "agentId": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T10:00:08.736Z"
+  },
+  {
+    "id": "WXjZOBYtpYYt3PpzfAtY",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:22.014Z"
+  },
+  {
+    "id": "XwUme17LRXdSwBbEc8a0",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:30:33.362Z"
+  },
+  {
+    "id": "Y3sS62OUKBhMrrr6TACK",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:12:29.178Z"
+  },
+  {
+    "id": "YYwjhfR4u1W4O5ayS3Bh",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:07:07.832Z"
+  },
+  {
+    "id": "YZNKt4LyhFoyMrA3MmxR",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T08:38:43.413Z"
+  },
+  {
+    "id": "Z5MgCfkHQUJGy2bkIL39",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:07:11.204Z"
+  },
+  {
+    "id": "Zs6Jx0jCM0S225VWvm7Q",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T10:31:02.056Z"
+  },
+  {
+    "id": "aAioO3iMSqpCXY2eOBmf",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:14.267Z"
+  },
+  {
+    "id": "aj768zkgsbp9IZWMiF77",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:05:49.336Z"
+  },
+  {
+    "id": "ak98pF6EmFUlzBQmewPo",
+    "agentId": "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:23.659Z"
+  },
+  {
+    "id": "awW7RqJ6blrGZ5Qfc5Yd",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:48:40.512Z"
+  },
+  {
+    "id": "b90V7nCkNN4HhxtrQ1b6",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T09:00:06.041Z"
+  },
+  {
+    "id": "bHtfEHBSLXTS9YdykSrq",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:06:07.692Z"
+  },
+  {
+    "id": "bZu2vGNXPJ9wp1GAXlGi",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:12.867Z"
+  },
+  {
+    "id": "bh0HoWurNCQ20TwKyvj1",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:41:25.380Z"
+  },
+  {
+    "id": "cGr9CUhwMx3c44kwfrva",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T13:54:53.334Z"
+  },
+  {
+    "id": "cK7nLMcMTN6Ik5roMJFH",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T10:28:26.013Z"
+  },
+  {
+    "id": "cQXehn4BzzaVL3U2rf6b",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:43.187Z"
+  },
+  {
+    "id": "czRVRkd3vefEn7HV7PJ7",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:48:08.913Z"
+  },
+  {
+    "id": "dOnQxxhtGGs480AsQPZW",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T08:11:33.740Z"
+  },
+  {
+    "id": "dZUH45iiSx8h0mAlC5rV",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:41.327Z"
+  },
+  {
+    "id": "eI81xOd6Ls8dcCMhPIfE",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:06:03.764Z"
+  },
+  {
+    "id": "eVCyEuqDe4lERyPIi1oD",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:20.864Z"
+  },
+  {
+    "id": "ejRjbnJ4hkaZZtfFM0cJ",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:55.283Z"
+  },
+  {
+    "id": "ezngWeExHUjHGCjFB87U",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:22.188Z"
+  },
+  {
+    "id": "fFGmFUGw7v3ENHLGrxaQ",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:30:45.686Z"
+  },
+  {
+    "id": "fsajgvVZIgjqS356demP",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:12:31.559Z"
+  },
+  {
+    "id": "gBH9jqEGGnr159JHIxNx",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T09:30:16.866Z"
+  },
+  {
+    "id": "gE4Vy6cvZoi1L68eE1TA",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:29.178Z"
+  },
+  {
+    "id": "gSIu6nczT8MEveyyz1iR",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T09:35:05.771Z"
+  },
+  {
+    "id": "hN0yXuk2IG70krTBXSZE",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:42.329Z"
+  },
+  {
+    "id": "hn2oijMtZ7j180HyCSTk",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:45.110Z"
+  },
+  {
+    "id": "hp29NiedIBkVnRxjnIDc",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T09:02:10.869Z"
+  },
+  {
+    "id": "ht9NKpOdpXq2dwL0wwPz",
+    "agentId": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:43.803Z"
+  },
+  {
+    "id": "iNWEdU9VlsS3JDH2DhhC",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:11:40.795Z"
+  },
+  {
+    "id": "iva0zqqpGZu5b9OjTGGL",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-10T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-11T08:55:07.130Z"
+  },
+  {
+    "id": "izx6E4VittX8jhRdl1Kh",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:47:36.596Z"
+  },
+  {
+    "id": "jep3Q4LZwtkA1PcuOle0",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T10:54:24.611Z"
+  },
+  {
+    "id": "jm82YKpsdzAqyQZNHjdh",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:30.570Z"
+  },
+  {
+    "id": "jsPtK5KKVoJfEA2Hj8oj",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:48:33.753Z"
+  },
+  {
+    "id": "jyYRhzUvpVBsF0nyRUl8",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:06:46.908Z"
+  },
+  {
+    "id": "jytJAyXJlr1zqAxjQRhc",
+    "agentId": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:30:34.593Z"
+  },
+  {
+    "id": "lRHOQ5F8EO0Hf07icutI",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T11:27:56.882Z"
+  },
+  {
+    "id": "mKbY36w8gCL2WII55Zvp",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:27:56.817Z"
+  },
+  {
+    "id": "mmB3miUFsk1czuOHVjAk",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T08:40:18.003Z"
+  },
+  {
+    "id": "n2dor8Owq19HoSiMMTRK",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:21.274Z"
+  },
+  {
+    "id": "nFYy8fz3Ta0oXozeCkjq",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:48:28.704Z"
+  },
+  {
+    "id": "oFmnLwP7aeVyfBgGcCI8",
+    "agentId": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:16.306Z"
+  },
+  {
+    "id": "oThHVc0KjKVmi0NqW6IA",
+    "agentId": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:06:12.912Z"
+  },
+  {
+    "id": "oqSbyPr3FCJyhuOJm8ep",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T09:47:13.677Z"
+  },
+  {
+    "id": "pFVyxkeRVCUMU67Rk7Z5",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T08:54:31.716Z"
+  },
+  {
+    "id": "pqyXmFwW21aoCuc3wkTP",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-11T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-12T08:21:58.204Z"
+  },
+  {
+    "id": "q2gdE39ZchliLe4HktPI",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:20.364Z"
+  },
+  {
+    "id": "qg2LLhe3Fy68yn8iANHn",
+    "agentId": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T09:02:19.506Z"
+  },
+  {
+    "id": "qmw9BB8cF03Pb4XxnpA7",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:31:09.399Z"
+  },
+  {
+    "id": "qvc56RlLkmnak5JggqeG",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:47:33.412Z"
+  },
+  {
+    "id": "raXzm0UAK6SJHDYsR2IC",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:34.734Z"
+  },
+  {
+    "id": "sW5oqU19BlVpLwo28hV4",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:12:30.729Z"
+  },
+  {
+    "id": "sxrxg1VYMLcraYqhIyGp",
+    "agentId": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T09:22:18.226Z"
+  },
+  {
+    "id": "tDieGdaqgcl0U62uDdiM",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T08:52:43.868Z"
+  },
+  {
+    "id": "tfpatqmWcpQ0VwxhIk3O",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:35.658Z"
+  },
+  {
+    "id": "tzn7NksZwCEjYF7Ckyuh",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T11:37:53.754Z"
+  },
+  {
+    "id": "ueGzHJYPh5VdA8ns048t",
+    "agentId": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T10:17:07.180Z"
+  },
+  {
+    "id": "vFjxK49MMbRRFLrcfnNn",
+    "agentId": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-04T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:06:31.454Z"
+  },
+  {
+    "id": "vZCSfmDLUWvrcqn7jVmN",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T09:59:04.247Z"
+  },
+  {
+    "id": "vqUaWtmNKJEXsWLUFDhQ",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-12T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T06:31:54.757Z"
+  },
+  {
+    "id": "vvykuZUPT0OnGLG476Ue",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-17T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-18T08:24:51.138Z"
+  },
+  {
+    "id": "wULO1OS56ZJXkrPnNpn0",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:21.064Z"
+  },
+  {
+    "id": "weC0pxwRrrWox9fxEdT7",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:33:32.314Z"
+  },
+  {
+    "id": "wiKtk3OpTzaoOkzGHn7K",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T08:52:09.190Z"
+  },
+  {
+    "id": "wwuIzz2fNHeGR2Mqr731",
+    "agentId": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "ci8tMsKdg7I9qCAC06wf",
+    "taskId": "new-rule-1754637360820-0.4771713098340271",
+    "date": "2025-08-07T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T09:06:46.286Z"
+  },
+  {
+    "id": "x11W2sjaLvrfAtGiKppM",
+    "agentId": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:11:58.392Z"
+  },
+  {
+    "id": "xJRkAzMSCeNQ7JZOxvIL",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-06T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:12:23.030Z"
+  },
+  {
+    "id": "xlepDCirFcJSmShjy7pE",
+    "agentId": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "sliC1AWGpjuoBkmUJRX1",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-05T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-08T07:08:32.979Z"
+  },
+  {
+    "id": "yNlP0HZsGNZZvHnPLIhE",
+    "agentId": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:27.685Z"
+  },
+  {
+    "id": "yaRISPVcOvj1KLho3IR8",
+    "agentId": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-14T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-15T11:39:32.630Z"
+  },
+  {
+    "id": "yhUR7fVzyENlk58lNXSk",
+    "agentId": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "competitionId": "U57Wo5JZblbsZrFBhMSD",
+    "taskId": "new-rule-1755153849565-0.18231803841868155",
+    "date": "2025-08-13T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-14T09:14:24.794Z"
+  },
+  {
+    "id": "z1UKMN8gm645QrrET7Lc",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:22.384Z"
+  },
+  {
+    "id": "zCvMyiukNECvwryNcBOT",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:23.373Z"
+  },
+  {
+    "id": "zVrexDzz6y0RZ4lOo5No",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:47:27.155Z"
+  },
+  {
+    "id": "zikO24BuzmV6JSUQjcaW",
+    "agentId": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "new-rule-1753956250661-0.5424779113354657",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T13:16:13.669Z"
+  },
+  {
+    "id": "zsfY15Dfogf81AYEe2tZ",
+    "agentId": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "taskId": "QBFT5EgbPpMRohNeZm0I",
+    "date": "2025-08-03T23:00:00.000Z",
+    "loggedBy": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "loggedAt": "2025-08-04T12:38:21.462Z"
+  }
+]

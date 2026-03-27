@@ -1,0 +1,114 @@
+[
+  {
+    "id": "3A9CBux2ZZaWdSgA2mF9",
+    "name": "Smart Yield",
+    "initials": "SMY",
+    "type": "percentage",
+    "sortOrder": "desc",
+    "passFailCriteriaEnabled": true,
+    "passFailValue": 15,
+    "passFailOperator": "gte"
+  },
+  {
+    "id": "3a4jjDAY5XUnqiuY1VDl",
+    "name": "Same Day Repeats",
+    "emoji": "🔂",
+    "type": "percentage",
+    "sortOrder": "asc",
+    "passFailCriteriaEnabled": true,
+    "passFailValue": 5,
+    "passFailOperator": "lte",
+    "initials": "SDR"
+  },
+  {
+    "id": "9hep2piIQiHrVWtiwlhQ",
+    "name": "RATOC",
+    "initials": "RAT",
+    "type": "percentage",
+    "sortOrder": "desc",
+    "passFailCriteriaEnabled": false
+  },
+  {
+    "id": "9tPWcncUFiDweHtnw19F",
+    "name": "Smart Bookings",
+    "initials": "SMB",
+    "type": "number",
+    "sortOrder": "desc",
+    "passFailCriteriaEnabled": false
+  },
+  {
+    "id": "AcYfL6EtwcrKQJerTj64",
+    "name": "Customer Satisfaction ",
+    "emoji": "😊",
+    "type": "scoreOutOf",
+    "maxValue": 5,
+    "passFailCriteriaEnabled": true,
+    "sortOrder": "desc",
+    "passFailValue": 4,
+    "passFailOperator": "gte",
+    "initials": "CSAT"
+  },
+  {
+    "id": "NLEv2mXh0IMb9dwVS5TL",
+    "type": "number",
+    "sortOrder": "desc",
+    "initials": "RVL",
+    "name": "RATOC Volumes",
+    "passFailCriteriaEnabled": true,
+    "passFailValue": 5,
+    "passFailOperator": "gte"
+  },
+  {
+    "id": "bGNWSRM6G2Wkkc7pbr2F",
+    "name": "Customer Callback Rate",
+    "emoji": "🔁",
+    "type": "percentage",
+    "passFailCriteriaEnabled": true,
+    "sortOrder": "desc",
+    "passFailValue": 82,
+    "passFailOperator": "gte",
+    "initials": "CCR"
+  },
+  {
+    "id": "eH9t0rADgTEcQ2SzFKJQ",
+    "name": "RATOC Reopens",
+    "initials": "RRO",
+    "type": "percentage",
+    "sortOrder": "asc",
+    "passFailCriteriaEnabled": true,
+    "passFailValue": 0,
+    "passFailOperator": "lte"
+  },
+  {
+    "id": "eyeOmIF9V2ubiZfMTSgp",
+    "name": "Retentions",
+    "emoji": "🔐",
+    "type": "percentage",
+    "passFailCriteriaEnabled": true,
+    "sortOrder": "desc",
+    "passFailValue": 98,
+    "passFailOperator": "gte",
+    "initials": "RET"
+  },
+  {
+    "id": "mYmESMJSHsc9LztNgpt9",
+    "name": "Call Scoring",
+    "emoji": "☎️",
+    "type": "percentage",
+    "passFailCriteriaEnabled": true,
+    "sortOrder": "desc",
+    "passFailValue": 94.5,
+    "passFailOperator": "gte",
+    "initials": "SLC"
+  },
+  {
+    "id": "uu5W4KD7TjuKAB3gk74Y",
+    "name": "Non-RATOC",
+    "initials": "NR",
+    "type": "percentage",
+    "sortOrder": "asc",
+    "passFailCriteriaEnabled": true,
+    "passFailValue": 1.4,
+    "passFailOperator": "lte"
+  }
+]

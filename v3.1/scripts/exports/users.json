@@ -1,0 +1,634 @@
+[
+  {
+    "id": "24OVYFFzNSYD14wgwSR6Pbhy1mp1",
+    "uid": "24OVYFFzNSYD14wgwSR6Pbhy1mp1",
+    "name": "Mohammad Shoaib",
+    "email": "mohammad.shoaib@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "uid": "2b2X24TeHiWxgAwsisID7tYXzXi1",
+    "name": "Joseph Abbotts",
+    "email": "joseph.abbotts@sigmaconnected.com",
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "roles": [
+      "agent",
+      "admin"
+    ]
+  },
+  {
+    "id": "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+    "avatarInitials": "",
+    "roles": [
+      "agent"
+    ],
+    "uid": "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+    "avatarUrl": "",
+    "name": "Maariyah Farooq",
+    "avatarBgColor": "",
+    "email": "maariyah.farooq@sigmaconnected.com",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "9UErCwhuzfUYX0FfdraZv0s2kgo2",
+    "uid": "9UErCwhuzfUYX0FfdraZv0s2kgo2",
+    "name": "Harvey Rae",
+    "email": "harvey.rae@sigmaconnected.com",
+    "roles": [
+      "podManager"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null
+  },
+  {
+    "id": "9eJRGNpnkAX5oZ5qbtpnonVJPCC2",
+    "uid": "9eJRGNpnkAX5oZ5qbtpnonVJPCC2",
+    "name": "Craig Jones",
+    "email": "craig.jones@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "AdVzeTE1R0RYsytc0alJJRPbD792",
+    "uid": "AdVzeTE1R0RYsytc0alJJRPbD792",
+    "email": "jim@jabi.uk",
+    "roles": [
+      "admin",
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "name": "James Hope",
+    "podId": null
+  },
+  {
+    "id": "D7wCpgSguKOU5JCAuqZFtWH7PKr1",
+    "uid": "D7wCpgSguKOU5JCAuqZFtWH7PKr1",
+    "name": "Corrinna Almeida",
+    "email": "corrinna.almeida@sigmaconnected.com",
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9",
+    "roles": [
+      "agent",
+      "teamLeader"
+    ]
+  },
+  {
+    "id": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "uid": "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+    "name": "Deborah Ray",
+    "email": "deborah.ray@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "uid": "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+    "name": "Bushra Sabeel",
+    "email": "bushra.sabeel@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "HjvG2UkMqeaQrzEvEHfKi7plJcS2",
+    "uid": "HjvG2UkMqeaQrzEvEHfKi7plJcS2",
+    "name": "Khari Campbell Shephard",
+    "email": "khari.campbell-shephard@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "Kzlr0i9vVLcFbWpzvYstte7sQnk1",
+    "uid": "Kzlr0i9vVLcFbWpzvYstte7sQnk1",
+    "name": "Mohammed Choudhury",
+    "email": "mohammed.choudhury@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "QbGAOZlFw3b6IhtnQzvoDOwjBkH2",
+    "uid": "QbGAOZlFw3b6IhtnQzvoDOwjBkH2",
+    "name": "Hafsa Saeed",
+    "email": "hafsa.saeed@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "R6XeaF0zeBTZvyW2XDuJDJKXsQT2",
+    "uid": "R6XeaF0zeBTZvyW2XDuJDJKXsQT2",
+    "name": "Gulab Randhawa",
+    "email": "gulab.randhawa@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "YpgAYZQ7Ebbx6CHbQKHOWtarsIJ2",
+    "uid": "YpgAYZQ7Ebbx6CHbQKHOWtarsIJ2",
+    "name": "Gulshan Reehal",
+    "email": "Gulshan.Reehal@sigmaconnected.com",
+    "roles": [
+      "podManager"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null
+  },
+  {
+    "id": "ZcfrDV19bnfptZd3mrTLlvleiNs1",
+    "uid": "ZcfrDV19bnfptZd3mrTLlvleiNs1",
+    "name": "Rauf Aziz",
+    "email": "rauf.aziz@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "bZOSCFaKtBREzaItMoTWmRsQpt93",
+    "uid": "bZOSCFaKtBREzaItMoTWmRsQpt93",
+    "name": "Ayanle Abdulle",
+    "email": "ayanle.abdulle@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "uid": "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+    "email": "adewunmi.elegunde@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "name": "Adewunmi Elegunde"
+  },
+  {
+    "id": "c9akTnPLp4XmGcwwZtuT3ox44vs1",
+    "uid": "c9akTnPLp4XmGcwwZtuT3ox44vs1",
+    "name": "Agent",
+    "email": "agent@test.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null
+  },
+  {
+    "id": "ckkYy9MR2Ac4Qgn4p8WaTo83guD2",
+    "uid": "ckkYy9MR2Ac4Qgn4p8WaTo83guD2",
+    "name": "Adeel Ahmed",
+    "email": "adeel.ahmed@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "crhVcz54xlbNp5x4xOerkTVX9nI3",
+    "uid": "crhVcz54xlbNp5x4xOerkTVX9nI3",
+    "name": "Anthony Rogers",
+    "email": "Anthony.rogers@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "ePstjvSTNbgWXj9yjbHgUwh0ufn1",
+    "uid": "ePstjvSTNbgWXj9yjbHgUwh0ufn1",
+    "name": "Anila Tariq",
+    "email": "anila.tariq@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "fG5Jj26CDpRjrSKG0eS4WnBwmUt1",
+    "uid": "fG5Jj26CDpRjrSKG0eS4WnBwmUt1",
+    "name": "Sadia Rashid",
+    "email": "sadia.rashid@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "hMvPsJ7NAIUDgKmIw7wfvwT01En1",
+    "uid": "hMvPsJ7NAIUDgKmIw7wfvwT01En1",
+    "name": "Rashi Yagnik",
+    "email": "rashi.yagnik@sigmaconnected.com",
+    "roles": [
+      "teamLeader"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null
+  },
+  {
+    "id": "hzQ2N1wRF9V1oWbBAy405brkFlW2",
+    "uid": "hzQ2N1wRF9V1oWbBAy405brkFlW2",
+    "name": "Sadya Mazhar",
+    "email": "sadya.mazhar@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "j6r4rl3BgEVlib3M7Di0zPDLj282",
+    "uid": "j6r4rl3BgEVlib3M7Di0zPDLj282",
+    "name": "Yaser Iqbal",
+    "email": "yaser.iqbal@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "lOYkjlDBjEPcXp34UrtTkePkjSb2",
+    "uid": "lOYkjlDBjEPcXp34UrtTkePkjSb2",
+    "name": "Saira Malik",
+    "email": "saira.malik@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "lSUVBHEFnTUYtLVUKZxwTGeUWwK2",
+    "uid": "lSUVBHEFnTUYtLVUKZxwTGeUWwK2",
+    "name": "Peter Okie Anie",
+    "email": "peter.okieanie@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "lfjyVejaxZPZ5708GoToi4gcT973",
+    "uid": "lfjyVejaxZPZ5708GoToi4gcT973",
+    "name": "Fernando Velasquez",
+    "email": "fernando.velasquez@sigmaconnected.com",
+    "roles": [
+      "podManager"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null
+  },
+  {
+    "id": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "uid": "n4813w7X36PGcfVDGfO7FbgyZXH3",
+    "name": "Rashpal Reehal",
+    "email": "rashpal.reehal@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "nVQrf9rPmbd9KlIqyIUTnXRl7PA2",
+    "uid": "nVQrf9rPmbd9KlIqyIUTnXRl7PA2",
+    "name": "Joanne Stanton",
+    "email": "joanne.stanton@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "oVuGNOcPSNU5uWeNWdMo3aqbBiT2",
+    "uid": "oVuGNOcPSNU5uWeNWdMo3aqbBiT2",
+    "name": "Mohammad Butt",
+    "email": "mohammad.butt@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "ocaIwOVychWdKAqQvYkWivumyLo1",
+    "uid": "ocaIwOVychWdKAqQvYkWivumyLo1",
+    "name": "Darren Wicks",
+    "email": "darren.wicks@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "uid": "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+    "name": "Louella Crank",
+    "email": "louella.crank@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "poKrhzmTaXRBOtZiQPG0XZXfgRm2",
+    "uid": "poKrhzmTaXRBOtZiQPG0XZXfgRm2",
+    "name": "Sharon West",
+    "email": "sharon.west@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "mlq1IKFqmkUxSZXWwQBK"
+  },
+  {
+    "id": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "uid": "qbUgAQIearW1YvVRd34vIJAUiEU2",
+    "name": "Caitlin Ward",
+    "email": "caitlin.ward@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "uid": "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+    "name": "Jim Hope",
+    "email": "james.hope@sigmaconnected.com",
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "roles": [
+      "agent",
+      "admin",
+      "campaignManager",
+      "teamLeader",
+      "podManager",
+      "competitionRunner"
+    ]
+  },
+  {
+    "id": "rzHvFEXN5KVfOvIBibpz3K5n5WV2",
+    "uid": "rzHvFEXN5KVfOvIBibpz3K5n5WV2",
+    "name": "Mohamed Hussein",
+    "email": "Mohamed.hussein@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "snZqVJTsY5hqgy0Ljk1iwiacGzR2",
+    "uid": "snZqVJTsY5hqgy0Ljk1iwiacGzR2",
+    "name": "Asareena Shah",
+    "email": "asareena.shah@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "sshCwRILYhWkPkoddG2vgqAAnoh1",
+    "uid": "sshCwRILYhWkPkoddG2vgqAAnoh1",
+    "name": "Aaron Mani",
+    "email": "aaron.mani@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "tvnmTYgOemX8WgCs58UgoXZRVwy1",
+    "uid": "tvnmTYgOemX8WgCs58UgoXZRVwy1",
+    "name": "Zoe Lapwoth",
+    "email": "zoe.lapworth@sigmaconnected.com",
+    "roles": [
+      "podManager"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null
+  },
+  {
+    "id": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "uid": "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+    "name": "Sandra Green",
+    "email": "sandra.green@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "uid": "vbLJQYhw0yWD4OBhQfgeyBD1EXE3",
+    "name": "Team Manager",
+    "email": "manager@test.com",
+    "avatarUrl": "https://picsum.photos/seed/vbLJQYhw0yWD4OBhQfgeyBD1EXE3/40",
+    "role": "podManager",
+    "roles": [
+      "podManager"
+    ],
+    "avatarBgColor": "#e20055",
+    "avatarInitials": "HR"
+  },
+  {
+    "id": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "uid": "wMrHem04HjhOdXuAxnM37nEcRx52",
+    "name": "Ngozika Iwuji",
+    "email": "ngozika.lwuji@sigmaconnected.com",
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "roles": [
+      "agent"
+    ],
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "uid": "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+    "name": "Olapeju Abimbola",
+    "email": "olapeju.abimola@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "zJ7Czyfdt0PNOPsYvaRBDhg52oI2",
+    "uid": "zJ7Czyfdt0PNOPsYvaRBDhg52oI2",
+    "name": "Mariam Ali",
+    "email": "mariam.ali@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "Iof0gX7lyE0k7bqbalZ9"
+  },
+  {
+    "id": "zMC1rnMPTRXnUwe6qYMNC9eD4bn2",
+    "uid": "zMC1rnMPTRXnUwe6qYMNC9eD4bn2",
+    "email": "ellie.ocarroll@sigmaconnected.com",
+    "roles": [
+      "teamLeader"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null,
+    "name": "Ellie OCarroll"
+  },
+  {
+    "id": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "uid": "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+    "name": "Carol Ebanks",
+    "email": "carol.ebanks@sigmaconnected.com",
+    "roles": [
+      "agent"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc"
+  },
+  {
+    "id": "zp2wUl8vL3flqx13K8hqhBpj92H3",
+    "uid": "zp2wUl8vL3flqx13K8hqhBpj92H3",
+    "name": "Gulshan Reehal",
+    "email": "Gulshan.Reehal@sigmated.co.uk",
+    "roles": [
+      "podManager"
+    ],
+    "avatarUrl": "",
+    "avatarInitials": "",
+    "avatarBgColor": "",
+    "podId": null
+  }
+]

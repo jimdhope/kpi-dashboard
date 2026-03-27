@@ -1,0 +1,6391 @@
+[
+  {
+    "id": "0zf8n1ukdiQRTQilhg31",
+    "name": "Black Friday 2025",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-11-27T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1764231388220-0.552814251296215",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231388676-0.4680125764780484",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231389252-0.3477437208597336",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231389796-0.6058720170971202",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231390284-0.6242677925642",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231391389-0.2290665102715287",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231391901-0.6573812573275397",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231392397-0.9563280144720104",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231393749-0.6844954653011356",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1764231394222-0.22747175304798983",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1764231566660",
+        "name": "Shopping Trolley Titans",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2"
+        ],
+        "emoji": "🛒"
+      },
+      {
+        "id": "team-2-1764231566660",
+        "name": "Midnight Shoppers",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "emoji": "🕰️"
+      },
+      {
+        "id": "team-3-1764231566660",
+        "name": "Cyber  Savages",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🖥️"
+      }
+    ],
+    "endDate": "2025-12-10T00:00:00.000Z"
+  },
+  {
+    "id": "1WvvKvnJBHmh6Flqqq8v",
+    "name": "Scones, Chocolate Macaroons & Cheese",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-05-28T23:00:00.000Z",
+    "endDate": "2025-06-03T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1748448913187",
+        "name": "Scone",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1748448913187",
+        "name": "Chocolate Macaroon",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2"
+        ]
+      },
+      {
+        "id": "team-3-1748448913187",
+        "name": "Cheese",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "2ZprNcAJmQkZgzZ9ojP8",
+    "name": "Rock, Paper, Scissors",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-08-20T23:00:00.000Z",
+    "endDate": "2025-08-26T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1755760864261-0.9960480012704538",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760864693-0.8115204008853448",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760865060-0.8732094957229027",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760865359-0.5851535989251914",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760865637-0.5800781056027645",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760865885-0.5793189744814558",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760866119-0.2066591643913569",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760866383-0.21156336233501716",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760866613-0.6850378864973362",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755760866870-0.46379601670725024",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1755763562105",
+        "name": "Team Rock",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🪨"
+      },
+      {
+        "id": "team-2-1755763562105",
+        "name": "Team Paper",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "📰"
+      },
+      {
+        "id": "team-3-1755763562105",
+        "name": "Team Scissors",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ],
+        "emoji": "✂️"
+      }
+    ]
+  },
+  {
+    "id": "3M9KRL9pvsqII31VujHp",
+    "name": "UFO Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-06-18T23:00:00.000Z",
+    "endDate": "2025-06-24T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1750314346134",
+        "name": "Nocturnal Lights",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ]
+      },
+      {
+        "id": "team-2-1750314346134",
+        "name": "Radar Visual",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03"
+        ]
+      },
+      {
+        "id": "team-3-1750314346134",
+        "name": "Close Encounters",
+        "agentIds": [
+          "coEVh7UkWCaseDE2c280xZ6oGE02",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "6JP8ZobHZaSGuhDQH3Uz",
+    "name": "Valentines Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-02-12T00:00:00.000Z",
+    "endDate": "2026-02-18T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1770886826703-0.5689672531287757",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886826903-0.9593391787845311",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886827103-0.6234025785381856",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886827391-0.40723350725575713",
+        "name": "Hotkey",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886827743-0.24364262530006509",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886828631-0.6948290668669848",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886828983-0.3831901499805662",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886829287-0.29353930286491337",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886830295-0.17950925459314448",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770886830551-0.6748097063674294",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1770887033297",
+        "name": "Swipe Right Squad",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ],
+        "emoji": "➡️"
+      },
+      {
+        "id": "team-2-1770887033297",
+        "name": "Team Heartbreakers",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03"
+        ],
+        "emoji": "💔"
+      },
+      {
+        "id": "team-3-1770887033297",
+        "name": "Team Cupid",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "💘"
+      }
+    ]
+  },
+  {
+    "id": "7RRmZB99xnjQDs2IPA31",
+    "name": "Sci-Fi Showdown",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-07-09T23:00:00.000Z",
+    "endDate": "2025-07-15T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      },
+      {
+        "id": "UHBHbE8aFMYGpaYi8aOE",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1752074799325",
+        "name": "The Trekkies",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ]
+      },
+      {
+        "id": "team-2-1752074799325",
+        "name": "The Whovians",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ]
+      },
+      {
+        "id": "team-3-1752074799325",
+        "name": "The Force",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "83dsZyCdHD882zoM82Vo",
+    "name": "AI Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-02-06T00:00:00.000Z",
+    "endDate": "2025-02-12T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461371524",
+        "name": "Deep Thought",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-2-1746461371524",
+        "name": "Hal 9000",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-3-1746461371524",
+        "name": "Skynet",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "84uZLAQogPqAPYMQh1eL",
+    "name": "Snack Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-02-26T00:00:00.000Z",
+    "endDate": "2026-03-04T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1772021511875-0.22710110881860823",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021512338-0.005178434127796949",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021512585-0.5860285173357752",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021512801-0.4748249308581023",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021513009-0.43469124307151197",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021513217-0.045633265617836316",
+        "name": "Phone",
+        "emoji": "☎️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021513425-0.18644109534763098",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021513633-0.5669309333658431",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021514289-0.7338193093304084",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772021514553-0.2765711407814564",
+        "name": "Bonus",
+        "emoji": "🍫",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1772021923109",
+        "name": "Walkers",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ],
+        "emoji": "🔴"
+      },
+      {
+        "id": "team-2-1772021923109",
+        "name": "Doritos",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ],
+        "emoji": "🟠"
+      },
+      {
+        "id": "team-3-1772021923109",
+        "name": "Pringles",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "🔵"
+      }
+    ]
+  },
+  {
+    "id": "8F3XG9C7XhkHZLlwfSFi",
+    "name": "Doctor Who Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-11-20T00:00:00.000Z",
+    "endDate": "2025-11-26T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1763626504937-0.3233032998409092",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626505441-0.9624951468645895",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626505849-0.4848616035760497",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626506265-0.9526570552251199",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626506649-0.6714545036486429",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626507600-0.01691018144435663",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626508032-0.5797806524767635",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626508457-0.2635698876703051",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626509465-0.041880438200846415",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763626509801-0.3693147417522036",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1763626691474",
+        "name": "Darlek",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ],
+        "emoji": "🧂"
+      },
+      {
+        "id": "team-2-1763626691474",
+        "name": "Cyberman",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52"
+        ],
+        "emoji": "🤖"
+      },
+      {
+        "id": "team-3-1763626691474",
+        "name": "Ood",
+        "agentIds": [
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ],
+        "emoji": "🐙"
+      }
+    ]
+  },
+  {
+    "id": "8Pipn6Pq9NSm3Ivrn7gF",
+    "name": "World Animal Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-10-01T23:00:00.000Z",
+    "endDate": "2025-10-07T23:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1759392816131",
+        "name": "Tiger",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🐯"
+      },
+      {
+        "id": "team-2-1759392816131",
+        "name": "Polar Bear",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ],
+        "emoji": "🐻‍❄️"
+      },
+      {
+        "id": "team-3-1759392816131",
+        "name": "Kangaroo",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "🦘"
+      }
+    ],
+    "rules": [
+      {
+        "id": "new-rule-1759335870987-0.08399106394768552",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335871530-0.5040392088250748",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335872058-0.816170040845813",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335872562-0.9953815572471504",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335874777-0.2712705381305871",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335875707-0.4784789208098631",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335881826-0.3750794042593214",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335882354-0.6613090672964737",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335883146-0.31928401125339956",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759335885193-0.28413497252929876",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ]
+  },
+  {
+    "id": "91HH9B9JDGrP2eK5RKvi",
+    "name": "Garden",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podId": "um7ZRZ3Vs4pzw9oYZLrc",
+    "startDate": "2025-04-30T23:00:00.000Z",
+    "endDate": "2025-05-06T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746393862583",
+        "name": "Midnight Rose",
+        "agentIds": [
+          "c9akTnPLp4XmGcwwZtuT3ox44vs1",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746393862583",
+        "name": "Spring Symphony",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1746393862583",
+        "name": "Star of Billion",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "9RvqVck3u4LIVLVG6QGj",
+    "name": "Murder Mystery",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-02-27T00:00:00.000Z",
+    "endDate": "2025-03-05T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461209162",
+        "name": "Clue Chasers",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746461209162",
+        "name": "Mystery Masters",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1746461209162",
+        "name": "The Sleuthing Sleuths",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "AYksHsTlFUBagQfcPDSP",
+    "name": "Mothers Week 2026",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-03-12T00:00:00.000Z",
+    "endDate": "2026-03-18T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1773249392305-0.8881152472032259",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249392640-0.06939949623575481",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249392900-0.5328856241900695",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249393192-0.38563803957935605",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249393481-0.5182481268019264",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249396329-0.7800930951566747",
+        "name": "Phone",
+        "emoji": "☎️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249396760-0.9356407961681983",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249397120-0.33938239726221575",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249398136-0.5216810480359452",
+        "name": "Bruce hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1773249398351-0.3486353035188071",
+        "name": "Bonus",
+        "emoji": "🤰",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1773249558600",
+        "name": "Mother of Dragons",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🐲"
+      },
+      {
+        "id": "team-2-1773249558601",
+        "name": "Weasley Warriors",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ],
+        "emoji": "🪄"
+      },
+      {
+        "id": "team-3-1773249558601",
+        "name": "Moira’s Bebes",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2"
+        ],
+        "emoji": "👚"
+      }
+    ]
+  },
+  {
+    "id": "BcHy8KvTEu64kjq0uTz9",
+    "name": "Cheese",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-03-27T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746460751606",
+        "name": "The Brie Brigade",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746460751606",
+        "name": "The Feta Force",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-3-1746460751606",
+        "name": "The Gouda Gang",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      }
+    ],
+    "endDate": "2025-05-08T23:00:00.000Z"
+  },
+  {
+    "id": "BxQUyUoi4DptamlAdaQt",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-03-19T00:00:00.000Z",
+    "endDate": "2026-03-25T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "rule-1773855377420",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856815723",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856816171",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856817155",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856817426",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856817610",
+        "name": "Phone",
+        "emoji": "☎️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856817793",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856817978",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856818162",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "rule-1773856818387",
+        "name": "Bonus",
+        "emoji": "🔴",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1",
+        "name": "The Smithy Squad",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52"
+        ],
+        "emoji": "🏆"
+      },
+      {
+        "id": "team-2",
+        "name": "The Bovvered Brigade",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2"
+        ],
+        "emoji": "🚀"
+      },
+      {
+        "id": "team-3",
+        "name": "The 500 Milers",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ],
+        "emoji": "🔥"
+      }
+    ],
+    "name": "Comic Relief"
+  },
+  {
+    "id": "Ely8hH6rhZBl41pwK63G",
+    "name": "Chip Week 2026",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-02-19T00:00:00.000Z",
+    "endDate": "2026-02-25T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1771436467266-0.040375498130259646",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436467650-0.5076299200429278",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436467970-0.9504136460306621",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436468282-0.923487962718752",
+        "name": "Hotkey",
+        "emoji": "🔥💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436468770-0.4489305509800502",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436469470-0.0010303828160243",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436470458-0.914369778131944",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436470882-0.5807267953026911",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436471314-0.5915783688459016",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1771436472435-0.316709333410808",
+        "name": "Bonus",
+        "emoji": "🍟",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1771436676362",
+        "name": "Fish and Chips",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ],
+        "emoji": "🐟"
+      },
+      {
+        "id": "team-2-1771436676362",
+        "name": "Sausage and Chips",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "emoji": "🌭"
+      },
+      {
+        "id": "team-3-1771436676362",
+        "name": "Pie and Chips",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🥧"
+      }
+    ]
+  },
+  {
+    "id": "EsFc6Ev9jVVxeYBzivsX",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "rules": [
+      {
+        "emoji": "💲",
+        "points": 5,
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart"
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "points": 5,
+        "name": "ES",
+        "emoji": "🔥"
+      },
+      {
+        "points": 5,
+        "emoji": " 💡",
+        "name": "Hot Key",
+        "id": "OhyK93ceO1NlFlXyYIlQ"
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "emoji": "😊",
+        "points": 1,
+        "name": "RATOC"
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "points": 2,
+        "emoji": "📞",
+        "name": "Phone"
+      },
+      {
+        "points": 2,
+        "name": "Email",
+        "id": "eLrFNEflHwglTJD16yPY",
+        "emoji": "📧"
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "points": 5,
+        "name": "Bonus",
+        "emoji": "❤️"
+      }
+    ],
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "name": "Fathers Day 2025",
+    "teams": [
+      {
+        "id": "team-1-1749456254188",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "name": "The Perfect Lawn Patrol"
+      },
+      {
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ],
+        "id": "team-2-1749456254188",
+        "name": "Team Comfy Chair Conquerors"
+      },
+      {
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "id": "team-3-1749456254188",
+        "name": "The Extra Nap Enthusiasts"
+      }
+    ],
+    "startDate": "2025-06-11T23:00:00.000Z",
+    "endDate": "2025-06-17T23:00:00.000Z"
+  },
+  {
+    "id": "GXH9RNPJNijh7zABsIgJ",
+    "name": "Halloween '25 ",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-10-30T00:00:00.000Z",
+    "endDate": "2025-11-05T00:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1761811529351",
+        "name": "Vampire",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ],
+        "emoji": "🧛"
+      },
+      {
+        "id": "team-2-1761811529351",
+        "name": "Werewolf",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "emoji": "🐺"
+      },
+      {
+        "id": "team-3-1761811529351",
+        "name": "Zombie",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ],
+        "emoji": "🧟"
+      }
+    ],
+    "rules": [
+      {
+        "id": "new-rule-1761811286248-0.008485110944879137",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811286690-0.9953268590898525",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811287129-0.39635709976639966",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811287545-0.02978359133766728",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811287961-0.8290998090005628",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811289545-0.7197655248491165",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811290113-0.5738973005812289",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811290442-0.44876159940983684",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811291721-0.1546230352856922",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761811292129-0.3176158978504052",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 0,
+        "type": "numeric"
+      }
+    ]
+  },
+  {
+    "id": "H4QDoEsUixpMNYoEFRNL",
+    "name": "Classic Cartoon Characters",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-01-30T00:00:00.000Z",
+    "endDate": "2025-02-05T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461415918",
+        "name": "Buggs Bunny",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      },
+      {
+        "id": "team-2-1746461415918",
+        "name": "Count Duckula",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1746461415918",
+        "name": "Fred Flintstone",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "HkCzMLucx3yY2vVGp5th",
+    "name": "Comic Book Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-08-27T23:00:00.000Z",
+    "endDate": "2025-09-02T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1756369428425-0.05473692547309417",
+        "name": "Ask Bruce",
+        "emoji": "☑️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369430018-0.07144190890224156",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369430501-0.8126947148901209",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369430735-0.46984873163520746",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369432117-0.6267960113776972",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369432307-0.40963117376324043",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369432500-0.06001115918822719",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369434361-0.8667675572717412",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369613470-0.4545301424781929",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756369615092-0.7883822878464274",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1756369748749",
+        "name": "Batman",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "emoji": "🦇"
+      },
+      {
+        "id": "team-2-1756369748749",
+        "name": "Moon Knight",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ],
+        "emoji": "🌙"
+      },
+      {
+        "id": "team-3-1756369748749",
+        "name": "Spider Man",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ],
+        "emoji": "🕷️"
+      }
+    ]
+  },
+  {
+    "id": "May9sn5NuxVQhc5jpL7S",
+    "name": "Powering Our Planet",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-04-23T23:00:00.000Z",
+    "endDate": "2025-04-29T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746460540860",
+        "name": "Solar",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-2-1746460540860",
+        "name": "Tidal",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-3-1746460540860",
+        "name": "Wind",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "N1LQyohK6U9p1hILQGdf",
+    "name": "Coffee Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-10-08T23:00:00.000Z",
+    "endDate": "2025-10-14T23:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1759994337610",
+        "name": "Pumpkin Spiced Latte",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03"
+        ],
+        "emoji": "🟠"
+      },
+      {
+        "id": "team-2-1759994337610",
+        "name": "Maple Hazel Frape",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2"
+        ],
+        "emoji": "🟤"
+      },
+      {
+        "id": "team-3-1759994337610",
+        "name": "Vanilla Iced Velvet Americano",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "⚪"
+      }
+    ],
+    "rules": [
+      {
+        "id": "new-rule-1759994162321-0.4215866607730998",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994162836-0.9392719824295117",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994163428-0.31787750965083683",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994164185-0.5378082469873264",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994165476-0.08841294718846937",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994166180-0.4618936756936678",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994166713-0.7541073691932332",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994167757-0.38260071368081006",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994168212-0.6972856783236632",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1759994168628-0.555175677228113",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ]
+  },
+  {
+    "id": "OjbbAVIxKjVcyeeXOkyk",
+    "name": "Gameshows",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-01-23T00:00:00.000Z",
+    "endDate": "2025-01-29T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461479810",
+        "name": "Deal or No Deal",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746461479810",
+        "name": "Taskmaster",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-3-1746461479810",
+        "name": "The Traitors",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "PmmhS9s4NtzWsFJgqaWJ",
+    "name": "Happiness",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-03-20T00:00:00.000Z",
+    "endDate": "2025-03-26T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461039787",
+        "name": "Harmony",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      },
+      {
+        "id": "team-2-1746461039787",
+        "name": "Radience",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1746461039787",
+        "name": "Sunshine",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "PwbIE9IAXnTZJmnaeK36",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "endDate": "2025-09-30T23:00:00.000Z",
+    "startDate": "2025-09-24T23:00:00.000Z",
+    "rules": [
+      {
+        "emoji": "✅",
+        "points": 5,
+        "name": "Ask Bruce",
+        "type": "numeric",
+        "id": "new-rule-1758731101450-0.0893040789889149"
+      },
+      {
+        "emoji": "💲",
+        "name": "Smart",
+        "points": 5,
+        "id": "new-rule-1758731101993-0.47929002014137034",
+        "type": "numeric"
+      },
+      {
+        "points": 5,
+        "id": "new-rule-1758731103110-0.7357706715113653",
+        "name": "ES",
+        "type": "numeric",
+        "emoji": "🔥"
+      },
+      {
+        "id": "new-rule-1758731103985-0.33293457093769085",
+        "type": "numeric",
+        "points": 5,
+        "emoji": "💡",
+        "name": "Hot Key"
+      },
+      {
+        "points": 1,
+        "emoji": "😊",
+        "id": "new-rule-1758731106818-0.026132016010612213",
+        "type": "numeric",
+        "name": "RATOC"
+      },
+      {
+        "points": 2,
+        "name": "Phone",
+        "emoji": "📞",
+        "id": "new-rule-1758731107842-0.7011617279454292",
+        "type": "numeric"
+      },
+      {
+        "type": "numeric",
+        "emoji": "📧",
+        "name": "Email",
+        "id": "new-rule-1758731109472-0.5418750204303036",
+        "points": 2
+      },
+      {
+        "name": "Retentions",
+        "emoji": "🔐",
+        "id": "new-rule-1758731111139-0.548009777676465",
+        "type": "numeric",
+        "points": 5
+      },
+      {
+        "id": "new-rule-1758731112361-0.6534937989368966",
+        "type": "numeric",
+        "emoji": "🦋",
+        "name": "Bruce Hub",
+        "points": 5
+      },
+      {
+        "type": "numeric",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "id": "new-rule-1758731113441-0.22543337478038739"
+      }
+    ],
+    "name": "One Hit Wonders",
+    "teams": [
+      {
+        "name": "Are You Going to be My Girl",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ],
+        "emoji": "🛩️",
+        "id": "team-1-1758731317488"
+      },
+      {
+        "emoji": "🚀",
+        "id": "team-2-1758731317488",
+        "name": "Grove is in the Heart",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ]
+      },
+      {
+        "id": "team-3-1758731317488",
+        "name": "I'll be There for You",
+        "emoji": "🔥",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "SLopsRiJjiC1nsmBZTgv",
+    "name": "Wild About Wildlife",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-07-23T23:00:00.000Z",
+    "endDate": "2025-07-29T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      },
+      {
+        "id": "UHBHbE8aFMYGpaYi8aOE",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5
+      },
+      {
+        "id": "QeGXP2B8Xk1g38Sam86V",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1753343076267",
+        "name": "The Roaring Rangers",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1753343076267",
+        "name": "Stripe Hype Squad",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ]
+      },
+      {
+        "id": "team-3-1753343076267",
+        "name": "Paws & Claws Crew",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "U57Wo5JZblbsZrFBhMSD",
+    "name": "World of Travel",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-08-13T23:00:00.000Z",
+    "endDate": "2025-08-19T23:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1755154041706",
+        "name": "Orient Express",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ]
+      },
+      {
+        "id": "team-2-1755154041706",
+        "name": "Everest",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ]
+      },
+      {
+        "id": "team-3-1755154041706",
+        "name": "Route 66",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "wMrHem04HjhOdXuAxnM37nEcRx52"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "id": "new-rule-1755153849565-0.18231803841868155",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 0,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153849789-0.29860122394731337",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153849973-0.36026347119133106",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153850198-0.4374667257266943",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153850390-0.6988957672294198",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153850582-0.14455212672694628",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153850789-0.10097557497633947",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153931599-0.3777174469802336",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153933851-0.8112744827044421",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1755153935218-0.529291729878757",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ]
+  },
+  {
+    "id": "Um3yh0W8X92gX8F9s2QX",
+    "name": "Appreciation Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-03-06T00:00:00.000Z",
+    "endDate": "2025-03-12T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461151508",
+        "name": "Efficient Experts",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746461151508",
+        "name": "Passionate Performers",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      },
+      {
+        "id": "team-3-1746461151508",
+        "name": "Reliable Rockstars",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "V6bid0Kmr7IdtR2zE1ma",
+    "name": "A. A. Milne's Birthday",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-01-15T00:00:00.000Z",
+    "endDate": "2026-01-21T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1768464844006-0.09582417177072744",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464844526-0.9634830742652664",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464845062-0.9933538513382307",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464845542-0.5773565299587415",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464846014-0.703713637615623",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464847686-0.3626340009481599",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464848134-0.1055628641086328",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464848662-0.4676308313184725",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464849583-0.6191352544394574",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1768464850175-0.3030292561054828",
+        "name": "Bonus",
+        "emoji": "🍯",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1768465044859",
+        "name": "The Honey Pots",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🍯"
+      },
+      {
+        "id": "team-2-1768465044859",
+        "name": "The Hundred Acre Crew",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ],
+        "emoji": "🌳"
+      },
+      {
+        "id": "team-3-1768465044859",
+        "name": "The Expeditioners",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🗺️"
+      }
+    ]
+  },
+  {
+    "id": "Xndyq8dPCuFiAdqW8ga7",
+    "name": "Internet Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-10-22T23:00:00.000Z",
+    "endDate": "2025-10-29T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1761206269714-0.3052306505685234",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206270226-0.7938871676515525",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206270770-0.7083097558329144",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206271266-0.11834521947948129",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206271746-0.8130530349592812",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206272697-0.201414454564655",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206273218-0.7387515072564359",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206273625-0.6533391737740313",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206274660-0.44221532034532884",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1761206275066-0.10375760555325075",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1761206436685",
+        "name": "MySpace",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "💾"
+      },
+      {
+        "id": "team-2-1761206436685",
+        "name": "Bebo",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ],
+        "emoji": "🧡"
+      },
+      {
+        "id": "team-3-1761206436685",
+        "name": "AIM",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2"
+        ],
+        "emoji": "💬"
+      }
+    ]
+  },
+  {
+    "id": "YqRnMG0c4vCKb6qvoDFg",
+    "name": "Cult Classics",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-01-16T00:00:00.000Z",
+    "endDate": "2025-01-22T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461531307",
+        "name": "Team Goonies",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746461531307",
+        "name": "Team Princess Bride",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1746461531307",
+        "name": "Team Rocky Horror",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "YwX5SHAHdXsiblYnd73A",
+    "name": "Eat What You Want",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-05-07T23:00:00.000Z",
+    "endDate": "2025-05-13T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746689815350",
+        "name": "Finger Lickin' Chicken",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ]
+      },
+      {
+        "id": "team-2-1746689815350",
+        "name": "Hawaiian Pizza",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ]
+      },
+      {
+        "id": "team-3-1746689815350",
+        "name": "All Day Breakfast",
+        "agentIds": [
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ZMhIPgTIRKYvIsDkDzPt",
+    "startDate": "2025-09-17T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1758179220622-0.6101626851269746",
+        "type": "numeric",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 5
+      },
+      {
+        "id": "new-rule-1758179220916-0.6342310552095687",
+        "emoji": "💲",
+        "type": "numeric",
+        "points": 5,
+        "name": "Smart"
+      },
+      {
+        "emoji": "🔥",
+        "id": "new-rule-1758179221164-0.8078703582753359",
+        "type": "numeric",
+        "name": "ES",
+        "points": 5
+      },
+      {
+        "type": "numeric",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "id": "new-rule-1758179221424-0.0011929127871070921"
+      },
+      {
+        "emoji": "😊",
+        "points": 1,
+        "name": "RATOC",
+        "type": "numeric",
+        "id": "new-rule-1758179222924-0.46729387839082404"
+      },
+      {
+        "name": "Phone",
+        "emoji": "📞",
+        "id": "new-rule-1758179223412-0.40812435077227105",
+        "type": "numeric",
+        "points": 2
+      },
+      {
+        "type": "numeric",
+        "points": 2,
+        "name": "Email",
+        "id": "new-rule-1758179223933-0.6008710342039262",
+        "emoji": "📧"
+      },
+      {
+        "id": "new-rule-1758179225387-0.04553874027316884",
+        "type": "numeric",
+        "points": 5,
+        "name": "Retentions",
+        "emoji": "🔐"
+      },
+      {
+        "type": "numeric",
+        "name": "Bruce Hub",
+        "id": "new-rule-1758179225924-0.8521908194238883",
+        "emoji": "🦋",
+        "points": 5
+      },
+      {
+        "points": 5,
+        "name": "Bonus",
+        "id": "new-rule-1758179226364-0.8279495644784788",
+        "type": "numeric",
+        "emoji": "❤️"
+      }
+    ],
+    "name": "Week of Birmingham",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "endDate": "2025-09-23T23:00:00.000Z",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "teams": [
+      {
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ],
+        "id": "team-1-1758179427863",
+        "name": "Peaky Blinders",
+        "emoji": "🧢"
+      },
+      {
+        "name": "Cadbury",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "id": "team-2-1758179427863",
+        "emoji": "🍫"
+      },
+      {
+        "name": "Ozzy Osbourne",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "🦇",
+        "id": "team-3-1758179427863"
+      }
+    ]
+  },
+  {
+    "id": "ZatUr9Bry3xcnqRR0zgU",
+    "name": "Winter Warmers",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2024-12-26T00:00:00.000Z",
+    "endDate": "2025-01-01T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461698654",
+        "name": "Cosy Comforts",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-2-1746461698654",
+        "name": "Fireside Friends",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1746461698654",
+        "name": "Hot Chocolate Hero's",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "a01BqlTKE70sFLe2UYYb",
+    "name": "Emoji Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-07-16T23:00:00.000Z",
+    "endDate": "2025-07-22T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      },
+      {
+        "id": "UHBHbE8aFMYGpaYi8aOE",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5
+      },
+      {
+        "id": "QeGXP2B8Xk1g38Sam86V",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1752738209821",
+        "name": "Team 🎉",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ]
+      },
+      {
+        "id": "team-2-1752738209821",
+        "name": "Team 🤩",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ]
+      },
+      {
+        "id": "team-3-1752738209821",
+        "name": "Team ✨",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "abvw1WSwY9AsD42Albkx",
+    "name": "Eurovision 2025",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-05-14T23:00:00.000Z",
+    "endDate": "2025-05-20T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1747293317434",
+        "name": "Irish Trance",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ]
+      },
+      {
+        "id": "team-2-1747293317434",
+        "name": "French Power Ballad",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2"
+        ]
+      },
+      {
+        "id": "team-3-1747293317434",
+        "name": "Albanian Folktronica",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "coEVh7UkWCaseDE2c280xZ6oGE02",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aplfzKJpYXLAoCl50gdk",
+    "name": "World Book Week 2026",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-03-05T00:00:00.000Z",
+    "endDate": "2026-03-11T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1772643775593-0.1346396018741427",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643775852-0.9224884155117177",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643776056-0.4437533048047051",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643776264-0.6924029231255632",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643776473-0.05320204330066913",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643776649-0.48181559190673984",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643776838-0.6005619522103879",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643777046-0.9796713421217348",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643778145-0.227218640214911",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1772643778394-0.9386434335807748",
+        "name": "Bonus",
+        "emoji": "📚",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1772643974717",
+        "name": "Harry Potter",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "emoji": "🪄"
+      },
+      {
+        "id": "team-2-1772643974717",
+        "name": "Twilight",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ],
+        "emoji": "🧛"
+      },
+      {
+        "id": "team-3-1772643974717",
+        "name": "Thursday Murder Club",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ],
+        "emoji": "🎓"
+      }
+    ]
+  },
+  {
+    "id": "b5cXBgcbhZ7dgHeadGMi",
+    "name": "Red Head Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-01-08T00:00:00.000Z",
+    "endDate": "2026-01-14T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1767860680889-0.824739719568418",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860681393-0.10434451044095105",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860682033-0.6888392538600542",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860682553-0.42668792971136504",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860682993-0.5813583479014657",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860684017-0.2744246421648362",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860684449-0.8871366016253207",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860684865-0.36716198578837456",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860685842-0.37439106462529426",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767860686514-0.74890717753104",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1767860892592",
+        "name": "Karen Gillan ",
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ],
+        "emoji": "🟦"
+      },
+      {
+        "id": "team-2-1767860892592",
+        "name": "Tim Minchin",
+        "agentIds": [
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ],
+        "emoji": "🎹"
+      },
+      {
+        "id": "team-3-1767860892592",
+        "name": "Chuck Norris",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🤠"
+      }
+    ]
+  },
+  {
+    "id": "bpDlnrG5gdPgYcVb5Eu9",
+    "name": "Breakfast",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-09-03T23:00:00.000Z",
+    "endDate": "2025-09-09T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1756970516681-0.2857410217624695",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970522105-0.38657949643342704",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970522961-0.2450229172969225",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970526537-0.6050816381615318",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970530657-0.13861761427275043",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970532673-0.6147482115761173",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970534369-0.8910101519846914",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970537113-0.9823755664314192",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970538801-0.7941688532190682",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1756970540017-0.24559433626011062",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1756970612548",
+        "name": "Full English",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🥓"
+      },
+      {
+        "id": "team-2-1756970612548",
+        "name": "Contiental",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ],
+        "emoji": "🥐"
+      },
+      {
+        "id": "team-3-1756970612548",
+        "name": "Cereal ",
+        "agentIds": [
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ],
+        "emoji": "🥣"
+      }
+    ]
+  },
+  {
+    "id": "cZhS9308d8otcHsxanln",
+    "name": "Murder Mystery Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-01-29T00:00:00.000Z",
+    "endDate": "2026-02-04T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1769678688618-0.25751775252514164",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678688982-0.23369988542698794",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678689207-0.28808572133346455",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678689431-0.985618224882798",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678689767-0.4643415408490912",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678690139-0.46498774900813666",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678691402-0.4702643713688296",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678691783-0.7724691826855694",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678692142-0.6593664085647349",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769678694402-0.5997163902561814",
+        "name": "Bonus",
+        "emoji": "🔪",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1769678875148",
+        "name": "The Prime Suspects",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🕵️"
+      },
+      {
+        "id": "team-2-1769678875148",
+        "name": "Death by Spreadsheet",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03"
+        ],
+        "emoji": "💀"
+      },
+      {
+        "id": "team-3-1769678875148",
+        "name": "The Red Herrings",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🚩"
+      }
+    ]
+  },
+  {
+    "id": "ci8tMsKdg7I9qCAC06wf",
+    "name": "Afternoon Tea Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-08-06T23:00:00.000Z",
+    "endDate": "2025-08-12T23:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1754637705068",
+        "name": "Cucumber Sandwich",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ]
+      },
+      {
+        "id": "team-2-1754637705068",
+        "name": "Jam Scone",
+        "agentIds": [
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2"
+        ]
+      },
+      {
+        "id": "team-3-1754637705068",
+        "name": "Yorkshire Tea",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "id": "new-rule-1754637360820-0.4771713098340271",
+        "name": "Bruce",
+        "emoji": "✅",
+        "points": 0,
+        "type": "checkbox"
+      },
+      {
+        "id": "new-rule-1754637389847-0.6650511315700359",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637403201-0.9778884977655617",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637476822-0.08353881482664316",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637495716-0.2622176532531",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637512838-0.202289273402126",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637530633-0.024304000350267252",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637552732-0.2803349808920126",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637555156-0.105279171664585",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1754637555779-0.718464469329894",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ]
+  },
+  {
+    "id": "eLX1rsovIiGLXrnWD8PH",
+    "name": "Magitech Mysteries",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-03-13T00:00:00.000Z",
+    "endDate": "2025-03-19T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461104181",
+        "name": "Team Elias",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-2-1746461104181",
+        "name": "Team Jasper",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ]
+      },
+      {
+        "id": "team-3-1746461104181",
+        "name": "Team Lila",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fP1TPFkgwYqvdODXjoTX",
+    "name": "Hug a bear Day",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-11-06T00:00:00.000Z",
+    "endDate": "2025-11-12T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1762416922493-0.04819968422544396",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416922957-0.37452968744505466",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416923349-0.37206685064521205",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416923821-0.09648265076208717",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416924309-0.5786063181793876",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416925237-0.28087905502289623",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416925790-0.589438891882351",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416926213-0.8852315953477162",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416927222-0.49396262375898725",
+        "name": "Bruce hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1762416927766-0.7849586202609924",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1762417158906",
+        "name": "Winnie-the-Pooh",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🐻"
+      },
+      {
+        "id": "team-2-1762417158906",
+        "name": "Paddington",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2"
+        ],
+        "emoji": "🐻‍❄️"
+      },
+      {
+        "id": "team-3-1762417158906",
+        "name": "Fozzie Bear",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "🧸"
+      }
+    ]
+  },
+  {
+    "id": "g5keWOUB78bsgWxMCGxS",
+    "name": "Chocolate Covered ",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-12-11T00:00:00.000Z",
+    "endDate": "2025-12-17T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1765440389203-0.049986775378393355",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440389658-0.7837254179570377",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440389906-0.32336089395820655",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440390179-0.2032402560526485",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440390419-0.6970660879644542",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440393314-0.7396232799741124",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440394347-0.7419058998556446",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440394971-0.3499540967885598",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440396587-0.8161766998825367",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1765440397211-0.9314960772519163",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1765440637433",
+        "name": "Strawberries",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "🍓"
+      },
+      {
+        "id": "team-2-1765440637433",
+        "name": "Bacon",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🥓"
+      },
+      {
+        "id": "team-3-1765440637433",
+        "name": "Pretzel",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ],
+        "emoji": "🥨"
+      }
+    ]
+  },
+  {
+    "id": "hoN0rVc2w5TKXUFK9BzL",
+    "name": "Bridget Jones Boyfriends",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-02-20T00:00:00.000Z",
+    "endDate": "2025-02-26T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461264209",
+        "name": "Daniel Cleaver",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-2-1746461264209",
+        "name": "Jack Qwant",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-3-1746461264209",
+        "name": "Mark Darcy",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "kiNlvIODx0KGNNiYfYen",
+    "name": "Valentines",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-02-13T00:00:00.000Z",
+    "endDate": "2025-02-19T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461318345",
+        "name": "Cupid's Crew",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746461318345",
+        "name": "Heart Throbs",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-3-1746461318345",
+        "name": "Love Bugs",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "kuoJVsbbcuoBnGMuBQVN",
+    "name": "Retro Games Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-05-21T23:00:00.000Z",
+    "endDate": "2025-05-27T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1747897131736",
+        "name": "Pac-Man",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ]
+      },
+      {
+        "id": "team-2-1747897131736",
+        "name": "Space Invaders",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ]
+      },
+      {
+        "id": "team-3-1747897131736",
+        "name": "Donkey Kong",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lTlGgllNvYsHajHxnqMZ",
+    "name": "Chocolate Cake Week 2026",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-01-22T00:00:00.000Z",
+    "endDate": "2026-01-28T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1769072227473-0.06877500027199746",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072227937-0.05026619190467807",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072228274-0.6179985529486701",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072228670-0.6050190862663962",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072229089-0.6442984530066561",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072230081-0.051553013320355445",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072230417-0.19344214197896514",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072230734-0.9125472021881451",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072231850-0.0592654743024017",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1769072232106-0.007334842025240151",
+        "name": "Bonus",
+        "emoji": "🍰",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1769072517773",
+        "name": "Cocoa Crushers",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ],
+        "emoji": "🍫"
+      },
+      {
+        "id": "team-2-1769072517773",
+        "name": "Ganache Gang",
+        "agentIds": [
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03"
+        ],
+        "emoji": "🍯"
+      },
+      {
+        "id": "team-3-1769072517773",
+        "name": "Batter Brawlers",
+        "agentIds": [
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🥣"
+      }
+    ]
+  },
+  {
+    "id": "lyAQZxj2ZapzNJmeFCuI",
+    "name": "World Chocolate Day",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-07-02T23:00:00.000Z",
+    "endDate": "2025-07-08T23:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1751527256973",
+        "name": "Milk Chocolate",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1751527256974",
+        "name": "Dark Chocolate",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1751527256974",
+        "name": "White Chocolate",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 1
+      },
+      {
+        "id": "UHBHbE8aFMYGpaYi8aOE",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5
+      }
+    ]
+  },
+  {
+    "id": "nuQfQ4fkiB06oumkQotT",
+    "name": "Names",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-01-09T00:00:00.000Z",
+    "endDate": "2025-01-15T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461583025",
+        "name": "Amelia",
+        "agentIds": [
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-2-1746461583025",
+        "name": "Barry",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ]
+      },
+      {
+        "id": "team-3-1746461583025",
+        "name": "Dave",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "omi6XrUItljL95dtW33c",
+    "name": "Christmas Songs",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-12-18T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1766044029964-0.6850597367188692",
+        "name": "ASk Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044030405-0.5763805545595518",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044030836-0.30748068659576777",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044031292-0.4090094507631312",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044031764-0.961486854553809",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044032749-0.6838625878452638",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044033244-0.8612061402865283",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044033916-0.293172432705219",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044035109-0.3307961472343349",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1766044035693-0.5636121788628519",
+        "name": "Bonus",
+        "emoji": "🎄",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1766044242109",
+        "name": "Santa Tell Me",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ],
+        "emoji": "🎅"
+      },
+      {
+        "id": "team-2-1766044242109",
+        "name": "All I want for Christmas",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2"
+        ],
+        "emoji": "🎄"
+      },
+      {
+        "id": "team-3-1766044242109",
+        "name": "Last Christmas",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🔴"
+      }
+    ],
+    "endDate": "2025-12-31T00:00:00.000Z"
+  },
+  {
+    "id": "pQrjwic85K9li1RNbUac",
+    "name": "Creativity & innovation",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-04-16T23:00:00.000Z",
+    "endDate": "2025-04-22T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746460609547",
+        "name": "The Idea Alchemists",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ]
+      },
+      {
+        "id": "team-2-1746460609547",
+        "name": "The Spark Syndicate",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-3-1746460609547",
+        "name": "The Visionary Voyagers",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "qCz5qRRmOKXU08yshFFW",
+    "name": "New Year, New Me!",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-01-02T00:00:00.000Z",
+    "endDate": "2025-01-08T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746461628477",
+        "name": "Digital Detoxers",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-2-1746461628477",
+        "name": "Organizational Optimists",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-3-1746461628477",
+        "name": "Skill Seekers",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sciVzyuJ8yK8NEvXYhoe",
+    "name": "Green Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-02-05T00:00:00.000Z",
+    "endDate": "2026-02-11T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1770281138219-0.7168850965767861",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281138666-0.08376681141617137",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281139051-0.43560248649553435",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281140377-0.3997902702897913",
+        "name": "Hotkey",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281140836-0.46613683812203766",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281141298-0.39654815877251803",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281142394-0.01818895556863087",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281142762-0.5642411869734327",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281143169-0.5301513698941414",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1770281144939-0.09443839464775095",
+        "name": "Bonus",
+        "emoji": "🟢",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1770281365950",
+        "name": "Earth Advocates",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🌍"
+      },
+      {
+        "id": "team-2-1770281365950",
+        "name": "Carbon Crushers",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ],
+        "emoji": "◼️"
+      },
+      {
+        "id": "team-3-1770281365950",
+        "name": "Eco-Evolutionaries",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ],
+        "emoji": "💚"
+      }
+    ]
+  },
+  {
+    "id": "sliC1AWGpjuoBkmUJRX1",
+    "name": "Ice Cream",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-07-30T23:00:00.000Z",
+    "endDate": "2025-08-05T23:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1753946538310",
+        "name": "99 & a Flake",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ]
+      },
+      {
+        "id": "team-2-1753946538310",
+        "name": "Knickerbocker glory",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ]
+      },
+      {
+        "id": "team-3-1753946538310",
+        "name": "Phish Food",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "UHBHbE8aFMYGpaYi8aOE",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "QeGXP2B8Xk1g38Sam86V",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1753956250661-0.5424779113354657",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 0,
+        "type": "checkbox"
+      }
+    ]
+  },
+  {
+    "id": "u7vtJH34l2WsoJDYzcUc",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2026-01-01T00:00:00.000Z",
+    "endDate": "2026-01-07T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1767342803429-0.5780783696373132",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342803973-0.647022358701498",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342804589-0.3708906661142609",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342805125-0.2857760331421427",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342805925-0.4451540991065236",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342807941-0.9456783059159001",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342808469-0.5766924695348665",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342809302-0.8734180620768127",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342810501-0.1042137549223685",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1767342811125-0.41899426954981367",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1767343113189",
+        "name": "War of the Worlds",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "🕷️"
+      },
+      {
+        "id": "team-2-1767343113189",
+        "name": "Alien",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2"
+        ],
+        "emoji": "👽"
+      },
+      {
+        "id": "team-3-1767343113189",
+        "name": "Blade Runner",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2"
+        ],
+        "emoji": "🤖"
+      }
+    ],
+    "name": "Science Fiction Week"
+  },
+  {
+    "id": "uFNVJ6iBYvzpKEMhvV1c",
+    "name": "Sibling Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-04-09T23:00:00.000Z",
+    "endDate": "2025-04-15T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1746460669979",
+        "name": "Brotherly Bond",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ]
+      },
+      {
+        "id": "team-2-1746460669979",
+        "name": "Sibling Superstars",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      },
+      {
+        "id": "team-3-1746460669979",
+        "name": "Sister Squad",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wgNIiet4vsDLngpZjdPi",
+    "name": "Monopoly Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-11-13T00:00:00.000Z",
+    "endDate": "2025-11-19T00:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1763022133465-0.3613859266274333",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022133929-0.16013838273070302",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022134441-0.175218280264268",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022134881-0.43452216738882354",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022135378-0.1977459914691071",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 3,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022136265-0.4958341117963143",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022136721-0.6230339743288088",
+        "name": "Email",
+        "emoji": "✉️",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022137081-0.3157531192984224",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022138041-0.18206051349892616",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1763022138409-0.6406585551425096",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1763022354818",
+        "name": "Top Hat",
+        "agentIds": [
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ],
+        "emoji": "🎩"
+      },
+      {
+        "id": "team-2-1763022354818",
+        "name": "Scottie Dog",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2"
+        ],
+        "emoji": "🐕"
+      },
+      {
+        "id": "team-3-1763022354818",
+        "name": "Race Car",
+        "agentIds": [
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ],
+        "emoji": "🏎️"
+      }
+    ]
+  },
+  {
+    "id": "xXMZPYdsyKaVk6cqtY0Y",
+    "name": "Pizza Week",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-10-15T23:00:00.000Z",
+    "endDate": "2025-10-21T23:00:00.000Z",
+    "teams": [
+      {
+        "id": "team-1-1760598320114",
+        "name": "Pepperoni",
+        "agentIds": [
+          "2b2X24TeHiWxgAwsisID7tYXzXi1",
+          "wMrHem04HjhOdXuAxnM37nEcRx52",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "emoji": "🔴"
+      },
+      {
+        "id": "team-2-1760598320114",
+        "name": "Chicken & Mushroom",
+        "agentIds": [
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03"
+        ],
+        "emoji": "🍄"
+      },
+      {
+        "id": "team-3-1760598320114",
+        "name": "Margherita",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3"
+        ],
+        "emoji": "🧀"
+      }
+    ],
+    "rules": [
+      {
+        "id": "new-rule-1760598177016-0.4673772387986562",
+        "name": "Ask Bruce",
+        "emoji": "✅",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598177438-0.851592425113724",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598177704-0.08620469704959421",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598179455-0.45762743293445407",
+        "name": "Hot Key",
+        "emoji": "💡",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598180288-0.19676854489098816",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598181077-0.44466318649587566",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598182135-0.4014490568039658",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598182820-0.3748668591730856",
+        "name": "Retentions",
+        "emoji": "🔐",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598183388-0.27723820126071375",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5,
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1760598185315-0.8024016029017814",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5,
+        "type": "numeric"
+      }
+    ]
+  },
+  {
+    "id": "xcpDCfwhdCyvvVGtLLd0",
+    "startDate": "2025-06-04T23:00:00.000Z",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "rules": [
+      {
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 5,
+        "id": "E8IVBnAmRTFj4WcND985"
+      },
+      {
+        "points": 5,
+        "id": "DcPyadG1ey53rgMVliCn",
+        "emoji": "🔥",
+        "name": "ES"
+      },
+      {
+        "points": 5,
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "emoji": " 💡",
+        "name": "Hot Key"
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "emoji": "😊",
+        "points": 1,
+        "name": "RATOC"
+      },
+      {
+        "name": "Phone",
+        "emoji": "📞",
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "points": 2
+      },
+      {
+        "name": "Email",
+        "emoji": "📧",
+        "id": "eLrFNEflHwglTJD16yPY",
+        "points": 2
+      },
+      {
+        "points": 5,
+        "name": "Bonus",
+        "id": "ut28S7765k9buwOWEFKk",
+        "emoji": "❤️"
+      }
+    ],
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "endDate": "2025-06-10T23:00:00.000Z",
+    "name": "World Environment Week 2025",
+    "teams": [
+      {
+        "name": "The Green Machines",
+        "id": "team-1-1749108970727",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2"
+        ]
+      },
+      {
+        "id": "team-2-1749108970727",
+        "name": "Plastic Busters",
+        "agentIds": [
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ]
+      },
+      {
+        "id": "team-3-1749108970727",
+        "agentIds": [
+          "coEVh7UkWCaseDE2c280xZ6oGE02",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2"
+        ],
+        "name": "Eco Warriors"
+      }
+    ]
+  },
+  {
+    "id": "xfqX6lRMFTCTzDM4tC7w",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "endDate": "2025-09-16T23:00:00.000Z",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "name": "Roald Dahl Week",
+    "startDate": "2025-09-10T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "new-rule-1757490857665-0.6294509709616535",
+        "points": 5,
+        "type": "numeric",
+        "emoji": "✅",
+        "name": "Ask bruce"
+      },
+      {
+        "type": "numeric",
+        "id": "new-rule-1757490860689-0.4585776925553625",
+        "points": 5,
+        "emoji": "💲",
+        "name": "Smart"
+      },
+      {
+        "name": "ES",
+        "type": "numeric",
+        "id": "new-rule-1757490861136-0.23541691438900458",
+        "emoji": "🔥",
+        "points": 5
+      },
+      {
+        "points": 5,
+        "emoji": "💡",
+        "id": "new-rule-1757490861600-0.2688512616516572",
+        "name": "Hot Key",
+        "type": "numeric"
+      },
+      {
+        "id": "new-rule-1757490862935-0.6038241284444513",
+        "type": "numeric",
+        "points": 1,
+        "name": "RATOC",
+        "emoji": "😊"
+      },
+      {
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2,
+        "type": "numeric",
+        "id": "new-rule-1757490863778-0.7909217985833702"
+      },
+      {
+        "points": 2,
+        "id": "new-rule-1757490864607-0.5785890379963022",
+        "name": "Email",
+        "emoji": "📧",
+        "type": "numeric"
+      },
+      {
+        "name": "Retentions",
+        "type": "numeric",
+        "emoji": "🔐",
+        "id": "new-rule-1757490870582-0.5050064094041811",
+        "points": 5
+      },
+      {
+        "type": "numeric",
+        "id": "new-rule-1757490872646-0.02327373253689302",
+        "name": "Bruce Hub",
+        "emoji": "🦋",
+        "points": 5
+      },
+      {
+        "points": 5,
+        "type": "numeric",
+        "id": "new-rule-1757490946495-0.6336114214467724",
+        "name": "Bonus",
+        "emoji": "❤️"
+      }
+    ],
+    "teams": [
+      {
+        "emoji": "🍑",
+        "id": "team-1-1757491102535",
+        "name": "James and the Giant Peach",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "2b2X24TeHiWxgAwsisID7tYXzXi1"
+        ]
+      },
+      {
+        "id": "team-2-1757491102535",
+        "agentIds": [
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2"
+        ],
+        "name": "The BFG",
+        "emoji": "🦶"
+      },
+      {
+        "agentIds": [
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "wMrHem04HjhOdXuAxnM37nEcRx52"
+        ],
+        "emoji": "🦊",
+        "name": "Fantastic Mr Fox",
+        "id": "team-3-1757491102536"
+      }
+    ]
+  },
+  {
+    "id": "zoPtQMf6xCNq2B7xYkdW",
+    "name": "KPIassic Park",
+    "campaignId": "RcYWHI40RTlxh28aHL1X",
+    "podIds": [
+      "um7ZRZ3Vs4pzw9oYZLrc"
+    ],
+    "startDate": "2025-06-25T23:00:00.000Z",
+    "endDate": "2025-07-01T23:00:00.000Z",
+    "rules": [
+      {
+        "id": "E8IVBnAmRTFj4WcND985",
+        "name": "Smart",
+        "emoji": "💲",
+        "points": 10
+      },
+      {
+        "id": "DcPyadG1ey53rgMVliCn",
+        "name": "ES",
+        "emoji": "🔥",
+        "points": 10
+      },
+      {
+        "id": "OhyK93ceO1NlFlXyYIlQ",
+        "name": "Hot Key",
+        "emoji": " 💡",
+        "points": 5
+      },
+      {
+        "id": "MRjG6PCmr1aZRE7wL36Y",
+        "name": "RATOC",
+        "emoji": "😊",
+        "points": 1
+      },
+      {
+        "id": "NxL5IPOthJAUXzfKMKd2",
+        "name": "Phone",
+        "emoji": "📞",
+        "points": 2
+      },
+      {
+        "id": "eLrFNEflHwglTJD16yPY",
+        "name": "Email",
+        "emoji": "📧",
+        "points": 2
+      },
+      {
+        "id": "ut28S7765k9buwOWEFKk",
+        "name": "Bonus",
+        "emoji": "❤️",
+        "points": 5
+      },
+      {
+        "id": "new-rule-1750922544788-0.3237933705860777",
+        "name": "Retentions",
+        "emoji": "🔒",
+        "points": 5
+      }
+    ],
+    "teams": [
+      {
+        "id": "team-1-1750922681521",
+        "name": "Stego-Score-us",
+        "agentIds": [
+          "xZXSInRfyDPxTfhtJcQCUyeHHNn2",
+          "n4813w7X36PGcfVDGfO7FbgyZXH3",
+          "EiD9pXmKX7Taa5hId2AKv3g7rcE3",
+          "omIHwvFrlDf3x8PrHjYQSgRZcy62"
+        ]
+      },
+      {
+        "id": "team-2-1750922681521",
+        "name": "KPI-Rex",
+        "agentIds": [
+          "H5SCGUq7E2M65ZZYrhemGAPC3So2",
+          "qbUgAQIearW1YvVRd34vIJAUiEU2",
+          "4yezVnN2K0hAyGXal1eQ5PuRB6R2"
+        ]
+      },
+      {
+        "id": "team-3-1750922681521",
+        "name": "Tricera-Top Performers",
+        "agentIds": [
+          "ru0WSQYdUmgtrWHlEOEIwzLIxLx2",
+          "ukMO6DNuQXR8GZsyp7mKe60pzRb2",
+          "zQgbzieYvQZrNYGVMYgjSaa1U0C2",
+          "bmAMmcXINeNx1K2rPkl4hfnzOt03",
+          "coEVh7UkWCaseDE2c280xZ6oGE02"
+        ]
+      }
+    ]
+  }
+]
