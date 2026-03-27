@@ -88,7 +88,7 @@ function CertificatePreview({
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [src, setSrc] = useState('');
+  const [src, setSrc] = useState<string | null>(null);
   
   const previewUrl = useMemo(() => {
     const params = new URLSearchParams({
@@ -141,13 +141,15 @@ function CertificatePreview({
           </div>
         </div>
       )}
-      <img
-        src={src}
-        alt="Certificate preview"
-        onLoad={handleLoad}
-        onError={handleError}
-        className={`w-full h-full object-cover ${loading || error ? 'hidden' : ''}`}
-      />
+      {src && (
+        <img
+          src={src}
+          alt="Certificate preview"
+          onLoad={handleLoad}
+          onError={handleError}
+          className={`w-full h-full object-cover ${loading || error ? 'hidden' : ''}`}
+        />
+      )}
     </div>
   );
 }
