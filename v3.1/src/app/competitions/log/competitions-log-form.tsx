@@ -174,7 +174,7 @@ export function CompetitionsLogForm({
                       {selectedDate ? format(selectedDate, "PPP") : "Pick date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50">
+                  <PopoverContent className="w-auto min-w-[300px] p-0 z-50">
                     <Calendar mode="single" selected={selectedDate} onSelect={handleDateChange} initialFocus />
                   </PopoverContent>
                 </Popover>
