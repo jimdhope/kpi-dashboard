@@ -750,7 +750,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                           {format(formData.startDate, 'PP')}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[340px] p-0" align="start">
+                      <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={formData.startDate}
@@ -781,7 +781,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                           {format(formData.endDate, 'PP')}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[340px] p-0" align="start">
+                      <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={formData.endDate}

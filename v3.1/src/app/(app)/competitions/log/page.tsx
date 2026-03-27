@@ -584,7 +584,7 @@ export default function LogScoresPage() {
                       {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[340px] p-0 z-50">
+                  <PopoverContent className="w-auto p-0 z-50">
                     <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(startOfDay(date))} initialFocus />
                   </PopoverContent>
                 </Popover>
