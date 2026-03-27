@@ -15,7 +15,7 @@ export function generateSessionToken(): string {
 }
 
 export async function setSessionCookie(token: string, expiresAt: Date): Promise<void> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const signedValue = `${token}.${signSessionToken(token)}`;
 
   cookieStore.set(SESSION_COOKIE_NAME, signedValue, {
@@ -28,12 +28,12 @@ export async function setSessionCookie(token: string, expiresAt: Date): Promise<
 }
 
 export async function clearSessionCookie(): Promise<void> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
 export async function getSessionTokenFromCookie(): Promise<string | null> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const rawValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!rawValue) {
