@@ -2,6 +2,7 @@
   "name": "kpi-quest-v3.1",
   "version": "3.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev -p 9103",
     "build": "next build",
@@ -11,16 +12,14 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed",
+    "db:seed": "node --import tsx/esm prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:import": "tsx scripts/import-from-firebase.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@prisma/client": "^6.7.0",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -66,7 +65,7 @@
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
-    "prisma": "^6.7.0",
+    "prisma": "^7.5.0",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
