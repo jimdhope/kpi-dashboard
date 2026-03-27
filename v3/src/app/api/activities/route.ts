@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      activityRepository.count({ where }),
+      activityRepository.count(where),
     ]);
 
     // Transform to ActivityRecord format
