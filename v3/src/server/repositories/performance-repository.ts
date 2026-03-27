@@ -1,4 +1,4 @@
-import { PerformanceLogRecord, PerformanceOverview, PerformanceTrackerSummary, PerformanceUserSummary } from "@/lib/contracts";
+import { PerformanceLogRecord, PerformanceOverview, PerformanceTrackerSummary, PerformanceUserSummary, KpiRecord } from "@/lib/contracts";
 import { prisma } from "@/server/db/client";
 
 function toNumber(value: { toNumber(): number }): number {
@@ -155,5 +155,101 @@ export const performanceRepository = {
       trackerSummaries: trackerSummaries.sort((a, b) => b.totalValue - a.totalValue),
       userSummaries,
     };
+  },
+
+  // KPI Log functions
+  async createKpiLog(input: { kpiId: string; userId: string; value: number; date: Date; loggedAt?: Date }) {
+    const log = await prisma.kpiLog.create({
+      data: {
+        kpiId: input.kpiId,
+        userId: input.userId,
+        value: input.value,
+        date: input.date,
+        loggedAt: input.loggedAt ?? new Date(),
+      },
+      include: {
+        kpi: {
+          select: {
+            id: true,
+            name: true,
+            initials: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return {
+      id: log.id,
+      kpiId: log.kpiId,
+      kpiName: log.kpi.name,
+      kpiInitials: log.kpi.initials,
+      userId: log.userId,
+      userName: log.user?.name ?? null,
+      value: toNumber(log.value),
+      date: log.date.toISOString(),
+      loggedAt: log.loggedAt.toISOString(),
+      createdAt: log.createdAt.toISOString(),
+    };
+  },
+
+  async listKpiLogs(filters?: { podId?: string; startDate?: string; endDate?: string }) {
+    // Build where clause - filter by 'date' (when KPI was achieved)
+    const where: any = {};
+    
+    if (filters?.startDate) {
+      where.date = { ...where.date, gte: new Date(filters.startDate) };
+    }
+    if (filters?.endDate) {
+      where.date = { ...where.date, lte: new Date(filters.endDate) };
+    }
+    
+    // If podId is provided, filter by users in that pod
+    if (filters?.podId) {
+      const memberships = await prisma.podMembership.findMany({
+        where: { podId: filters.podId },
+        select: { userId: true },
+      });
+      const userIds = memberships.map(m => m.userId);
+      where.userId = { in: userIds };
+    }
+
+    const logs = await prisma.kpiLog.findMany({
+      where,
+      include: {
+        kpi: {
+          select: {
+            id: true,
+            name: true,
+            initials: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    });
+
+    return logs.map((log) => ({
+      id: log.id,
+      kpiId: log.kpiId,
+      kpiName: log.kpi.name,
+      kpiInitials: log.kpi.initials,
+      userId: log.userId,
+      userName: log.user?.name ?? null,
+      value: toNumber(log.value),
+      date: log.date.toISOString(),
+      loggedAt: log.loggedAt.toISOString(),
+      createdAt: log.createdAt.toISOString(),
+    }));
   },
 };

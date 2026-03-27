@@ -25,6 +25,7 @@ export interface AppUser {
   email: string;
   name: string;
   roles: UserRole[];
+  podIds?: string[];  // Pod memberships for the user
   avatarUrl?: string | null;
   avatarInitials?: string | null;
   avatarBgColor?: string | null;
@@ -175,6 +176,32 @@ export interface TrackerKpiRecord {
   targetValue: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface KpiRecord {
+  id: string;
+  name: string;
+  initials: string;
+  type: "number" | "percentage" | "scoreOutOf";
+  maxValue: number | null;
+  sortOrder: "desc" | "asc";
+  passFailCriteriaEnabled: boolean;
+  passFailOperator: "gte" | "lte" | null;
+  passFailValue: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KpiLogRecord {
+  id: string;
+  kpiId: string;
+  kpiName: string;
+  kpiInitials: string;
+  userId: string | null;
+  userName: string | null;
+  value: number;
+  loggedAt: string;
+  createdAt: string;
 }
 
 export interface PerformanceLogRecord {

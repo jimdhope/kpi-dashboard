@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfWeek, endOfWeek, endOfDay, subWeeks, subDays, startOfMonth, endOfMonth, format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -31,16 +31,18 @@ interface AdditionalKpi {
   sortOrder?: 'desc' | 'asc';
 }
 
-interface AdditionalKpiLog {
+interface KpiLogResponse {
   id: string;
-  agentId: string;
-  podId: string;
   kpiId: string;
-  date: string;
+  kpiName: string;
+  userId: string | null;
+  userName: string | null;
   value: number;
+  date: string;       // When the KPI was achieved
+  loggedAt: string;  // When it was imported
 }
 
-type Timeframe = 'thisWeek' | 'thisMonth' | 'last6weeks' | 'allTime';
+type Timeframe = 'thisWeek' | 'thisMonth' | 'last6weeks' | 'allTime' | 'custom';
 
 interface ChartDataPoint {
   date: string;
@@ -67,12 +69,15 @@ export default function PerformanceChartsPage() {
   const [pods, setPods] = useState<AppPod[]>([]);
   const [kpis, setKpis] = useState<AdditionalKpi[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
-  const [logs, setLogs] = useState<AdditionalKpiLog[]>([]);
+  const [logs, setLogs] = useState<KpiLogResponse[]>([]);
 
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [selectedKpiId, setSelectedKpiId] = useState<string>('');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('all');
   const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | undefined>(
+    { from: subDays(new Date(), 42), to: new Date() }
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,14 +127,18 @@ export default function PerformanceChartsPage() {
     async function fetchLogs() {
       setIsLoading(true);
       try {
-        let url = '/api/performance/logs';
+        let url = '/api/performance/kpi-logs';
+        const params = new URLSearchParams();
         if (selectedPodId !== 'all') {
-          url += `?podId=${selectedPodId}`;
+          params.append('podId', selectedPodId);
+        }
+        if (params.toString()) {
+          url += `?${params.toString()}`;
         }
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          setLogs(data.logs || []);
+          setLogs(Array.isArray(data) ? data : data.logs || []);
         }
       } catch (err) {
         console.error("Error fetching logs:", err);
@@ -148,9 +157,21 @@ export default function PerformanceChartsPage() {
   };
   const handleKpiChange = (kpiId: string) => { setSelectedKpiId(kpiId); localStorage.setItem(CHARTS_KPI_KEY, kpiId); };
   const handleAgentChange = (agentId: string) => { setSelectedAgentId(agentId); localStorage.setItem(CHARTS_AGENT_KEY, agentId); };
-  const handleTimeframeChange = (tf: string) => { setTimeframe(tf as Timeframe); localStorage.setItem(CHARTS_TIMEFRAME_KEY, tf); };
+  const handleTimeframeChange = (tf: string) => { 
+    setTimeframe(tf as Timeframe); 
+    localStorage.setItem(CHARTS_TIMEFRAME_KEY, tf);
+    if (tf !== 'custom') {
+      setCustomDateRange({ from: subDays(new Date(), 42), to: new Date() });
+    }
+  };
 
-  const podAgents = useMemo(() => agents.filter(a => a.roles?.includes('agent')), [agents]);
+  const podAgents = useMemo(() => {
+    return agents.filter(a => {
+      const isAgent = a.roles?.includes('agent');
+      if (selectedPodId === 'all') return isAgent;
+      return isAgent && a.podIds?.includes(selectedPodId);
+    });
+  }, [agents, selectedPodId]);
 
   const { chartData, tableData, percentageKpis, numberKpis, rightAxisMax } = useMemo(() => {
     const showAllKpis = selectedKpiId === 'all';
@@ -173,7 +194,7 @@ export default function PerformanceChartsPage() {
             endDate = endOfMonth(now);
             break;
         case 'last6weeks':
-            startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn: 1 });
+            startDate = startOfWeek(subWeeks(now, 6), { weekStartsOn: 1 });
             endDate = endOfWeek(now, { weekStartsOn: 1 });
             break;
         case 'allTime':
@@ -183,11 +204,19 @@ export default function PerformanceChartsPage() {
             startDate = new Date(sortedLogs[0].date);
             endDate = new Date(sortedLogs[sortedLogs.length - 1].date);
             break;
+        case 'custom':
+            if (!customDateRange?.from || !customDateRange?.to) {
+              return { chartData: [], tableData: [], percentageKpis: [], numberKpis: [], rightAxisMax: 100 };
+            }
+            startDate = customDateRange.from;
+            endDate = endOfDay(customDateRange.to);
+            break;
     }
     
     const relevantLogs = logs.filter(log => {
+      if (!log.userId) return false;
       const logDate = new Date(log.date);
-      const agentMatch = selectedAgentId === 'all' || log.agentId === selectedAgentId;
+      const agentMatch = selectedAgentId === 'all' || log.userId === selectedAgentId;
       const kpiMatch = showAllKpis || log.kpiId === selectedKpiId;
       return agentMatch && kpiMatch && logDate >= startDate && logDate <= endDate;
     });
@@ -196,18 +225,19 @@ export default function PerformanceChartsPage() {
 
     relevantLogs.forEach(log => {
         const dateStr = format(new Date(log.date), 'yyyy-MM-dd');
-        const kpiInfo = kpis.find(k => k.id === log.kpiId);
-        if (!kpiInfo) return;
-
         if (!dataByDate[dateStr]) {
             dataByDate[dateStr] = { date: format(new Date(log.date), 'MMM dd') };
         }
 
-        const valueKey = kpiInfo.name;
-        const countKey = `${kpiInfo.name}_count`;
-        
-        dataByDate[dateStr][valueKey] = (Number(dataByDate[dateStr][valueKey]) || 0) + Number(log.value);
-        dataByDate[dateStr][countKey] = (Number(dataByDate[dateStr][countKey]) || 0) + 1;
+        // Aggregate values for each KPI
+        kpisToProcess.forEach(kpiInfo => {
+            if (kpiInfo.id !== log.kpiId) return;
+            const valueKey = kpiInfo.name;
+            const countKey = `${kpiInfo.name}_count`;
+            
+            dataByDate[dateStr][valueKey] = (Number(dataByDate[dateStr][valueKey]) || 0) + Number(log.value);
+            dataByDate[dateStr][countKey] = (Number(dataByDate[dateStr][countKey]) || 0) + 1;
+        });
     });
 
     const finalChartData = Object.values(dataByDate).map(dataPoint => {
@@ -229,7 +259,7 @@ export default function PerformanceChartsPage() {
             }
         });
         return processedDataPoint as unknown as ChartDataPoint;
-    }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }).sort((a,b) => new Date(a.date as string).getTime() - new Date(b.date as string).getTime());
 
     const finalPercentageKpis = kpisToProcess.filter(k => k.type === 'percentage');
     const finalNumberKpis = kpisToProcess.filter(k => k.type !== 'percentage');
@@ -247,7 +277,7 @@ export default function PerformanceChartsPage() {
 
     return { chartData: finalChartData, tableData: relevantLogs, percentageKpis: finalPercentageKpis, numberKpis: finalNumberKpis, rightAxisMax: finalRightAxisMax > 0 ? finalRightAxisMax : 100 };
 
-  }, [selectedPodId, selectedKpiId, selectedAgentId, timeframe, logs, kpis, podAgents]);
+  }, [selectedPodId, selectedKpiId, selectedAgentId, timeframe, logs, kpis, podAgents, customDateRange]);
 
 
   return (
@@ -297,9 +327,40 @@ export default function PerformanceChartsPage() {
                   <SelectItem value="thisMonth">This Month</SelectItem>
                   <SelectItem value="last6weeks">Last 6 Weeks</SelectItem>
                   <SelectItem value="allTime">All Time</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {timeframe === 'custom' && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="custom-from">From:</Label>
+                  <input
+                    id="custom-from"
+                    type="date"
+                    className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    value={customDateRange?.from ? customDateRange.from.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange({ 
+                      from: new Date(e.target.value), 
+                      to: customDateRange?.to || new Date() 
+                    })}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="custom-to">To:</Label>
+                  <input
+                    id="custom-to"
+                    type="date"
+                    className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    value={customDateRange?.to ? customDateRange.to.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange({ 
+                      from: customDateRange?.from || subDays(new Date(), 42), 
+                      to: new Date(e.target.value) 
+                    })}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -330,28 +391,30 @@ export default function PerformanceChartsPage() {
                 <Legend />
                 {percentageKpis.map((kpi, index) => (
                    <Line 
-                     key={`pct-${kpi.id}`}
-                     yAxisId="left"
-                     type="monotone" 
-                     dataKey={kpi.name} 
-                     stroke={LINE_COLORS[(index + numberKpis.length) % LINE_COLORS.length]}
-                     strokeWidth={2} 
-                     dot={{ r: 4 }} 
-                     activeDot={{ r: 6 }} 
-                   />
-                ))}
-                {numberKpis.map((kpi, index) => (
-                   <Line 
-                     key={`num-${kpi.id}`}
-                     yAxisId="right"
-                     type="monotone" 
-                     dataKey={kpi.name} 
-                     stroke={LINE_COLORS[index % LINE_COLORS.length]} 
-                     strokeWidth={2} 
-                     dot={{ r: 4 }} 
-                     activeDot={{ r: 6 }} 
-                   />
-                ))}
+                      key={`pct-${kpi.id}`}
+                      yAxisId="left"
+                      type="monotone" 
+                      dataKey={kpi.name} 
+                      stroke={LINE_COLORS[(index + numberKpis.length) % LINE_COLORS.length]}
+                      strokeWidth={2} 
+                      dot={{ r: 4 }} 
+                      activeDot={{ r: 6 }}
+                      connectNulls={true} 
+                    />
+                 ))}
+                 {numberKpis.map((kpi, index) => (
+                    <Line 
+                      key={`num-${kpi.id}`}
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey={kpi.name} 
+                      stroke={LINE_COLORS[index % LINE_COLORS.length]} 
+                      strokeWidth={2} 
+                      dot={{ r: 4 }} 
+                      activeDot={{ r: 6 }}
+                      connectNulls={true} 
+                    />
+                 ))}
               </RechartsLineChart>
             </ResponsiveContainer>
           )}
@@ -370,10 +433,10 @@ export default function PerformanceChartsPage() {
                     ) : tableData.length === 0 ? (
                         <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data</TableCell></TableRow>
                     ) : (
-                        tableData.map(log => (
+                        tableData.map((log: KpiLogResponse) => (
                             <TableRow key={log.id}>
                                 <TableCell>{format(new Date(log.date), 'PPP')}</TableCell>
-                                <TableCell>{agents.find(a => a.id === log.agentId)?.name || 'Unknown'}</TableCell>
+                                <TableCell>{log.userName || 'Unknown'}</TableCell>
                                 <TableCell>{kpis.find(k => k.id === log.kpiId)?.name || 'Unknown'}</TableCell>
                                 <TableCell>{log.value}</TableCell>
                             </TableRow>

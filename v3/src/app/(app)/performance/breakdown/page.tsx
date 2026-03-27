@@ -4,11 +4,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   eachDayOfInterval,
   endOfWeek,
+  endOfDay,
   format,
   isSameDay,
   isWithinInterval,
   startOfWeek,
   subWeeks,
+  subDays,
   startOfMonth,
   endOfMonth,
 } from 'date-fns';
@@ -37,13 +39,15 @@ interface AdditionalKpi {
   passFailValue?: number;
 }
 
-interface AdditionalKpiLog {
+interface KpiLogResponse {
   id: string;
-  agentId: string;
-  podId: string;
   kpiId: string;
-  date: string;
+  kpiName: string;
+  userId: string | null;
+  userName: string | null;
   value: number;
+  date: string;       // When the KPI was achieved
+  loggedAt: string;  // When it was imported
 }
 
 const KPI_BREAKDOWN_POD_KEY = 'kpiBreakdown_selectedPodId';
@@ -51,7 +55,7 @@ const KPI_BREAKDOWN_TIMEFRAME_KEY = 'kpiBreakdown_timeframe';
 const KPI_BREAKDOWN_WEEKSTART_KEY = 'kpiBreakdown_weekStartsOn';
 const KPI_BREAKDOWN_VIEWMODE_KEY = 'kpiBreakdown_viewMode';
 
-type Timeframe = 'last6weeks' | 'thisWeek' | 'thisMonth' | 'allTime';
+type Timeframe = 'last6weeks' | 'thisWeek' | 'thisMonth' | 'allTime' | 'custom';
 type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type ViewMode = 'agent' | 'kpi';
 
@@ -74,12 +78,15 @@ export default function KpiBreakdownPage() {
   const [pods, setPods] = useState<AppPod[]>([]);
   const [kpis, setKpis] = useState<AdditionalKpi[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
-  const [logs, setLogs] = useState<AdditionalKpiLog[]>([]);
+  const [logs, setLogs] = useState<KpiLogResponse[]>([]);
 
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
   const [weekStartsOn, setWeekStartsOn] = useState<WeekStartDay>(4);
   const [viewMode, setViewMode] = useState<ViewMode>('agent');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | undefined>(
+    { from: subDays(new Date(), 42), to: new Date() }
+  );
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -95,7 +102,14 @@ export default function KpiBreakdownPage() {
   }, []);
 
   const handlePodChange = (podId: string) => { setSelectedPodId(podId); localStorage.setItem(KPI_BREAKDOWN_POD_KEY, podId); };
-  const handleTimeframeChange = (tf: string) => { setTimeframe(tf as Timeframe); localStorage.setItem(KPI_BREAKDOWN_TIMEFRAME_KEY, tf); };
+  const handleTimeframeChange = (tf: string) => { 
+    setTimeframe(tf as Timeframe); 
+    localStorage.setItem(KPI_BREAKDOWN_TIMEFRAME_KEY, tf);
+    if (tf !== 'custom') {
+      // Reset custom date range when switching away from custom
+      setCustomDateRange({ from: subDays(new Date(), 42), to: new Date() });
+    }
+  };
   const handleWeekStartChange = (day: string) => { setWeekStartsOn(parseInt(day, 10) as WeekStartDay); localStorage.setItem(KPI_BREAKDOWN_WEEKSTART_KEY, day); };
   const handleViewModeChange = (mode: string) => { setViewMode(mode as ViewMode); localStorage.setItem(KPI_BREAKDOWN_VIEWMODE_KEY, mode); };
 
@@ -133,14 +147,19 @@ export default function KpiBreakdownPage() {
     async function fetchLogs() {
       setIsLoading(true);
       try {
-        let url = '/api/performance/logs';
+        let url = '/api/performance/kpi-logs';
+        const params = new URLSearchParams();
         if (selectedPodId !== 'all') {
-          url += `?podId=${selectedPodId}`;
+          params.append('podId', selectedPodId);
+        }
+        // Fetch all logs for now (no timeframe filter in API yet)
+        if (params.toString()) {
+          url += `?${params.toString()}`;
         }
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          setLogs(data.logs || []);
+          setLogs(Array.isArray(data) ? data : data.logs || []);
         }
       } catch (err) {
         console.error("Error fetching logs:", err);
@@ -169,8 +188,15 @@ export default function KpiBreakdownPage() {
         break;
       case 'last6weeks':
       default:
-        startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn });
+        startDate = startOfWeek(subWeeks(now, 6), { weekStartsOn });
         endDate = endOfWeek(now, { weekStartsOn });
+        break;
+      case 'custom':
+        if (!customDateRange?.from || !customDateRange?.to) {
+          return logs;
+        }
+        startDate = customDateRange.from;
+        endDate = endOfDay(customDateRange.to);
         break;
     }
 
@@ -178,7 +204,7 @@ export default function KpiBreakdownPage() {
       const logDate = new Date(log.date);
       return logDate >= startDate && logDate <= endDate;
     });
-  }, [logs, timeframe, weekStartsOn]);
+  }, [logs, timeframe, weekStartsOn, customDateRange]);
   
 
   const { processedData, weekHeaders, podKpis } = useMemo(() => {
@@ -186,9 +212,11 @@ export default function KpiBreakdownPage() {
       return { processedData: [], weekHeaders: [], podKpis: [] };
     }
     
-    const podAgents = selectedPodId === 'all'
-      ? agents.filter(a => a.roles?.includes('agent'))
-      : agents.filter(a => a.roles?.includes('agent'));
+    const podAgents = agents.filter(a => {
+      const isAgent = a.roles?.includes('agent');
+      if (selectedPodId === 'all') return isAgent;
+      return isAgent && a.podIds?.includes(selectedPodId);
+    });
     
     if (podAgents.length === 0) {
         return { processedData: [], weekHeaders: [], podKpis: [] };
@@ -206,11 +234,12 @@ export default function KpiBreakdownPage() {
     const weeks = new Set<string>();
 
     filteredLogs.forEach(log => {
+        if (!log.userId) return; // Skip logs without userId
         const weekStart = startOfWeek(new Date(log.date), { weekStartsOn });
         const weekOf = format(weekStart, 'MMM dd, yyyy');
         weeks.add(weekOf);
 
-        const agent = agentData.find(a => a.agentId === log.agentId);
+        const agent = agentData.find(a => a.agentId === log.userId);
         const kpiDetails = kpis.find(k => k.id === log.kpiId);
 
         if (agent && kpiDetails) {
@@ -287,9 +316,40 @@ export default function KpiBreakdownPage() {
                   <SelectItem value="thisMonth">This Month</SelectItem>
                   <SelectItem value="last6weeks">Last 6 Weeks</SelectItem>
                   <SelectItem value="allTime">All Time</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {timeframe === 'custom' && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="custom-from">From:</Label>
+                  <input
+                    id="custom-from"
+                    type="date"
+                    className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    value={customDateRange?.from ? customDateRange.from.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange({ 
+                      from: new Date(e.target.value), 
+                      to: customDateRange?.to || new Date() 
+                    })}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="custom-to">To:</Label>
+                  <input
+                    id="custom-to"
+                    type="date"
+                    className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    value={customDateRange?.to ? customDateRange.to.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange({ 
+                      from: customDateRange?.from || subDays(new Date(), 42), 
+                      to: new Date(e.target.value) 
+                    })}
+                  />
+                </div>
+              </>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="weekstart-select">Week Starts On</Label>
               <Select onValueChange={handleWeekStartChange} value={String(weekStartsOn)} disabled={isLoading}>

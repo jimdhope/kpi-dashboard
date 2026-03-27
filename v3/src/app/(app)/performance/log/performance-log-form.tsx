@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format, startOfDay } from "date-fns";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,23 +15,41 @@ import { CalendarIcon, Filter, CheckSquare, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Pod { id: string; name: string; }
-interface Tracker { id: string; name: string; unit: string | null; }
+interface Kpi { id: string; name: string; initials: string; type: string; }
 interface Agent { id: string; name: string; }
 
 interface KpiInputState {
-  [userId: string]: { [trackerId: string]: { value: string; initialValue: string; } };
+  [userId: string]: { [kpiId: string]: { value: string; initialValue: string; } };
+}
+
+interface KpiLogResponse {
+  id: string;
+  kpiId: string;
+  userId: string | null;
+  value: number;
+  date: string;       // When the KPI was achieved
+  loggedAt: string;  // When it was imported
 }
 
 const LOG_POD_KEY = "perfLog_selectedPodId";
 const LOG_DATE_KEY = "perfLog_selectedDate";
 
+// UTC-based start/end of day
+function startOfDayUTC(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+}
+
+function endOfDayUTC(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+}
+
 export function PerformanceLogForm({
   pods,
-  trackers,
+  kpis,
   currentUserId,
 }: {
   pods: Pod[];
-  trackers: Tracker[];
+  kpis: Kpi[];
   currentUserId: string;
 }) {
   const [selectedPodId, setSelectedPodId] = useState("");
@@ -54,23 +72,44 @@ export function PerformanceLogForm({
     if (!selectedPodId) { setAgents([]); setInputs({}); return; }
     setIsLoadingAgents(true);
     fetch(`/api/pods/${selectedPodId}/members`)
-      .then((r) => r.json())
-      .then((data) => setAgents(data))
+      .then((r) => {
+        if (r.status === 401) {
+          // Session expired - redirect to login
+          window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+          return [];
+        }
+        if (!r.ok) return [];
+        return r.json();
+      })
+      .then((data) => setAgents(data || []))
       .catch(() => setAgents([]))
       .finally(() => setIsLoadingAgents(false));
   }, [selectedPodId]);
 
-  // Load existing logs when pod or date changes
+  // Load existing KPI logs when pod or date changes
   useEffect(() => {
     if (!selectedPodId || agents.length === 0) return;
-    fetch(`/api/performance/logs?podId=${selectedPodId}&date=${selectedDate.toISOString()}`)
-      .then((r) => r.json())
-      .then((logs: { userId: string; trackerKpiId: string; value: number }[]) => {
+    
+    const startDate = startOfDayUTC(selectedDate).toISOString();
+    const endDate = endOfDayUTC(selectedDate).toISOString();
+    
+    fetch(`/api/performance/kpi-logs?podId=${selectedPodId}&startDate=${startDate}&endDate=${endDate}`)
+      .then((r) => {
+        if (r.status === 401) {
+          window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+          return { logs: [] };
+        }
+        if (!r.ok) return { logs: [] };
+        return r.json();
+      })
+      .then((data: { logs?: KpiLogResponse[] }) => {
+        const logs = data.logs || [];
         const newInputs: KpiInputState = {};
         logs.forEach((log) => {
+          if (!log.userId) return; // Skip logs without userId
           if (!newInputs[log.userId]) newInputs[log.userId] = {};
           const val = String(log.value);
-          newInputs[log.userId][log.trackerKpiId] = { value: val, initialValue: val };
+          newInputs[log.userId][log.kpiId] = { value: val, initialValue: val };
         });
         setInputs(newInputs);
       })
@@ -92,20 +131,20 @@ export function PerformanceLogForm({
     }
   };
 
-  const handleInputChange = (userId: string, trackerId: string, value: string) => {
+  const handleInputChange = (userId: string, kpiId: string, value: string) => {
     setInputs((prev) => ({
       ...prev,
       [userId]: {
         ...(prev[userId] ?? {}),
-        [trackerId]: { value, initialValue: prev[userId]?.[trackerId]?.initialValue ?? "" },
+        [kpiId]: { value, initialValue: prev[userId]?.[kpiId]?.initialValue ?? "" },
       },
     }));
   };
 
   const hasChanges = useMemo(() => {
     for (const userId in inputs) {
-      for (const trackerId in inputs[userId]) {
-        if (inputs[userId][trackerId].value !== inputs[userId][trackerId].initialValue) return true;
+      for (const kpiId in inputs[userId]) {
+        if (inputs[userId][kpiId].value !== inputs[userId][kpiId].initialValue) return true;
       }
     }
     return false;
@@ -114,19 +153,24 @@ export function PerformanceLogForm({
   const handleSaveAll = async () => {
     setIsSaving(true);
     setMessage(null);
-    const logs: { userId: string; trackerKpiId: string; value: number; loggedAt: string }[] = [];
+    const logs: { userId: string; kpiId: string; value: number; loggedAt: string }[] = [];
     for (const userId in inputs) {
-      for (const trackerId in inputs[userId]) {
-        const entry = inputs[userId][trackerId];
+      for (const kpiId in inputs[userId]) {
+        const entry = inputs[userId][kpiId];
         if (entry.value === entry.initialValue) continue;
         const num = parseFloat(entry.value);
         if (isNaN(num)) continue;
-        logs.push({ userId, trackerKpiId: trackerId, value: num, loggedAt: selectedDate.toISOString() });
+        logs.push({ userId, kpiId, value: num, loggedAt: startOfDayUTC(selectedDate).toISOString() });
       }
     }
 
+    if (logs.length === 0) {
+      setIsSaving(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/performance/logs/batch", {
+      const res = await fetch("/api/performance/kpi-logs/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ logs }),
@@ -137,8 +181,8 @@ export function PerformanceLogForm({
       setInputs((prev) => {
         const next = { ...prev };
         for (const userId in next) {
-          for (const tid in next[userId]) {
-            next[userId][tid] = { ...next[userId][tid], initialValue: next[userId][tid].value };
+          for (const kpiId in next[userId]) {
+            next[userId][kpiId] = { ...next[userId][kpiId], initialValue: next[userId][kpiId].value };
           }
         }
         return next;
@@ -153,7 +197,7 @@ export function PerformanceLogForm({
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <Card className="glass-card">
+      <Card className="frosted-glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filters</CardTitle>
         </CardHeader>
@@ -204,10 +248,10 @@ export function PerformanceLogForm({
       </Card>
 
       {/* Score Matrix */}
-      <Card className="glass-card">
+      <Card className="frosted-glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><CheckSquare className="h-5 w-5" /> Log Scores</CardTitle>
-          <CardDescription>Enter daily scores for each agent against each tracker.</CardDescription>
+          <CardDescription>Enter daily scores for each agent against each KPI.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoadingAgents ? (
@@ -224,12 +268,12 @@ export function PerformanceLogForm({
           ) : agents.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-3">No agents found in the selected pod.</p>
-              <Button asChild size="sm" variant="secondary"><a href="/pods">Manage Pods</a></Button>
+              <Button asChild size="sm" variant="secondary"><a href="/settings/pods">Manage Pods</a></Button>
             </div>
-          ) : trackers.length === 0 ? (
+          ) : kpis.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-3">No KPI trackers configured yet.</p>
-              <Button asChild size="sm"><a href="/trackers">Set Up Trackers</a></Button>
+              <p className="text-muted-foreground mb-3">No KPIs configured yet.</p>
+              <Button asChild size="sm"><a href="/performance/kpis">Set Up KPIs</a></Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -237,9 +281,12 @@ export function PerformanceLogForm({
                 <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
                     <TableHead className="min-w-[150px]">Agent</TableHead>
-                    {trackers.map((t) => (
-                      <TableHead key={t.id} className="min-w-[140px] text-center" title={t.name}>
-                        {t.name}{t.unit ? ` (${t.unit})` : ""}
+                    {kpis.map((kpi) => (
+                      <TableHead key={kpi.id} className="min-w-[100px] text-center" title={kpi.name}>
+                        <div className="flex flex-col items-center">
+                          <span className="font-semibold">{kpi.initials || kpi.name.slice(0, 4)}</span>
+                          <span className="text-xs font-normal text-muted-foreground">{kpi.name.slice(0, 10)}{kpi.name.length > 10 ? '...' : ''}</span>
+                        </div>
                       </TableHead>
                     ))}
                   </TableRow>
@@ -248,15 +295,15 @@ export function PerformanceLogForm({
                   {agents.map((agent) => (
                     <TableRow key={agent.id}>
                       <TableCell className="font-medium">{agent.name}</TableCell>
-                      {trackers.map((tracker) => (
-                        <TableCell key={tracker.id}>
+                      {kpis.map((kpi) => (
+                        <TableCell key={kpi.id}>
                           <Input
                             type="number"
                             placeholder="—"
-                            value={inputs[agent.id]?.[tracker.id]?.value ?? ""}
+                            value={inputs[agent.id]?.[kpi.id]?.value ?? ""}
                             min={0}
                             step="0.01"
-                            onChange={(e) => handleInputChange(agent.id, tracker.id, e.target.value)}
+                            onChange={(e) => handleInputChange(agent.id, kpi.id, e.target.value)}
                             className="h-8 text-center"
                           />
                         </TableCell>

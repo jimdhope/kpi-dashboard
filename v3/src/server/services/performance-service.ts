@@ -79,4 +79,21 @@ export const performanceService = {
     await authService.requireCurrentUser();
     return performanceRepository.getOverview();
   },
+
+  // KPI Log functions
+  async listKpiLogs(filters?: { podId?: string; startDate?: string; endDate?: string }) {
+    await authService.requireCurrentUser();
+    return performanceRepository.listKpiLogs(filters);
+  },
+
+  async createKpiLog(input: { kpiId: string; userId?: string; value: number; date: Date; loggedAt?: string | null }) {
+    const currentUser = await authService.requireCurrentUser();
+    return performanceRepository.createKpiLog({
+      kpiId: input.kpiId,
+      userId: input.userId || currentUser.id,
+      value: input.value,
+      date: input.date,
+      loggedAt: input.loggedAt ? new Date(input.loggedAt) : undefined,
+    });
+  },
 };

@@ -26,11 +26,11 @@ interface AdditionalKpi {
 
 interface AdditionalKpiLog {
   id: string;
-  agentId: string;
-  podId: string;
   kpiId: string;
-  date: string;
+  userId: string | null;
+  userName: string | null;
   value: number;
+  date: string;
 }
 
 interface AppUser {
@@ -115,7 +115,7 @@ export default function PerformanceDashboard() {
     async function fetchLogs() {
       setIsLoading(true);
       try {
-        let url = '/api/performance/logs';
+        let url = '/api/performance/kpi-logs';
         if (selectedPodId !== 'all') {
           url += `?podId=${selectedPodId}`;
         }
@@ -159,7 +159,7 @@ export default function PerformanceDashboard() {
         endDate = endOfMonth(now);
         break;
       case 'last6weeks':
-        startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn: 1 });
+        startDate = startOfWeek(subWeeks(now, 6), { weekStartsOn: 1 });
         endDate = endOfWeek(now, { weekStartsOn: 1 });
         break;
       case 'allTime':
@@ -185,9 +185,10 @@ export default function PerformanceDashboard() {
 
       const agentData: Record<string, { sum: number; count: number }> = {};
       kpiLogs.forEach(log => {
-        if (!agentData[log.agentId]) agentData[log.agentId] = { sum: 0, count: 0 };
-        agentData[log.agentId].sum += log.value;
-        agentData[log.agentId].count += 1;
+        if (!log.userId) return; // Skip logs without userId
+        if (!agentData[log.userId]) agentData[log.userId] = { sum: 0, count: 0 };
+        agentData[log.userId].sum += log.value;
+        agentData[log.userId].count += 1;
       });
 
       const agentScores: Record<string, number> = {};

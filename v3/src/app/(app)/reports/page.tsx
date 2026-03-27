@@ -617,12 +617,31 @@ export default function ReportsPage() {
                 ))}
             </select>
           ) : (
-            <div className="text-sm">
-              {dateRange?.from && dateRange?.to && (
-                <span className="text-muted-foreground">
-                  {format(dateRange.from, 'MMM d')} - {format(dateRange.to, 'MMM d, yyyy')}
-                </span>
-              )}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">From:</span>
+                <input
+                  type="date"
+                  className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={dateRange?.from ? dateRange.from.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setDateRange({ 
+                    from: new Date(e.target.value), 
+                    to: dateRange?.to || new Date() 
+                  })}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">To:</span>
+                <input
+                  type="date"
+                  className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={dateRange?.to ? dateRange.to.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setDateRange({ 
+                    from: dateRange?.from || subDays(new Date(), 30), 
+                    to: new Date(e.target.value) 
+                  })}
+                />
+              </div>
             </div>
           )}
           
@@ -775,7 +794,7 @@ export default function ReportsPage() {
                       if (selectedRules !== 'all') return rule.title === selectedRules;
                       // When showing all rules (log scale), hide rules with all-zero values
                       if (selectedRules === 'all') {
-                        return competitionTrendsData.some(d => (d[rule.title] || 0) > 0);
+                        return competitionTrendsData.some(d => Number(d[rule.title] || 0) > 0);
                       }
                       return true;
                     })

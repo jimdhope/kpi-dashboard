@@ -96,6 +96,24 @@ model Kpi {
   passFailValue         Decimal?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
+  kpiLogs               KpiLog[]
+}
+
+model KpiLog {
+  id        String   @id @default(cuid())
+  kpiId     String
+  userId    String?
+  value     Decimal
+  date      DateTime  // When the KPI was achieved/recorded (from Firebase)
+  loggedAt  DateTime @default(now()) // When it was imported
+  createdAt DateTime @default(now())
+  kpi       Kpi     @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([kpiId])
+  @@index([userId])
+  @@index([loggedAt])
+  @@index([date])
 }
 
 model User {
@@ -116,6 +134,7 @@ model User {
   auditLogs           AuditLog[]
   podMemberships      PodMembership[]
   trackerLogs         TrackerLog[]
+  kpiLogs             KpiLog[]
   competitionEntries  CompetitionEntry[]
   createdCompetitions Competition[]
   activities          Activity[]
