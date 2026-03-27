@@ -30,10 +30,11 @@ const updateSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const draft = await competitionDraftService.getById(params.id);
+    const { id } = await params;
+    const draft = await competitionDraftService.getById(id);
     if (!draft) {
       return errorResponse(404, "Draft not found");
     }
@@ -46,13 +47,14 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const payload = updateSchema.parse(body);
 
-    const draft = await competitionDraftService.update(params.id, {
+    const draft = await competitionDraftService.update(id, {
       name: payload.name,
       description: payload.description ?? undefined,
       startsAt: payload.startsAt ? new Date(payload.startsAt) : null,
@@ -77,10 +79,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await competitionDraftService.delete(params.id);
+    const { id } = await params;
+    await competitionDraftService.delete(id);
     return ok({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Forbidden") {

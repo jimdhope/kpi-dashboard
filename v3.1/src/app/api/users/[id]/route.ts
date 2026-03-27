@@ -8,10 +8,11 @@ const schema = z.object({
   roles: z.array(z.enum(USER_ROLES)).min(1),
 });
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const payload = schema.parse(await request.json());
-    return ok(await userService.updateUser(context.params.id, payload));
+    return ok(await userService.updateUser(id, payload));
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid user payload.");
@@ -29,9 +30,10 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 }
 
-export async function DELETE(_request: Request, context: { params: { id: string } }) {
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    await userService.deleteUser(context.params.id);
+    const { id } = await context.params;
+    await userService.deleteUser(id);
     return ok({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Forbidden") {

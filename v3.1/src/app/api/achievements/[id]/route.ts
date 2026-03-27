@@ -4,12 +4,13 @@ import { prisma } from "@/server/db/client";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await authService.requireCurrentUser();
     await prisma.dailyAchievement.delete({
-      where: { id: params.id },
+      where: { id },
     });
     return ok({ success: true });
   } catch (error) {

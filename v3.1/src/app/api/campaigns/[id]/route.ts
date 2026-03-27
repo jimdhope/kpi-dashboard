@@ -10,10 +10,11 @@ const schema = z.object({
   outgoingWebhookId: z.string().optional().nullable(),
 });
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const payload = schema.parse(await request.json());
-    return ok(await campaignService.updateCampaign(context.params.id, payload));
+    return ok(await campaignService.updateCampaign(id, payload));
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid campaign payload.");

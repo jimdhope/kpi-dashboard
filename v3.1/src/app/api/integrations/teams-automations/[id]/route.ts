@@ -53,11 +53,12 @@ const schema = z.object({
   isActive: z.boolean(),
 });
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const payload = schema.parse(await request.json());
     return ok(
-      await teamsAutomationService.updateAutomation(params.id, {
+      await teamsAutomationService.updateAutomation(id, {
         ...payload,
         oneTimeAt: payload.oneTimeAt ? new Date(payload.oneTimeAt) : null,
         startsAt: payload.startsAt ? new Date(payload.startsAt) : null,

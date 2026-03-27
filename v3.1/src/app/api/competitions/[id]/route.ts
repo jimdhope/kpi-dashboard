@@ -25,11 +25,12 @@ const schema = z.object({
   ),
 });
 
-export async function GET(request: Request, context: { params: { id: string } }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const { competitionService } = await import("@/server/services/competition-service");
     const competitions = await competitionService.listCompetitions(true);
-    const competition = competitions.find(c => c.id === context.params.id);
+    const competition = competitions.find(c => c.id === id);
     
     if (!competition) {
       return errorResponse(404, "Competition not found");
@@ -42,10 +43,11 @@ export async function GET(request: Request, context: { params: { id: string } })
   }
 }
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const payload = schema.parse(await request.json());
-    return ok(await competitionService.updateCompetition(context.params.id, payload));
+    return ok(await competitionService.updateCompetition(id, payload));
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid competition payload.");
@@ -60,9 +62,10 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    await competitionService.deleteCompetition(context.params.id);
+    const { id } = await context.params;
+    await competitionService.deleteCompetition(id);
     return ok({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Forbidden") {

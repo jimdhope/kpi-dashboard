@@ -4,16 +4,15 @@ import { competitionSseService } from "@/server/services/competition-sse-service
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { competitionId: string } }
+  { params }: { params: Promise<{ competitionId: string }> }
 ) {
   try {
     // Verify user is authenticated
+    const { competitionId } = await params;
     const session = await authService.getCurrentSession();
     if (!session.user) {
       return new Response("Unauthorized", { status: 401 });
     }
-
-    const competitionId = params.competitionId;
     const clientId = session.user.id;
 
     // Create a readable stream for SSE

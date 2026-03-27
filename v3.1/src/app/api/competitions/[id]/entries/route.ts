@@ -5,10 +5,11 @@ import { authService } from "@/server/services/auth-service";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const entries = await competitionEntryService.listByCompetition(params.id);
+    const { id } = await params;
+    const entries = await competitionEntryService.listByCompetition(id);
     return ok({ entries });
   } catch (error) {
     console.error('GET /api/competitions/[id]/entries error:', error);
@@ -18,9 +19,10 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const userId = body.userId;
 
@@ -28,7 +30,7 @@ export async function POST(
       return errorResponse(400, "userId is required");
     }
 
-    const entry = await competitionEntryService.enrollUser(params.id, userId);
+    const entry = await competitionEntryService.enrollUser(id, userId);
     return ok({ entry }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "Forbidden") {

@@ -9,10 +9,11 @@ const schema = z.object({
   targetValue: z.number().optional().nullable(),
 });
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const payload = schema.parse(await request.json());
-    return ok(await trackerService.updateTracker(context.params.id, payload));
+    return ok(await trackerService.updateTracker(id, payload));
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid tracker payload.");
@@ -27,9 +28,10 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    await trackerService.deleteTracker(context.params.id);
+    const { id } = await context.params;
+    await trackerService.deleteTracker(id);
     return ok({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Forbidden") {

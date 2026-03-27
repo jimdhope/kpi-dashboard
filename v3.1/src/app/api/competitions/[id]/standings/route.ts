@@ -3,10 +3,10 @@ import { errorResponse, ok } from "@/server/http";
 import { prisma } from "@/server/db/client";
 import { startOfDay, endOfDay } from "date-fns";
 
-export async function GET(request: Request, context: { params: { id: string } }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id: competitionId } = await context.params;
     const user = await authService.requireCurrentUser();
-    const competitionId = context.params.id;
 
     const competition = await prisma.competition.findUnique({
       where: { id: competitionId },

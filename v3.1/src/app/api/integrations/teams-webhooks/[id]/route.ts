@@ -11,10 +11,11 @@ const schema = z.object({
   isActive: z.boolean(),
 });
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const payload = schema.parse(await request.json());
-    return ok(await teamsWebhookService.updateWebhook(context.params.id, payload));
+    return ok(await teamsWebhookService.updateWebhook(id, payload));
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid Teams webhook payload.");

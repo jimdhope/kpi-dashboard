@@ -3,17 +3,18 @@ import { certificateService } from "@/server/services/certificate-service";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const url = new URL(request.url);
     const podId = url.searchParams.get('podId') || undefined;
 
     if (podId) {
-      const data = await certificateService.getCertificatesByPod(params.id, podId);
+      const data = await certificateService.getCertificatesByPod(id, podId);
       return ok({ certificates: data });
     } else {
-      const data = await certificateService.getCertificateData(params.id);
+      const data = await certificateService.getCertificateData(id);
       return ok({ certificates: data });
     }
   } catch (error) {
@@ -27,7 +28,7 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();

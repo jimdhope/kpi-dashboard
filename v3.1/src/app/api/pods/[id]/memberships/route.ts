@@ -6,10 +6,11 @@ const schema = z.object({
   userIds: z.array(z.string()).default([]),
 });
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const payload = schema.parse(await request.json());
-    return ok(await podService.updateMemberships(context.params.id, payload.userIds));
+    return ok(await podService.updateMemberships(id, payload.userIds));
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid memberships payload.");
