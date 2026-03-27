@@ -7,7 +7,7 @@ import { cn, generateInitials } from '@/lib/utils';
 import { 
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
   Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
-  Award, LineChart, SettingsIcon, Users, Bell, FileText
+  Award, LineChart, SettingsIcon, Users, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -22,13 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { NavDropdown, NavigationProvider, type NavDropdownItem } from './nav-dropdown';
-
-// Notification placeholder
-const NotificationBellPlaceholder = () => (
-  <Button variant="ghost" size="sm" className="relative flex items-center justify-center h-9 w-9 px-0">
-    <Bell className="w-5 h-5 text-muted-foreground" />
-  </Button>
-);
+import { NotificationBell } from './notification-bell';
 
 interface NavItemConfig {
   key: string;
@@ -439,7 +433,7 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
         </Button>
         
         {/* Notifications */}
-        <NotificationBellPlaceholder />
+        <NotificationBell />
         
         {/* User Menu */}
         {user && (
