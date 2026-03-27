@@ -434,3 +434,263 @@ export interface RpsGameResult {
   result: "win" | "loss" | "draw";
   cooldownSeconds: number;
 }
+
+// ============================================================================
+// Activity Types (V2 Replica)
+// ============================================================================
+
+export const ACTIVITY_TYPES = [
+  // Tracker activities
+  'tracker_created',
+  'tracker_entry_logged',
+  'tracker_milestone',
+  // Competition activities
+  'competition_joined',
+  'competition_completed',
+  'competition_started',
+  'competition_won',
+  'competition_score_logged',
+  'competition_milestone',
+  'competition_absent',
+  // Score activities
+  'score_logged',
+  'achievement_earned',
+  'milestone_reached',
+  'badge_earned',
+  // KPI activities
+  'kpi_created',
+  'kpi_updated',
+  'kpi_goal_reached',
+  'kpi_goal_achieved',
+  'kpi_trend_improved',
+  // Game activities
+  'game_played',
+  'game_won',
+  'game_high_score',
+  'game_achievement',
+  // Profile activities
+  'profile_updated',
+] as const;
+
+export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+
+// Activity category for filtering
+export type ActivityCategory = 'all' | 'trackers' | 'competitions' | 'scores' | 'kpis' | 'games' | 'profile';
+
+// Map activity types to categories
+export const ACTIVITY_TYPE_CATEGORIES: Record<ActivityType, ActivityCategory> = {
+  // Tracker activities
+  tracker_created: 'trackers',
+  tracker_entry_logged: 'trackers',
+  tracker_milestone: 'trackers',
+  // Competition activities
+  competition_joined: 'competitions',
+  competition_completed: 'competitions',
+  competition_started: 'competitions',
+  competition_won: 'competitions',
+  competition_score_logged: 'competitions',
+  competition_milestone: 'competitions',
+  competition_absent: 'competitions',
+  // Score activities
+  score_logged: 'scores',
+  achievement_earned: 'scores',
+  milestone_reached: 'scores',
+  badge_earned: 'scores',
+  // KPI activities
+  kpi_created: 'kpis',
+  kpi_updated: 'kpis',
+  kpi_goal_reached: 'kpis',
+  kpi_goal_achieved: 'kpis',
+  kpi_trend_improved: 'kpis',
+  // Game activities
+  game_played: 'games',
+  game_won: 'games',
+  game_high_score: 'games',
+  game_achievement: 'games',
+  // Profile activities
+  profile_updated: 'profile',
+};
+
+// Category display labels
+export const ACTIVITY_CATEGORY_LABELS: Record<ActivityCategory, string> = {
+  all: 'All Activities',
+  trackers: 'Trackers',
+  competitions: 'Competitions',
+  scores: 'Scores & Achievements',
+  kpis: 'KPIs',
+  games: 'Mini Games',
+  profile: 'Profile',
+};
+
+// Activity type display information with icons and colors
+export const ACTIVITY_TYPE_CONFIG: Record<ActivityType, {
+  label: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+}> = {
+  // Tracker activities
+  tracker_created: {
+    label: 'Tracker Created',
+    icon: 'Target',
+    color: 'text-teal-500',
+    bgColor: 'bg-teal-500/20',
+  },
+  tracker_entry_logged: {
+    label: 'Tracker Entry Logged',
+    icon: 'CheckCircle',
+    color: 'text-emerald-500',
+    bgColor: 'bg-emerald-500/20',
+  },
+  tracker_milestone: {
+    label: 'Tracker Milestone',
+    icon: 'Flag',
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/20',
+  },
+  // Competition activities
+  competition_joined: {
+    label: 'Joined Competition',
+    icon: 'Trophy',
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/20',
+  },
+  competition_completed: {
+    label: 'Competition Completed',
+    icon: 'Trophy',
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/20',
+  },
+  competition_started: {
+    label: 'Competition Started',
+    icon: 'Trophy',
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/20',
+  },
+  competition_won: {
+    label: 'Competition Won',
+    icon: 'Crown',
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/20',
+  },
+  competition_score_logged: {
+    label: 'Competition Score Logged',
+    icon: 'Target',
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/20',
+  },
+  competition_milestone: {
+    label: 'Competition Milestone',
+    icon: 'Flag',
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/20',
+  },
+  competition_absent: {
+    label: 'Competition Absent',
+    icon: 'CalendarX',
+    color: 'text-gray-500',
+    bgColor: 'bg-gray-500/20',
+  },
+  // Score activities
+  score_logged: {
+    label: 'Score Logged',
+    icon: 'Target',
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/20',
+  },
+  achievement_earned: {
+    label: 'Achievement Earned',
+    icon: 'Award',
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/20',
+  },
+  milestone_reached: {
+    label: 'Milestone Reached',
+    icon: 'TrendingUp',
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/20',
+  },
+  badge_earned: {
+    label: 'Badge Earned',
+    icon: 'Medal',
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/20',
+  },
+  // KPI activities
+  kpi_created: {
+    label: 'KPI Created',
+    icon: 'BarChart3',
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/20',
+  },
+  kpi_updated: {
+    label: 'KPI Updated',
+    icon: 'BarChart3',
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/20',
+  },
+  kpi_goal_reached: {
+    label: 'KPI Goal Reached',
+    icon: 'Target',
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/20',
+  },
+  kpi_goal_achieved: {
+    label: 'KPI Goal Achieved',
+    icon: 'CheckCircle',
+    color: 'text-green-600',
+    bgColor: 'bg-green-600/20',
+  },
+  kpi_trend_improved: {
+    label: 'KPI Trend Improved',
+    icon: 'TrendingUp',
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/20',
+  },
+  // Game activities
+  game_played: {
+    label: 'Game Played',
+    icon: 'Gamepad2',
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-500/20',
+  },
+  game_won: {
+    label: 'Game Won',
+    icon: 'Swords',
+    color: 'text-red-500',
+    bgColor: 'bg-red-500/20',
+  },
+  game_high_score: {
+    label: 'Game High Score',
+    icon: 'Star',
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/20',
+  },
+  game_achievement: {
+    label: 'Game Achievement',
+    icon: 'Trophy',
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/20',
+  },
+  // Profile activities
+  profile_updated: {
+    label: 'Profile Updated',
+    icon: 'User',
+    color: 'text-gray-500',
+    bgColor: 'bg-gray-500/20',
+  },
+};
+
+// Date range presets
+export type DateRangePreset = 'all' | 'today' | 'week' | 'month' | 'quarter';
+
+// Helper function to get activities by category
+export function getActivitiesByCategory(
+  activities: ActivityRecord[],
+  category: ActivityCategory
+): ActivityRecord[] {
+  if (category === 'all') return activities;
+  return activities.filter(
+    (activity) => ACTIVITY_TYPE_CATEGORIES[activity.type as ActivityType] === category
+  );
+}

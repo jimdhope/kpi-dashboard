@@ -2,6 +2,7 @@ import { competitionRepository } from "@/server/repositories/competition-reposit
 import { competitionEntryRepository } from "@/server/repositories/competition-entry-repository";
 import { authService } from "@/server/services/auth-service";
 import { requireCompetitionEditor } from "@/server/services/authorization";
+import { activityService } from "@/server/services/activity-service";
 import { prisma } from "@/server/db/client";
 import { competitionSseService } from "@/server/services/competition-sse-service";
 
@@ -46,9 +47,31 @@ export const competitionService = {
     };
   },
 
-  async joinCompetition(competitionId: string) {
+  async joinCompetition(competitionId: string, teamId?: string) {
     const user = await authService.requireCurrentUser();
-    // Entry logic
+    
+    // Get competition details
+    const competition = await prisma.competition.findUnique({
+      where: { id: competitionId },
+      include: { teams: true },
+    });
+    
+    if (!competition) throw new Error("Competition not found");
+    
+    // Get team name if teamId provided
+    const team = teamId ? competition.teams.find(t => t.id === teamId) : null;
+    
+    // Log activity
+    await activityService.logCompetitionJoined({
+      competitionId,
+      competitionName: competition.name,
+      teamName: team?.name,
+      userId: user.id,
+      userName: user.name,
+    });
+    
+    // Return success (entry logic would go here)
+    return { success: true, competitionId };
   },
 
   async listCompetitions(includeDrafts = false) {
@@ -234,13 +257,26 @@ export const competitionService = {
 
     const entry = await prisma.competitionEntry.findFirst({
       where: { userId: targetUserId, competitionId: input.competitionId },
+      include: { competition: true },
     });
 
     if (!entry) throw new Error("Participant not enrolled in this competition.");
 
-    return prisma.competitionEntry.update({
+    // Update the entry
+    const updatedEntry = await prisma.competitionEntry.update({
       where: { id: entry.id },
       data: { score: { increment: input.score } },
     });
+
+    // Log activity
+    await activityService.logCompetitionScoreLogged({
+      competitionId: input.competitionId,
+      competitionName: entry.competition.name,
+      points: input.score,
+      userId: targetUserId,
+      userName: user.name,
+    });
+
+    return updatedEntry;
   },
 };

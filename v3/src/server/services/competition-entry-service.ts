@@ -1,7 +1,9 @@
 import { competitionEntryRepository } from "@/server/repositories/competition-entry-repository";
 import { competitionRepository } from "@/server/repositories/competition-repository";
 import { authService } from "@/server/services/auth-service";
+import { activityService } from "@/server/services/activity-service";
 import { competitionSseService } from "@/server/services/competition-sse-service";
+import { prisma } from "@/server/db/client";
 
 export const competitionEntryService = {
   async listByCompetition(competitionId: string) {
@@ -29,6 +31,20 @@ export const competitionEntryService = {
       present: false,
     });
 
+    // Get user name for activity logging
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    // Log activity
+    await activityService.logCompetitionJoined({
+      competitionId,
+      competitionName: competition.name,
+      userId,
+      userName: user?.name || 'Unknown Agent',
+    });
+
     competitionSseService.broadcast(competitionId, {
       type: 'entry_added',
       data: entry,
@@ -41,6 +57,29 @@ export const competitionEntryService = {
   async updatePresence(entryId: string, present: boolean) {
     const entry = await competitionEntryRepository.update(entryId, { present });
     
+    // Get competition and user details for activity logging
+    const userId = entry.userId;
+    const [competition, user] = await Promise.all([
+      prisma.competition.findUnique({
+        where: { id: entry.competitionId },
+        select: { name: true },
+      }),
+      userId ? prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      }) : Promise.resolve(null),
+    ]);
+
+    // Log competition_absent when marked as not present
+    if (!present && competition && user && entry.userId) {
+      await activityService.logCompetitionAbsent({
+        competitionId: entry.competitionId,
+        competitionName: competition.name,
+        userId: entry.userId,
+        userName: user.name,
+      });
+    }
+
     competitionSseService.broadcast(entry.competitionId, {
       type: 'presence_updated',
       data: entry,
@@ -72,6 +111,30 @@ export const competitionEntryService = {
       bonusTeamId: input.bonusTeamId,
     });
 
+    // Get competition and user details for activity logging
+    const userId = entry.userId;
+    const [competition, user] = await Promise.all([
+      prisma.competition.findUnique({
+        where: { id: entry.competitionId },
+        select: { name: true },
+      }),
+      userId ? prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      }) : Promise.resolve(null),
+    ]);
+
+    // Log activity
+    if (competition && user && entry.userId) {
+      await activityService.logCompetitionScoreLogged({
+        competitionId: entry.competitionId,
+        competitionName: competition.name,
+        points: input.value,
+        userId: entry.userId,
+        userName: user.name,
+      });
+    }
+
     competitionSseService.broadcast(entry.competitionId, {
       type: 'score_logged',
       data: updated,
@@ -90,6 +153,12 @@ export const competitionEntryService = {
   }>) {
     const results = [];
 
+    // Get competition details for activity logging
+    const competition = await prisma.competition.findUnique({
+      where: { id: competitionId },
+      select: { name: true },
+    });
+
     for (const score of scores) {
       const entry = await competitionEntryRepository.findById(score.entryId);
       if (!entry || entry.competitionId !== competitionId) continue;
@@ -103,6 +172,22 @@ export const competitionEntryService = {
         isBonus: score.isBonus,
         bonusTeamId: score.bonusTeamId,
       });
+
+      // Log activity for each score
+      if (competition && entry.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: entry.userId },
+          select: { name: true },
+        });
+
+        await activityService.logCompetitionScoreLogged({
+          competitionId,
+          competitionName: competition.name,
+          points: score.value,
+          userId: entry.userId,
+          userName: user?.name || 'Unknown Agent',
+        });
+      }
 
       results.push(updated);
     }

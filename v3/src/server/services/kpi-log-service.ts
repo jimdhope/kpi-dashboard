@@ -1,5 +1,7 @@
 import { kpiLogRepository, KpiLogRecord } from "@/server/repositories/kpi-log-repository";
 import { authService } from "@/server/services/auth-service";
+import { activityService } from "@/server/services/activity-service";
+import { kpiRepository } from "@/server/repositories/kpi-repository";
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -74,12 +76,24 @@ export const kpiLogService = {
         throw new ValidationError("Value must be a valid number");
       }
 
+      // Get KPI details for activity logging
+      const kpi = await kpiRepository.getById(input.kpiId);
+
       const log = await kpiLogRepository.create({
         kpiId: input.kpiId,
         userId,
         value: input.value,
         date: input.date,
         loggedAt: input.loggedAt,
+      });
+
+      // Log activity
+      await activityService.logKpiUpdated({
+        kpiId: input.kpiId,
+        kpiName: kpi?.name || 'Unknown KPI',
+        newValue: input.value,
+        userId,
+        userName: currentUser.name,
       });
 
       return log;
@@ -107,6 +121,11 @@ export const kpiLogService = {
       const currentUser = await authService.requireCurrentUser();
       const results: KpiLogRecord[] = [];
 
+      // Get all KPI details for activity logging
+      const kpiIds = [...new Set(logs.map(l => l.kpiId))];
+      const kpis = await Promise.all(kpiIds.map(id => kpiRepository.getById(id)));
+      const kpiMap = new Map(kpis.filter(Boolean).map(k => [k!.id, k!]));
+
       for (const log of logs) {
         const userId = log.userId || currentUser.id;
 
@@ -124,6 +143,16 @@ export const kpiLogService = {
           value: log.value,
           date: log.date,
           loggedAt: log.loggedAt,
+        });
+
+        // Log activity for each log
+        const kpi = kpiMap.get(log.kpiId);
+        await activityService.logKpiUpdated({
+          kpiId: log.kpiId,
+          kpiName: kpi?.name || 'Unknown KPI',
+          newValue: log.value,
+          userId,
+          userName: currentUser.name,
         });
 
         results.push(created);

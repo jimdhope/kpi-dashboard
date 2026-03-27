@@ -1,5 +1,6 @@
 import { kpiRepository } from "@/server/repositories/kpi-repository";
 import { authService } from "@/server/services/auth-service";
+import { activityService } from "@/server/services/activity-service";
 
 export const kpiService = {
   async list() {
@@ -21,7 +22,19 @@ export const kpiService = {
     passFailValue?: number | null;
   }) {
     await authService.requireAdmin();
-    return kpiRepository.create(payload);
+    const currentUser = await authService.requireCurrentUser();
+
+    const kpi = await kpiRepository.create(payload);
+
+    // Log activity
+    await activityService.logKpiCreated({
+      kpiId: kpi.id,
+      kpiName: kpi.name,
+      userId: currentUser.id,
+      userName: currentUser.name,
+    });
+
+    return kpi;
   },
 
   async update(id: string, payload: Partial<{

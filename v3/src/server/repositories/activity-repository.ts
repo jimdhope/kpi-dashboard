@@ -20,6 +20,31 @@ function mapActivity(activity: Activity & { user?: { name: string } | null }): A
 }
 
 export const activityRepository = {
+  async findMany(params: {
+    where?: Record<string, unknown>;
+    orderBy?: { createdAt?: 'asc' | 'desc' };
+    take?: number;
+    skip?: number;
+  }): Promise<(Activity & { user?: { name: string } | null })[]> {
+    const { where = {}, orderBy = { createdAt: 'desc' }, take = 50, skip = 0 } = params;
+    
+    return prisma.activity.findMany({
+      where,
+      orderBy,
+      take,
+      skip,
+      include: {
+        user: {
+          select: { name: true },
+        },
+      },
+    });
+  },
+
+  async count(where: Record<string, unknown> = {}): Promise<number> {
+    return prisma.activity.count({ where });
+  },
+
   async listRecent(limit = 20): Promise<ActivityRecord[]> {
     const activities = await prisma.activity.findMany({
       orderBy: { createdAt: "desc" },

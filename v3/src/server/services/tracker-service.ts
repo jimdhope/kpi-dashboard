@@ -21,20 +21,30 @@ export const trackerService = {
       value: input.value,
     });
 
-    // Create a rich activity log for the feed
+    // Get KPI name
     const kpis = await trackerRepository.listKpis();
-    const kpiName = kpis.find(k => k.id === input.trackerKpiId)?.name || "KPI";
+    const kpi = kpis.find(k => k.id === input.trackerKpiId);
+    const kpiName = kpi?.name || "KPI";
 
-    await activityService.logAgentAction({
-      type: "tracker_entry_logged",
-      title: `Logged ${input.value} performance for ${kpiName}`,
-      description: input.description,
-      metadata: {
-        trackerKpiId: input.trackerKpiId,
-        value: input.value,
-        kpiName,
-      },
-      userId: targetUserId, // attribution to the agent
+    // Determine if this is being logged by a supervisor on behalf of an agent
+    const isRecordedBySupervisor = currentUser.id !== targetUserId;
+
+    // Get target user name for activity attribution
+    const targetUser = isRecordedBySupervisor
+      ? await prisma.user.findUnique({ where: { id: targetUserId }, select: { name: true } })
+      : null;
+
+    // Log detailed activity with proper attribution
+    await activityService.logTrackerEntryLogged({
+      trackerId: input.trackerKpiId,
+      trackerName: kpiName,
+      value: input.value,
+      userId: targetUserId,
+      userName: targetUser?.name || currentUser.name,
+      ...(isRecordedBySupervisor && {
+        recorderId: currentUser.id,
+        recorderName: currentUser.name,
+      }),
     });
 
     return log;
@@ -76,9 +86,21 @@ export const trackerService = {
 
   async createTracker(payload: any) {
     await authService.requireAdmin();
-    return prisma.trackerKpi.create({
+    const currentUser = await authService.requireCurrentUser();
+
+    const tracker = await prisma.trackerKpi.create({
       data: payload,
     });
+
+    // Log activity
+    await activityService.logTrackerCreated({
+      trackerId: tracker.id,
+      trackerName: tracker.name,
+      userId: currentUser.id,
+      userName: currentUser.name,
+    });
+
+    return tracker;
   },
 
   async deleteTracker(id: string) {
