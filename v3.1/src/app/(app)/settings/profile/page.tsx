@@ -23,7 +23,7 @@ import {
 import { Loader2 } from "lucide-react";
 
 const profileFormSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }).max(50, { message: 'Name must be 50 characters or less.' }),
+  name: z.string().min(2, { error: 'Name must be at least 2 characters.' }).max(50, { error: 'Name must be 50 characters or less.' }),
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;

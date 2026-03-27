@@ -41,16 +41,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 // Define the validation schema using Zod
 const campaignFormSchema = z.object({
-  name: z.string().min(3, { message: 'Campaign name must be at least 3 characters.' }).max(50, { message: 'Campaign name must be 50 characters or less.' }),
+  name: z.string().min(3, { error: 'Campaign name must be at least 3 characters.' }).max(50, { error: 'Campaign name must be 50 characters or less.' }),
   description: z.string().max(1000).optional().nullable(),
-  logoType: z.enum(['url', 'custom'], { required_error: "Please select a logo type."}), // Radio button value
+  logoType: z.enum(['url', 'custom'], { error: "Please select a logo type."}), // Radio button value
   logoUrl: z.string().optional().or(z.literal('')), // Optional URL
-  logoInitials: z.string().max(2, { message: "Initials can be max 2 characters."}).optional(), // Optional custom initials
-  logoBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')), // Optional hex color
+  logoInitials: z.string().max(2, { error: "Initials can be max 2 characters."}).optional(), // Optional custom initials
+  logoBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { error: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')), // Optional hex color
   // Certificate branding
   companyName: z.string().optional().or(z.literal('')),
-  certificatePrimaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')),
-  certificateSecondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')),
+  certificatePrimaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { error: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')),
+  certificateSecondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { error: "Color must be a valid hex code (e.g., #RRGGBB)"}).optional().or(z.literal('')),
   certificateFontFamily: z.string().optional().or(z.literal('')),
   certificateTagline: z.string().optional().or(z.literal('')),
   certificateFooterText: z.string().optional().or(z.literal('')),

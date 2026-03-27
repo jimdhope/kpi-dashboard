@@ -3,7 +3,7 @@ import { ok, errorResponse } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1),
 });
 

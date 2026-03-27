@@ -10,7 +10,7 @@ const schema = z.object({
   message: z.string().min(1).max(2000),
   priority: z.enum(NOTIFICATION_PRIORITIES),
   actionUrl: z.string().optional().nullable(),
-  metadata: z.record(z.unknown()).optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
 export async function GET() {

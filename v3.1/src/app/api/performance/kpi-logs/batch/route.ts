@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     console.error("POST /api/performance/kpi-logs/batch error:", error);
 
     if (error instanceof z.ZodError) {
-      const messages = error.errors.map((e) => e.message).join(", ");
+      const messages = error.issues.map((e) => e.message).join(", ");
       return NextResponse.json({ error: `Validation error: ${messages}` }, { status: 400 });
     }
     if (error instanceof UnauthorizedError) {

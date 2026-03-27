@@ -5,7 +5,7 @@ import { userService } from "@/server/services/user-service";
 
 const schema = z.object({
   name: z.string().min(2).max(80),
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8),
   roles: z.array(z.enum(USER_ROLES)).min(1),
 });
