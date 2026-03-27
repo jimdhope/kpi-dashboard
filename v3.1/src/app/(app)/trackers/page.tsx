@@ -241,7 +241,7 @@ export default function TrackersDashboard() {
                 {getTimeFrameLabel()}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[380px] p-0" align="end">
+            <PopoverContent className="w-[340px] p-0" align="end">
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">

@@ -180,7 +180,7 @@ export default function AgentTrackersPage() {
               {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[380px] p-0" align="end">
+          <PopoverContent className="w-[340px] p-0" align="end">
             <Calendar
               mode="single"
               selected={selectedDate}
