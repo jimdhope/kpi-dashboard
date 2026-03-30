@@ -23,3 +23,8 @@ scripts/
 perf/
 check_*.ts
 debug_*.ts
+
+# Local version copies (app is at root level)
+v2/
+v3/
+v3.1/
