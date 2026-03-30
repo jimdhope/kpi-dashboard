@@ -1,0 +1,25 @@
+# IDE & AI tools
+.opencode/
+.cursor/
+.vscode/
+.idx/
+.modified
+
+# Build artifacts
+.next
+node_modules
+tsconfig.tsbuildinfo
+tsconfig.typecheck.tsbuildinfo
+coverage
+dist
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Scripts (not needed for app runtime)
+scripts/
+perf/
+check_*.ts
+debug_*.ts

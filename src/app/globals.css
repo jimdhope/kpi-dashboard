@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  /* Required Core Scheme */
+  --color-onyx: #0d0a0bff;
+  --color-bright-snow: #f8f8f8ff;
+  --color-green: #3f7d20ff;
+  --color-cerulean: #4281a4ff;
+  --color-goldenrod: #d5a021ff;
+
+  /* Shadcn system mapped to Dark Theme by default */
+  --color-background: var(--color-onyx);
+  --color-foreground: var(--color-bright-snow);
+  
+  --color-card: #151213;
+  --color-card-foreground: var(--color-bright-snow);
+  
+  --color-popover: #151213;
+  --color-popover-foreground: var(--color-bright-snow);
+  
+  --color-primary: var(--color-cerulean);
+  --color-primary-foreground: #ffffff;
+  
+  --color-secondary: #1a1718;
+  --color-secondary-foreground: var(--color-bright-snow);
+  
+  --color-muted: #2a2728;
+  --color-muted-foreground: #a09f9f;
+  
+  --color-accent: #1a1718;
+  --color-accent-foreground: var(--color-bright-snow);
+  
+  --color-destructive: #7f1d1d;
+  --color-destructive-foreground: #ffffff;
+  
+  --color-border: #2a2728;
+  --color-input: #2a2728;
+  --color-ring: var(--color-cerulean);
+
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+
+  /* Glassmorphism colors */
+  --color-glass: rgba(21, 18, 19, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-glass-hover: rgba(21, 18, 19, 0.9);
+
+  /* Container */
+  --container-center: true;
+  --container-padding: 2rem;
+  --container-2xl: 1400px;
+
+  /* Animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Glassmorphic Base */
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+}
+
+.glass-card {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.glass-sidebar {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid var(--color-glass-border);
+}
+
+/* Frosted Glass effect for cards */
+.frosted-glass {
+  @apply bg-card border border-gray-200 shadow-lg;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.dark .frosted-glass {
+  @apply border-gray-700;
+}

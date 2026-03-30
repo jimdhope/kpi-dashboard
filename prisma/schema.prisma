@@ -1,0 +1,642 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoleKey {
+  admin
+  campaignManager
+  podManager
+  teamLeader
+  competitionRunner
+  agent
+}
+
+enum NotificationType {
+  competition_reminder
+  score_achievement
+  team_update
+  system_alert
+}
+
+enum NotificationPriority {
+  low
+  medium
+  high
+}
+
+enum TeamsWebhookDirection {
+  incoming
+  outgoing
+}
+
+enum TeamsChannelCategory {
+  daily_summary
+  leaderboard
+  alert
+  custom
+}
+
+enum TeamsAutomationTrigger {
+  incomingWebhookReceived
+  performanceLogged
+  competitionScoreLogged
+}
+
+enum TeamsAutomationScope {
+  global
+  campaign
+  pod
+}
+
+enum TeamsAutomationMode {
+  event
+  oneTime
+  recurring
+}
+
+enum TeamsAutomationConditionEvent {
+  performanceLogged
+  competitionScoreLogged
+}
+
+enum TeamsAutomationConditionMetric {
+  count
+  totalValue
+}
+
+enum TeamsAutomationDeliveryFormat {
+  messageCard
+  adaptiveCard
+  adaptiveCardWithImage
+}
+
+enum KpiType {
+  number
+  percentage
+  scoreOutOf
+}
+
+enum KpiSortOrder {
+  desc
+  asc
+}
+
+enum PassFailOperator {
+  gte
+  lte
+}
+
+model Kpi {
+  id                    String            @id @default(cuid())
+  name                  String
+  initials              String            @db.VarChar(4)
+  type                  KpiType           @default(number)
+  maxValue              Decimal?
+  sortOrder             KpiSortOrder      @default(desc)
+  passFailCriteriaEnabled Boolean          @default(false)
+  passFailOperator       PassFailOperator?
+  passFailValue         Decimal?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  kpiLogs               KpiLog[]
+}
+
+model KpiLog {
+  id        String   @id @default(cuid())
+  kpiId     String
+  userId    String?
+  value     Decimal
+  date      DateTime  // When the KPI was achieved/recorded (from Firebase)
+  loggedAt  DateTime @default(now()) // When it was imported
+  createdAt DateTime @default(now())
+  kpi       Kpi     @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([kpiId])
+  @@index([userId])
+  @@index([loggedAt])
+  @@index([date])
+}
+
+model User {
+  id                    String                     @id @default(cuid())
+  email                 String                     @unique
+  name                  String
+  passwordHash          String
+  avatarUrl             String?
+  avatarInitials        String?
+  avatarBgColor         String?
+  firebaseUid           String?                    @unique
+  podId                 String?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  userRoles             UserRole[]
+  sessions              Session[]
+  passwordResetTokens   PasswordResetToken[]
+  auditLogs             AuditLog[]
+  podMemberships        PodMembership[]
+  trackerLogs           TrackerLog[]
+  kpiLogs               KpiLog[]
+  competitionEntries    CompetitionEntry[]
+  createdCompetitions   Competition[]
+  activities            Activity[]
+  notifications         Notification[]
+  notificationSettings  UserNotificationSettings?
+  pod                   Pod?                       @relation(fields: [podId], references: [id])
+  ledPods               Pod[]                      @relation("PodTeamLeader")
+  managedPods           Pod[]                      @relation("PodManager")
+}
+
+model Role {
+  id        String     @id @default(cuid())
+  key       RoleKey    @unique
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  userRoles UserRole[]
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  sessionTokenHash String   @unique
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  consumedAt DateTime?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  payloadJson Json?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Campaign {
+  id                String                @id @default(cuid())
+  name              String
+  description       String?
+  isActive          Boolean               @default(true)
+  incomingWebhookId String?
+  outgoingWebhookId String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  incomingWebhook   TeamsWebhookEndpoint? @relation("CampaignIncomingWebhook", fields: [incomingWebhookId], references: [id], onDelete: SetNull)
+  outgoingWebhook   TeamsWebhookEndpoint? @relation("CampaignOutgoingWebhook", fields: [outgoingWebhookId], references: [id], onDelete: SetNull)
+  teamsAutomations  TeamsAutomation[]
+  pods              Pod[]
+  trackerKpis       TrackerKpi[]
+  competitions      Competition[]
+}
+
+model Pod {
+  id                String                @id @default(cuid())
+  campaignId        String?
+  incomingWebhookId String?
+  outgoingWebhookId String?
+  name              String
+  description       String?
+  teamLeaderId      String?
+  podManagerId      String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  campaign          Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  incomingWebhook   TeamsWebhookEndpoint? @relation("PodIncomingWebhook", fields: [incomingWebhookId], references: [id], onDelete: SetNull)
+  outgoingWebhook   TeamsWebhookEndpoint? @relation("PodOutgoingWebhook", fields: [outgoingWebhookId], references: [id], onDelete: SetNull)
+  teamLeader        User?                 @relation("PodTeamLeader", fields: [teamLeaderId], references: [id])
+  podManager        User?                 @relation("PodManager", fields: [podManagerId], references: [id])
+  teamsAutomations  TeamsAutomation[]
+  memberships       PodMembership[]
+  users             User[]
+}
+
+model PodMembership {
+  id        String   @id @default(cuid())
+  podId      String
+  userId     String
+  joinedAt   DateTime @default(now())
+  pod        Pod      @relation(fields: [podId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([podId, userId])
+}
+
+model TrackerKpi {
+  id          String       @id @default(cuid())
+  campaignId  String?
+  name        String
+  unit        String?
+  targetValue Decimal?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  logs        TrackerLog[]
+}
+
+model TrackerLog {
+  id           String    @id @default(cuid())
+  trackerKpiId String
+  userId       String?
+  value        Decimal
+  loggedAt     DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  trackerKpi   TrackerKpi @relation(fields: [trackerKpiId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Competition {
+  id            String             @id @default(cuid())
+  name          String
+  description   String?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  campaignId    String?
+  podIds        String[]
+  isDraft       Boolean            @default(false)
+  draftData     Json?
+  createdById   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  rules         CompetitionRule[]
+  teams         CompetitionTeam[]
+  entries       CompetitionEntry[]
+  createdBy     User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  campaign      Campaign?          @relation(fields: [campaignId], references: [id])
+}
+
+model CompetitionRule {
+  id            String      @id @default(cuid())
+  competitionId  String
+  title         String
+  points        Int         @default(0)
+  isCheckbox    Boolean     @default(false)
+  emoji         String?
+  dailyTarget   Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+}
+
+model CompetitionTeam {
+  id            String      @id @default(cuid())
+  competitionId String
+  name          String
+  agentIds      String[]    @default([])
+  emoji         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+}
+
+model CompetitionEntry {
+  id            String      @id @default(cuid())
+  competitionId  String
+  userId        String?
+  score         Int         @default(0)
+  present       Boolean     @default(false)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  scoreLogs     CompetitionScoreLog[]
+}
+
+model CompetitionScoreLog {
+  id            String            @id @default(cuid())
+  entryId       String
+  ruleId        String?
+  value         Int               @default(0)
+  isBonus       Boolean           @default(false)
+  bonusTeamId   String?
+  loggedAt      DateTime          @default(now())
+  createdAt     DateTime          @default(now())
+  entry         CompetitionEntry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
+
+model CompetitionRuleTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  rules       Json    // Array of rule definitions: { title, points, isCheckbox, emoji, dailyTarget }
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Activity {
+  id           String   @id @default(cuid())
+  userId       String?
+  type         String
+  title        String
+  description  String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Enhanced fields
+  agentName    String?
+  recorderId   String?
+  recorderName String?
+  richMessage  String?
+
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id           String               @id @default(cuid())
+  userId       String
+  type         NotificationType
+  title        String
+  message      String
+  priority     NotificationPriority @default(medium)
+  actionUrl    String?
+  metadataJson Json?
+  readAt       DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// =============================================================================
+// Notification & Push Settings
+// =============================================================================
+
+model UserNotificationSettings {
+  id                    String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Channels
+  emailEnabled          Boolean  @default(true)
+  pushEnabled           Boolean  @default(true)
+  inAppEnabled         Boolean  @default(true)
+
+  // Categories
+  notifyCompetitions   Boolean  @default(true)
+  notifyTrackers      Boolean  @default(true)
+  notifyAchievements  Boolean  @default(true)
+  notifySystem        Boolean  @default(true)
+
+  // Quiet hours
+  quietHoursEnabled    Boolean  @default(false)
+  quietHoursStart     String?  @default("22:00")  // HH:MM format
+  quietHoursEnd       String?  @default("08:00")
+  quietHoursTimezone  String   @default("UTC")
+
+  // Push subscription (stored as encrypted JSON)
+  pushSubscription    String?  // Encrypted subscription JSON
+  pushEndpoint        String?  @unique
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model AppPushSettings {
+  id              String   @id @default("push")
+  vapidPublicKey String?
+  vapidPrivateKey String? // Encrypted
+  enabled         Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+model TeamsWebhookEndpoint {
+  id                   String                @id @default(cuid())
+  name                 String
+  friendlyName        String?
+  direction            TeamsWebhookDirection
+  url                  String
+  description          String?
+  category            TeamsChannelCategory?
+  testStatus          String?               @default("untested") // untested, success, failed
+  lastTestedAt        DateTime?
+  lastPostAt         DateTime?
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  campaignIncomingRefs Campaign[]            @relation("CampaignIncomingWebhook")
+  campaignOutgoingRefs Campaign[]            @relation("CampaignOutgoingWebhook")
+  podIncomingRefs      Pod[]                 @relation("PodIncomingWebhook")
+  podOutgoingRefs      Pod[]                 @relation("PodOutgoingWebhook")
+  outgoingAutomations  TeamsAutomation[]     @relation("TeamsAutomationOutgoingWebhook")
+  inboundEvents        TeamsIncomingEvent[]
+}
+
+model TeamsAutomation {
+  id                String                 @id @default(cuid())
+  name              String
+  trigger           TeamsAutomationTrigger
+  scope             TeamsAutomationScope   @default(global)
+  mode              TeamsAutomationMode    @default(event)
+  deliveryFormat    TeamsAutomationDeliveryFormat @default(messageCard)
+  messageTemplateId String?
+  campaignId        String?
+  podId             String?
+  outgoingWebhookId String
+  titleTemplate     String
+  messageTemplate   String
+  factsJson         Json?
+  adaptiveCardJson  Json?
+  imageTitleTemplate String?
+  imageSubtitleTemplate String?
+  imageMetricTemplate String?
+  imageFooterTemplate String?
+  imageAccentColor  String?
+  oneTimeAt         DateTime?
+  startsAt          DateTime?
+  endsAt            DateTime?
+  timezone          String?               @default("UTC")
+  windowStartTime   String?
+  windowEndTime     String?
+  quietStartTime    String?
+  quietEndTime      String?
+  repeatEveryMinutes Int?
+  batchWindowMinutes Int?
+  cooldownMinutes   Int?
+  conditionEvent    TeamsAutomationConditionEvent?
+  conditionMetric   TeamsAutomationConditionMetric?
+  conditionLookbackMinutes Int?
+  conditionMinimumCount Int?
+  conditionMinimumValue Float?
+  onlyIfNewData     Boolean                @default(false)
+  conditionActivityWithinMinutes Int?
+  isActive          Boolean                @default(true)
+  lastTriggeredAt   DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  campaign          Campaign?              @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  pod               Pod?                   @relation(fields: [podId], references: [id], onDelete: Cascade)
+  outgoingWebhook   TeamsWebhookEndpoint   @relation("TeamsAutomationOutgoingWebhook", fields: [outgoingWebhookId], references: [id], onDelete: Cascade)
+  messageTemplateRef TeamsMessageTemplate? @relation(fields: [messageTemplateId], references: [id], onDelete: SetNull)
+  pendingDeliveries TeamsAutomationPendingDelivery[]
+
+  @@index([trigger, scope, isActive])
+}
+
+model TeamsMessageTemplate {
+  id                   String                        @id @default(cuid())
+  name                 String
+  category             TeamsChannelCategory?
+  version              Int                           @default(1)
+  deliveryFormat       TeamsAutomationDeliveryFormat @default(messageCard)
+  titleTemplate        String
+  messageTemplate      String
+  factsJson            Json?
+  adaptiveCardJson     Json?
+  imageTitleTemplate   String?
+  imageSubtitleTemplate String?
+  imageMetricTemplate  String?
+  imageFooterTemplate  String?
+  imageAccentColor     String?
+  variationsJson       Json?                        // { compact: {...}, detailed: {...}, celebration: {...} }
+  isDefault            Boolean                      @default(false)
+  isActive             Boolean                       @default(true)
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  automations          TeamsAutomation[]
+}
+
+model TeamsAutomationPendingDelivery {
+  id           String          @id @default(cuid())
+  automationId String
+  title        String
+  text         String
+  factsJson    Json?
+  dueAt        DateTime
+  createdAt    DateTime        @default(now())
+  sentAt       DateTime?
+  automation   TeamsAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId, dueAt, sentAt])
+}
+
+model TeamsIncomingEvent {
+  id           String               @id @default(cuid())
+  endpointId   String
+  endpointName String
+  payloadJson  Json
+  headersJson  Json?
+  createdAt    DateTime             @default(now())
+  endpoint     TeamsWebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, createdAt])
+}
+
+// =============================================================================
+// V2 Firebase Migration Models
+// =============================================================================
+
+model DailyAchievement {
+  id             String    @id @default(cuid())
+  competitionId  String
+  agentId        String
+  podId          String
+  ruleId         String
+  ruleName       String?
+  value          Int       @default(0)
+  points         Int       @default(0)
+  date           DateTime
+  loggedBy       String?
+  loggedAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([competitionId])
+  @@index([agentId])
+  @@index([podId])
+  @@index([date])
+}
+
+model DailyTaskLog {
+  id             String    @id @default(cuid())
+  competitionId  String
+  agentId        String
+  podId          String?
+  taskId         String
+  taskName       String?
+  completed      Boolean   @default(false)
+  date           DateTime
+  createdAt      DateTime  @default(now())
+
+  @@index([competitionId])
+  @@index([agentId])
+  @@index([date])
+}
+
+model TeamBonusLog {
+  id             String    @id @default(cuid())
+  competitionId  String
+  teamId         String
+  teamName       String?
+  podId          String?
+  points         Int       @default(0)
+  reason         String?
+  date           DateTime
+  loggedBy       String?
+  loggedAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([competitionId])
+  @@index([teamId])
+  @@index([podId])
+  @@index([date])
+}
+
+model PodTarget {
+  id             String   @id @default(cuid())
+  competitionId  String
+  podId          String
+  date           DateTime
+  targetsJson    Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([competitionId, podId, date])
+  @@index([competitionId])
+  @@index([podId])
+}
+
+model RpsGame {
+  id             String   @id @default(cuid())
+  playerId       String
+  playerThrow    String
+  opponentThrow  String
+  result         String
+  points         Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([playerId])
+}
