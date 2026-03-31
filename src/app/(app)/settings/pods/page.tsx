@@ -55,6 +55,10 @@ interface Pod {
   description: string | null;
   memberCount: number;
   members: PodMember[];
+  incomingWebhookId: string | null;
+  outgoingWebhookId: string | null;
+  incomingWebhookName: string | null;
+  outgoingWebhookName: string | null;
 }
 
 interface User {
@@ -62,6 +66,12 @@ interface User {
   name: string;
   email: string;
   roles: string[];
+}
+
+interface Webhook {
+  id: string;
+  name: string;
+  direction: 'incoming' | 'outgoing';
 }
 
 export default function AdminPodsPage() {
@@ -85,16 +95,20 @@ export default function AdminPodsPage() {
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formCampaignId, setFormCampaignId] = useState('');
+  const [formIncomingWebhookId, setFormIncomingWebhookId] = useState('');
+  const [formOutgoingWebhookId, setFormOutgoingWebhookId] = useState('');
+  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       setIsLoadingRelated(true);
       try {
-        const [podsRes, campaignsRes, usersRes] = await Promise.all([
+        const [podsRes, campaignsRes, usersRes, webhooksRes] = await Promise.all([
           fetch('/api/pods'),
           fetch('/api/campaigns'),
           fetch('/api/users'),
+          fetch('/api/integrations/teams-webhooks'),
         ]);
 
         if (podsRes.ok) {
@@ -108,6 +122,10 @@ export default function AdminPodsPage() {
         if (usersRes.ok) {
           const data = await usersRes.json();
           setUsers(data.users || []);
+        }
+        if (webhooksRes.ok) {
+          const data = await webhooksRes.json();
+          setWebhooks(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -145,6 +163,8 @@ export default function AdminPodsPage() {
     setFormName('');
     setFormDescription('');
     setFormCampaignId('');
+    setFormIncomingWebhookId('');
+    setFormOutgoingWebhookId('');
     setIsFormOpen(true);
   };
 
@@ -154,6 +174,8 @@ export default function AdminPodsPage() {
     setFormName(pod.name);
     setFormDescription(pod.description || '');
     setFormCampaignId(pod.campaignId || '');
+    setFormIncomingWebhookId(pod.incomingWebhookId || '');
+    setFormOutgoingWebhookId(pod.outgoingWebhookId || '');
     setIsFormOpen(true);
   };
 
@@ -181,6 +203,8 @@ export default function AdminPodsPage() {
         name: formName.trim(),
         description: formDescription.trim() || null,
         campaignId: formCampaignId || null,
+        incomingWebhookId: formIncomingWebhookId || null,
+        outgoingWebhookId: formOutgoingWebhookId || null,
       };
 
       if (dialogMode === 'add') {
@@ -328,6 +352,34 @@ export default function AdminPodsPage() {
                       <option value="">No campaign</option>
                       {campaigns.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="incomingWebhook">Incoming Webhook</Label>
+                    <select
+                      id="incomingWebhook"
+                      value={formIncomingWebhookId}
+                      onChange={(e) => setFormIncomingWebhookId(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">None</option>
+                      {webhooks.filter(w => w.direction === 'incoming').map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="outgoingWebhook">Outgoing Webhook</Label>
+                    <select
+                      id="outgoingWebhook"
+                      value={formOutgoingWebhookId}
+                      onChange={(e) => setFormOutgoingWebhookId(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">None</option>
+                      {webhooks.filter(w => w.direction === 'outgoing').map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
                       ))}
                     </select>
                   </div>

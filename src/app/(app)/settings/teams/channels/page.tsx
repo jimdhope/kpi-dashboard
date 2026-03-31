@@ -1,11 +1,9 @@
 import { redirect } from "next/navigation";
 import { TeamsWebhooksAdmin } from "@/components/teams-webhooks-admin";
-import { TeamsTemplatesAdmin } from "@/components/teams-templates-admin";
 import { authService } from "@/server/services/auth-service";
 import { teamsWebhookService } from "@/server/services/teams-webhook-service";
-import { teamsMessageTemplateService } from "@/server/services/teams-message-template-service";
 
-export default async function TeamsChannelsPage() {
+export default async function TeamsWebhooksPage() {
   const session = await authService.getCurrentSession();
   if (!session.user) {
     redirect("/login");
@@ -16,19 +14,17 @@ export default async function TeamsChannelsPage() {
   }
 
   const webhooks = await teamsWebhookService.listWebhooks();
-  const templates = await teamsMessageTemplateService.listTemplates();
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Teams Channels</h1>
+        <h1 className="text-3xl font-bold">Teams Webhooks</h1>
         <p className="text-muted-foreground mt-1">
-          Manage Microsoft Teams webhook endpoints and message templates.
+          Manage Microsoft Teams webhook endpoints for sending notifications.
         </p>
       </div>
       
       <TeamsWebhooksAdmin initialWebhooks={webhooks} />
-      <TeamsTemplatesAdmin initialTemplates={templates} />
     </div>
   );
 }

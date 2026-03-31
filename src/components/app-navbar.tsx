@@ -99,7 +99,7 @@ const navItems: NavItemConfig[] = [
       { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
       { label: 'Pods', href: '/settings/pods', icon: Shield },
       { label: 'Users', href: '/settings/users', icon: Users },
-      { label: 'Teams Channels', href: '/settings/teams/channels', icon: SettingsIcon },
+      { label: 'Teams Webhooks', href: '/settings/teams-webhooks', icon: SettingsIcon },
       { label: 'Teams Workflows', href: '/settings/teams/workflows', icon: SettingsIcon },
     ]
   },

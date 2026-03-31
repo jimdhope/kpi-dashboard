@@ -118,7 +118,13 @@ export default function LogScoresPage() {
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
   const [activeCompetitionName, setActiveCompetitionName] = useState<string>('');
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
+
+  // Allowed roles for Send to Teams feature
+  const ALLOWED_SEND_ROLES = ['admin', 'teamLeader', 'podManager', 'competitionRunner'];
+
+  // Helper to check if user has any allowed role
+  const canSendToTeams = currentUserRoles.some(role => ALLOWED_SEND_ROLES.includes(role));
 
   const competitionRules = useMemo(() => {
     const comp = competitions.find(c => c.id === activeCompetitionId);
@@ -179,7 +185,8 @@ export default function LogScoresPage() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUserId(data.user?.id || null);
-          setCurrentUserRole(data.user?.role || null);
+          // User has roles array, not single role field
+          setCurrentUserRoles(data.user?.roles || []);
         }
       } catch (err) {
         console.error('Error fetching current user:', err);
@@ -600,7 +607,7 @@ export default function LogScoresPage() {
                 Active: <span className="font-medium">{activeCompetitionName}</span>
               </div>
             )}
-            {activeCompetitionId && (currentUserRole === 'admin' || currentUserRole === 'team_leader' || currentUserRole === 'pod_manager') && (
+            {activeCompetitionId && canSendToTeams && (
               <div className="w-full md:hidden">
                 <Button
                   variant="default"
@@ -613,7 +620,7 @@ export default function LogScoresPage() {
                 </Button>
               </div>
             )}
-              {activeCompetitionId && (currentUserRole === 'admin' || currentUserRole === 'team_leader' || currentUserRole === 'pod_manager') && (
+              {activeCompetitionId && canSendToTeams && (
                 <Button
                   variant="default"
                   size="sm"
