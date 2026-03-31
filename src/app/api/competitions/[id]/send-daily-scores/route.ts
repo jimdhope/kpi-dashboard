@@ -133,18 +133,17 @@ export async function POST(
     const sentTo: string[] = [];
     const failed: string[] = [];
 
+    // Get all entries with users for the competition
+    const allEntries = competition.entries.filter((entry: any) => entry.user);
+
     for (const pod of pods) {
       if (!pod.outgoingWebhook || !pod.outgoingWebhook.isActive) {
         failed.push(`${pod.name} - webhook not configured or inactive`);
         continue;
       }
 
-      const agentsInPod = competition.entries.filter((entry: any) => {
-        if (!entry.user) return false;
-        return entry.user.podMemberships.some((m: any) => m.podId === pod.id);
-      });
-
-      const agentStandings = agentsInPod
+      // Show ALL agents in the competition (not filtered by pod)
+      const agentStandings = allEntries
         .map((entry: any) => {
           // Find which team this agent belongs to
           const agentTeam = competition.teams.find((team: any) => 
@@ -308,6 +307,9 @@ export async function GET(
     });
     const ruleMap = new Map(rules.map(r => [r.id, r]));
 
+    // Get all entries with users for the competition
+    const allEntries = competition.entries.filter((entry: any) => entry.user);
+
     const podsInCompetition = await prisma.pod.findMany({
       where: { id: { in: competition.podIds } },
       include: {
@@ -316,12 +318,8 @@ export async function GET(
     }) as PodWithWebhook[];
 
     const podsWithAgents = podsInCompetition.map(pod => {
-      const agentsInPod = competition.entries.filter((entry: any) => {
-        if (!entry.user) return false;
-        return entry.user.podMemberships.some((m: any) => m.podId === pod.id);
-      });
-
-      const agentStandings = agentsInPod
+      // Show ALL agents in the competition (not filtered by pod)
+      const agentStandings = allEntries
         .map((entry: any) => {
           const agentTeam = competition.teams.find((team: any) => 
             team.agentIds.includes(entry.userId)
