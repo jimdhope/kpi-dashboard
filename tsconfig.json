@@ -37,6 +37,9 @@
   ],
   "exclude": [
     "node_modules",
-    "scripts"
+    "scripts",
+    "v2",
+    "v3",
+    "v3.1"
   ]
 }

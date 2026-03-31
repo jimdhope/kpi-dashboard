@@ -40,6 +40,7 @@ interface Competition {
   teams?: Array<{
     id: string;
     name: string;
+    agentIds?: string[];
   }>;
 }
 
@@ -337,11 +338,12 @@ export default function CompetitionCertificatesPage() {
           teamScores[team.id] = 0;
         });
 
-        // Add agent scores to their teams (assuming agents map to teams)
+        // Add agent scores to their teams
         rankedAgentsWithRank.forEach(a => {
           // Find which team this agent belongs to
+          // Note: team.agentIds now store database IDs (after migration)
           const team = competition.teams?.find(t => 
-            a.agent && podAgents.some(pa => pa.id === a.agent!.id)
+            a.agent && t.agentIds && t.agentIds.includes(a.agent.id)
           );
           if (team) {
             teamScores[team.id] = (teamScores[team.id] || 0) + a.score;
@@ -358,11 +360,11 @@ export default function CompetitionCertificatesPage() {
           .sort((a, b) => b.score - a.score)[0];
 
         if (winningTeamEntry && winningTeamEntry.team) {
-          // Get team members - top performing agents from the pod who contributed to the team score
-          const teamMembers = rankedAgentsWithRank
-            .filter(a => a.rank <= 5)
-            .map(a => a.agent!.name)
-            .filter(Boolean);
+          // Get actual team members from the winning team's agentIds
+          const winningTeamAgentIds = winningTeamEntry.team.agentIds || [];
+          const teamMembers = podAgents
+            .filter(agent => winningTeamAgentIds.includes(agent.id))
+            .map(agent => agent.name);
           
           certEntries.push({
             type: 'team',

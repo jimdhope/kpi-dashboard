@@ -7,6 +7,8 @@ const schema = z.object({
   description: z.string().max(2000).optional().nullable(),
   startsAt: z.string().optional().nullable(),
   endsAt: z.string().optional().nullable(),
+  campaignId: z.string().optional().nullable(),
+  podIds: z.array(z.string()).optional(),
   rules: z.array(
     z.object({
       title: z.string().min(1).max(120),

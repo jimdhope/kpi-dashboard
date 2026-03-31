@@ -83,16 +83,8 @@ export default function ManageCompetitionsPage() {
         if (compsRes.ok) {
           const data = await compsRes.json();
           const comps = data.competitions || [];
-          const enrichedComps = comps.map((comp: Competition) => {
-            const campaign = (data.campaigns || []).find((c: Campaign) => c.id === comp.campaignId);
-            const podList = (data.pods || []).filter((p: Pod) => comp.podIds?.includes(p.id));
-            return {
-              ...comp,
-              campaignName: campaign?.name || 'Unknown',
-              podNames: podList.map((p: Pod) => p.name),
-            };
-          });
-          setCompetitions(enrichedComps);
+          // The API already includes campaign info from the service
+          setCompetitions(comps);
         }
         if (podsRes.ok) {
           const data = await podsRes.json();

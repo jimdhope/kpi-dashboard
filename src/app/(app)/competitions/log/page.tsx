@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { SendDailyScoresDialog } from '@/components/send-daily-scores-dialog';
 
 interface Pod {
   id: string;
@@ -116,6 +117,8 @@ export default function LogScoresPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeCompetitionId, setActiveCompetitionId] = useState<string | null>(null);
   const [activeCompetitionName, setActiveCompetitionName] = useState<string>('');
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   const competitionRules = useMemo(() => {
     const comp = competitions.find(c => c.id === activeCompetitionId);
@@ -176,6 +179,7 @@ export default function LogScoresPage() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUserId(data.user?.id || null);
+          setCurrentUserRole(data.user?.role || null);
         }
       } catch (err) {
         console.error('Error fetching current user:', err);
@@ -590,11 +594,37 @@ export default function LogScoresPage() {
                 </Popover>
               </div>
             </div>
+            <div className="flex items-center gap-4">
             {activeCompetitionName && (
-              <div className="text-sm text-muted-foreground">
-                Active Competition: <span className="font-medium">{activeCompetitionName}</span>
+              <div className="text-sm text-muted-foreground md:hidden">
+                Active: <span className="font-medium">{activeCompetitionName}</span>
               </div>
             )}
+            {activeCompetitionId && (currentUserRole === 'admin' || currentUserRole === 'team_leader' || currentUserRole === 'pod_manager') && (
+              <div className="w-full md:hidden">
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => setSendDialogOpen(true)}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send to Teams
+                </Button>
+              </div>
+            )}
+              {activeCompetitionId && (currentUserRole === 'admin' || currentUserRole === 'team_leader' || currentUserRole === 'pod_manager') && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setSendDialogOpen(true)}
+                  className="hidden md:inline-flex"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send to Teams
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -793,6 +823,21 @@ export default function LogScoresPage() {
           </Card>
         )}
       </div>
+
+      <SendDailyScoresDialog
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        competitionId={activeCompetitionId || ''}
+        competitionName={activeCompetitionName}
+        date={selectedDate}
+        onSuccess={(sentTo) => {
+          toast({
+            title: "Scores Sent to Teams",
+            description: `Successfully sent to ${sentTo.length} pod${sentTo.length !== 1 ? 's' : ''}`,
+            variant: "default",
+          });
+        }}
+      />
     </div>
   );
 }

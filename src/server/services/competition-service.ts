@@ -75,13 +75,20 @@ export const competitionService = {
   },
 
   async listCompetitions(includeDrafts = false) {
-    await authService.requireCurrentUser(); // Any authenticated user can view
+    try {
+      await authService.requireCurrentUser(); // Any authenticated user can view
+    } catch (error) {
+      console.error('listCompetitions: User authentication failed:', error);
+      throw error;
+    }
+    
     const comps = await prisma.competition.findMany({
       where: includeDrafts ? {} : { isDraft: false },
       include: {
         rules: true,
         teams: true,
         entries: { include: { user: true } },
+        campaign: true,
         _count: { select: { entries: true } },
         createdBy: true,
       },
@@ -187,6 +194,7 @@ export const competitionService = {
       include: {
         rules: true,
         teams: true,
+        campaign: true,
       },
     });
 
@@ -302,6 +310,7 @@ export const competitionService = {
     // Sum scores for each team
     for (const entry of rankings) {
       // Find which team this user belongs to
+      // Note: team.agentIds now store database IDs (migrated from Firebase UIDs)
       for (const team of comp.teams) {
         if (team.agentIds.includes(entry.userId)) {
           teamScores[team.id].score += entry.score;

@@ -39,7 +39,6 @@ interface Pod {
 interface User {
   id: string;
   name: string;
-  firebaseUid?: string;
   podId?: string | null;
   roles: string[];
 }
@@ -74,17 +73,6 @@ export default function AdminCompetitionsDashboard() {
   const [showDrafts, setShowDrafts] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-
-  // Build lookup map: database ID -> firebase UID
-  const dbIdToFirebaseUid = useMemo(() => {
-    const map = new Map<string, string>();
-    users.forEach(u => {
-      if (u.firebaseUid) {
-        map.set(u.id, u.firebaseUid);
-      }
-    });
-    return map;
-  }, [users]);
 
   // Fetch drafts on mount
   useEffect(() => {
@@ -223,12 +211,11 @@ export default function AdminCompetitionsDashboard() {
     });
 
     // Calculate scores from achievements by linking agents to teams
-    // Translate database ID -> Firebase UID for matching
+    // agentIds now store database IDs (after migration)
     const unassignedScore = { id: 'unassigned', name: 'Unassigned', score: 0 };
     competitionAchievements.forEach((log) => {
-      const firebaseUid = dbIdToFirebaseUid.get(log.agentId);
       const teamWithAgent = teams.find((team) => 
-        team.agentIds && firebaseUid && team.agentIds.includes(firebaseUid)
+        team.agentIds && team.agentIds.includes(log.agentId)
       );
       if (teamWithAgent && teamScores[teamWithAgent.id]) {
         teamScores[teamWithAgent.id].score += log.points;
@@ -246,7 +233,7 @@ export default function AdminCompetitionsDashboard() {
     }
 
     return standings;
-  }, [selectedCompetition, competitionAchievements, dbIdToFirebaseUid]);
+  }, [selectedCompetition, competitionAchievements]);
 
   const agentStandings = useMemo(() => {
     const agentScores: Record<string, { id: string; name: string; score: number }> = {};

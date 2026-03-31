@@ -42,6 +42,7 @@ import {
   FileText,
   Upload,
   Copy,
+  Shuffle,
 } from 'lucide-react';
 import { format, addDays, startOfDay } from 'date-fns';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
@@ -78,12 +79,11 @@ interface Pod {
   members?: PodMember[];
 }
 
-interface User {
-  id: string;
-  firebaseUid?: string | null;
-  name: string;
-  email: string;
-}
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+  }
 
 interface Rule {
   id: string;
@@ -173,6 +173,10 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateDescription, setNewTemplateDescription] = useState('');
 
+  // Round Robin state
+  const [roundRobinAvailable, setRoundRobinAvailable] = useState(false);
+  const [roundRobinCompetitionName, setRoundRobinCompetitionName] = useState<string | null>(null);
+
   // Load templates
   useEffect(() => {
     async function loadTemplates() {
@@ -188,6 +192,30 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
     }
     loadTemplates();
   }, []);
+
+  // Check if Round Robin is available when pods change
+  useEffect(() => {
+    async function checkRoundRobin() {
+      if (formData.podIds.length === 0) {
+        setRoundRobinAvailable(false);
+        setRoundRobinCompetitionName(null);
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/competitions/agent-rankings?podIds=${formData.podIds.join(',')}`);
+        if (res.ok) {
+          const data = await res.json();
+          setRoundRobinAvailable(data.rankings && data.rankings.length > 0);
+          setRoundRobinCompetitionName(data.competitionName);
+        }
+      } catch (error) {
+        console.error('Error checking round robin availability:', error);
+        setRoundRobinAvailable(false);
+      }
+    }
+    checkRoundRobin();
+  }, [formData.podIds]);
 
   useEffect(() => {
     async function fetchData() {
@@ -242,8 +270,20 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                   agentIds: t.agentIds || [],
                 })));
               }
+              // Load daily targets - either from the dedicated field or from rules
               if (draftData.dailyTargets) {
                 setDailyTargets(draftData.dailyTargets);
+              } else {
+                // Fallback: extract daily targets from rules
+                const targets: DailyTargetData = {};
+                (draftData.rules || []).forEach((r: any) => {
+                  if (r.dailyTarget != null) {
+                    targets[r.id] = r.dailyTarget;
+                  }
+                });
+                if (Object.keys(targets).length > 0) {
+                  setDailyTargets(targets);
+                }
               }
               setLastSaved(draft.updatedAt ? new Date(draft.updatedAt) : null);
             }
@@ -278,6 +318,16 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                   agentIds: t.agentIds || [],
                 })));
               }
+              // Load daily targets from rules
+              const targets: DailyTargetData = {};
+              (comp.rules || []).forEach((r: any) => {
+                if (r.dailyTarget != null) {
+                  targets[r.id] = r.dailyTarget;
+                }
+              });
+              if (Object.keys(targets).length > 0) {
+                setDailyTargets(targets);
+              }
             }
           }
         }
@@ -305,54 +355,84 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
   const handleSaveDraft = useCallback(async () => {
     setIsSavingDraft(true);
     try {
+      // Format rules and teams for API
+      const rules = formData.rules.map(r => ({
+        id: r.id,
+        title: r.name,
+        emoji: r.emoji,
+        points: r.points,
+        isCheckbox: r.type === 'checkbox',
+        dailyTarget: dailyTargets[r.id],
+      }));
+
+      const teamsData = teams.filter(t => t.name.trim()).map(t => ({
+        id: t.id,
+        name: t.name,
+        agentIds: t.agentIds,
+        emoji: t.emoji,
+      }));
+
+      // draftData only contains recovery/metadata data
       const draftData = {
-        name: formData.name,
-        campaignId: formData.campaignId,
-        podIds: formData.podIds,
-        rules: formData.rules.map(r => ({
-          id: r.id,
-          name: r.name,
-          emoji: r.emoji,
-          points: r.points,
-          isCheckbox: r.type === 'checkbox',
-          dailyTarget: dailyTargets[r.id],
-        })),
-        teams: teams.filter(t => t.name.trim()).map(t => ({
-          id: t.id,
-          name: t.name,
-          agentIds: t.agentIds,
-          emoji: t.emoji,
-        })),
         dailyTargets,
         startsAt: formData.startDate.toISOString(),
         endsAt: formData.endDate.toISOString(),
       };
 
+      const payload = {
+        name: formData.name,
+        campaignId: formData.campaignId,
+        podIds: formData.podIds,
+        rules,
+        teams: teamsData,
+        draftData,
+      };
+
+      console.log('[handleSaveDraft] Saving draft:', {
+        draftId: currentDraftId || 'new',
+        name: formData.name,
+        rulesCount: rules.length,
+        teamsCount: teamsData.length,
+      });
+
       if (currentDraftId) {
-        // Update existing draft
-        await fetch(`/api/competitions/drafts/${currentDraftId}`, {
+        // Update existing draft - send rules and teams at top level (flat)
+        const res = await fetch(`/api/competitions/drafts/${currentDraftId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(draftData),
+          body: JSON.stringify(payload),
         });
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('[handleSaveDraft] Failed to update draft:', {
+            status: res.status,
+            error: errorText,
+            draftId: currentDraftId,
+          });
+          toast({ variant: 'destructive', title: 'Error', description: 'Failed to save draft' });
+        }
       } else {
         // Create new draft
         const res = await fetch('/api/competitions/drafts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.name,
-            description: '',
-            draftData,
-          }),
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
           const data = await res.json();
+          console.log('[handleSaveDraft] Draft created:', data.draft?.id);
           if (data.draft?.id) {
             setCurrentDraftId(data.draft.id);
             // Update URL without refresh
             window.history.replaceState(null, '', `?draft=${data.draft.id}`);
           }
+        } else {
+          const errorText = await res.text();
+          console.error('[handleSaveDraft] Failed to create draft:', {
+            status: res.status,
+            error: errorText,
+          });
+          toast({ variant: 'destructive', title: 'Error', description: 'Failed to create draft' });
         }
       }
       setLastSaved(new Date());
@@ -420,10 +500,10 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
   }, [pods, formData.campaignId]);
 
   const selectedPodAgents = useMemo(() => {
-    // Collect Firebase UIDs of assigned agents
-    const assignedFirebaseUids = new Set<string>();
+    // Collect assigned agent IDs (teams now store database IDs after migration)
+    const assignedAgentIds = new Set<string>();
     teams.forEach((team) => {
-      team.agentIds.forEach((id) => assignedFirebaseUids.add(id));
+      team.agentIds.forEach((id) => assignedAgentIds.add(id));
     });
     const unassigned: User[] = [];
     
@@ -432,15 +512,9 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
       (pod.members || []).forEach((member) => {
         // Find the user with matching database ID
         const user = users.find((u) => u.id === member.id);
-        if (user) {
-          // Check if this user's firebaseUid is NOT assigned to any team
-          if (user.firebaseUid && !assignedFirebaseUids.has(user.firebaseUid)) {
-            unassigned.push(user);
-          } else if (!user.firebaseUid) {
-            // If user has no firebaseUid, they can't be assigned to competition teams
-            // so include them in unassigned for pod assignment purposes
-            unassigned.push(user);
-          }
+        // Include if user exists and is not already assigned
+        if (user && !assignedAgentIds.has(user.id)) {
+          unassigned.push(user);
         }
       });
     });
@@ -451,8 +525,9 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
   const getTeamAgents = (teamId: string): User[] => {
     const team = teams.find((t) => t.id === teamId);
     if (!team) return [];
+    // agentIds now store database IDs (after migration)
     return team.agentIds
-      .map((id) => users.find((u) => u.firebaseUid === id))
+      .map((id) => users.find((u) => u.id === id))
       .filter((u): u is User => !!u);
   };
 
@@ -530,14 +605,58 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
     
     const newTeams: Team[] = teams.map((t) => ({ ...t, agentIds: [] }));
     shuffled.forEach((agent) => {
-      const agentId = agent.id;
-      if (agentId) {
-        newTeams[Math.floor(Math.random() * newTeams.length)].agentIds.push(agentId);
+      // Use database ID (agent.id)
+      if (agent.id) {
+        newTeams[Math.floor(Math.random() * newTeams.length)].agentIds.push(agent.id);
       }
     });
     
     setTeams(newTeams);
     toast({ title: 'Agents Assigned', description: 'Agents have been randomly assigned to teams.' });
+  };
+
+  const handleRoundRobinAssignment = async () => {
+    if (!roundRobinAvailable || teams.length === 0) return;
+    
+    try {
+      const res = await fetch(`/api/competitions/agent-rankings?podIds=${formData.podIds.join(',')}`);
+      if (!res.ok) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch rankings' });
+        return;
+      }
+      
+      const { rankings } = await res.json();
+      
+      // Get all agents from selected pods
+      const allAgents = selectedPodAgents;
+      
+      // Create mapping: agentId -> score (for sorting)
+      const agentScoreMap = new Map<string, number>(rankings.map((r: { agentId: string; score: number }) => [r.agentId, r.score]));
+      
+      // Sort agents by their previous competition score (descending)
+      // Agents without previous scores go at the end
+      const sortedAgents = [...allAgents].sort((a, b) => {
+        const scoreA: number = agentScoreMap.get(a.id) ?? -1;
+        const scoreB: number = agentScoreMap.get(b.id) ?? -1;
+        return scoreB - scoreA;
+      });
+      
+      // Distribute evenly: 1st → Team 1, 2nd → Team 2, 3rd → Team 3, 4th → Team 1...
+      const newTeams: Team[] = teams.map(t => ({ ...t, agentIds: [] }));
+      sortedAgents.forEach((agent, index) => {
+        const teamIndex = index % teams.length;
+        newTeams[teamIndex].agentIds.push(agent.id);
+      });
+      
+      setTeams(newTeams);
+      toast({ 
+        title: 'Round Robin Assigned', 
+        description: `Based on "${roundRobinCompetitionName}" rankings` 
+      });
+    } catch (error) {
+      console.error('Round robin assignment error:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to assign agents' });
+    }
   };
 
   const handleTargetChange = (ruleId: string, value: string) => {
@@ -613,22 +732,31 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
         }
       } else {
         // Publish from draft
+        console.log(`[handleSave] Mode: ${currentDraftId ? 'publish-draft' : 'create-direct'}, draftId: ${currentDraftId}`);
         if (currentDraftId) {
+          console.log(`[handleSave] Publishing draft: ${currentDraftId}`);
           const res = await fetch(`/api/competitions/drafts/${currentDraftId}/publish`, {
             method: 'POST',
           });
+          console.log(`[handleSave] Publish response status: ${res.status}`);
           if (!res.ok) {
+            const errorText = await res.text();
+            console.log(`[handleSave] Publish error response: ${errorText}`);
             const error = await res.json().catch(() => ({ message: 'Failed to publish competition' }));
             throw new Error(error.message || 'Failed to publish competition');
           }
         } else {
           // Create competition directly
+          console.log(`[handleSave] Creating competition directly:`, competitionData);
           const res = await fetch('/api/competitions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(competitionData),
           });
+          console.log(`[handleSave] Create response status: ${res.status}`);
           if (!res.ok) {
+            const errorText = await res.text();
+            console.log(`[handleSave] Create error response: ${errorText}`);
             const error = await res.json().catch(() => ({ message: 'Failed to create competition' }));
             throw new Error(error.message || 'Failed to create competition');
           }
@@ -990,6 +1118,16 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleRoundRobinAssignment}
+                    disabled={!roundRobinAvailable}
+                    title={!roundRobinAvailable ? 'No previous competition data available' : `Based on "${roundRobinCompetitionName}" rankings`}
+                  >
+                    <Shuffle className="mr-2 h-4 w-4" />
+                    Round Robin
+                  </Button>
                   <Button type="button" variant="outline" onClick={handleRandomAssignment}>
                     Random Assign
                   </Button>
@@ -1011,14 +1149,13 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {selectedPodAgents.map((agent) => {
-                        const agentId = agent.id;
                         return (
                           <div
                             key={agent.id}
                             className="px-3 py-1.5 text-sm bg-card rounded-full cursor-pointer hover:bg-accent border"
                             onClick={() => {
-                              if (agentId && agent.name) {
-                                setSelectedAgentForTeam({ id: agentId, name: agent.name });
+                              if (agent.id && agent.name) {
+                                setSelectedAgentForTeam({ id: agent.id, name: agent.name });
                               }
                             }}
                           >
@@ -1151,7 +1288,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedAgentForTeam} onOpenChange={() => setSelectedAgentForTeam(null)}>
+          <Dialog open={!!selectedAgentForTeam} onOpenChange={() => setSelectedAgentForTeam(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign to Team</DialogTitle>
@@ -1166,6 +1303,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                 variant="outline"
                 className="w-full justify-start text-left"
                 onClick={() => {
+                  // Use database ID (agent.id)
                   if (selectedAgentForTeam?.id) {
                     handleAssignAgent(team.id, selectedAgentForTeam.id);
                     setSelectedAgentForTeam(null);

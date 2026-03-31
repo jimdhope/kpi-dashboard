@@ -8,6 +8,8 @@ const updateSchema = z.object({
   startsAt: z.string().optional().nullable(),
   endsAt: z.string().optional().nullable(),
   draftData: z.any().optional(),
+  campaignId: z.string().optional().nullable(),
+  podIds: z.array(z.string()).optional(),
   rules: z.array(
     z.object({
       id: z.string().optional(),
@@ -62,6 +64,8 @@ export async function PUT(
       draftData: payload.draftData,
       rules: payload.rules,
       teams: payload.teams,
+      campaignId: payload.campaignId ?? undefined,
+      podIds: payload.podIds ?? undefined,
     });
 
     return ok({ draft });

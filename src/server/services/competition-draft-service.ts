@@ -19,6 +19,20 @@ export const competitionDraftService = {
     name?: string;
     description?: string;
     draftData?: CompetitionDraftData;
+    rules?: Array<{
+      title: string;
+      points: number;
+      isCheckbox?: boolean;
+      emoji?: string | null;
+      dailyTarget?: number | null;
+    }>;
+    teams?: Array<{
+      name: string;
+      agentIds?: string[];
+      emoji?: string | null;
+    }>;
+    campaignId?: string;
+    podIds?: string[];
   }) {
     const user = await authService.requireCurrentUser();
     
@@ -26,6 +40,10 @@ export const competitionDraftService = {
       name: data.name || 'Untitled Competition',
       description: data.description,
       draftData: data.draftData,
+      rules: data.rules,
+      teams: data.teams,
+      campaignId: data.campaignId,
+      podIds: data.podIds,
       createdById: user.id,
     });
   },
@@ -48,6 +66,8 @@ export const competitionDraftService = {
       agentIds?: string[];
       emoji?: string | null;
     }>;
+    campaignId?: string | null;
+    podIds?: string[];
   }) {
     return competitionDraftRepository.update(id, data);
   },
