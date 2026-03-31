@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
 import { ok, errorResponse } from "@/server/http";
-import { buildDailyScoresAdaptiveCard, DailyScoresCardData, PodStandingsForTeams } from "@/server/services/competition-teams-card-service";
+import { buildDailyScoresAdaptiveCard, DailyScoresCardData, PodStandingsForTeams, CompetitionTeamStanding } from "@/server/services/competition-teams-card-service";
 
 interface PodWithWebhook {
   id: string;
@@ -13,6 +13,14 @@ interface PodWithWebhook {
     url: string;
     isActive: boolean;
   } | null;
+}
+
+interface AgentScoreLog {
+  ruleId: string | null;
+  ruleEmoji: string | null;
+  ruleTitle: string | null;
+  value: number;
+  isBonus: boolean;
 }
 
 export async function POST(
@@ -38,6 +46,8 @@ export async function POST(
     const competition = await prisma.competition.findUnique({
       where: { id: competitionId },
       include: {
+        rules: true,
+        teams: true,
         entries: {
           include: {
             user: {
@@ -50,11 +60,8 @@ export async function POST(
               },
             },
             scoreLogs: {
-              where: {
-                createdAt: {
-                  gte: new Date(`${date}T00:00:00.000Z`),
-                  lt: new Date(`${date}T23:59:59.999Z`),
-                },
+              include: {
+                // Get rule info for emoji display
               },
             },
           },
@@ -66,12 +73,61 @@ export async function POST(
       return errorResponse(404, "Competition not found");
     }
 
+    // Get daily score logs with rule info
+    const dateStart = new Date(`${date}T00:00:00.000Z`);
+    const dateEnd = new Date(`${date}T23:59:59.999Z`);
+
+    const scoreLogs = await prisma.competitionScoreLog.findMany({
+      where: {
+        loggedAt: {
+          gte: dateStart,
+          lt: dateEnd,
+        },
+        entry: {
+          competitionId: competitionId,
+        },
+      },
+      include: {
+        entry: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    // Get rule info for score logs
+    const ruleIds = [...new Set(scoreLogs.filter(l => l.ruleId).map(l => l.ruleId!))];
+    const rules = await prisma.competitionRule.findMany({
+      where: { id: { in: ruleIds } },
+    });
+    const ruleMap = new Map(rules.map(r => [r.id, r]));
+
     const pods = await prisma.pod.findMany({
       where: { id: { in: podIds } },
       include: {
         outgoingWebhook: true,
       },
     }) as PodWithWebhook[];
+
+    // Build competition standings by team
+    const teamStandings: CompetitionTeamStanding[] = competition.teams.map(team => {
+      const teamEntryIds = competition.entries
+        .filter((entry: any) => entry.userId && team.agentIds.includes(entry.userId))
+        .map((entry: any) => entry.id);
+
+      const teamTotalScore = competition.entries
+        .filter((entry: any) => entry.userId && team.agentIds.includes(entry.userId))
+        .reduce((sum: number, entry: any) => sum + entry.score, 0);
+
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        teamEmoji: team.emoji || '',
+        totalScore: teamTotalScore,
+        memberCount: team.agentIds.length,
+      };
+    }).sort((a, b) => b.totalScore - a.totalScore);
 
     const sentTo: string[] = [];
     const failed: string[] = [];
@@ -88,11 +144,36 @@ export async function POST(
       });
 
       const agentStandings = agentsInPod
-        .map((entry: any) => ({
-          agentId: entry.userId!,
-          agentName: entry.user!.name,
-          score: entry.score,
-        }))
+        .map((entry: any) => {
+          // Find which team this agent belongs to
+          const agentTeam = competition.teams.find((team: any) => 
+            team.agentIds.includes(entry.userId)
+          );
+
+          // Get score logs for this entry on this date
+          const entryLogs = scoreLogs.filter(log => log.entryId === entry.id);
+          
+          // Build emoji representation from score logs
+          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map(log => {
+            const rule = log.ruleId ? ruleMap.get(log.ruleId) : null;
+            return {
+              ruleId: log.ruleId,
+              ruleEmoji: rule?.emoji || (log.isBonus ? '💰' : '📝'),
+              ruleTitle: rule?.title || (log.isBonus ? 'Bonus' : 'Manual'),
+              value: log.value,
+              isBonus: log.isBonus,
+            };
+          });
+
+          return {
+            agentId: entry.userId!,
+            agentName: entry.user!.name,
+            teamEmoji: agentTeam?.emoji || '',
+            teamName: agentTeam?.name || '',
+            score: entry.score,
+            scoreLogs: scoreLogsForCard,
+          };
+        })
         .sort((a: any, b: any) => b.score - a.score)
         .map((standing: any, index: number) => ({
           ...standing,
@@ -102,6 +183,7 @@ export async function POST(
       const podStandings: PodStandingsForTeams = {
         podId: pod.id,
         podName: pod.name,
+        dailyTarget: null,
         agents: agentStandings,
         hasWebhook: !!pod.outgoingWebhook,
       };
@@ -115,6 +197,7 @@ export async function POST(
           day: "numeric",
         }),
         pods: [podStandings],
+        teamStandings: teamStandings,
       };
 
       const card = buildDailyScoresAdaptiveCard(cardData);
@@ -172,6 +255,8 @@ export async function GET(
     const competition = await prisma.competition.findUnique({
       where: { id: competitionId },
       include: {
+        rules: true,
+        teams: true,
         entries: {
           include: {
             user: {
@@ -183,14 +268,7 @@ export async function GET(
                 },
               },
             },
-            scoreLogs: {
-              where: {
-                createdAt: {
-                  gte: new Date(`${date}T00:00:00.000Z`),
-                  lt: new Date(`${date}T23:59:59.999Z`),
-                },
-              },
-            },
+            scoreLogs: true,
           },
         },
       },
@@ -199,6 +277,32 @@ export async function GET(
     if (!competition) {
       return errorResponse(404, "Competition not found");
     }
+
+    // Get daily score logs
+    const dateStart = new Date(`${date}T00:00:00.000Z`);
+    const dateEnd = new Date(`${date}T23:59:59.999Z`);
+
+    const scoreLogs = await prisma.competitionScoreLog.findMany({
+      where: {
+        loggedAt: {
+          gte: dateStart,
+          lt: dateEnd,
+        },
+        entry: {
+          competitionId: competitionId,
+        },
+      },
+      include: {
+        entry: true,
+      },
+    });
+
+    // Get rule info
+    const ruleIds = [...new Set(scoreLogs.filter(l => l.ruleId).map(l => l.ruleId!))];
+    const rules = await prisma.competitionRule.findMany({
+      where: { id: { in: ruleIds } },
+    });
+    const ruleMap = new Map(rules.map(r => [r.id, r]));
 
     const podsInCompetition = await prisma.pod.findMany({
       where: { id: { in: competition.podIds } },
@@ -214,12 +318,33 @@ export async function GET(
       });
 
       const agentStandings = agentsInPod
-        .map((entry: any) => ({
-          agentId: entry.userId!,
-          agentName: entry.user!.name,
-          score: entry.score,
-          hasActivity: entry.scoreLogs.length > 0,
-        }))
+        .map((entry: any) => {
+          const agentTeam = competition.teams.find((team: any) => 
+            team.agentIds.includes(entry.userId)
+          );
+          const entryLogs = scoreLogs.filter(log => log.entryId === entry.id);
+          
+          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map(log => {
+            const rule = log.ruleId ? ruleMap.get(log.ruleId) : null;
+            return {
+              ruleId: log.ruleId,
+              ruleEmoji: rule?.emoji || (log.isBonus ? '💰' : '📝'),
+              ruleTitle: rule?.title || (log.isBonus ? 'Bonus' : 'Manual'),
+              value: log.value,
+              isBonus: log.isBonus,
+            };
+          });
+
+          return {
+            agentId: entry.userId!,
+            agentName: entry.user!.name,
+            teamEmoji: agentTeam?.emoji || '',
+            teamName: agentTeam?.name || '',
+            score: entry.score,
+            hasActivity: entryLogs.length > 0,
+            scoreLogs: scoreLogsForCard,
+          };
+        })
         .sort((a: any, b: any) => b.score - a.score)
         .map((standing: any, index: number) => ({
           ...standing,
@@ -229,6 +354,7 @@ export async function GET(
       return {
         podId: pod.id,
         podName: pod.name,
+        dailyTarget: null,
         agents: agentStandings,
         hasWebhook: !!pod.outgoingWebhook && pod.outgoingWebhook.isActive,
         webhookConfigured: !!pod.outgoingWebhook,
@@ -236,7 +362,23 @@ export async function GET(
       };
     });
 
-    return ok({ pods: podsWithAgents });
+    // Build team standings
+    const teamStandings = competition.teams.map((team: any) => {
+      const teamEntries = competition.entries.filter((entry: any) => 
+        entry.userId && team.agentIds.includes(entry.userId)
+      );
+      const teamTotalScore = teamEntries.reduce((sum: number, entry: any) => sum + entry.score, 0);
+      
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        teamEmoji: team.emoji || '',
+        totalScore: teamTotalScore,
+        memberCount: team.agentIds.length,
+      };
+    }).sort((a: any, b: any) => b.totalScore - a.totalScore);
+
+    return ok({ pods: podsWithAgents, teamStandings });
   } catch (error) {
     console.error("GET /api/competitions/[id]/send-daily-scores error:", error);
     return errorResponse(500, "Failed to get pod standings for Teams");
