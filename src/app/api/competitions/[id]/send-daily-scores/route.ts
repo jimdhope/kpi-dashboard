@@ -110,21 +110,22 @@ export async function POST(
       },
     }) as PodWithWebhook[];
 
-    // Build competition standings by team
+    // Build competition standings by team (using DAILY scores)
     const teamStandings: CompetitionTeamStanding[] = competition.teams.map(team => {
       const teamEntryIds = competition.entries
         .filter((entry: any) => entry.userId && team.agentIds.includes(entry.userId))
         .map((entry: any) => entry.id);
 
-      const teamTotalScore = competition.entries
-        .filter((entry: any) => entry.userId && team.agentIds.includes(entry.userId))
-        .reduce((sum: number, entry: any) => sum + entry.score, 0);
+      // Calculate daily score for this team from score logs
+      const teamDailyScore = scoreLogs
+        .filter((log: any) => teamEntryIds.includes(log.entryId))
+        .reduce((sum: number, log: any) => sum + log.value, 0);
 
       return {
         teamId: team.id,
         teamName: team.name,
         teamEmoji: team.emoji || '',
-        totalScore: teamTotalScore,
+        totalScore: teamDailyScore, // Use daily score, not total
         memberCount: team.agentIds.length,
       };
     }).sort((a, b) => b.totalScore - a.totalScore);
@@ -153,8 +154,11 @@ export async function POST(
           // Get score logs for this entry on this date
           const entryLogs = scoreLogs.filter(log => log.entryId === entry.id);
           
+          // Calculate DAILY score from score logs (not total)
+          const dailyScore = entryLogs.reduce((sum: number, log: any) => sum + log.value, 0);
+          
           // Build emoji representation from score logs
-          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map(log => {
+          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map((log: any) => {
             const rule = log.ruleId ? ruleMap.get(log.ruleId) : null;
             return {
               ruleId: log.ruleId,
@@ -170,7 +174,7 @@ export async function POST(
             agentName: entry.user!.name,
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
-            score: entry.score,
+            score: dailyScore, // Use daily score, not total score
             scoreLogs: scoreLogsForCard,
           };
         })
@@ -322,9 +326,12 @@ export async function GET(
           const agentTeam = competition.teams.find((team: any) => 
             team.agentIds.includes(entry.userId)
           );
-          const entryLogs = scoreLogs.filter(log => log.entryId === entry.id);
+          const entryLogs = scoreLogs.filter((log: any) => log.entryId === entry.id);
           
-          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map(log => {
+          // Calculate DAILY score from score logs
+          const dailyScore = entryLogs.reduce((sum: number, log: any) => sum + log.value, 0);
+          
+          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map((log: any) => {
             const rule = log.ruleId ? ruleMap.get(log.ruleId) : null;
             return {
               ruleId: log.ruleId,
@@ -340,7 +347,7 @@ export async function GET(
             agentName: entry.user!.name,
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
-            score: entry.score,
+            score: dailyScore, // Use daily score, not total
             hasActivity: entryLogs.length > 0,
             scoreLogs: scoreLogsForCard,
           };
@@ -362,18 +369,22 @@ export async function GET(
       };
     });
 
-    // Build team standings
+    // Build team standings (using DAILY scores)
     const teamStandings = competition.teams.map((team: any) => {
-      const teamEntries = competition.entries.filter((entry: any) => 
-        entry.userId && team.agentIds.includes(entry.userId)
-      );
-      const teamTotalScore = teamEntries.reduce((sum: number, entry: any) => sum + entry.score, 0);
+      const teamEntryIds = competition.entries
+        .filter((entry: any) => entry.userId && team.agentIds.includes(entry.userId))
+        .map((entry: any) => entry.id);
+      
+      // Calculate daily score from score logs
+      const teamDailyScore = scoreLogs
+        .filter((log: any) => teamEntryIds.includes(log.entryId))
+        .reduce((sum: number, log: any) => sum + log.value, 0);
       
       return {
         teamId: team.id,
         teamName: team.name,
         teamEmoji: team.emoji || '',
-        totalScore: teamTotalScore,
+        totalScore: teamDailyScore, // Use daily score, not total
         memberCount: team.agentIds.length,
       };
     }).sort((a: any, b: any) => b.totalScore - a.totalScore);
