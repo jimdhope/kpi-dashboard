@@ -77,7 +77,9 @@ export interface CompetitionService {
 }
 export interface PerformanceService {
   listLogs(): Promise<PerformanceLogRecord[]>;
-  createLog(input: { trackerKpiId: string; value: number; loggedAt?: string | null }): Promise<PerformanceLogRecord>;
+  listLogsByPodIds(podIds: string[]): Promise<PerformanceLogRecord[]>;
+  deleteLog(id: string): Promise<{ success: boolean; id: string }>;
+  createLog(input: { trackerKpiId: string; userId: string; value: number; loggedAt?: string | null }): Promise<PerformanceLogRecord>;
   getOverview(): Promise<PerformanceOverview>;
 }
 export interface TeamsWebhookService {

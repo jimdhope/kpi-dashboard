@@ -11,11 +11,21 @@ export const performanceService = {
     return performanceRepository.listLogs();
   },
 
-  async createLog(input: { trackerKpiId: string; value: number; loggedAt?: string | null }) {
+  async listLogsByPodIds(podIds: string[]) {
+    await authService.requireCurrentUser();
+    return performanceRepository.listLogsByPodIds(podIds);
+  },
+
+  async deleteLog(id: string) {
+    await authService.requireCurrentUser();
+    return performanceRepository.deleteLog(id);
+  },
+
+  async createLog(input: { trackerKpiId: string; userId: string; value: number; loggedAt?: string | null }) {
     const currentUser = await authService.requireCurrentUser();
     const createdLog = await performanceRepository.createLog({
       trackerKpiId: input.trackerKpiId,
-      userId: currentUser.id,
+      userId: input.userId, // Use the provided userId (the agent being logged for)
       value: input.value,
       loggedAt: input.loggedAt ? new Date(input.loggedAt) : undefined,
     });

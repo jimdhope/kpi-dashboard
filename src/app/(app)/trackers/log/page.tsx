@@ -9,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarIcon, Filter, ListFilter, Minus, Plus, Users } from 'lucide-react';
+import { CalendarIcon, Filter, ListFilter, Minus, Plus, Users, Send, Loader2 } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +23,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 
 interface User {
@@ -42,6 +49,7 @@ interface KpiInputState {
 }
 
 interface TrackerLog {
+  id?: string;
   userId: string;
   trackerKpiId: string;
   value: number;
@@ -55,6 +63,13 @@ interface PodData {
 }
 
 const SCORES_DATE_KEY = 'trackerScores_selectedDate';
+const TRACKER_WEBHOOK_KEY = 'tracker-teams-webhook-id';
+
+interface WebhookOption {
+  id: string;
+  name: string;
+  friendlyName?: string | null;
+}
 
 const debounce = (func: Function, delay: number) => {
   let timeoutId: NodeJS.Timeout | null = null;
@@ -72,9 +87,22 @@ export default function LogTrackerPage() {
   const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
+  // Teams webhook state
+  const [webhooks, setWebhooks] = useState<WebhookOption[]>([]);
+  const [selectedWebhookId, setSelectedWebhookId] = useState<string>('');
+  const [isSending, setIsSending] = useState(false);
+
   // Multi-pod data state
   const [podDataMap, setPodDataMap] = useState<Record<string, PodData>>({});
   const [selectedPodId, setSelectedPodId] = useState<string>(''); // Empty = all pods
+
+  // Load saved webhook preference on mount
+  useEffect(() => {
+    const savedWebhook = localStorage.getItem(TRACKER_WEBHOOK_KEY);
+    if (savedWebhook) {
+      setSelectedWebhookId(savedWebhook);
+    }
+  }, []);
 
   useEffect(() => {
     const savedDate = localStorage.getItem(SCORES_DATE_KEY);
@@ -113,13 +141,38 @@ export default function LogTrackerPage() {
     fetchKpis();
   }, []);
 
+  // Fetch available webhooks for Send to Teams
+  useEffect(() => {
+    async function fetchWebhooks() {
+      try {
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const res = await fetch(`/api/trackers/send-daily-scores?date=${dateStr}`);
+        if (res.ok) {
+          const data = await res.json();
+          setWebhooks(data.webhooks || []);
+          // If no saved webhook but we have webhooks, select first one
+          if (!selectedWebhookId && data.webhooks && data.webhooks.length > 0) {
+            const firstWebhook = data.webhooks[0].id;
+            setSelectedWebhookId(firstWebhook);
+            localStorage.setItem(TRACKER_WEBHOOK_KEY, firstWebhook);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch webhooks:', e);
+      }
+    }
+    fetchWebhooks();
+  }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch data for a single pod
   const fetchPodData = useCallback(async (podId: string) => {
     try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      console.log('Fetching pod data:', { podId, dateStr, selectedDate: selectedDate.toISOString() });
       // Fetch agents and logs in parallel
       const [agentsRes, logsRes] = await Promise.all([
         fetch(`/api/pods/${podId}/members`),
-        fetch(`/api/performance/logs?podId=${podId}&date=${format(selectedDate, 'yyyy-MM-dd')}`),
+        fetch(`/api/performance/logs?podId=${podId}&date=${dateStr}`),
       ]);
 
       if (!agentsRes.ok || !logsRes.ok) return null;
@@ -137,6 +190,7 @@ export default function LogTrackerPage() {
           inputs[agent.id][kpi.id] = {
             value: log ? String(log.value) : '0',
             initialValue: log ? String(log.value) : '0',
+            logId: log?.id, // Store log ID for potential deletion
           };
         });
       });
@@ -180,7 +234,8 @@ export default function LogTrackerPage() {
     podId: string,
     agentId: string, 
     kpiId: string, 
-    valueStr: string
+    valueStr: string,
+    logId?: string
   ) => {
     const savingKey = `${podId}-${agentId}-${kpiId}`;
     setIsSaving(prev => ({...prev, [savingKey]: true }));
@@ -189,16 +244,25 @@ export default function LogTrackerPage() {
     const valueIsNumeric = !isNaN(value);
 
     try {
-      if (valueStr === '' || !valueIsNumeric || value <= 0) {
-        // Could implement delete here
-      } else {
+      // If value is 0 or empty and there's an existing log, delete it
+      if ((valueStr === '' || !valueIsNumeric || value <= 0) && logId) {
+        const res = await fetch(`/api/performance/logs?id=${logId}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) {
+          console.error('Failed to delete log');
+        }
+      } else if (valueStr !== '' && valueIsNumeric && value > 0) {
+        // Use UTC date string for consistent querying
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
         const res = await fetch('/api/performance/logs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             trackerKpiId: kpiId,
+            userId: agentId,
             value: value,
-            loggedAt: selectedDate.toISOString(),
+            loggedAt: dateStr, // Send as YYYY-MM-DD string, not ISO
           }),
         });
 
@@ -207,6 +271,7 @@ export default function LogTrackerPage() {
         }
       }
     } catch(e) {
+      console.error('Save error:', e);
       toast({ title: "Auto-Save Error", description: "Could not save score.", variant: "destructive" });
     } finally {
       setIsSaving(prev => ({...prev, [savingKey]: false }));
@@ -214,8 +279,8 @@ export default function LogTrackerPage() {
   }, [selectedDate, toast]);
 
   const debouncedSave = useMemo(
-    () => debounce((podId: string, agentId: string, kpiId: string, value: string) => {
-      handleSaveTrackerScore(podId, agentId, kpiId, value);
+    () => debounce((podId: string, agentId: string, kpiId: string, value: string, logId?: string) => {
+      handleSaveTrackerScore(podId, agentId, kpiId, value, logId);
     }, 1000),
     [handleSaveTrackerScore]
   );
@@ -227,6 +292,9 @@ export default function LogTrackerPage() {
     newValue: string
   ) => {
     if (newValue !== '' && (!/^\d*$/.test(newValue))) return;
+    
+    // Get the current logId from state
+    const currentLogId = podDataMap[podId]?.inputs[agentId]?.[kpiId]?.logId;
     
     // Update local state immediately
     setPodDataMap(prev => {
@@ -249,8 +317,8 @@ export default function LogTrackerPage() {
       return updated;
     });
 
-    debouncedSave(podId, agentId, kpiId, newValue);
-  }, [debouncedSave]);
+    debouncedSave(podId, agentId, kpiId, newValue, currentLogId);
+  }, [debouncedSave, podDataMap]);
 
   const handleIncrement = useCallback((podId: string, agentId: string, kpiId: string, currentValue: string) => {
     const numericValue = parseInt(currentValue, 10) || 0;
@@ -272,6 +340,50 @@ export default function LogTrackerPage() {
     if (date) {
       setSelectedDate(startOfDay(date));
       localStorage.setItem(SCORES_DATE_KEY, date.toISOString());
+    }
+  };
+
+  const handleSendToTeams = async () => {
+    if (!selectedWebhookId) {
+      toast({
+        title: "No Channel Selected",
+        description: "Please select a Teams channel to send to.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const response = await fetch('/api/trackers/send-daily-scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateStr,
+          webhookId: selectedWebhookId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send to Teams');
+      }
+
+      toast({
+        title: "Sent to Teams",
+        description: `Successfully sent tracker scores to ${data.sentTo} (${data.agentCount} agents, ${data.kpiCount} KPIs)`,
+      });
+    } catch (err) {
+      console.error('Failed to send to Teams:', err);
+      toast({
+        title: "Send Failed",
+        description: err instanceof Error ? err.message : 'Failed to send to Teams',
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -445,6 +557,43 @@ export default function LogTrackerPage() {
                   </PopoverContent>
                 </Popover>
               </div>
+            </div>
+            {/* Send to Teams section */}
+            <div className="flex flex-wrap gap-2 items-end">
+              <div className="grid gap-2">
+                <Label>Teams Channel</Label>
+                <Select
+                  value={selectedWebhookId}
+                  onValueChange={(value) => {
+                    setSelectedWebhookId(value);
+                    localStorage.setItem(TRACKER_WEBHOOK_KEY, value);
+                  }}
+                  disabled={webhooks.length === 0}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={webhooks.length === 0 ? "No webhooks" : "Select channel"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {webhooks.map(webhook => (
+                      <SelectItem key={webhook.id} value={webhook.id}>
+                        {webhook.friendlyName || webhook.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleSendToTeams}
+                disabled={isSending || !selectedWebhookId || webhooks.length === 0}
+                className="gap-2"
+              >
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Send to Teams
+              </Button>
             </div>
           </div>
         </CardContent>

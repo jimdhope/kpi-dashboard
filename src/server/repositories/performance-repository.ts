@@ -53,6 +53,13 @@ export const performanceRepository = {
     return mapLog(log);
   },
 
+  async deleteLog(id: string) {
+    await prisma.trackerLog.delete({
+      where: { id },
+    });
+    return { success: true, id };
+  },
+
   async listLogs() {
     const logs = await prisma.trackerLog.findMany({
       include: {
@@ -70,6 +77,41 @@ export const performanceRepository = {
       },
       orderBy: [{ loggedAt: "desc" }, { createdAt: "desc" }],
       take: 100,
+    });
+
+    return logs.map(mapLog);
+  },
+
+  async listLogsByPodIds(podIds: string[]) {
+    if (podIds.length === 0) {
+      return [];
+    }
+
+    // Get user IDs from the specified pods
+    const memberships = await prisma.podMembership.findMany({
+      where: { podId: { in: podIds } },
+      select: { userId: true },
+    });
+    const userIds = [...new Set(memberships.map(m => m.userId))];
+
+    const logs = await prisma.trackerLog.findMany({
+      where: {
+        userId: { in: userIds },
+      },
+      include: {
+        trackerKpi: {
+          select: {
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: [{ loggedAt: "desc" }, { createdAt: "desc" }],
     });
 
     return logs.map(mapLog);

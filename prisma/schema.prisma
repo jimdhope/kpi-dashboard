@@ -38,6 +38,7 @@ enum TeamsChannelCategory {
   daily_summary
   leaderboard
   alert
+  campaign
   custom
 }
 

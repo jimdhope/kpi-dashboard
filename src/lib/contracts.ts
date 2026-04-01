@@ -56,7 +56,7 @@ export const TEAMS_WEBHOOK_DIRECTIONS = ["incoming", "outgoing"] as const;
 
 export type TeamsWebhookDirection = (typeof TEAMS_WEBHOOK_DIRECTIONS)[number];
 
-export const TEAMS_CHANNEL_CATEGORIES = ["daily_summary", "leaderboard", "alert", "custom"] as const;
+export const TEAMS_CHANNEL_CATEGORIES = ["daily_summary", "leaderboard", "alert", "campaign", "custom"] as const;
 
 export type TeamsChannelCategory = (typeof TEAMS_CHANNEL_CATEGORIES)[number];
 
@@ -100,6 +100,7 @@ export const TEAMS_CHANNEL_CATEGORY_LABELS: Record<TeamsChannelCategory, string>
   daily_summary: "Daily Summary",
   leaderboard: "Leaderboard",
   alert: "Alert",
+  campaign: "Campaign",
   custom: "Custom",
 };
 

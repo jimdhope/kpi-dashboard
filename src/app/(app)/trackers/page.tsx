@@ -69,28 +69,61 @@ export default function TrackersDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [kpisRes, podsRes, usersRes, logsRes] = await Promise.all([
+        // First fetch pods to get pod IDs
+        const podsRes = await fetch('/api/pods');
+        let podIds: string[] = [];
+        
+        if (podsRes.ok) {
+          const podsData = await podsRes.json();
+          const allPods = podsData.pods || [];
+          setPods(allPods);
+          podIds = allPods.map((p: Pod) => p.id);
+        }
+
+        // Fetch KPIs and users in parallel
+        const [kpisRes, usersRes] = await Promise.all([
           fetch('/api/trackers'),
-          fetch('/api/pods'),
           fetch('/api/users'),
-          fetch('/api/performance/logs'),
         ]);
 
         if (kpisRes.ok) {
           const data = await kpisRes.json();
           setTrackerKpis(data.kpis || []);
         }
-        if (podsRes.ok) {
-          const data = await podsRes.json();
-          setPods(data.pods || []);
-        }
         if (usersRes.ok) {
           const data = await usersRes.json();
-          setAgents((data.users || []).filter((u: AppUser) => u.name));
+          // Get users that belong to pods
+          const allUsers = data.users || [];
+          
+          // Get memberships to map users to pods
+          const membershipsRes = await fetch('/api/pod-memberships');
+          let userPodMap: Record<string, string> = {};
+          if (membershipsRes.ok) {
+            const membershipsData = await membershipsRes.json();
+            const memberships = membershipsData.memberships || [];
+            memberships.forEach((m: { userId: string; podId: string }) => {
+              userPodMap[m.userId] = m.podId;
+            });
+          }
+          
+          setAgents(allUsers.filter((u: AppUser) => {
+            // Only include users that are in pods
+            return u.name && userPodMap[u.id];
+          }).map((u: AppUser) => ({
+            ...u,
+            podId: userPodMap[u.id], // Add podId from membership
+          })));
         }
-        if (logsRes.ok) {
-          const data = await logsRes.json();
-          setTrackerLogs(Array.isArray(data) ? data : (data.logs || []));
+
+        // Fetch logs filtered by pod IDs
+        if (podIds.length > 0) {
+          const logsRes = await fetch(`/api/performance/logs?podIds=${podIds.join(',')}`);
+          if (logsRes.ok) {
+            const data = await logsRes.json();
+            setTrackerLogs(Array.isArray(data) ? data : (data.logs || []));
+          }
+        } else {
+          setTrackerLogs([]);
         }
       } catch (error) {
         console.error("Error fetching trackers data:", error);
