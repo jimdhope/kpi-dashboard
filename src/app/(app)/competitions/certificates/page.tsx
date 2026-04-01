@@ -58,6 +58,7 @@ interface Achievement {
   podId: string;
   competitionId: string;
   ruleId: string;
+  ruleName?: string | null;
   value: number;
   points: number;
   date: string;
@@ -281,20 +282,76 @@ export default function CompetitionCertificatesPage() {
         (a) => a.competitionId === selectedCompetitionId && a.podId === selectedPodId
       );
 
+      // Debug: Log what's being filtered
+      console.log('=== Certificate Generation Debug ===');
+      console.log('Selected Competition:', selectedCompetitionId);
+      console.log('Selected Pod:', selectedPodId);
+      console.log('Total achievements in state:', achievements.length);
+      console.log('Filtered pod achievements:', podAchievements.length);
+      
       // Get agents who are members of this pod (using podIds array)
       const podAgents = users.filter(
         (u) => u.podIds?.includes(selectedPodId) && u.roles?.includes('agent')
       );
+      
+      console.log('Pod agents found:', podAgents.length);
+      console.log('Pod agent IDs:', podAgents.map(a => a.id));
 
-      // Calculate scores
+      // Calculate scores - only for agents in the selected pod
       const agentScores: Record<string, number> = {};
-      podAgents.forEach((a) => { agentScores[a.id] = 0; });
+      
+      // Initialize scores for agents in the pod who have achievements
       podAchievements.forEach((log) => {
-        const rule = rulesMap.get(log.ruleId);
-        if (rule && !rule.isCheckbox) {
-          agentScores[log.agentId] = (agentScores[log.agentId] || 0) + log.value * (rule.points || 0);
+        // Only count achievements for agents in our pod
+        const agentInPod = podAgents.some(a => a.id === log.agentId);
+        if (!agentInPod) {
+          console.log('Skipping achievement for agent not in pod:', log.agentId);
+          return;
         }
+        
+        // Calculate points - prefer pre-calculated log.points, otherwise calculate from rule
+        let points = 0;
+        
+        // Priority 1: Use pre-calculated points if available (Firebase imported data)
+        if (log.points && log.points > 0) {
+          points = log.points;
+          console.log(`Using pre-calculated points for agent ${log.agentId}: ${points}`);
+        } else {
+          // Priority 2: Try to find rule by ID
+          let rule = rulesMap.get(log.ruleId);
+          
+          // Priority 3: Try to match by ruleName (imported data uses different IDs)
+          if (!rule && log.ruleName) {
+            rule = [...rulesMap.values()].find(r => r.title === log.ruleName);
+            if (rule) {
+              console.log(`Found rule by name: ${rule.title} for agent ${log.agentId}`);
+            }
+          }
+          
+          if (rule && !rule.isCheckbox) {
+            points = log.value * (rule.points || 0);
+          } else {
+            console.log(`Rule not found for achievement: ruleId=${log.ruleId}, ruleName=${log.ruleName}`);
+          }
+        }
+        
+        agentScores[log.agentId] = (agentScores[log.agentId] || 0) + points;
       });
+
+      console.log('Agent scores calculated:', agentScores);
+      console.log('=====================================');
+
+      // Debug: Check if we have any scores
+      if (Object.keys(agentScores).length === 0) {
+        console.log('WARNING: No agent scores calculated - no achievements for this pod/competition');
+        toast({ 
+          title: 'No Data', 
+          description: 'No achievements found for this competition and pod. Check if achievements are logged for this date.',
+          variant: 'destructive'
+        });
+        setIsGenerating(false);
+        return;
+      }
 
       // Rank agents by score
       const rankedAgents = Object.entries(agentScores)
