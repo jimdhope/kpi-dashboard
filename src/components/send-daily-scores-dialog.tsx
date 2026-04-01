@@ -13,8 +13,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2, Send, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Send, AlertCircle, CheckCircle2, XCircle, Table, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 interface PodOption {
   podId: string;
@@ -40,6 +41,10 @@ interface SendDailyScoresDialogProps {
   onSuccess?: (sentTo: string[]) => void;
 }
 
+type TableFormat = 'separate' | 'combined';
+
+const STORAGE_KEY = 'teams-card-table-format';
+
 export function SendDailyScoresDialog({
   open,
   onOpenChange,
@@ -50,10 +55,25 @@ export function SendDailyScoresDialog({
 }: SendDailyScoresDialogProps) {
   const [pods, setPods] = useState<PodOption[]>([]);
   const [selectedPodIds, setSelectedPodIds] = useState<Set<string>>(new Set());
+  const [tableFormat, setTableFormat] = useState<TableFormat>('separate');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [result, setResult] = useState<{ sentTo: string[]; failed: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Load saved preference on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'combined' || saved === 'separate') {
+      setTableFormat(saved);
+    }
+  }, []);
+
+  // Save preference when changed
+  const handleTableFormatChange = (format: TableFormat) => {
+    setTableFormat(format);
+    localStorage.setItem(STORAGE_KEY, format);
+  };
 
   useEffect(() => {
     if (open) {
@@ -61,17 +81,9 @@ export function SendDailyScoresDialog({
     }
   }, [open, competitionId, date]);
 
-  useEffect(() => {
-    if (pods.length > 0) {
-      const selectablePods = pods.filter(p => p.webhookConfigured && p.webhookActive);
-      setSelectedPodIds(new Set(selectablePods.map(p => p.podId)));
-    }
-  }, [pods]);
-
   const fetchPods = async () => {
     setIsLoading(true);
     setError(null);
-    setResult(null);
 
     try {
       const dateStr = format(date, 'yyyy-MM-dd');
@@ -87,11 +99,18 @@ export function SendDailyScoresDialog({
       const data = await response.json();
       setPods(data.pods || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch pods');
+      setError(err instanceof Error ? err.message : 'Failed to load pods');
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (pods.length > 0) {
+      const selectablePods = pods.filter(p => p.webhookConfigured && p.webhookActive);
+      setSelectedPodIds(new Set(selectablePods.map(p => p.podId)));
+    }
+  }, [pods]);
 
   const handlePodToggle = (podId: string, checked: boolean) => {
     setSelectedPodIds(prev => {
@@ -125,34 +144,37 @@ export function SendDailyScoresDialog({
 
     try {
       const dateStr = format(date, 'yyyy-MM-dd');
+      const payload = {
+        date: dateStr,
+        podIds: Array.from(selectedPodIds),
+        tableFormat,
+      };
+
       const response = await fetch(
         `/api/competitions/${competitionId}/send-daily-scores`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date: dateStr,
-            podIds: Array.from(selectedPodIds),
-          }),
+          body: JSON.stringify(payload),
         }
       );
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send scores');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send to Teams');
       }
 
+      const data = await response.json();
       setResult({
         sentTo: data.sentTo || [],
         failed: data.failed || [],
       });
 
-      if (data.sentTo?.length > 0 && onSuccess) {
+      if (data.sentTo && data.sentTo.length > 0 && onSuccess) {
         onSuccess(data.sentTo);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send scores');
+      setError(err instanceof Error ? err.message : 'Failed to send to Teams');
     } finally {
       setIsSending(false);
     }
@@ -226,118 +248,117 @@ export function SendDailyScoresDialog({
                 <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
               </div>
             </div>
-          ) : pods.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
-              No pods found in this competition
+          ) : selectablePods.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">
+                No pods with active webhooks configured.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configure webhooks in Settings to send cards.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                Select which pods to send the daily scores update to:
-              </div>
+              {/* Table Format Toggle */}
+              {selectablePods.length > 1 && (
+                <div className="flex items-center gap-2 pb-3 border-b">
+                  <button
+                    type="button"
+                    onClick={() => handleTableFormatChange('separate')}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                      tableFormat === 'separate'
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Table className="h-4 w-4" />
+                    Separate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTableFormatChange('combined')}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                      tableFormat === 'combined'
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <List className="h-4 w-4" />
+                    Combined
+                  </button>
+                </div>
+              )}
 
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {pods.map(pod => {
-                  const isDisabled = !pod.webhookConfigured || !pod.webhookActive;
-                  const isSelected = selectedPodIds.has(pod.podId);
-
-                  return (
-                    <div
-                      key={pod.podId}
-                      className={cn(
-                        "flex items-center gap-3 p-3 rounded-lg border transition-colors",
-                        isDisabled
-                          ? "bg-muted/50 border-muted cursor-not-allowed"
-                          : "hover:bg-muted/50 border-border"
-                      )}
-                    >
-                      <Checkbox
-                        id={`pod-${pod.podId}`}
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handlePodToggle(pod.podId, !!checked)}
-                        disabled={isDisabled}
-                      />
-                      <Label
-                        htmlFor={`pod-${pod.podId}`}
-                        className={cn(
-                          "flex-1 cursor-pointer",
-                          isDisabled && "cursor-not-allowed opacity-50"
-                        )}
-                      >
-                        <span className="font-medium">{pod.podName}</span>
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          ({pod.agents.length} agent{pod.agents.length !== 1 ? 's' : ''})
-                        </span>
-                      </Label>
-                      <div className="flex items-center gap-1 text-sm">
-                        {pod.webhookConfigured && pod.webhookActive ? (
-                          <span className="flex items-center gap-1 text-green-600">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Ready
-                          </span>
-                        ) : !pod.webhookConfigured ? (
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <XCircle className="h-4 w-4" />
-                            No webhook
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-yellow-600">
-                            <AlertCircle className="h-4 w-4" />
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center gap-3 pt-2 border-t">
+              <div className="flex items-center gap-2">
                 <Checkbox
                   id="select-all"
                   checked={allSelected}
                   onCheckedChange={handleSelectAll}
-                  disabled={selectablePods.length === 0}
                 />
-                <Label
-                  htmlFor="select-all"
-                  className="font-medium cursor-pointer"
-                >
-                  Select All
+                <Label htmlFor="select-all" className="font-medium">
+                  Select all pods ({selectablePods.length})
                 </Label>
               </div>
 
-              {error && (
-                <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
-                  <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-                </div>
-              )}
+              <div className="border rounded-lg divide-y">
+                {selectablePods.map(pod => (
+                  <div
+                    key={pod.podId}
+                    className="flex items-start gap-3 p-3"
+                  >
+                    <Checkbox
+                      id={pod.podId}
+                      checked={selectedPodIds.has(pod.podId)}
+                      onCheckedChange={checked =>
+                        handlePodToggle(pod.podId, checked as boolean)
+                      }
+                      className="mt-1"
+                    />
+                    <Label
+                      htmlFor={pod.podId}
+                      className="flex-1 cursor-pointer"
+                    >
+                      <div className="font-medium">{pod.podName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {pod.agents.length} agent{pod.agents.length !== 1 ? 's' : ''} •{' '}
+                        {pod.agents.reduce((sum, a) => sum + a.score, 0)} pts total
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            {result ? 'Close' : 'Cancel'}
-          </Button>
-          {!result && (
-            <Button
-              onClick={handleSend}
-              disabled={isLoading || isSending || selectedPodIds.size === 0}
-            >
-              {isSending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send to Teams
-                </>
-              )}
-            </Button>
+          {result ? (
+            <Button onClick={handleClose}>Close</Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSend}
+                disabled={isSending || selectedPodIds.size === 0}
+              >
+                {isSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send to Teams
+                  </>
+                )}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

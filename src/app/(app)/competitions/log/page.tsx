@@ -119,12 +119,66 @@ export default function LogScoresPage() {
   const [activeCompetitionName, setActiveCompetitionName] = useState<string>('');
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
+  const [isSendingToTeams, setIsSendingToTeams] = useState(false);
 
   // Allowed roles for Send to Teams feature
   const ALLOWED_SEND_ROLES = ['admin', 'teamLeader', 'podManager', 'competitionRunner'];
 
   // Helper to check if user has any allowed role
   const canSendToTeams = currentUserRoles.some(role => ALLOWED_SEND_ROLES.includes(role));
+
+  // Get pod IDs for active competition
+  const activeCompetitionPodIds = useMemo(() => {
+    const comp = competitions.find(c => c.id === activeCompetitionId);
+    return comp?.podIds || [];
+  }, [competitions, activeCompetitionId]);
+
+  // Check if single pod (for direct send)
+  const isSinglePod = activeCompetitionPodIds.length === 1;
+
+  // Handler for sending to teams (single pod case)
+  const handleSendToTeamsSinglePod = async () => {
+    if (!activeCompetitionId || isSendingToTeams) return;
+    
+    const podId = activeCompetitionPodIds[0];
+    setIsSendingToTeams(true);
+    
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const response = await fetch(`/api/competitions/${activeCompetitionId}/send-daily-scores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateStr,
+          podIds: [podId],
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Scores Sent to Teams",
+          description: `Successfully sent to ${data.sentTo?.length || 0} pod`,
+          variant: "default",
+        });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Failed to Send",
+          description: error.error || "Failed to send to Teams",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to send to Teams",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingToTeams(false);
+    }
+  };
 
   const competitionRules = useMemo(() => {
     const comp = competitions.find(c => c.id === activeCompetitionId);
@@ -185,7 +239,6 @@ export default function LogScoresPage() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUserId(data.user?.id || null);
-          // User has roles array, not single role field
           setCurrentUserRoles(data.user?.roles || []);
         }
       } catch (err) {
@@ -202,14 +255,19 @@ export default function LogScoresPage() {
       return;
     }
 
-    const dateForQuery = startOfDay(selectedDate);
+    // Use string-based date comparison to avoid timezone issues
+    const dateForQuery = format(selectedDate, 'yyyy-MM-dd');
 
     const matchingComp = competitions.find(comp => {
-      if (!comp.podIds?.includes(selectedPodId)) return false;
-      const startDate = comp.startsAt ? new Date(comp.startsAt) : null;
-      const endDate = comp.endsAt ? new Date(comp.endsAt) : null;
-      if (!startDate || !endDate) return false;
-      return dateForQuery >= startDate && dateForQuery <= endDate;
+      const podMatch = comp.podIds?.includes(selectedPodId);
+      if (!podMatch) return false;
+      if (!comp.startsAt || !comp.endsAt) return false;
+      
+      const startDateStr = format(new Date(comp.startsAt), 'yyyy-MM-dd');
+      const endDateStr = format(new Date(comp.endsAt), 'yyyy-MM-dd');
+      
+      const dateMatch = dateForQuery >= startDateStr && dateForQuery <= endDateStr;
+      return dateMatch;
     });
 
     setActiveCompetitionId(matchingComp?.id || null);
@@ -613,10 +671,20 @@ export default function LogScoresPage() {
                   variant="default"
                   size="lg"
                   className="w-full"
-                  onClick={() => setSendDialogOpen(true)}
+                  disabled={isSendingToTeams}
+                  onClick={() => isSinglePod ? handleSendToTeamsSinglePod() : setSendDialogOpen(true)}
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  Send to Teams
+                  {isSendingToTeams ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send to Teams
+                    </>
+                  )}
                 </Button>
               </div>
             )}
@@ -624,11 +692,21 @@ export default function LogScoresPage() {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => setSendDialogOpen(true)}
+                  disabled={isSendingToTeams}
+                  onClick={() => isSinglePod ? handleSendToTeamsSinglePod() : setSendDialogOpen(true)}
                   className="hidden md:inline-flex"
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  Send to Teams
+                  {isSendingToTeams ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send to Teams
+                    </>
+                  )}
                 </Button>
               )}
             </div>

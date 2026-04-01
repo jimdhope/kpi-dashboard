@@ -38,6 +38,7 @@ export interface DailyScoresCardData {
   date: string;
   pods: PodStandingsForTeams[];
   teamStandings?: CompetitionTeamStanding[];
+  hidePodName?: boolean; // When true, hides pod names in the card (for combined format)
 }
 
 /**
@@ -46,6 +47,12 @@ export interface DailyScoresCardData {
 function scoreLogsToEmojis(scoreLogs: AgentScoreLog[]): string {
   if (!scoreLogs || scoreLogs.length === 0) {
     return '—';
+  }
+  
+  // Check if this agent is marked as N/A (absent)
+  const hasNA = scoreLogs.some(log => log.ruleId === 'na' || log.ruleTitle === 'N/A');
+  if (hasNA) {
+    return 'N/A';
   }
   
   return scoreLogs.map(log => log.ruleEmoji || '📝').join('');
@@ -70,7 +77,7 @@ function buildKeySection(rules: Array<{ emoji: string | null; title: string | nu
   return [
     {
       type: "TextBlock",
-      text: `📋 Key: ${keyText}`,
+      text: `📋 Key: ${keyText}    ❌ = Not Present`,
       size: "Small",
       wrap: true,
       isSubtle: true,
@@ -102,26 +109,28 @@ function buildPodTargetsSection(pod: PodStandingsForTeams): any[] {
 function buildStandingsSection(teamStandings: CompetitionTeamStanding[]): any[] {
   if (!teamStandings || teamStandings.length === 0) return [];
   
+  // Build standings as a single line: "1. Team: X pts | 2. Team: X pts | 3. Team: X pts"
   const standingsText = teamStandings
     .map((team, index) => {
-      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-      return `${medal} ${team.teamEmoji} ${team.teamName}: ${team.totalScore} pts`;
+      const position = index === 0 ? '1.' : index === 1 ? '2.' : index === 2 ? '3.' : `${index + 1}.`;
+      return `${position} ${team.teamName}: ${team.totalScore} pts`;
     })
-    .join('\n');
+    .join(' | ');
   
   return [
     {
       type: "TextBlock",
-      text: "🏆 Competition Standings",
+      text: "Standings",
       weight: "Bolder",
       spacing: "Medium",
-      size: "Medium",
+      size: "Small",
     },
     {
       type: "TextBlock",
       text: standingsText,
       spacing: "Small",
       wrap: true,
+      size: "Small",
     },
   ];
 }
@@ -187,20 +196,13 @@ export function buildDailyScoresAdaptiveCard(data: DailyScoresCardData) {
   // Header
   body.push({
     type: "TextBlock",
-    text: "📊 Daily Scores Update",
+    text: "Daily Scores Update",
     size: "Large",
     weight: "Bolder",
     color: "Accent",
     wrap: true,
   });
   
-  body.push({
-    type: "TextBlock",
-    text: `${data.competitionName} - ${data.date}`,
-    spacing: "Medium",
-    size: "Medium",
-  });
-
   // Collect all unique rules for the key
   const allRules: Array<{ emoji: string | null; title: string | null }> = [];
   for (const pod of data.pods) {
@@ -227,14 +229,17 @@ export function buildDailyScoresAdaptiveCard(data: DailyScoresCardData) {
 
   // Pod sections
   for (const pod of data.pods) {
-    // Pod header
-    body.push({
-      type: "TextBlock",
-      text: `🏅 ${pod.podName}`,
-      weight: "Bolder",
-      spacing: "Medium",
-      size: "Medium",
-    });
+    // Pod header - skip if hidePodName is true (combined format) or only 1 pod
+    const shouldHidePodName = data.hidePodName || (data.pods.length === 1);
+    if (!shouldHidePodName) {
+      body.push({
+        type: "TextBlock",
+        text: pod.podName,
+        weight: "Bolder",
+        spacing: "Medium",
+        size: "Medium",
+      });
+    }
 
     // Table header
     body.push({

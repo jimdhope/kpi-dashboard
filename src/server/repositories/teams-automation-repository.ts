@@ -180,8 +180,9 @@ const automationInclude = {
       name: true,
     },
   },
-  messageTemplateRef: {
+  TeamsMessageTemplate: {
     select: {
+      id: true,
       name: true,
       version: true,
       deliveryFormat: true,

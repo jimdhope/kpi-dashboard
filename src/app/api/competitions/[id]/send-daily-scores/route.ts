@@ -37,11 +37,14 @@ export async function POST(
 
     const { id: competitionId } = await params;
     const body = await request.json();
-    const { date, podIds } = body as { date: string; podIds: string[] };
+    const { date, podIds, tableFormat } = body as { date: string; podIds: string[]; tableFormat?: 'combined' | 'separate' };
 
     if (!date || !podIds || !Array.isArray(podIds)) {
       return errorResponse(400, "Invalid request: date and podIds are required");
     }
+
+    // Default to 'separate'
+    const format = tableFormat || 'separate';
 
     const competition = await prisma.competition.findUnique({
       where: { id: competitionId },
@@ -59,11 +62,7 @@ export async function POST(
                 },
               },
             },
-            scoreLogs: {
-              include: {
-                // Get rule info for emoji display
-              },
-            },
+            scoreLogs: true,
           },
         },
       },
@@ -73,31 +72,52 @@ export async function POST(
       return errorResponse(404, "Competition not found");
     }
 
-    // Get daily score logs with rule info
-    const dateStart = new Date(`${date}T00:00:00.000Z`);
-    const dateEnd = new Date(`${date}T23:59:59.999Z`);
+    // Get daily achievements (the actual data from the log page)
+    const dayStart = new Date(date);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setUTCHours(23, 59, 59, 999);
 
-    const scoreLogs = await prisma.competitionScoreLog.findMany({
+    const achievements = await prisma.dailyAchievement.findMany({
       where: {
-        loggedAt: {
-          gte: dateStart,
-          lt: dateEnd,
-        },
-        entry: {
-          competitionId: competitionId,
-        },
-      },
-      include: {
-        entry: {
-          include: {
-            user: true,
-          },
+        competitionId: competitionId,
+        date: {
+          gte: dayStart,
+          lte: dayEnd,
         },
       },
     });
 
-    // Get rule info for score logs
-    const ruleIds = [...new Set(scoreLogs.filter(l => l.ruleId).map(l => l.ruleId!))];
+    // Get all agent user IDs from achievements and competition entries
+    const agentIdsFromEntries = competition.entries
+      .filter((e: any) => e.userId)
+      .map((e: any) => e.userId as string);
+    const agentIdsFromAchievements = achievements.map(a => a.agentId);
+    const allAgentIds = [...new Set([...agentIdsFromEntries, ...agentIdsFromAchievements])];
+
+    // Build a map of agentId to agent name from competition entries
+    const agentNameMap = new Map<string, string>();
+    for (const entry of competition.entries) {
+      if (entry.userId && entry.user?.name) {
+        agentNameMap.set(entry.userId, entry.user.name);
+      }
+    }
+
+    // Also fetch agent names from users table for any agents not in entries
+    const missingAgentIds = allAgentIds.filter(id => !agentNameMap.has(id));
+    
+    if (missingAgentIds.length > 0) {
+      const users = await prisma.user.findMany({
+        where: { id: { in: missingAgentIds } },
+        select: { id: true, name: true },
+      });
+      for (const user of users) {
+        agentNameMap.set(user.id, user.name);
+      }
+    }
+
+    // Get rule info for achievements
+    const ruleIds = [...new Set(achievements.map(a => a.ruleId).filter(Boolean))];
     const rules = await prisma.competitionRule.findMany({
       where: { id: { in: ruleIds } },
     });
@@ -110,28 +130,25 @@ export async function POST(
       },
     }) as PodWithWebhook[];
 
-    // Build competition standings by team (using DAILY scores)
+    // Build competition standings by team (using DAILY scores from achievements)
     const teamStandings: CompetitionTeamStanding[] = competition.teams.map(team => {
-      const teamEntryIds = competition.entries
-        .filter((entry: any) => entry.userId && team.agentIds.includes(entry.userId))
-        .map((entry: any) => entry.id);
-
-      // Calculate daily score for this team from score logs
-      const teamDailyScore = scoreLogs
-        .filter((log: any) => teamEntryIds.includes(log.entryId))
-        .reduce((sum: number, log: any) => sum + log.value, 0);
+      // Calculate daily score for this team from achievements
+      const teamDailyScore = achievements
+        .filter(a => team.agentIds.includes(a.agentId))
+        .reduce((sum: number, a) => sum + (a.points ?? a.value), 0);
 
       return {
         teamId: team.id,
         teamName: team.name,
         teamEmoji: team.emoji || '',
-        totalScore: teamDailyScore, // Use daily score, not total
+        totalScore: teamDailyScore,
         memberCount: team.agentIds.length,
       };
     }).sort((a, b) => b.totalScore - a.totalScore);
 
     const sentTo: string[] = [];
     const failed: string[] = [];
+    const allPodStandings: PodStandingsForTeams[] = [];
 
     // Get all entries with users for the competition
     const allEntries = competition.entries.filter((entry: any) => entry.user);
@@ -142,42 +159,48 @@ export async function POST(
         continue;
       }
 
-      // Show ALL agents in the competition (not filtered by pod)
-      const agentStandings = allEntries
-        .map((entry: any) => {
+      // Show agents from achievements (and entries if they exist)
+      const agentStandings = allAgentIds
+        .map((agentId: string) => {
+          // Use agentNameMap for name lookup (handles agents not in entries)
+          const agentName = agentNameMap.get(agentId) || 'Unknown Agent';
+          
           // Find which team this agent belongs to
           const agentTeam = competition.teams.find((team: any) => 
-            team.agentIds.includes(entry.userId)
+            team.agentIds.includes(agentId)
           );
 
-          // Get score logs for this entry on this date
-          const entryLogs = scoreLogs.filter(log => log.entryId === entry.id);
+          // Get achievements for this agent on this date
+          const agentAchievements = achievements.filter(a => a.agentId === agentId);
           
-          // Calculate DAILY score from score logs (not total)
-          const dailyScore = entryLogs.reduce((sum: number, log: any) => sum + log.value, 0);
+          // Calculate DAILY score from achievements
+          const dailyScore = agentAchievements.reduce(
+            (sum: number, a) => sum + (a.points ?? a.value), 
+            0
+          );
           
-          // Build emoji representation from score logs
-          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map((log: any) => {
-            const rule = log.ruleId ? ruleMap.get(log.ruleId) : null;
+          // Build emoji representation from achievements
+          const scoreLogsForCard: AgentScoreLog[] = agentAchievements.map((a: any) => {
+            const rule = a.ruleId ? ruleMap.get(a.ruleId) : null;
             return {
-              ruleId: log.ruleId,
-              ruleEmoji: rule?.emoji || (log.isBonus ? '💰' : '📝'),
-              ruleTitle: rule?.title || (log.isBonus ? 'Bonus' : 'Manual'),
-              value: log.value,
-              isBonus: log.isBonus,
+              ruleId: a.ruleId,
+              ruleEmoji: rule?.emoji || '📝',
+              ruleTitle: a.ruleName || rule?.title || 'Activity',
+              value: a.value,
+              isBonus: false,
             };
           });
 
           return {
-            agentId: entry.userId!,
-            agentName: entry.user!.name,
+            agentId: agentId,
+            agentName: agentName,
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
-            score: dailyScore, // Use daily score, not total score
+            score: dailyScore,
             scoreLogs: scoreLogsForCard,
           };
         })
-        .sort((a: any, b: any) => b.score - a.score)
+        .sort((a: any, b: any) => a.agentName.localeCompare(b.agentName))
         .map((standing: any, index: number) => ({
           ...standing,
           rank: index + 1,
@@ -191,6 +214,64 @@ export async function POST(
         hasWebhook: !!pod.outgoingWebhook,
       };
 
+      // For combined format, collect all pod standings for later processing
+      if (format === 'combined') {
+        allPodStandings.push(podStandings);
+      } else {
+        // Separate format - build and send card immediately for each pod
+        // Hide pod name if there's only one pod in the competition
+        const hidePodName = podIds.length === 1;
+        
+        const cardData: DailyScoresCardData = {
+          competitionName: competition.name,
+          date: new Date(date).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          pods: [podStandings],
+          teamStandings: teamStandings,
+          hidePodName,
+        };
+
+        const card = buildDailyScoresAdaptiveCard(cardData);
+
+        // Send immediately
+        try {
+          const response = await fetch(pod.outgoingWebhook.url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(card),
+          });
+
+          if (response.ok || response.status === 200) {
+            sentTo.push(pod.name);
+          } else {
+            failed.push(`${pod.name} - HTTP ${response.status}`);
+          }
+        } catch (err) {
+          failed.push(`${pod.name} - ${err instanceof Error ? err.message : "Unknown error"}`);
+        }
+      }
+    }
+
+    // Handle combined format - build single card with all agents and send to all pods
+    if (format === 'combined' && allPodStandings.length > 0) {
+      // Combine all agents from all pods into one list sorted alphabetically
+      const allAgents = allPodStandings
+        .flatMap((p: PodStandingsForTeams) => p.agents)
+        .sort((a: any, b: any) => a.agentName.localeCompare(b.agentName))
+        .map((agent: any, index: number) => ({ ...agent, rank: index + 1 }));
+
+      const combinedPodStandings: PodStandingsForTeams = {
+        podId: 'combined',
+        podName: 'All Pods',
+        dailyTarget: null,
+        agents: allAgents,
+        hasWebhook: true,
+      };
+
       const cardData: DailyScoresCardData = {
         competitionName: competition.name,
         date: new Date(date).toLocaleDateString("en-US", {
@@ -199,26 +280,35 @@ export async function POST(
           month: "long",
           day: "numeric",
         }),
-        pods: [podStandings],
+        pods: [combinedPodStandings],
         teamStandings: teamStandings,
+        hidePodName: true,
       };
 
-      const card = buildDailyScoresAdaptiveCard(cardData);
+      const combinedCard = buildDailyScoresAdaptiveCard(cardData);
 
-      try {
-        const response = await fetch(pod.outgoingWebhook.url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(card),
-        });
-
-        if (response.ok || response.status === 200) {
-          sentTo.push(pod.name);
-        } else {
-          failed.push(`${pod.name} - HTTP ${response.status}`);
+      // Send combined card to all pods
+      for (const pod of pods) {
+        if (!pod.outgoingWebhook || !pod.outgoingWebhook.isActive) {
+          failed.push(`${pod.name} - webhook not configured or inactive`);
+          continue;
         }
-      } catch (err) {
-        failed.push(`${pod.name} - ${err instanceof Error ? err.message : "Unknown error"}`);
+
+        try {
+          const response = await fetch(pod.outgoingWebhook.url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(combinedCard),
+          });
+
+          if (response.ok || response.status === 200) {
+            sentTo.push(pod.name);
+          } else {
+            failed.push(`${pod.name} - HTTP ${response.status}`);
+          }
+        } catch (err) {
+          failed.push(`${pod.name} - ${err instanceof Error ? err.message : "Unknown error"}`);
+        }
       }
     }
 
@@ -281,27 +371,51 @@ export async function GET(
       return errorResponse(404, "Competition not found");
     }
 
-    // Get daily score logs
-    const dateStart = new Date(`${date}T00:00:00.000Z`);
-    const dateEnd = new Date(`${date}T23:59:59.999Z`);
+    // Get daily achievements (the actual data from the log page)
+    const dayStart = new Date(date);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setUTCHours(23, 59, 59, 999);
 
-    const scoreLogs = await prisma.competitionScoreLog.findMany({
+    const achievements = await prisma.dailyAchievement.findMany({
       where: {
-        loggedAt: {
-          gte: dateStart,
-          lt: dateEnd,
+        competitionId: competitionId,
+        date: {
+          gte: dayStart,
+          lte: dayEnd,
         },
-        entry: {
-          competitionId: competitionId,
-        },
-      },
-      include: {
-        entry: true,
       },
     });
 
+    // Get all agent user IDs from achievements and competition entries
+    const agentIdsFromEntries = competition.entries
+      .filter((e: any) => e.userId)
+      .map((e: any) => e.userId as string);
+    const agentIdsFromAchievements = achievements.map(a => a.agentId);
+    const allAgentIds = [...new Set([...agentIdsFromEntries, ...agentIdsFromAchievements])];
+
+    // Build a map of agentId to agent name
+    const agentNameMap = new Map<string, string>();
+    for (const entry of competition.entries) {
+      if (entry.userId && entry.user?.name) {
+        agentNameMap.set(entry.userId, entry.user.name);
+      }
+    }
+
+    // Also fetch agent names from users table for any agents not in entries
+    const missingAgentIds = allAgentIds.filter(id => !agentNameMap.has(id));
+    if (missingAgentIds.length > 0) {
+      const users = await prisma.user.findMany({
+        where: { id: { in: missingAgentIds } },
+        select: { id: true, name: true },
+      });
+      for (const user of users) {
+        agentNameMap.set(user.id, user.name);
+      }
+    }
+
     // Get rule info
-    const ruleIds = [...new Set(scoreLogs.filter(l => l.ruleId).map(l => l.ruleId!))];
+    const ruleIds = [...new Set(achievements.map(a => a.ruleId).filter(Boolean))];
     const rules = await prisma.competitionRule.findMany({
       where: { id: { in: ruleIds } },
     });
@@ -318,39 +432,43 @@ export async function GET(
     }) as PodWithWebhook[];
 
     const podsWithAgents = podsInCompetition.map(pod => {
-      // Show ALL agents in the competition (not filtered by pod)
-      const agentStandings = allEntries
-        .map((entry: any) => {
+      // Show agents who have achievements or are in competition entries
+      const agentStandings = allAgentIds
+        .map((agentId: string) => {
+          const agentName = agentNameMap.get(agentId) || 'Unknown Agent';
           const agentTeam = competition.teams.find((team: any) => 
-            team.agentIds.includes(entry.userId)
+            team.agentIds.includes(agentId)
           );
-          const entryLogs = scoreLogs.filter((log: any) => log.entryId === entry.id);
+          const agentAchievements = achievements.filter((a: any) => a.agentId === agentId);
           
-          // Calculate DAILY score from score logs
-          const dailyScore = entryLogs.reduce((sum: number, log: any) => sum + log.value, 0);
+          // Calculate DAILY score from achievements
+          const dailyScore = agentAchievements.reduce(
+            (sum: number, a: any) => sum + (a.points ?? a.value), 
+            0
+          );
           
-          const scoreLogsForCard: AgentScoreLog[] = entryLogs.map((log: any) => {
-            const rule = log.ruleId ? ruleMap.get(log.ruleId) : null;
+          const scoreLogsForCard: AgentScoreLog[] = agentAchievements.map((a: any) => {
+            const rule = a.ruleId ? ruleMap.get(a.ruleId) : null;
             return {
-              ruleId: log.ruleId,
-              ruleEmoji: rule?.emoji || (log.isBonus ? '💰' : '📝'),
-              ruleTitle: rule?.title || (log.isBonus ? 'Bonus' : 'Manual'),
-              value: log.value,
-              isBonus: log.isBonus,
+              ruleId: a.ruleId,
+              ruleEmoji: rule?.emoji || '📝',
+              ruleTitle: a.ruleName || rule?.title || 'Activity',
+              value: a.value,
+              isBonus: false,
             };
           });
 
           return {
-            agentId: entry.userId!,
-            agentName: entry.user!.name,
+            agentId: agentId,
+            agentName: agentName,
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
-            score: dailyScore, // Use daily score, not total
-            hasActivity: entryLogs.length > 0,
+            score: dailyScore,
+            hasActivity: agentAchievements.length > 0,
             scoreLogs: scoreLogsForCard,
           };
         })
-        .sort((a: any, b: any) => b.score - a.score)
+        .sort((a: any, b: any) => a.agentName.localeCompare(b.agentName))
         .map((standing: any, index: number) => ({
           ...standing,
           rank: index + 1,
@@ -367,22 +485,18 @@ export async function GET(
       };
     });
 
-    // Build team standings (using DAILY scores)
+    // Build team standings (using DAILY scores from achievements)
     const teamStandings = competition.teams.map((team: any) => {
-      const teamEntryIds = competition.entries
-        .filter((entry: any) => entry.userId && team.agentIds.includes(entry.userId))
-        .map((entry: any) => entry.id);
-      
-      // Calculate daily score from score logs
-      const teamDailyScore = scoreLogs
-        .filter((log: any) => teamEntryIds.includes(log.entryId))
-        .reduce((sum: number, log: any) => sum + log.value, 0);
+      // Calculate daily score from achievements
+      const teamDailyScore = achievements
+        .filter((a: any) => team.agentIds.includes(a.agentId))
+        .reduce((sum: number, a: any) => sum + (a.points ?? a.value), 0);
       
       return {
         teamId: team.id,
         teamName: team.name,
         teamEmoji: team.emoji || '',
-        totalScore: teamDailyScore, // Use daily score, not total
+        totalScore: teamDailyScore,
         memberCount: team.agentIds.length,
       };
     }).sort((a: any, b: any) => b.totalScore - a.totalScore);
