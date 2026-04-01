@@ -2,8 +2,10 @@ import { performanceRepository } from "@/server/repositories/performance-reposit
 import { podRepository } from "@/server/repositories/pod-repository";
 import { trackerRepository } from "@/server/repositories/tracker-repository";
 import { authService } from "@/server/services/auth-service";
+import { activityService } from "@/server/services/activity-service";
 import { teamsAutomationService } from "@/server/services/teams-automation-service";
 import { teamsEventService } from "@/server/services/teams-event-service";
+import { prisma } from "@/server/db/client";
 
 export const performanceService = {
   async listLogs() {
@@ -23,6 +25,14 @@ export const performanceService = {
 
   async createLog(input: { trackerKpiId: string; userId: string; value: number; loggedAt?: string | null }) {
     const currentUser = await authService.requireCurrentUser();
+    
+    // Get the target user's name for activity logging
+    const targetUser = await prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { name: true },
+    });
+    const targetUserName = targetUser?.name || currentUser.name;
+    
     const createdLog = await performanceRepository.createLog({
       trackerKpiId: input.trackerKpiId,
       userId: input.userId, // Use the provided userId (the agent being logged for)
@@ -35,6 +45,20 @@ export const performanceService = {
       podRepository.listOutgoingWebhookIdsForUser(currentUser.id),
       podRepository.listPodIdsForUser(currentUser.id),
     ]);
+
+    // Log activity for the tracker entry
+    const isRecordedBySupervisor = currentUser.id !== input.userId;
+    await activityService.logTrackerEntryLogged({
+      trackerId: input.trackerKpiId,
+      trackerName: createdLog.trackerName,
+      value: Number(input.value),
+      userId: input.userId,
+      userName: targetUserName,
+      ...(isRecordedBySupervisor && {
+        recorderId: currentUser.id,
+        recorderName: currentUser.name,
+      }),
+    });
 
     const webhookIds = [
       tracker?.campaign?.outgoingWebhookId ?? null,
@@ -84,12 +108,33 @@ export const performanceService = {
 
   async createKpiLog(input: { kpiId: string; userId?: string; value: number; date: Date; loggedAt?: string | null }) {
     const currentUser = await authService.requireCurrentUser();
-    return performanceRepository.createKpiLog({
+    
+    // Get the target user and KPI names for activity logging
+    const [targetUser, kpi] = await Promise.all([
+      input.userId ? prisma.user.findUnique({ where: { id: input.userId }, select: { name: true } }) : Promise.resolve(null),
+      prisma.kpi.findUnique({ where: { id: input.kpiId }, select: { name: true } }),
+    ]);
+    
+    const targetUserId = input.userId || currentUser.id;
+    const targetUserName = targetUser?.name || currentUser.name;
+    
+    const createdLog = await performanceRepository.createKpiLog({
       kpiId: input.kpiId,
-      userId: input.userId || currentUser.id,
+      userId: targetUserId,
       value: input.value,
       date: input.date,
       loggedAt: input.loggedAt ? new Date(input.loggedAt) : undefined,
     });
+    
+    // Log activity for the KPI value update
+    await activityService.logKpiUpdated({
+      kpiId: input.kpiId,
+      kpiName: kpi?.name || 'Unknown KPI',
+      newValue: input.value,
+      userId: targetUserId,
+      userName: targetUserName,
+    });
+    
+    return createdLog;
   },
 };

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
+import { activityService } from "@/server/services/activity-service";
 import { prisma } from "@/server/db/client";
 
 const createSchema = z.object({
@@ -42,6 +43,26 @@ export async function POST(request: Request) {
         points: payload.points ?? 0,
       },
     });
+
+    // Log activity for game result
+    if (payload.result === 'win') {
+      await activityService.logGameWon({
+        gameId: game.id,
+        gameName: 'Rock Paper Scissors',
+        score: payload.points ?? 0,
+        userId: user.id,
+        userName: user.name,
+      });
+    } else {
+      await activityService.logGamePlayed({
+        gameId: game.id,
+        gameName: 'Rock Paper Scissors',
+        result: payload.result,
+        score: payload.points ?? 0,
+        userId: user.id,
+        userName: user.name,
+      });
+    }
 
     return ok({ game }, { status: 201 });
   } catch (error) {

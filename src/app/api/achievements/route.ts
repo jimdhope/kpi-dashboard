@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
+import { activityService } from "@/server/services/activity-service";
 import { prisma } from "@/server/db/client";
 
 const createSchema = z.object({
@@ -93,6 +94,19 @@ export async function POST(request: Request) {
           loggedBy: user.id,
           loggedAt: new Date(),
         },
+      });
+
+      // Log activity for new achievement
+      const agent = await prisma.user.findUnique({
+        where: { id: payload.agentId },
+        select: { name: true },
+      });
+
+      await activityService.logAchievementEarned({
+        achievementName: payload.ruleName || 'Achievement',
+        points: payload.points ?? payload.value,
+        userId: payload.agentId,
+        userName: agent?.name || 'Unknown',
       });
     }
 

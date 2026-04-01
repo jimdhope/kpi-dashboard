@@ -134,6 +134,14 @@ export const competitionService = {
       },
     });
 
+    // Log activity for competition creation
+    await activityService.logCompetitionStarted({
+      competitionId: competition.id,
+      competitionName: competition.name,
+      userId: user.id,
+      userName: user.name,
+    });
+
     // Broadcast new competition
     competitionSseService.broadcast(competition.id, {
       type: 'competition_created',

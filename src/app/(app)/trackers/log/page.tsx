@@ -168,7 +168,6 @@ export default function LogTrackerPage() {
   const fetchPodData = useCallback(async (podId: string) => {
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      console.log('Fetching pod data:', { podId, dateStr, selectedDate: selectedDate.toISOString() });
       // Fetch agents and logs in parallel
       const [agentsRes, logsRes] = await Promise.all([
         fetch(`/api/pods/${podId}/members`),
