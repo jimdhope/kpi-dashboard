@@ -133,6 +133,7 @@ model User {
   avatarInitials        String?
   avatarBgColor         String?
   firebaseUid           String?                    @unique
+  mustChangePassword    Boolean                   @default(false)
   podId                 String?
   createdAt             DateTime                   @default(now())
   updatedAt             DateTime                   @updatedAt
@@ -640,4 +641,14 @@ model RpsGame {
   createdAt      DateTime @default(now())
 
   @@index([playerId])
+}
+
+model ImportLog {
+  id            String   @id @default(cuid())
+  importedAt    DateTime @default(now())
+  source        String   // "upload" or "existing"
+  collections   Json     // { "users": { imported: 48, updated: 5 }, ... }
+  durationMs    Int
+  status        String   // "success", "partial", "failed"
+  errorMessage  String?
 }
