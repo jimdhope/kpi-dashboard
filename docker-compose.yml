@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16
+    platform: linux/amd64
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -20,6 +21,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
     ports:
       - "9103:9103"
     environment:

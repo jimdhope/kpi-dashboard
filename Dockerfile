@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM --platform=linux/amd64 node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 2: Production
-FROM node:20-alpine AS runner
+FROM --platform=linux/amd64 node:20-alpine AS runner
 
 WORKDIR /app
 
