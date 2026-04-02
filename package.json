@@ -1,6 +1,6 @@
 {
-  "name": "kpi-quest-v3.1",
-  "version": "3.1.0",
+  "name": "kpi-quest",
+  "version": "3.2.0",
   "private": true,
   "type": "module",
   "scripts": {

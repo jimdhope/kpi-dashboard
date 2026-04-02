@@ -92,6 +92,57 @@ npx tsx scripts/reset-passwords.ts
 
 ---
 
+## Docker Deployment
+
+### Using Docker Compose (Recommended for Local Development)
+
+```bash
+# Build and start all services (PostgreSQL + App)
+docker-compose up --build
+
+# Or run in background
+docker-compose up -d --build
+```
+
+The app will be available at `http://localhost:9103`
+
+### Using Docker Directly
+
+```bash
+# Build the image
+docker build -t kpi-quest:latest .
+
+# Run the container
+docker run -d \
+  --name kpi-quest \
+  -p 9103:9103 \
+  -e DATABASE_URL="postgresql://postgres:postgres@host:5432/kpi_quest_v3" \
+  kpi-quest:latest
+```
+
+---
+
+## Pull from GitHub Container Registry
+
+On a new server, you can pull the pre-built image:
+
+```bash
+# Login to GHCR (if not already logged in)
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+# Pull the latest image
+docker pull ghcr.io/jimdhope/kpi-dashboard/app:latest
+
+# Run the container
+docker run -d \
+  --name kpi-quest \
+  -p 9103:9103 \
+  -e DATABASE_URL="postgresql://postgres:postgres@host:5432/kpi_quest_v3" \
+  ghcr.io/jimdhope/kpi-dashboard/app:latest
+```
+
+---
+
 ## Features
 
 - **Campaigns & Pods** - Organize agents into teams and campaigns

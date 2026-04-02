@@ -214,7 +214,7 @@ export const dataImportService = {
     await prisma.importLog.create({
       data: {
         source,
-        collections: results as unknown as Record<string, unknown>,
+        collections: results as unknown as object,
         durationMs: duration,
         status: results.every(r => r.errors === 0) ? 'success' : 'partial',
       }
