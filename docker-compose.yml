@@ -30,6 +30,7 @@ services:
       - NODE_ENV=production
       - PORT=9103
       - DB_HOST=postgres
+      - SESSION_COOKIE_SECRET=dev-secret-change-in-production
     depends_on:
       postgres:
         condition: service_healthy

@@ -37,6 +37,7 @@ COPY --from=builder /app/package.json ./
 # Copy production node_modules (runtime deps only)
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 
 # Create database initialization script
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
@@ -44,6 +45,8 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
     echo 'echo "Database ready! Running prisma db push..."' >> /entrypoint.sh && \
     echo 'npx prisma db push --url "$DATABASE_URL"' >> /entrypoint.sh && \
+    echo 'echo "Seeding database..."' >> /entrypoint.sh && \
+    echo 'npx tsx prisma/seed.ts' >> /entrypoint.sh && \
     echo 'echo "Starting application..."' >> /entrypoint.sh && \
     echo 'exec node server.js' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh

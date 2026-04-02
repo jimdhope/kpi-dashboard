@@ -1,7 +1,15 @@
+import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient, RoleKey } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
-const prisma = new PrismaClient();
+const { Pool } = pg;
+
+const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/kpi_quest_v3";
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const roleLabels: Record<RoleKey, string> = {
   admin: "Admin",
@@ -21,13 +29,9 @@ async function main() {
     });
   }
 
-  const adminEmail = process.env.SEED_ADMIN_EMAIL;
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@kpi-quest.local";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin123!";
   const adminName = process.env.SEED_ADMIN_NAME ?? "V3 Admin";
-
-  if (!adminEmail || !adminPassword) {
-    return;
-  }
 
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
