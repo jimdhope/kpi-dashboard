@@ -24,6 +24,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Install netcat for health check
+RUN apk add --no-cache netcat-openbsd
+
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -43,6 +46,16 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
+# Create database initialization script
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'echo "Waiting for database..."' >> /entrypoint.sh && \
+    echo 'until nc -z $DB_HOST 5432; do sleep 1; done' >> /entrypoint.sh && \
+    echo 'echo "Database ready! Running migrations..."' >> /entrypoint.sh && \
+    echo 'npx prisma db push --skip-generate' >> /entrypoint.sh && \
+    echo 'echo "Starting application..."' >> /entrypoint.sh && \
+    echo 'exec node server.js' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
 # Change ownership for security
 RUN chown nextjs:nodejs /app
 
@@ -51,4 +64,4 @@ USER nextjs
 
 EXPOSE 9103
 
-CMD ["node", "server.js"]
+CMD ["/entrypoint.sh"]

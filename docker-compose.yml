@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16
-    platform: linux/amd64
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -29,6 +28,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kpi_quest_v3
       - NODE_ENV=production
+      - DB_HOST=postgres
     depends_on:
       postgres:
         condition: service_healthy
