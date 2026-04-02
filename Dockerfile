@@ -44,24 +44,21 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
     echo 'echo "Database ready! Running prisma db push..."' >> /entrypoint.sh && \
     echo 'npx prisma db push --url "$DATABASE_URL"' >> /entrypoint.sh && \
-    echo 'echo "Starting application as nextjs user..."' >> /entrypoint.sh && \
-    echo 'exec su-exec nextjs node server.js' >> /entrypoint.sh && \
+    echo 'echo "Starting application..."' >> /entrypoint.sh && \
+    echo 'exec node server.js' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 # Install su-exec for running commands as different user
 RUN apk add --no-cache su-exec
 
-# Create non-root user for security
+# Create non-root user for ownership (optional - can run as root)
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Change ownership for security
+# Change ownership
 RUN chown -R nextjs:nodejs /app
-
-# Switch to non-root user (after creating entrypoint)
-USER nextjs
 
 EXPOSE 9103
 
-# Override CMD to run entrypoint as root, then switch to nextjs
+# Run as root for local testing
 CMD ["/bin/bash", "-c", "/entrypoint.sh"]
