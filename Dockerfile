@@ -38,7 +38,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Create database initialization script (runs as root first)
+# Create database initialization script
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'echo "Waiting for database..."' >> /entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
@@ -58,9 +58,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Change ownership for security
 RUN chown -R nextjs:nodejs /app
 
-# Switch to non-root user
+# Switch to non-root user (after creating entrypoint)
 USER nextjs
 
 EXPOSE 9103
 
-CMD ["/entrypoint.sh"]
+# Override CMD to run entrypoint as root, then switch to nextjs
+CMD ["/bin/bash", "-c", "/entrypoint.sh"]
