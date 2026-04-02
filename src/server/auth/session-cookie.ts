@@ -18,9 +18,12 @@ export async function setSessionCookie(token: string, expiresAt: Date): Promise<
   const cookieStore = await cookies();
   const signedValue = `${token}.${signSessionToken(token)}`;
 
+  // Secure flag only in production with HTTPS
+  const secure = process.env.NODE_ENV === "production";
+
   cookieStore.set(SESSION_COOKIE_NAME, signedValue, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     expires: expiresAt,
     path: "/",
