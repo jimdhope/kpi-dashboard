@@ -16,7 +16,7 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
+app:
     image: ghcr.io/jimdhope/kpi-dashboard/app:latest
     restart: unless-stopped
     ports:
@@ -27,7 +27,6 @@ services:
       - PORT=9103
       - DB_HOST=postgres
       - SESSION_COOKIE_SECRET=dev-secret-change-in-production
-      # URL without https so secure cookie flag is false for HTTP
     depends_on:
       postgres:
         condition: service_healthy
