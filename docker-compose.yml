@@ -17,12 +17,8 @@ services:
       retries: 5
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      platforms:
-        - linux/amd64
-        - linux/arm64
+    image: ghcr.io/jimdhope/kpi-dashboard/app:latest
+    restart: unless-stopped
     ports:
       - "9103:9103"
     environment:
@@ -34,7 +30,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   postgres_v3_data:
