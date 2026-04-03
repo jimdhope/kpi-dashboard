@@ -43,6 +43,7 @@ export interface DailyScoresCardData {
 
 /**
  * Convert score logs to emoji string (e.g., "✅✅✅☎️☎️😊💲")
+ * Repeats each emoji based on its value (count)
  */
 function scoreLogsToEmojis(scoreLogs: AgentScoreLog[]): string {
   if (!scoreLogs || scoreLogs.length === 0) {
@@ -55,7 +56,14 @@ function scoreLogsToEmojis(scoreLogs: AgentScoreLog[]): string {
     return 'N/A';
   }
   
-  return scoreLogs.map(log => log.ruleEmoji || '📝').join('');
+  // Repeat each emoji based on its value (count)
+  return scoreLogs
+    .map(log => {
+      const emoji = log.ruleEmoji || '📝';
+      const count = Math.max(1, log.value || 1); // Default to 1 if value is 0/undefined
+      return emoji.repeat(Math.min(count, 10)); // Max 10 to prevent abuse
+    })
+    .join('');
 }
 
 /**

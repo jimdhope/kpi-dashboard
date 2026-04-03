@@ -52,9 +52,26 @@ export async function POST(request: Request) {
 
       // Interpolate template with context
       const context = payload.context || {};
+      
+      // Enhanced interpolate that handles repeating emojis based on count
       const interpolate = (str: string) => {
         return str.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-          return String(context[key] ?? `{{${key}}}`);
+          const value = context[key];
+          
+          // Handle achievementBadge with count - if context has achievementCount, repeat the badge
+          if (key === 'achievementBadge' && context.achievementCount) {
+            const count = Number(context.achievementCount) || 1;
+            const badge = String(value ?? '');
+            return badge.repeat(Math.min(count, 10)); // Max 10 repeats to prevent abuse
+          }
+          
+          // Handle any *Count variables to repeat the preceding value
+          if (key.endsWith('Count') || key === 'achievementCount') {
+            // This is handled by specific keys above
+            return String(value ?? `{{${key}}}`);
+          }
+          
+          return String(value ?? `{{${key}}}`);
         });
       };
 

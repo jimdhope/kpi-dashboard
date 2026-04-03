@@ -455,7 +455,7 @@ export default function DataImportPage() {
           <CardDescription>Current data in database vs export file</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {status.map((item) => (
               <div key={item.collection} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">

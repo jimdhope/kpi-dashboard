@@ -102,6 +102,24 @@ export const dataImportService = {
       status: exportData?.trackerLogs?.length === trackerLogCount ? 'complete' : 'partial'
     });
 
+    // KPIs (additionalKpis)
+    const kpiCount = await prisma.kpi.count();
+    statuses.push({
+      collection: 'kpis',
+      inFile: exportData?.additionalKpis?.length || 0,
+      inDb: kpiCount,
+      status: exportData?.additionalKpis?.length === kpiCount ? 'complete' : 'partial'
+    });
+
+    // KPI Logs (additionalKpiLogs)
+    const kpiLogCount = await prisma.kpiLog.count();
+    statuses.push({
+      collection: 'kpiLogs',
+      inFile: exportData?.additionalKpiLogs?.length || 0,
+      inDb: kpiLogCount,
+      status: exportData?.additionalKpiLogs?.length === kpiLogCount ? 'complete' : 'partial'
+    });
+
     // Daily Achievements
     const achievementCount = await prisma.dailyAchievement.count();
     statuses.push({
