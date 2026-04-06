@@ -122,23 +122,20 @@ docker run -d \
 
 ---
 
-## Pull from GitHub Container Registry
+## Pull from Docker Hub
 
 On a new server, you can pull the pre-built image:
 
 ```bash
-# Login to GHCR (if not already logged in)
-echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-
 # Pull the latest image
-docker pull ghcr.io/jimdhope/kpi-dashboard/app:latest
+docker pull jimdhope/kpi-dashboard:latest
 
 # Run the container
 docker run -d \
   --name kpi-quest \
   -p 9103:9103 \
   -e DATABASE_URL="postgresql://postgres:postgres@host:5432/kpi_quest_v3" \
-  ghcr.io/jimdhope/kpi-dashboard/app:latest
+  jimdhope/kpi-dashboard:latest
 ```
 
 ---
