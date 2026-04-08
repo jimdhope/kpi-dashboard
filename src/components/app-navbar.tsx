@@ -7,7 +7,8 @@ import { cn, generateInitials } from '@/lib/utils';
 import { 
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
   Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
-  Award, LineChart, SettingsIcon, Users, FileText
+  Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone,
+  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -81,6 +82,20 @@ const navItems: NavItemConfig[] = [
     ]
   },
   { 
+    key: 'usefulTools',
+    label: 'Tools', 
+    href: '/tools', 
+    icon: Wrench,
+    items: [
+      { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays },
+      { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap },
+      { label: 'Burns Test', href: '/tools/burns-test', icon: Flame },
+      { label: 'Dual Fuel', href: '/tools/dual-fuel', icon: Infinity },
+      { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig },
+      { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2 },
+    ]
+  },
+  { 
     key: 'activity',
     label: 'Activity', 
     href: '/agent/activity', 
@@ -113,6 +128,7 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     performance: 'admin',
     reports: 'admin',
     miniGames: 'admin',
+    usefulTools: 'agent',
     activity: 'admin',
     settings: 'admin',
   },
@@ -122,6 +138,7 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     performance: 'admin',
     reports: 'admin',
     miniGames: 'admin',
+    usefulTools: 'agent',
     activity: 'admin',
     settings: 'admin',
   },
@@ -131,6 +148,7 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     performance: 'admin',
     reports: 'admin',
     miniGames: 'admin',
+    usefulTools: 'agent',
     activity: 'admin',
     settings: 'admin',
   },
@@ -140,6 +158,7 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     performance: 'agent',
     reports: 'agent',
     miniGames: 'agent',
+    usefulTools: 'agent',
     activity: 'agent',
     settings: 'admin',
   },
@@ -149,6 +168,7 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     performance: 'agent',
     reports: 'agent',
     miniGames: 'agent',
+    usefulTools: 'agent',
     activity: 'agent',
     settings: 'admin',
   },
@@ -158,6 +178,7 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     performance: 'agent',
     reports: 'none',
     miniGames: 'agent',
+    usefulTools: 'agent',
     activity: 'agent',
     settings: 'none',
     integrations: 'none',
@@ -342,6 +363,17 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
               )}
               <div className="h-px bg-border my-2" />
               <SheetClose asChild>
+                <Link href="/call-flow" target="_blank" rel="noopener noreferrer">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-2 h-11"
+                  >
+                    <Phone className="h-4 w-4" />
+                    <span>Call Flow</span>
+                  </Button>
+                </Link>
+              </SheetClose>
+              <SheetClose asChild>
                 <Link href={primaryRole === 'agent' ? '/agent/profile' : '/settings/profile'}>
                   <Button
                     variant={isActive('/settings/profile') ? "secondary" : "ghost"}
@@ -402,6 +434,22 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
               );
             })}
           </NavigationProvider>
+
+          {/* Call Flow - opens in new tab */}
+          <Link href="/call-flow" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="ghost"
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200",
+                isActive('/call-flow') 
+                  ? "bg-primary/20 text-primary border border-primary/30" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-glass/50"
+              )}
+            >
+              <Phone className="w-4 h-4" />
+              <span className="text-sm font-medium">Call Flow</span>
+            </Button>
+          </Link>
         </div>
       </div>
 
