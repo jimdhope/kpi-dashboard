@@ -17,10 +17,17 @@ export interface PodAgentStanding {
   hasActivity?: boolean;
 }
 
+export interface RuleTargetProgress {
+  emoji: string;
+  title: string;
+  achieved: number;
+  target: number;
+}
+
 export interface PodStandingsForTeams {
   podId: string;
   podName: string;
-  dailyTarget: number | null;
+  ruleTargets: RuleTargetProgress[];
   agents: PodAgentStanding[];
   hasWebhook: boolean;
 }
@@ -98,15 +105,20 @@ function buildKeySection(rules: Array<{ emoji: string | null; title: string | nu
  * Build the daily pod targets section
  */
 function buildPodTargetsSection(pod: PodStandingsForTeams): any[] {
-  if (!pod.dailyTarget) return [];
+  if (!pod.ruleTargets || pod.ruleTargets.length === 0) return [];
+  
+  const targetsText = pod.ruleTargets
+    .map(rt => `${rt.emoji} - ${rt.title} ${rt.achieved}/${rt.target}`)
+    .join(' | ');
   
   return [
     {
       type: "TextBlock",
-      text: `🎯 Daily Pod Target: ${pod.dailyTarget} points`,
+      text: `🎯 Daily Targets: ${targetsText}`,
       weight: "Bolder",
       spacing: "Medium",
-      size: "Medium",
+      size: "Small",
+      wrap: true,
     },
   ];
 }
@@ -117,11 +129,10 @@ function buildPodTargetsSection(pod: PodStandingsForTeams): any[] {
 function buildStandingsSection(teamStandings: CompetitionTeamStanding[]): any[] {
   if (!teamStandings || teamStandings.length === 0) return [];
   
-  // Build standings as a single line: "1. Team: X pts | 2. Team: X pts | 3. Team: X pts"
+  // Build standings as a single line using team emojis: "🐸 Team: X pts | 🦊 Team: X pts | 🦁 Team: X pts"
   const standingsText = teamStandings
-    .map((team, index) => {
-      const position = index === 0 ? '1.' : index === 1 ? '2.' : index === 2 ? '3.' : `${index + 1}.`;
-      return `${position} ${team.teamName}: ${team.totalScore} pts`;
+    .map((team) => {
+      return `${team.teamEmoji} ${team.teamName}: ${team.totalScore} pts`;
     })
     .join(' | ');
   

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
 import { ok, errorResponse } from "@/server/http";
-import { buildDailyScoresAdaptiveCard, DailyScoresCardData, PodStandingsForTeams, CompetitionTeamStanding } from "@/server/services/competition-teams-card-service";
+import { buildDailyScoresAdaptiveCard, DailyScoresCardData, PodStandingsForTeams, CompetitionTeamStanding, RuleTargetProgress } from "@/server/services/competition-teams-card-service";
 
 interface PodWithWebhook {
   id: string;
@@ -88,22 +88,22 @@ export async function POST(
       },
     });
 
-    // Get all agent user IDs from achievements and competition entries
-    const agentIdsFromEntries = competition.entries
-      .filter((e: any) => e.userId)
-      .map((e: any) => e.userId as string);
-    const agentIdsFromAchievements = achievements.map(a => a.agentId);
-    const allAgentIds = [...new Set([...agentIdsFromEntries, ...agentIdsFromAchievements])];
+    // Get all agent user IDs from pod memberships (ALL agents in the pod, not just entries/achievements)
+    const podMemberships = await prisma.podMembership.findMany({
+      where: { podId: { in: podIds } },
+      include: { user: true },
+    });
+    const allAgentIds = [...new Set(podMemberships.map(m => m.userId))];
 
-    // Build a map of agentId to agent name from competition entries
+    // Build a map of agentId to agent name from pod memberships
     const agentNameMap = new Map<string, string>();
-    for (const entry of competition.entries) {
-      if (entry.userId && entry.user?.name) {
-        agentNameMap.set(entry.userId, entry.user.name);
+    for (const membership of podMemberships) {
+      if (membership.userId && membership.user?.name) {
+        agentNameMap.set(membership.userId, membership.user.name);
       }
     }
 
-    // Also fetch agent names from users table for any agents not in entries
+    // Also fetch agent names from users table for any agents not in memberships
     const missingAgentIds = allAgentIds.filter(id => !agentNameMap.has(id));
     
     if (missingAgentIds.length > 0) {
@@ -129,6 +129,53 @@ export async function POST(
         outgoingWebhook: true,
       },
     }) as PodWithWebhook[];
+
+    // Calculate rule targets for each pod
+    // Target = (number of non-absent agents) × rule.dailyTarget
+    const rulesWithTargets = competition.rules.filter(r => r.dailyTarget && r.dailyTarget > 0);
+    
+    // For each pod, get the agent IDs and identify absent agents
+    const podAgentMap = new Map<string, string[]>();
+    for (const membership of podMemberships) {
+      const podId = membership.podId;
+      if (!podAgentMap.has(podId)) {
+        podAgentMap.set(podId, []);
+      }
+      podAgentMap.get(podId)!.push(membership.userId);
+    }
+
+    // Find absent agents (those with N/A achievement for the day)
+    const absentAgentIds = new Set(
+      achievements
+        .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
+        .map(a => a.agentId)
+    );
+
+    // Build rule targets for each pod
+    const podRuleTargetsMap = new Map<string, RuleTargetProgress[]>();
+    for (const podId of podIds) {
+      const agentIds = podAgentMap.get(podId) || [];
+      const presentAgentIds = agentIds.filter(id => !absentAgentIds.has(id));
+      const presentCount = presentAgentIds.length;
+
+      const ruleTargets: RuleTargetProgress[] = rulesWithTargets.map(rule => {
+        // Sum achievements for this rule from present agents only
+        const achieved = achievements
+          .filter(a => a.ruleId === rule.id && presentAgentIds.includes(a.agentId))
+          .reduce((sum, a) => sum + (a.value || 0), 0);
+        
+        const target = presentCount * (rule.dailyTarget || 0);
+
+        return {
+          emoji: rule.emoji || '📝',
+          title: rule.title,
+          achieved,
+          target,
+        };
+      });
+
+      podRuleTargetsMap.set(podId, ruleTargets);
+    }
 
     // Build competition standings by team (using DAILY scores from achievements)
     const teamStandings: CompetitionTeamStanding[] = competition.teams.map(team => {
@@ -209,7 +256,7 @@ export async function POST(
       const podStandings: PodStandingsForTeams = {
         podId: pod.id,
         podName: pod.name,
-        dailyTarget: null,
+        ruleTargets: podRuleTargetsMap.get(pod.id) || [],
         agents: agentStandings,
         hasWebhook: !!pod.outgoingWebhook,
       };
@@ -267,7 +314,7 @@ export async function POST(
       const combinedPodStandings: PodStandingsForTeams = {
         podId: 'combined',
         podName: 'All Pods',
-        dailyTarget: null,
+        ruleTargets: [],
         agents: allAgents,
         hasWebhook: true,
       };
@@ -387,22 +434,22 @@ export async function GET(
       },
     });
 
-    // Get all agent user IDs from achievements and competition entries
-    const agentIdsFromEntries = competition.entries
-      .filter((e: any) => e.userId)
-      .map((e: any) => e.userId as string);
-    const agentIdsFromAchievements = achievements.map(a => a.agentId);
-    const allAgentIds = [...new Set([...agentIdsFromEntries, ...agentIdsFromAchievements])];
+    // Get all agent user IDs from pod memberships (ALL agents in the pod, not just entries/achievements)
+    const podMemberships = await prisma.podMembership.findMany({
+      where: { podId: { in: competition.podIds } },
+      include: { user: true },
+    });
+    const allAgentIds = [...new Set(podMemberships.map(m => m.userId))];
 
-    // Build a map of agentId to agent name
+    // Build a map of agentId to agent name from pod memberships
     const agentNameMap = new Map<string, string>();
-    for (const entry of competition.entries) {
-      if (entry.userId && entry.user?.name) {
-        agentNameMap.set(entry.userId, entry.user.name);
+    for (const membership of podMemberships) {
+      if (membership.userId && membership.user?.name) {
+        agentNameMap.set(membership.userId, membership.user.name);
       }
     }
 
-    // Also fetch agent names from users table for any agents not in entries
+    // Also fetch agent names from users table for any agents not in memberships
     const missingAgentIds = allAgentIds.filter(id => !agentNameMap.has(id));
     if (missingAgentIds.length > 0) {
       const users = await prisma.user.findMany({
@@ -420,6 +467,48 @@ export async function GET(
       where: { id: { in: ruleIds } },
     });
     const ruleMap = new Map(rules.map(r => [r.id, r]));
+
+    // Calculate rule targets for each pod (GET endpoint)
+    const rulesWithTargetsGet = competition.rules.filter(r => r.dailyTarget && r.dailyTarget > 0);
+    
+    const podAgentMapGet = new Map<string, string[]>();
+    for (const membership of podMemberships) {
+      const podId = membership.podId;
+      if (!podAgentMapGet.has(podId)) {
+        podAgentMapGet.set(podId, []);
+      }
+      podAgentMapGet.get(podId)!.push(membership.userId);
+    }
+
+    const absentAgentIdsGet = new Set(
+      achievements
+        .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
+        .map(a => a.agentId)
+    );
+
+    const podRuleTargetsMapGet = new Map<string, RuleTargetProgress[]>();
+    for (const podId of competition.podIds) {
+      const agentIds = podAgentMapGet.get(podId) || [];
+      const presentAgentIds = agentIds.filter(id => !absentAgentIdsGet.has(id));
+      const presentCount = presentAgentIds.length;
+
+      const ruleTargets: RuleTargetProgress[] = rulesWithTargetsGet.map(rule => {
+        const achieved = achievements
+          .filter(a => a.ruleId === rule.id && presentAgentIds.includes(a.agentId))
+          .reduce((sum, a) => sum + (a.value || 0), 0);
+        
+        const target = presentCount * (rule.dailyTarget || 0);
+
+        return {
+          emoji: rule.emoji || '📝',
+          title: rule.title,
+          achieved,
+          target,
+        };
+      });
+
+      podRuleTargetsMapGet.set(podId, ruleTargets);
+    }
 
     // Get all entries with users for the competition
     const allEntries = competition.entries.filter((entry: any) => entry.user);
@@ -477,7 +566,7 @@ export async function GET(
       return {
         podId: pod.id,
         podName: pod.name,
-        dailyTarget: null,
+        ruleTargets: podRuleTargetsMapGet.get(pod.id) || [],
         agents: agentStandings,
         hasWebhook: !!pod.outgoingWebhook && pod.outgoingWebhook.isActive,
         webhookConfigured: !!pod.outgoingWebhook,
