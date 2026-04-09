@@ -1,4 +1,4 @@
-# KPI Quest V3.2
+# KPI Quest V3.3
 
 A competition tracking and performance management application built with Next.js, Prisma, and PostgreSQL.
 
@@ -70,7 +70,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kpi_quest_v3
 SESSION_COOKIE_SECRET=your-secret-key-change-in-production
 APP_URL=http://localhost:9103
 SEED_ADMIN_EMAIL=admin@kpiquest.local
-SEED_ADMIN_PASSWORD=KPIQuest2024!
+SEED_ADMIN_PASSWORD=admin123!
 ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
@@ -138,7 +138,7 @@ curl http://localhost:9103
 After a fresh installation, use the default admin credentials:
 
 - **Email:** admin@kpiquest.local
-- **Password:** KPIQuest2024!
+- **Password:** admin123!
 
 You will be prompted to change your password on first login.
 
