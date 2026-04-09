@@ -2,33 +2,79 @@
 
 A competition tracking and performance management application built with Next.js, Prisma, and PostgreSQL.
 
-## Local Development Setup
+---
 
-### 1. Environment Setup
+## Prerequisites
 
-Copy `.env.example` to `.env.local`:
+- **Node.js** 20.x or higher
+- **PostgreSQL** 14.x or higher
+- **Linux server** (tested on Ubuntu) with systemd
+
+---
+
+## Server Setup (Native Installation)
+
+This guide covers installing KPI Quest without Docker.
+
+### 1. Install PostgreSQL
 
 ```bash
-cp .env.example .env.local
+# Install PostgreSQL
+sudo apt update
+sudo apt install -y postgresql postgresql-contrib
+
+# Start and enable PostgreSQL
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
 ```
 
-Update the `.env.local` file with your database URL and other required environment variables.
-
-### 2. Start Database
+### 2. Create Database and User
 
 ```bash
-docker compose up -d
+# Create database
+sudo -u postgres psql -c "CREATE DATABASE kpi_quest_v3;"
+
+# Create user and grant privileges
+sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'postgres';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE kpi_quest_v3 TO postgres;"
+sudo -u postgres psql -d kpi_quest_v3 -c "GRANT ALL ON SCHEMA public TO postgres;"
 ```
 
-Or if using a managed PostgreSQL service, ensure your database is running and accessible.
+### 3. Clone the Repository
 
-### 3. Install Dependencies
+```bash
+sudo mkdir -p /var/www
+cd /var/www
+sudo git clone https://github.com/jimdhope/kpi-dashboard.git kpi-dashboard
+cd kpi-dashboard
+```
+
+### 4. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 4. Setup Database
+### 5. Configure Environment
+
+Copy `.env.example` to `.env.local` and update:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your settings:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kpi_quest_v3
+SESSION_COOKIE_SECRET=your-secret-key-change-in-production
+APP_URL=http://localhost:9103
+SEED_ADMIN_EMAIL=admin@kpiquest.local
+SEED_ADMIN_PASSWORD=KPIQuest2024!
+ENCRYPTION_KEY=your-32-character-encryption-key
+```
+
+### 6. Setup Database
 
 ```bash
 # Generate Prisma client
@@ -38,20 +84,51 @@ npm run db:generate
 npm run db:push
 ```
 
-### 5. Run the App
+### 7. Create systemd Service
 
-```bash
-npm run dev
+Create `/etc/systemd/system/kpi-dashboard.service`:
+
+```ini
+[Unit]
+Description=KPI Quest Dashboard
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/kpi-dashboard
+Environment="NODE_ENV=production"
+Environment="PORT=9103"
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-The app will be available at `http://localhost:9103` (or the port specified in your .env.local).
-
-### 6. (Optional) Background Worker
-
-Run the background worker in a separate terminal when you need Teams outbound deliveries processed:
+### 8. Set Permissions and Start
 
 ```bash
-npm run jobs:work
+# Set ownership
+sudo chown -R www-data:www-data /var/www/kpi-dashboard
+sudo chmod -R 755 /var/www/kpi-dashboard
+
+# Enable and start service
+sudo systemctl daemon-reload
+sudo systemctl enable kpi-dashboard
+sudo systemctl start kpi-dashboard
+```
+
+### 9. Verify Installation
+
+```bash
+# Check service status
+sudo systemctl status kpi-dashboard
+
+# Test the application
+curl http://localhost:9103
 ```
 
 ---
@@ -84,69 +161,38 @@ The import will pull:
 - Tracker KPIs and Logs
 - Pod Memberships
 
-**After import**, run the password reset script to ensure all users must change their password on first login:
+**After import**, run the password reset script:
 
 ```bash
+cd /var/www/kpi-dashboard
 npx tsx scripts/reset-passwords.ts
 ```
 
 ---
 
-## Docker Deployment
-
-### Using Docker Compose (Recommended for Local Development)
+## Useful Commands
 
 ```bash
-# Build and start all services (PostgreSQL + App)
-docker-compose up --build
+# Restart the service
+sudo systemctl restart kpi-dashboard
 
-# Or run in background
-docker-compose up -d --build
-```
+# View logs
+sudo journalctl -u kpi-dashboard -f
 
-The app will be available at `http://localhost:9103`
-
-### Using Docker Directly
-
-```bash
-# Build the image
-docker build -t kpi-quest:latest .
-
-# Run the container
-docker run -d \
-  --name kpi-quest \
-  -p 9103:9103 \
-  -e DATABASE_URL="postgresql://postgres:postgres@host:5432/kpi_quest_v3" \
-  kpi-quest:latest
-```
-
----
-
-## Pull from Docker Hub
-
-On a new server, you can pull the pre-built image:
-
-```bash
-# Pull the latest image
-docker pull jimdhope/kpi-dashboard:latest
-
-# Run the container
-docker run -d \
-  --name kpi-quest \
-  -p 9103:9103 \
-  -e DATABASE_URL="postgresql://postgres:postgres@host:5432/kpi_quest_v3" \
-  jimdhope/kpi-dashboard:latest
+# Stop the service
+sudo systemctl stop kpi-dashboard
 ```
 
 ---
 
 ## Features
 
-- **Campaigns & Pods** - Organize agents into teams and campaigns
-- **Competitions** - Create and run weekly competitions with custom rules
-- **Daily Achievement Logging** - Track agent performance daily
-- **Trackers** - KPI tracking with leaderboards
-- **Teams Integration** - Send daily scores and notifications via Microsoft Teams
+- **Competitions** - Create weekly competitions with custom KPI rules and leaderboards
+- **Performance Tracking** - Campaign-wide KPI tracking with real-time dashboards
+- **Daily Trackers** - Log daily KPIs and track trends over time
+- **Useful Tools** - Calculator tools for instalment plans, energy usage, meter readings, and more
+- **Mini-Games** - Rock Paper Scissors game for team engagement
+- **Pod Management** - Organize agents into teams with role-based access
 - **Activity Logging** - Full audit trail of all system actions
 
 ---
@@ -157,4 +203,22 @@ docker run -d \
 - **Backend:** Next.js API Routes, Prisma ORM
 - **Database:** PostgreSQL
 - **Authentication:** Custom session-based auth
-- **Notifications:** Microsoft Teams webhooks
+
+---
+
+## Development (Local)
+
+If running locally for development:
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# (Optional) Run background worker
+npm run jobs:work
+```
+
+The app will be available at `http://localhost:9103`

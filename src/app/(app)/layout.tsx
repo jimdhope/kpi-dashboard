@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AppNavBar } from '@/components/app-navbar';
 import { CommandPalette } from '@/components/command-palette';
 import { OfflineIndicator } from '@/components/offline-indicator';
+import { AnimatedGradient } from '@/components/animated-gradient';
 import { AppUser } from '@/lib/contracts';
 import { Loader2 } from 'lucide-react';
 
@@ -45,9 +46,12 @@ export default function AppLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <>
+        <AnimatedGradient />
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </>
     );
   }
 
@@ -56,13 +60,16 @@ export default function AppLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppNavBar user={user} />
-      <OfflineIndicator />
-      <CommandPalette />
-      <main className="px-4 md:px-6 pb-6">
-        {children}
-      </main>
-    </div>
+    <>
+      <AnimatedGradient />
+      <div className="min-h-screen">
+        <AppNavBar user={user} />
+        <OfflineIndicator />
+        <CommandPalette />
+        <main className="px-4 md:px-6 pb-6">
+          {children}
+        </main>
+      </div>
+    </>
   );
 }

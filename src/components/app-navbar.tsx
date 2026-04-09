@@ -2,13 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn, generateInitials } from '@/lib/utils';
 import { 
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
   Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone,
-  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2
+  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -87,6 +88,7 @@ const navItems: NavItemConfig[] = [
     href: '/tools', 
     icon: Wrench,
     items: [
+      { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen },
       { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays },
       { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap },
       { label: 'Burns Test', href: '/tools/burns-test', icon: Flame },
@@ -390,9 +392,14 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
 
         {/* Desktop Logo */}
         <Link href={dashboardHref} className="hidden lg:flex items-center gap-2 mr-4">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <Image 
+            src="/logo.svg" 
+            alt="KPI Quest Logo" 
+            width={40} 
+            height={40} 
+            className="h-8 w-8"
+            unoptimized
+          />
           <span className="text-xl font-bold">KPI Quest</span>
         </Link>
 

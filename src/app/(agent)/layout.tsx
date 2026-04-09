@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AppNavBar } from '@/components/app-navbar';
+import { AnimatedGradient } from '@/components/animated-gradient';
 import { AppUser } from '@/lib/contracts';
 
 export default function AgentLayout({
@@ -33,11 +34,14 @@ export default function AgentLayout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppNavBar user={user} />
-      <main className="px-4 md:px-6 pb-6">
-        {children}
-      </main>
-    </div>
+    <>
+      <AnimatedGradient />
+      <div className="min-h-screen">
+        <AppNavBar user={user} />
+        <main className="px-4 md:px-6 pb-6">
+          {children}
+        </main>
+      </div>
+    </>
   );
 }

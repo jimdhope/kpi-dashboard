@@ -87,11 +87,6 @@ export function BurnsTestCalculator() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Burns Test Calculator</h1>
-        <p className="text-muted-foreground">Enter 7 days of meter readings for each rate type. Each day&apos;s reading must be greater than or equal to the previous day.</p>
-      </div>
-
       <Card className="frosted-glass">
         <CardHeader><CardTitle>Configuration</CardTitle></CardHeader>
         <CardContent className="space-y-4">

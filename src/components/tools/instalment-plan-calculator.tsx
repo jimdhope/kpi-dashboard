@@ -64,11 +64,6 @@ export function InstalmentPlanCalculator() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Instalment Plan Calculator</h1>
-        <p className="text-muted-foreground">Calculate payment plans and suggested instalment amounts for customer balances.</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-4 space-y-6">
           <Card className="frosted-glass">

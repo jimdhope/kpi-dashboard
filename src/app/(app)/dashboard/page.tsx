@@ -99,7 +99,7 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Competitions</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
@@ -109,7 +109,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">{stats.activeCompetitions} active now</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pods</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -119,7 +119,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">Active pods</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Agents</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -129,7 +129,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">Team members</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today's Logs</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
@@ -149,7 +149,7 @@ export default function DashboardPage() {
             const Icon = link.icon;
             return (
               <Link key={link.href} href={link.href}>
-                <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                <Card className="glass-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
                   <CardHeader className="flex flex-row items-center gap-3 pb-2">
                     <Icon className="h-5 w-5 text-primary" />
                     <CardTitle className="text-base">{link.title}</CardTitle>

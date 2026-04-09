@@ -77,11 +77,6 @@ export function AgreedReadsCalculator() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Agreed Reads Calculator</h1>
-        <p className="text-muted-foreground">Calculate agreed meter reads for billing periods with proposed dates.</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-4 space-y-6">
           <Card className="frosted-glass">

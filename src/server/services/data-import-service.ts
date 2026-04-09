@@ -827,7 +827,12 @@ export const dataImportService = {
       const child = spawn('npx', ['tsx', 'scripts/import-from-firebase.ts', tempCredPath], {
         cwd: process.cwd(),
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, FIREBASE_CREDS_PATH: tempCredPath }
+        env: { 
+          ...process.env, 
+          FIREBASE_CREDS_PATH: tempCredPath,
+          NPM_CONFIG_LOGLEVEL: 'error',
+          npm_config_loglevel: 'error'
+        }
       });
       
       let stdout = '';
@@ -862,14 +867,16 @@ export const dataImportService = {
         
         if (code === 0) {
           try {
-            // Find JSON between markers
+            // Find JSON between markers - use lastIndexOf to handle multiple occurrences
             const startMarker = '---RESULT_JSON_START---';
             const endMarker = '---RESULT_JSON_END---';
-            const startIdx = stdout.indexOf(startMarker);
-            const endIdx = stdout.indexOf(endMarker);
+            const startIdx = stdout.lastIndexOf(startMarker);
+            const endIdx = stdout.lastIndexOf(endMarker);
             
-            if (startIdx !== -1 && endIdx !== -1) {
-              const jsonStr = stdout.substring(startIdx + startMarker.length, endIdx).trim();
+            if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+              let jsonStr = stdout.substring(startIdx + startMarker.length, endIdx).trim();
+              // Clean up any trailing content that might break JSON parsing
+              jsonStr = jsonStr.replace(/,\s*$/, '').replace(/\}\s*$/, '}');
               const result = JSON.parse(jsonStr);
               resolve(result);
             } else {
@@ -879,13 +886,29 @@ export const dataImportService = {
               const result = JSON.parse(lastLine);
               resolve(result);
             }
-          } catch (e) {
-            // If parsing fails, assume success if exit code is 0
-            resolve({
-              results: [{ collection: 'firebase_import', imported: 0, updated: 0, errors: 0 }],
-              duration: 0,
-              success: true,
-            });
+          } catch (parseError: any) {
+            // If parsing fails, try to find any valid JSON object in the output
+            try {
+              const jsonMatch = stdout.match(/\{[\s\S]*"success"\s*:\s*(true|false)[\s\S]*\}/);
+              if (jsonMatch) {
+                const result = JSON.parse(jsonMatch[0]);
+                resolve(result);
+              } else {
+                // If parsing fails, assume success if exit code is 0
+                resolve({
+                  results: [{ collection: 'firebase_import', imported: 0, updated: 0, errors: 0 }],
+                  duration: 0,
+                  success: true,
+                });
+              }
+            } catch {
+              // If all parsing fails, assume success if exit code is 0
+              resolve({
+                results: [{ collection: 'firebase_import', imported: 0, updated: 0, errors: 0 }],
+                duration: 0,
+                success: true,
+              });
+            }
           }
         } else {
           resolve({

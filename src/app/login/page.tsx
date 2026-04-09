@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -47,6 +48,16 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/5 via-background to-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Image 
+              src="/logo.svg" 
+              alt="KPI Quest Logo" 
+              width={120} 
+              height={120} 
+              className="w-28 h-28"
+              unoptimized
+            />
+          </div>
           <CardTitle className="text-2xl font-bold">Login to KPI Quest</CardTitle>
           <CardDescription>Enter your credentials below</CardDescription>
         </CardHeader>

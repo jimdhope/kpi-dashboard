@@ -72,11 +72,6 @@ export function TariffComparisonTool() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Tariff Comparison Tool</h1>
-        <p className="text-muted-foreground">Compare energy tariffs to find the best deal for customers.</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-4 space-y-6">
           <Card className="frosted-glass">

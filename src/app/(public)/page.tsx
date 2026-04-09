@@ -2,147 +2,196 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Trophy, Target, TrendingUp, Users, BookOpen, Contact, Zap, CheckCircle, Star, BarChart3, Award, Gamepad2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  Trophy, Target, TrendingUp, Zap, CalendarDays, Calculator, 
+  CheckCircle, BarChart3, Gamepad2, BookOpen, Wrench, Flame, 
+  FileCheck2, Phone, Star, Award, Users, Shield, ArrowRight
+} from 'lucide-react';
 
-const features = [
+const toolFeatures = [
   {
-    id: 'competitions',
-    title: 'Competitions',
-    badge: 'Current',
-    badgeColor: 'bg-green-500/20 text-green-600 border-green-500/30',
-    icon: Trophy,
-    iconColor: 'text-yellow-500',
-    features: [
-      'Custom KPI competitions with flexible rules',
-      'Team & individual leaderboards',
-      'Daily achievement logging',
-      'Team bonus points',
-      'Certificate generation for top performers',
-    ],
-  },
-  {
-    id: 'performance',
-    title: 'Performance',
-    badge: 'Current',
-    badgeColor: 'bg-green-500/20 text-green-600 border-green-500/30',
-    icon: BarChart3,
-    iconColor: 'text-blue-500',
-    features: [
-      'Campaign-wide KPI tracking',
-      'Real-time dashboards',
-      'Pod & agent breakdowns',
-      '6-week performance trends',
-      'Export-ready reports',
-    ],
-  },
-  {
-    id: 'knowledge',
-    title: 'Knowledge Base',
-    badge: 'Coming Soon',
-    badgeColor: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
+    id: 'meter-reading',
+    title: 'Meter Reading Guide',
+    description: 'Comprehensive guide for reading all meter types',
     icon: BookOpen,
-    iconColor: 'text-purple-500',
-    features: [
-      'Articles & resources',
-      'Help documentation',
-      'Onboarding guides',
-      'Team knowledge sharing',
-      'Searchable wiki',
-    ],
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
   },
   {
-    id: 'directory',
-    title: 'Directory',
-    badge: 'Coming Soon',
-    badgeColor: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
-    icon: Contact,
-    iconColor: 'text-orange-500',
-    features: [
-      'Internal contacts',
-      'External contacts',
-      'Quick access for agents',
-      'Role-based visibility',
-      'Contact search',
-    ],
+    id: 'instalment',
+    title: 'Instalment Plan',
+    description: 'Calculate payment plans for customer balances',
+    icon: CalendarDays,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
+  {
+    id: 'energy',
+    title: 'Energy Usage',
+    description: 'Calculate usage and costs from meter readings',
+    icon: Zap,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
+  {
+    id: 'burns-test',
+    title: 'Burns Test',
+    description: 'Validate 7-day meter readings for accuracy',
+    icon: Flame,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
+  {
+    id: 'dual-fuel',
+    title: 'Dual Fuel',
+    description: 'Compare combined electricity and gas payments',
+    icon: BarChart3,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
+  {
+    id: 'tariff',
+    title: 'Tariff Comparison',
+    description: 'Find the best tariff deals for customers',
+    icon: Calculator,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
+  {
+    id: 'agreed-reads',
+    title: 'Agreed Reads',
+    description: 'Calculate agreed reads for billing periods',
+    icon: FileCheck2,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
   },
 ];
 
-const steps = [
+const mainFeatures = [
   {
-    number: 1,
-    title: 'Define',
-    description: 'Set up your KPIs, create competitions, and define achievement rules',
-    icon: Target,
-  },
-  {
-    number: 2,
-    title: 'Track',
-    description: 'Log daily achievements and monitor real-time progress',
-    icon: TrendingUp,
-  },
-  {
-    number: 3,
-    title: 'Win!',
-    description: 'Climb leaderboards, earn certificates, and celebrate success',
+    id: 'competitions',
+    title: 'Competitions',
+    description: 'Create KPI competitions with custom rules, leaderboards, and certificates',
     icon: Trophy,
+    color: 'text-goldenrod',
+    bgColor: 'bg-goldenrod/10',
+    stats: 'Win weekly competitions',
+  },
+  {
+    id: 'performance',
+    title: 'Performance Tracking',
+    description: 'Real-time dashboards, 6-week trends, and export-ready reports',
+    icon: TrendingUp,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+    stats: 'Track daily KPIs',
+  },
+  {
+    id: 'trackers',
+    title: 'Daily Trackers',
+    description: 'Log daily achievements and monitor team progress over time',
+    icon: Target,
+    color: 'text-green',
+    bgColor: 'bg-green/10',
+    stats: 'Monitor trends',
+  },
+  {
+    id: 'minigames',
+    title: 'Mini-Games',
+    description: 'Rock Paper Scissors with team leaderboards for engagement',
+    icon: Gamepad2,
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/10',
+    stats: 'Team fun',
+  },
+];
+
+const highlights = [
+  {
+    title: 'Team Pods',
+    description: 'Organize agents into teams with role-based access',
+    icon: Users,
+  },
+  {
+    title: 'Certificates',
+    description: 'Download awards for top performers',
+    icon: Award,
+  },
+  {
+    title: 'Call Flow Guide',
+    description: 'Guided scripts for customer calls',
+    icon: Phone,
+  },
+  {
+    title: 'Security',
+    description: 'Role-based permissions and audit trails',
+    icon: Shield,
   },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center w-full">
+    <div className="flex flex-col items-center w-full min-h-screen">
       {/* Hero Section */}
-      <section className="relative w-full py-20 md:py-32 lg:py-40 text-center overflow-hidden">
+      <section className="relative w-full py-16 md:py-24 lg:py-32 text-center">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
         <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-primary drop-shadow-lg">
-            Gamify Your Team&apos;s Performance
+          <div className="flex justify-center mb-8">
+            <Image 
+              src="/logo.svg" 
+              alt="KPI Quest Logo" 
+              width={180} 
+              height={180} 
+              className="w-36 h-36 md:w-44 md:h-44"
+              priority
+              unoptimized
+            />
+          </div>
+          
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
+            Gamify Your Team&apos;s <span className="text-primary">Performance</span>
           </h1>
-          <p className="mx-auto max-w-[700px] text-foreground/90 md:text-xl mt-4 drop-shadow-sm">
-            Transform KPI tracking into friendly competition. Track metrics, compete with colleagues, and celebrate wins together.
+          
+          <p className="mx-auto max-w-[700px] text-lg text-muted-foreground mb-10">
+            Transform KPI tracking into friendly competition. Track metrics, compete with colleagues, 
+            and celebrate wins together.
           </p>
-          <div className="mt-8">
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/login" passHref>
-              <Button size="lg">Get Started</Button>
+              <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90">
+                Get Started <ArrowRight className="h-4 w-4" />
+              </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
+      {/* Main Features */}
+      <section className="w-full py-12 md:py-16 border-t border-border">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-10">
             Everything You Need to Succeed
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-            {features.map((feature) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {mainFeatures.map((feature) => {
               const Icon = feature.icon;
               return (
-                <Card key={feature.id} variant="glass" className="relative overflow-hidden">
-                  <CardHeader>
+                <Card key={feature.id} className="glass-card hover:scale-[1.02] transition-transform">
+                  <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-primary/10`}>
-                          <Icon className={`h-6 w-6 ${feature.iconColor}`} />
-                        </div>
-                        <CardTitle className="text-xl">{feature.title}</CardTitle>
+                      <div className={`p-2 rounded-lg ${feature.bgColor}`}>
+                        <Icon className={`h-5 w-5 ${feature.color}`} />
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full border ${feature.badgeColor}`}>
-                        {feature.badge}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{feature.stats}</span>
                     </div>
+                    <CardTitle className="text-lg mt-3">{feature.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-2">
-                      {feature.features.map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
                   </CardContent>
                 </Card>
               );
@@ -151,27 +200,53 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="w-full py-16 md:py-24 lg:py-32">
+      {/* Useful Tools Section */}
+      <section className="w-full py-12 md:py-16 border-t border-border">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
-            How It Works
-          </h2>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {steps.map((step) => {
-              const Icon = step.icon;
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <Wrench className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold tracking-tight text-center">
+              Useful Tools
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {toolFeatures.map((tool) => {
+              const Icon = tool.icon;
               return (
-                <div key={step.number} className="flex flex-col items-center text-center">
-                  <div className="relative mb-6">
-                    <div className="w-20 h-20 rounded-full border-4 border-primary/20 bg-primary/5 flex items-center justify-center">
-                      <Icon className="h-8 w-8 text-primary" />
+                <Card key={tool.id} className="glass hover:bg-card/80 transition-colors">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className={`p-2 rounded-lg ${tool.bgColor}`}>
+                      <Icon className={`h-4 w-4 ${tool.color}`} />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center">
-                      {step.number}
+                    <div>
+                      <p className="font-medium text-sm">{tool.title}</p>
+                      <p className="text-xs text-muted-foreground">{tool.description}</p>
                     </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Highlights */}
+      <section className="w-full py-12 md:py-16 border-t border-border">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-8">
+            Built for Teams
+          </h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {highlights.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="flex flex-col items-center text-center p-4">
+                  <div className="p-3 rounded-full bg-primary/10 mb-3">
+                    <Icon className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                  <p className="text-muted-foreground text-sm max-w-[250px]">{step.description}</p>
+                  <h3 className="font-semibold text-sm mb-1">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground">{item.description}</p>
                 </div>
               );
             })}
@@ -179,53 +254,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Key Highlights */}
-      <section className="w-full py-16 md:py-24 lg:py-32 frosted-glass">
-        <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-12">
-            Built for Teams
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
-              <Trophy className="h-10 w-10 text-yellow-500 mb-4" />
-              <h3 className="font-semibold mb-2">Leaderboards</h3>
-              <p className="text-sm text-muted-foreground">Real-time rankings for pods, teams, and individuals</p>
-            </div>
-            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
-              <Star className="h-10 w-10 text-purple-500 mb-4" />
-              <h3 className="font-semibold mb-2">Achievements</h3>
-              <p className="text-sm text-muted-foreground">Log daily wins and earn points for your team</p>
-            </div>
-            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
-              <Award className="h-10 w-10 text-emerald-500 mb-4" />
-              <h3 className="font-semibold mb-2">Certificates</h3>
-              <p className="text-sm text-muted-foreground">Download awards for top performers</p>
-            </div>
-            <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card/50">
-              <Gamepad2 className="h-10 w-10 text-blue-500 mb-4" />
-              <h3 className="font-semibold mb-2">Mini-Games</h3>
-              <p className="text-sm text-muted-foreground">Fun breaks that contribute to team scores</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
-      <section className="w-full py-20 md:py-32 text-center">
-        <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+      <section className="w-full py-16 md:py-20 border-t border-border">
+        <div className="container mx-auto px-4 md:px-6 text-center">
+          <h2 className="text-2xl font-bold tracking-tight mb-4">
             Ready to Boost Performance?
           </h2>
-          <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl mt-4 mb-8">
+          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
             Join your team on KPI Quest and start turning targets into achievements.
           </p>
           <Link href="/login" passHref>
-            <Button size="lg">
+            <Button size="lg" className="bg-primary hover:bg-primary/90">
               Login / Get Started
             </Button>
           </Link>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="w-full py-6 border-t border-border text-center text-sm text-muted-foreground">
+        <p>KPI Quest - Performance Management Platform</p>
+      </footer>
     </div>
   );
 }
