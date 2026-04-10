@@ -9,7 +9,8 @@ import { ChevronDown } from 'lucide-react';
 export interface NavDropdownItem {
   label: string;
   href: string;
-  icon?: React.ElementType; // Changed React.ComponentType to React.ElementType due to lucide type updates
+  icon?: React.ElementType;
+  openInNewTab?: boolean;
 }
 
 interface NavDropdownProps {
@@ -202,12 +203,16 @@ export function NavDropdown({ items, trigger, href, align = 'left', className, o
           {items.map((item, index) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const linkProps = item.openInNewTab 
+              ? { target: "_blank", rel: "noopener noreferrer" } 
+              : {};
 
             return (
               <div key={item.href}>
                 <Link
                   href={item.href}
                   onClick={() => closeDropdown()}
+                  {...linkProps}
                   className={cn(
                     "flex items-center gap-3 w-full min-h-[44px] px-3 py-2.5 rounded-lg",
                     "transition-all duration-150 text-left",

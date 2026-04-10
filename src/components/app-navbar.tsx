@@ -9,7 +9,8 @@ import {
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
   Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone,
-  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen
+  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen,
+  BookMarked, Contact, Building2, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -35,6 +36,16 @@ interface NavItemConfig {
 
 // V2 Menu Structure + V3 Integrations
 const navItems: NavItemConfig[] = [
+  { 
+    key: 'knowledgeBase',
+    label: 'Knowledge Base', 
+    href: '/knowledge-base', 
+    icon: BookMarked,
+    items: [
+      { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen },
+      { label: 'Directory', href: '/directory', icon: Contact },
+    ]
+  },
   { 
     key: 'competitions',
     label: 'Competitions', 
@@ -88,6 +99,7 @@ const navItems: NavItemConfig[] = [
     href: '/tools', 
     icon: Wrench,
     items: [
+      { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true },
       { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen },
       { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays },
       { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap },
@@ -95,15 +107,6 @@ const navItems: NavItemConfig[] = [
       { label: 'Dual Fuel', href: '/tools/dual-fuel', icon: Infinity },
       { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig },
       { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2 },
-    ]
-  },
-  { 
-    key: 'activity',
-    label: 'Activity', 
-    href: '/agent/activity', 
-    icon: Activity,
-    items: [
-      { label: 'Activity History', href: '/agent/activity', icon: Activity },
     ]
   },
   { 
@@ -116,6 +119,7 @@ const navItems: NavItemConfig[] = [
       { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
       { label: 'Pods', href: '/settings/pods', icon: Shield },
       { label: 'Users', href: '/settings/users', icon: Users },
+      { label: 'Activity', href: '/agent/activity', icon: Activity },
       { label: 'Teams Webhooks', href: '/settings/teams-webhooks', icon: SettingsIcon },
       { label: 'Teams Workflows', href: '/settings/teams/workflows', icon: SettingsIcon },
     ]
@@ -125,6 +129,8 @@ const navItems: NavItemConfig[] = [
 // Simplified role permissions for V3
 const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>> = {
   admin: {
+    knowledgeBase: 'admin',
+    directory: 'admin',
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
@@ -135,6 +141,8 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     settings: 'admin',
   },
   campaignManager: {
+    knowledgeBase: 'admin',
+    directory: 'admin',
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
@@ -145,6 +153,8 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     settings: 'admin',
   },
   podManager: {
+    knowledgeBase: 'admin',
+    directory: 'admin',
     competitions: 'admin',
     trackers: 'admin',
     performance: 'admin',
@@ -155,6 +165,8 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     settings: 'admin',
   },
   teamLeader: {
+    knowledgeBase: 'admin',
+    directory: 'admin',
     competitions: 'admin',
     trackers: 'admin',
     performance: 'agent',
@@ -165,6 +177,8 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     settings: 'admin',
   },
   competitionRunner: {
+    knowledgeBase: 'admin',
+    directory: 'admin',
     competitions: 'admin',
     trackers: 'agent',
     performance: 'agent',
@@ -175,6 +189,8 @@ const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>
     settings: 'admin',
   },
   agent: {
+    knowledgeBase: 'agent',
+    directory: 'agent',
     competitions: 'agent',
     trackers: 'agent',
     performance: 'agent',
@@ -322,9 +338,12 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
                     </p>
                     {item.items.map((subItem) => {
                       const SubIcon = subItem.icon;
+                      const linkProps = subItem.openInNewTab 
+                        ? { target: "_blank", rel: "noopener noreferrer" } 
+                        : {};
                       return (
                         <SheetClose asChild key={subItem.href}>
-                          <Link href={subItem.href}>
+                          <Link href={subItem.href} {...linkProps}>
                             <Button
                               variant={isActive(subItem.href) ? "secondary" : "ghost"}
                               className="w-full justify-start gap-2 h-11 ml-2"
@@ -441,31 +460,18 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
               );
             })}
           </NavigationProvider>
-
-          {/* Call Flow - opens in new tab */}
-          <Link href="/call-flow" target="_blank" rel="noopener noreferrer">
-            <Button
-              variant="ghost"
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200",
-                isActive('/call-flow') 
-                  ? "bg-primary/20 text-primary border border-primary/30" 
-                  : "text-muted-foreground hover:text-foreground hover:bg-glass/50"
-              )}
-            >
-              <Phone className="w-4 h-4" />
-              <span className="text-sm font-medium">Call Flow</span>
-            </Button>
-          </Link>
         </div>
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
-        {/* Search */}
+        {/* Search - opens command palette */}
         <Button
           variant="ghost"
           size="sm"
           className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            document.dispatchEvent(new CustomEvent('open-search'));
+          }}
         >
           <Search className="w-4 h-4" />
           <span className="text-xs">Search</span>

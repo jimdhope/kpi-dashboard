@@ -152,6 +152,15 @@ model User {
   pod                   Pod?                       @relation(fields: [podId], references: [id])
   ledPods               Pod[]                      @relation("PodTeamLeader")
   managedPods           Pod[]                      @relation("PodManager")
+  
+  // Knowledge Base relations
+  kbArticles            KBArticle[]
+  kbVersions            KBVersion[]
+  kbComments            KBComment[]
+  
+  // Directory relations
+  createdContacts        Contact[]
+  createdCompanies       Company[]
 }
 
 model Role {
@@ -651,4 +660,153 @@ model ImportLog {
   durationMs    Int
   status        String   // "success", "partial", "failed"
   errorMessage  String?
+}
+
+// =============================================================================
+// Shared Tags System
+// =============================================================================
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6366f1")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  kbArticles KBArticle[]
+  contacts   Contact[]
+  
+  @@index([name])
+}
+
+// =============================================================================
+// Knowledge Base
+// =============================================================================
+
+model KBCategory {
+  id        String      @id @default(cuid())
+  name      String
+  slug      String      @unique
+  parentId  String?
+  parent    KBCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  KBCategory[] @relation("CategoryHierarchy")
+  articles  KBArticle[]
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  @@index([slug])
+  @@index([parentId])
+}
+
+model KBArticle {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  content     Json        // Tiptap JSON
+  excerpt     String?     // Short preview
+  categoryId  String?
+  category    KBCategory? @relation(fields: [categoryId], references: [id])
+  locked      Boolean     @default(false)
+  lockedRoles String[]    @default([]) // Roles that cannot edit
+  status      String      @default("draft") // draft, published
+  createdById String
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  publishedAt DateTime?
+  views       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  versions    KBVersion[]
+  comments    KBComment[]
+  tags        Tag[]
+  
+  @@index([slug])
+  @@index([status])
+  @@index([categoryId])
+  @@index([createdById])
+}
+
+model KBVersion {
+  id            String    @id @default(cuid())
+  articleId     String
+  article       KBArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  title         String
+  content       Json
+  createdById   String
+  createdBy     User      @relation(fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  
+  @@index([articleId])
+}
+
+model KBComment {
+  id           String     @id @default(cuid())
+  articleId    String
+  article      KBArticle  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  content      String
+  parentId     String?
+  parent      KBComment?  @relation("CommentThreads", fields: [parentId], references: [id])
+  replies     KBComment[] @relation("CommentThreads")
+  resolved    Boolean     @default(false)
+  createdById String
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  @@index([articleId])
+  @@index([parentId])
+}
+
+// =============================================================================
+// Directory
+// =============================================================================
+
+model Company {
+  id          String    @id @default(cuid())
+  name        String
+  type        String    @default("external") // internal, external
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  notes       String?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([name])
+  @@index([type])
+}
+
+model Department {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  email     String?
+  phone     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Contact {
+  id           String     @id @default(cuid())
+  name         String
+  type         String     @default("person") // person, department, team, company
+  email        String?
+  phone        String?
+  website      String?
+  address      String?
+  notes        String?
+  companyName  String?    // Plain text company name
+  departmentName String?   // Plain text department name
+  createdById  String?
+  createdBy    User?      @relation(fields: [createdById], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  tags         Tag[]
+  
+  @@index([name])
+  @@index([type])
 }

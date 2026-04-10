@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -22,21 +21,20 @@ export default function AppLayout({
   useEffect(() => {
     async function fetchSession() {
       try {
-        const res = await fetch('/api/auth/session');
+        const res = await fetch('/api/auth/session', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated) {
             setUser(data.user);
           } else {
-            // Not authenticated, redirect to login
-            router.push('/login');
+            router.replace('/login');
           }
         } else {
-          router.push('/login');
+          router.replace('/login');
         }
       } catch (error) {
         console.error('Failed to fetch session:', error);
-        router.push('/login');
+        router.replace('/login');
       } finally {
         setIsLoading(false);
       }
@@ -56,7 +54,14 @@ export default function AppLayout({
   }
 
   if (!user) {
-    return null; // Will redirect
+    return (
+      <>
+        <AnimatedGradient />
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </>
+    );
   }
 
   return (

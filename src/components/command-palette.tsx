@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Trophy, Target, BarChart3, Gamepad2, Settings, Shield, Home, Command, ArrowRight, CheckSquare, Award, LineChart, Megaphone, Users, BookOpen, UserCircle, Activity } from 'lucide-react';
+import { Search, Trophy, Target, BarChart3, Gamepad2, Settings, Shield, Home, Command, ArrowRight, CheckSquare, Award, LineChart, Megaphone, Users, BookOpen, UserCircle, Activity, FileText, Building2, BookMarked, Contact } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Search result type
@@ -24,6 +24,80 @@ interface SearchProvider {
 
 // Navigation routes with all dropdown items
 const navigationRoutes: SearchResult[] = [
+  // Knowledge Base section
+  {
+    id: 'nav-knowledgebase',
+    label: 'Knowledge Base',
+    description: 'Browse articles and guides',
+    icon: BookMarked,
+    href: '/knowledge-base',
+    category: 'navigation',
+  },
+  {
+    id: 'kb-browse',
+    label: 'Knowledge Base > Browse Articles',
+    description: 'Browse all knowledge base articles',
+    icon: BookOpen,
+    href: '/knowledge-base',
+    category: 'navigation',
+  },
+  {
+    id: 'kb-new',
+    label: 'Knowledge Base > New Article',
+    description: 'Create a new article',
+    icon: FileText,
+    href: '/knowledge-base/new',
+    category: 'navigation',
+  },
+  {
+    id: 'kb-categories',
+    label: 'Knowledge Base > Categories',
+    description: 'Manage article categories',
+    icon: FileText,
+    href: '/knowledge-base/categories',
+    category: 'navigation',
+  },
+  {
+    id: 'kb-tags',
+    label: 'Knowledge Base > Tags',
+    description: 'Manage article tags',
+    icon: FileText,
+    href: '/knowledge-base/tags',
+    category: 'navigation',
+  },
+  // Directory section
+  {
+    id: 'nav-directory',
+    label: 'Directory',
+    description: 'Manage contacts and companies',
+    icon: Contact,
+    href: '/directory',
+    category: 'navigation',
+  },
+  {
+    id: 'dir-contacts',
+    label: 'Directory > Contacts',
+    description: 'Browse all contacts',
+    icon: Users,
+    href: '/directory',
+    category: 'navigation',
+  },
+  {
+    id: 'dir-companies',
+    label: 'Directory > Companies',
+    description: 'Manage companies',
+    icon: Building2,
+    href: '/directory/companies',
+    category: 'navigation',
+  },
+  {
+    id: 'dir-departments',
+    label: 'Directory > Departments',
+    description: 'Manage departments',
+    icon: Building2,
+    href: '/directory/departments',
+    category: 'navigation',
+  },
   // Main section items
   {
     id: 'nav-competitions',
@@ -257,109 +331,79 @@ const defaultSearchProvider: SearchProvider = {
   },
 };
 
-// Wiki search provider - placeholder stub for future implementation
+// Wiki/Knowledge Base search provider
 const wikiSearchProvider: SearchProvider = {
   id: 'wiki',
-  name: 'Wiki',
+  name: 'Knowledge Base',
   search: async (query: string): Promise<SearchResult[]> => {
     if (!query.trim()) {
-      // Show placeholder items when no query
       return [
         {
           id: 'wiki-placeholder',
-          label: 'Wiki Articles',
-          description: 'Search knowledge base articles',
+          label: 'Search Knowledge Base',
+          description: 'Search articles and guides',
           icon: BookOpen,
-          href: '/wiki',
+          href: '/knowledge-base',
           category: 'wiki',
         },
       ];
     }
     
-    const lowerQuery = query.toLowerCase();
-    
-    // Placeholder articles - replace with actual API call when backend is ready
-    const wikiPlaceholders: SearchResult[] = [
-      {
-        id: 'wiki-getting-started',
-        label: 'Getting Started Guide',
-        description: 'Learn how to use KPI Quest',
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&types=kb&limit=5`);
+      if (!res.ok) return [];
+      
+      const data = await res.json();
+      return (data.results || []).map((result: any) => ({
+        id: result.id,
+        label: result.title,
+        description: result.subtitle || result.type,
         icon: BookOpen,
-        href: '/wiki/getting-started',
-        category: 'wiki',
-      },
-      {
-        id: 'wiki-kpi-setup',
-        label: 'Setting Up KPIs',
-        description: 'How to configure and track KPIs',
-        icon: BookOpen,
-        href: '/wiki/kpi-setup',
-        category: 'wiki',
-      },
-      {
-        id: 'wiki-competitions',
-        label: 'Running Competitions',
-        description: 'Tips for successful competitions',
-        icon: BookOpen,
-        href: '/wiki/competitions',
-        category: 'wiki',
-      },
-    ];
-    
-    return wikiPlaceholders.filter(
-      (article) =>
-        article.label.toLowerCase().includes(lowerQuery) ||
-        article.description?.toLowerCase().includes(lowerQuery)
-    );
+        href: result.href || `/knowledge-base/${result.slug}`,
+        category: 'wiki' as const,
+      }));
+    } catch (error) {
+      console.error('Wiki search error:', error);
+      return [];
+    }
   },
 };
 
-// Contacts search provider - placeholder stub for future implementation
+// Contacts search provider
 const contactsSearchProvider: SearchProvider = {
   id: 'contacts',
-  name: 'Contacts',
+  name: 'Directory',
   search: async (query: string): Promise<SearchResult[]> => {
     if (!query.trim()) {
-      // Show placeholder item when no query
       return [
         {
           id: 'contacts-placeholder',
-          label: 'Team Contacts',
-          description: 'Search team members and contacts',
-          icon: UserCircle,
-          href: '/contacts',
+          label: 'Search Directory',
+          description: 'Search contacts and companies',
+          icon: Contact,
+          href: '/directory',
           category: 'contacts',
         },
       ];
     }
     
-    const lowerQuery = query.toLowerCase();
-    
-    // Placeholder contacts - replace with actual API call when backend is ready
-    const contactsPlaceholders: SearchResult[] = [
-      {
-        id: 'contacts-team',
-        label: 'Team Directory',
-        description: 'Browse all team members',
-        icon: UserCircle,
-        href: '/contacts/team',
-        category: 'contacts',
-      },
-      {
-        id: 'contacts-admin',
-        label: 'Contact Admin',
-        description: 'Reach out to your team admin',
-        icon: UserCircle,
-        href: '/contacts/admin',
-        category: 'contacts',
-      },
-    ];
-    
-    return contactsPlaceholders.filter(
-      (contact) =>
-        contact.label.toLowerCase().includes(lowerQuery) ||
-        contact.description?.toLowerCase().includes(lowerQuery)
-    );
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&types=contacts&limit=5`);
+      if (!res.ok) return [];
+      
+      const data = await res.json();
+      return (data.results || []).map((result: any) => ({
+        id: result.id,
+        label: result.title,
+        description: result.subtitle || result.type,
+        icon: result.type === 'company' ? Building2 : UserCircle,
+        href: result.href || `/directory/contacts/${result.id}`,
+        category: 'contacts' as const,
+      }));
+    } catch (error) {
+      console.error('Contacts search error:', error);
+      return [];
+    }
   },
 };
 
@@ -486,9 +530,18 @@ export function CommandPalette() {
         setState(prev => ({ ...prev, isOpen: false }));
       }
     };
+
+    // Custom event to open search from button click
+    const handleOpenSearch = () => {
+      setState(prev => ({ ...prev, isOpen: true }));
+    };
     
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('open-search', handleOpenSearch);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('open-search', handleOpenSearch);
+    };
   }, [state.isOpen]);
   
   // Focus input when opened
@@ -611,9 +664,6 @@ export function CommandPalette() {
                   const Icon = result.icon;
                   const isSelected = item.index === state.selectedIndex;
                   
-                  // Add visual distinction for placeholder/wip categories
-                  const isPlaceholder = result.category === 'wiki' || result.category === 'contacts';
-                  
                   return (
                     <button
                       key={result.id}
@@ -624,8 +674,7 @@ export function CommandPalette() {
                         'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-left',
                         isSelected 
                           ? 'bg-primary/20 text-primary' 
-                          : 'text-foreground hover:bg-glass/50',
-                        isPlaceholder && !isSelected && 'opacity-70'
+                          : 'text-foreground hover:bg-glass/50'
                       )}
                     >
                       <div className={cn(
@@ -637,9 +686,6 @@ export function CommandPalette() {
                       <div className="flex-1 min-w-0">
                         <p className={cn('font-medium truncate', isSelected ? 'text-primary' : '')}>
                           {result.label}
-                          {isPlaceholder && (
-                            <span className="ml-2 text-xs text-muted-foreground/50">(coming soon)</span>
-                          )}
                         </p>
                         {result.description && (
                           <p className="text-xs text-muted-foreground truncate">

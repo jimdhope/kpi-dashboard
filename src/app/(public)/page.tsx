@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Trophy, Target, TrendingUp, Zap, CalendarDays, Calculator, 
   CheckCircle, BarChart3, Gamepad2, BookOpen, Wrench, Flame, 
-  FileCheck2, Phone, Star, Award, Users, Shield, ArrowRight
+  FileCheck2, Phone, Star, Award, Users, Shield, ArrowRight, Contact
 } from 'lucide-react';
 
 const toolFeatures = [
@@ -71,6 +71,24 @@ const toolFeatures = [
 ];
 
 const mainFeatures = [
+  {
+    id: 'directory',
+    title: 'Directory',
+    description: 'Manage contacts with searchable list, filters by type/company/department',
+    icon: Users,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+    stats: 'Contact management',
+  },
+  {
+    id: 'knowledgebase',
+    title: 'Knowledge Base',
+    description: 'Create and browse articles with rich text editor, typed categories and tags',
+    icon: BookOpen,
+    color: 'text-purple',
+    bgColor: 'bg-purple/10',
+    stats: 'Article management',
+  },
   {
     id: 'competitions',
     title: 'Competitions',

@@ -1,6 +1,20 @@
-# KPI Quest V3.3
+# KPI Quest V3.4
 
 A competition tracking and performance management application built with Next.js, Prisma, and PostgreSQL.
+
+---
+
+## What's New in V3.4
+
+### Directory & Knowledge Base Redesign
+- **Directory** - Now a single-page app with modal for adding contacts. Company and department are text fields (not dropdowns), tags are comma-separated text
+- **Knowledge Base** - Single-column layout with sticky filter section, category and tags are typed in when creating articles (auto-created if they don't exist)
+- Menu reorganized - Directory moved under Knowledge Base, Call Flow moved into Tools, Activity moved into Settings
+
+### UI Improvements
+- Sticky filter sections with consistent glass-card styling
+- Search button in navbar triggers command palette
+- Global search (Cmd/Ctrl+K) now properly returns contacts and KB articles
 
 ---
 
@@ -187,6 +201,8 @@ sudo systemctl stop kpi-dashboard
 
 ## Features
 
+- **Directory** - Contact management with search, filters by type/company/department. Add contacts via modal with typed company, department, and comma-separated tags
+- **Knowledge Base** - Article management with rich text editor (Tiptap), typed categories and tags, single-column browse view
 - **Competitions** - Create weekly competitions with custom KPI rules and leaderboards
 - **Performance Tracking** - Campaign-wide KPI tracking with real-time dashboards
 - **Daily Trackers** - Log daily KPIs and track trends over time
