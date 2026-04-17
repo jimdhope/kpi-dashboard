@@ -102,6 +102,7 @@ export const competitionService = {
       ...c,
       rules: c.rules,
       teams: c.teams,
+      draftData: c.draftData,
       entries: c.entries.map(e => ({
         id: e.id,
         competitionId: e.competitionId,
@@ -123,33 +124,69 @@ export const competitionService = {
     await requireCompetitionEditor();
     const user = await authService.requireCurrentUser();
     
+    // Extract nested arrays for separate handling
+    const { rules, teams, ...rest } = payload;
+    
+    // Create the competition first
     const competition = await prisma.competition.create({
       data: {
-        ...payload,
+        ...rest,
         createdById: user.id,
       },
-      include: {
-        rules: true,
-        teams: true,
-      },
     });
+    
+    // Create rules if provided
+    if (rules && rules.length > 0) {
+      await prisma.competitionRule.createMany({
+        data: rules.map((r: any) => ({
+          competitionId: competition.id,
+          title: r.title,
+          points: r.points,
+          isCheckbox: r.isCheckbox ?? false,
+          emoji: r.emoji ?? null,
+          dailyTarget: r.dailyTarget ?? null,
+        })),
+      });
+    }
+    
+    // Create teams if provided
+    if (teams && teams.length > 0) {
+      await prisma.competitionTeam.createMany({
+        data: teams.map((t: any) => ({
+          competitionId: competition.id,
+          name: t.name,
+          agentIds: t.agentIds ?? [],
+          emoji: t.emoji ?? null,
+        })),
+      });
+    }
+    
+    // Fetch the complete competition with rules and teams
+    const completeCompetition = await prisma.competition.findUnique({
+      where: { id: competition.id },
+      include: { rules: true, teams: true },
+    });
+
+    if (!completeCompetition) {
+      throw new Error("Failed to create competition");
+    }
 
     // Log activity for competition creation
     await activityService.logCompetitionStarted({
-      competitionId: competition.id,
-      competitionName: competition.name,
+      competitionId: completeCompetition.id,
+      competitionName: completeCompetition.name,
       userId: user.id,
       userName: user.name,
     });
 
     // Broadcast new competition
-    competitionSseService.broadcast(competition.id, {
+    competitionSseService.broadcast(completeCompetition.id, {
       type: 'competition_created',
-      data: competition,
+      data: completeCompetition,
       timestamp: new Date().toISOString(),
     });
 
-    return competition;
+    return completeCompetition;
   },
 
   async updateCompetition(id: string, payload: any) {

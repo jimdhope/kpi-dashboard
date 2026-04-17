@@ -39,7 +39,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/dashboard");
+    const redirectTo = payload.redirectUrl || "/dashboard";
+    router.replace(redirectTo);
     router.refresh();
     return;
   }

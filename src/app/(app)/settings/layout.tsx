@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Settings as SettingsIcon, Megaphone, ShieldCheck, Users, MessageSquare, Zap, Calendar, Database } from 'lucide-react';
+import { Settings as SettingsIcon, Megaphone, ShieldCheck, Users, MessageSquare, Zap, Calendar, Database, Download, Hash } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OfflineIndicator } from '@/components/offline-indicator';
 
@@ -32,6 +32,8 @@ interface MenuItem {
 const settingsMenuItems: MenuItem[] = [
   { label: 'General', href: '/settings/general', icon: SettingsIcon },
   { label: 'Data Import', href: '/settings/data-import', icon: Database },
+  { label: 'Backup', href: '/settings/backup', icon: Download },
+  { label: 'Hashtag Scores', href: '/settings/score-targets', icon: Hash },
   { label: 'Teams', href: '/settings/teams/channels', icon: MessageSquare },
   { label: 'Automations', href: '/settings/teams/automations', icon: Zap },
   { label: 'Scheduled', href: '/settings/teams/scheduled', icon: Calendar },

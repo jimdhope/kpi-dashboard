@@ -84,6 +84,17 @@ export const competitionDraftRepository = {
     podIds?: string[];
     createdById: string;
   }) {
+    // Validate campaignId exists if provided
+    if (data.campaignId) {
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: data.campaignId },
+        select: { id: true },
+      });
+      if (!campaign) {
+        throw new Error("Campaign not found");
+      }
+    }
+
     // Create the competition first
     const competition = await prisma.competition.create({
       data: {
@@ -216,6 +227,24 @@ export const competitionDraftRepository = {
     if (data.description !== undefined) updateData.description = data.description;
     if (data.startsAt !== undefined) updateData.startsAt = data.startsAt;
     if (data.endsAt !== undefined) updateData.endsAt = data.endsAt;
+    
+    // Handle campaignId - validate if being set to a new value
+    if (data.campaignId !== undefined) {
+      const newCampaignId = data.campaignId || null;
+      if (newCampaignId) {
+        const campaign = await prisma.campaign.findUnique({
+          where: { id: newCampaignId },
+          select: { id: true },
+        });
+        if (!campaign) {
+          throw new Error("Campaign not found");
+        }
+      }
+      updateData.campaignId = newCampaignId;
+    }
+    if (data.podIds !== undefined) {
+      updateData.podIds = data.podIds;
+    }
     
     // Merge draftData with rules and teams for redundancy
     // This ensures the wizard can always load from draftData

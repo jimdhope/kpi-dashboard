@@ -82,6 +82,11 @@ enum KpiType {
   scoreOutOf
 }
 
+enum ScoreTargetType {
+  competition
+  tracker
+}
+
 enum KpiSortOrder {
   desc
   asc
@@ -565,6 +570,21 @@ model TeamsIncomingEvent {
   endpoint     TeamsWebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   @@index([endpointId, createdAt])
+}
+
+model ScoreTarget {
+  id           String           @id @default(cuid())
+  hashtag      String           @unique
+  name         String
+  targetType   ScoreTargetType
+  competitionId String?
+  trackerKpiId String?
+  defaultPoints Int            @default(1)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([hashtag])
 }
 
 // =============================================================================

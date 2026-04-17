@@ -1,5 +1,6 @@
 import { errorResponse, ok } from "@/server/http";
 import { teamsAutomationService } from "@/server/services/teams-automation-service";
+import { scoreTargetService } from "@/server/services/score-target-service";
 
 function pickHeaders(headers: Headers) {
   return Object.fromEntries(
@@ -21,7 +22,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ end
       headers: pickHeaders(request.headers),
     });
 
-    return ok({ received: true, eventId: event.id }, { status: 202 });
+    const scoreResult = await scoreTargetService.processWebhookMessage(payload, endpointId);
+
+    return ok({ 
+      received: true, 
+      eventId: event.id,
+      scoresProcessed: scoreResult.processed,
+      scoreResults: scoreResult.results,
+    }, { status: 202 });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Incoming Teams webhook endpoint not found.") {

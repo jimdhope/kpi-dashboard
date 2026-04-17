@@ -1,20 +1,21 @@
-# KPI Quest V3.4
+# KPI Quest V3.5.1
 
 A competition tracking and performance management application built with Next.js, Prisma, and PostgreSQL.
 
 ---
 
-## What's New in V3.4
+## What's New in V3.5.1
 
-### Directory & Knowledge Base Redesign
-- **Directory** - Now a single-page app with modal for adding contacts. Company and department are text fields (not dropdowns), tags are comma-separated text
-- **Knowledge Base** - Single-column layout with sticky filter section, category and tags are typed in when creating articles (auto-created if they don't exist)
-- Menu reorganized - Directory moved under Knowledge Base, Call Flow moved into Tools, Activity moved into Settings
+### Bug Fixes
+- Fixed competition creation not saving rules to database
+- Fixed competition dashboard not showing stats for new competitions
+- Fixed Reports page showing single day target instead of cumulative target
+- Fixed competition draft saving with invalid campaign ID
 
-### UI Improvements
-- Sticky filter sections with consistent glass-card styling
-- Search button in navbar triggers command palette
-- Global search (Cmd/Ctrl+K) now properly returns contacts and KB articles
+### Features (V3.5)
+- **Backup & Restore** - Export all data (competitions, trackers, KB, directory) as JSON, restore from backup, clear all data
+- **MS Teams Webhook Hashtag Scoring** - Agents can post hashtags like #Smart in Teams to auto-log scores to competitions/trackers
+- **Role-Based Dashboards** - Automatic redirect to appropriate dashboard based on role (admin, teamLeader, competitionRunner, agent)
 
 ---
 

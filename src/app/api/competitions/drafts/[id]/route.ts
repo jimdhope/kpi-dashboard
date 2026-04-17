@@ -76,6 +76,9 @@ export async function PUT(
     if (error instanceof Error && error.message === "Forbidden") {
       return errorResponse(403, "Forbidden");
     }
+    if (error instanceof Error && error.message === "Campaign not found") {
+      return errorResponse(400, "Selected campaign no longer exists. Please select a different campaign.");
+    }
     console.error('PUT /api/competitions/drafts/[id] error:', error);
     return errorResponse(500, "Failed to update draft.");
   }

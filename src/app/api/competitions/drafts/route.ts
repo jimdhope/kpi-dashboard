@@ -78,6 +78,9 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "Forbidden") {
       return errorResponse(403, "Forbidden");
     }
+    if (error instanceof Error && error.message === "Campaign not found") {
+      return errorResponse(400, "Selected campaign no longer exists. Please select a different campaign.");
+    }
     console.error('[POST /api/competitions/drafts] Error:', error);
     return errorResponse(500, "Failed to create draft.");
   }

@@ -131,6 +131,23 @@ export default function AdminCompetitionsDashboard() {
   }, []);
 
   const selectedCompetition = competitions.find((c) => c.id === selectedCompetitionId);
+  
+  // Use database rules first, fallback to draftData rules (for legacy competitions)
+  const competitionRules = useMemo(() => {
+    if (!selectedCompetition) return [];
+    const dbRules = selectedCompetition.rules || [];
+    const draftDataRules = (selectedCompetition as any).draftData?.rules || [];
+    return dbRules.length > 0 ? dbRules : draftDataRules;
+  }, [selectedCompetition]);
+  
+  // Use database teams first, fallback to draftData teams
+  const competitionTeams = useMemo(() => {
+    if (!selectedCompetition) return [];
+    const dbTeams = selectedCompetition.teams || [];
+    const draftDataTeams = (selectedCompetition as any).draftData?.teams || [];
+    return dbTeams.length > 0 ? dbTeams : draftDataTeams;
+  }, [selectedCompetition]);
+  
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
 
   useEffect(() => {
@@ -151,22 +168,23 @@ export default function AdminCompetitionsDashboard() {
     return achievements.filter((a) => a.competitionId === selectedCompetitionId);
   }, [achievements, selectedCompetitionId]);
 
-  const achievementSummary = useMemo(() => {
-    if (!selectedCompetition?.rules || competitionAchievements.length === 0) return [];
+const achievementSummary = useMemo(() => {
+  if (!competitionRules || competitionAchievements.length === 0) return [];
 
-    return selectedCompetition.rules.map((rule) => {
-      const ruleLogs = competitionAchievements.filter((log) => {
-        const matchesRule = log.ruleId === rule.id;
-        const matchesPod = filteredPodIds.length === 0 || filteredPodIds.includes(log.podId);
-        return matchesRule && matchesPod;
-      });
-
-      const totalValue = ruleLogs.reduce((sum, log) => sum + log.value, 0);
-      const totalPoints = ruleLogs.reduce((sum, log) => sum + log.points, 0);
-
-      return { rule, totalValue, totalPoints };
+  return competitionRules.map((rule: any) => {
+    const ruleLogs = competitionAchievements.filter((log: any) => {
+      // Match by ruleId OR ruleName (for V2 imports)
+      const matchesRule = log.ruleId === rule.id || log.ruleName === rule.title;
+      const matchesPod = filteredPodIds.length === 0 || filteredPodIds.includes(log.podId);
+      return matchesRule && matchesPod;
     });
-  }, [selectedCompetition, competitionAchievements, filteredPodIds]);
+
+    const totalValue = ruleLogs.reduce((sum: number, log: any) => sum + log.value, 0);
+    const totalPoints = ruleLogs.reduce((sum: number, log: any) => sum + log.points, 0);
+
+    return { rule, totalValue, totalPoints };
+  });
+}, [competitionRules, competitionAchievements, filteredPodIds]);
 
   const podStandings = useMemo(() => {
     if (competitionAchievements.length === 0) return [];
@@ -201,20 +219,20 @@ export default function AdminCompetitionsDashboard() {
     return standings;
   }, [competitionAchievements, availablePods]);
 
-  const teamStandings = useMemo(() => {
-    const teams = selectedCompetition?.teams || [];
+const teamStandings = useMemo(() => {
+    const teams = competitionTeams;
     const teamScores: Record<string, { id: string; name: string; score: number; emoji?: string }> = {};
 
     // Initialize teams
-    teams.forEach((team) => {
+    teams.forEach((team: any) => {
       teamScores[team.id] = { id: team.id, name: team.name, emoji: team.emoji, score: 0 };
     });
 
     // Calculate scores from achievements by linking agents to teams
     // agentIds now store database IDs (after migration)
     const unassignedScore = { id: 'unassigned', name: 'Unassigned', score: 0 };
-    competitionAchievements.forEach((log) => {
-      const teamWithAgent = teams.find((team) => 
+    competitionAchievements.forEach((log: any) => {
+      const teamWithAgent = teams.find((team: any) => 
         team.agentIds && team.agentIds.includes(log.agentId)
       );
       if (teamWithAgent && teamScores[teamWithAgent.id]) {
@@ -233,7 +251,7 @@ export default function AdminCompetitionsDashboard() {
     }
 
     return standings;
-  }, [selectedCompetition, competitionAchievements]);
+  }, [competitionTeams, competitionAchievements]);
 
   const agentStandings = useMemo(() => {
     const agentScores: Record<string, { id: string; name: string; score: number }> = {};
@@ -439,7 +457,7 @@ export default function AdminCompetitionsDashboard() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {achievementSummary.map(({ rule, totalValue, totalPoints }) => (
+            {achievementSummary.map(({ rule, totalValue, totalPoints }: { rule: any; totalValue: number; totalPoints: number }) => (
               <Card key={rule.id} className="frosted-glass">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">

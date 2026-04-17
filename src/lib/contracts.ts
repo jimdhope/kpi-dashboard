@@ -522,6 +522,22 @@ export function isCompetitionEditor(roles: UserRole[]): boolean {
   return roles.some((role) => COMPETITION_EDITOR_ROLES.includes(role));
 }
 
+export function getRoleBasedDashboard(roles: UserRole[]): string {
+  if (hasAdminAccess(roles)) {
+    return '/admin';
+  }
+  if (roles.includes('campaignManager') || roles.includes('podManager')) {
+    return '/admin';
+  }
+  if (roles.includes('teamLeader')) {
+    return '/team-leader';
+  }
+  if (roles.includes('competitionRunner')) {
+    return '/competition-runner';
+  }
+  return '/agent';
+}
+
 export interface ActivityRecord {
   id: string;
   userId: string | null;

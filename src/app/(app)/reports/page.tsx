@@ -49,6 +49,7 @@ interface Competition {
   startsAt: string | null;
   endsAt: string | null;
   isDraft?: boolean;
+  podIds?: string[];
   rules?: Array<{
     id: string;
     title: string;
@@ -311,18 +312,44 @@ export default function ReportsPage() {
     const competition = competitions.find(c => c.id === selectedCompetitionId);
     const competitionRuleOrder = competition?.rules?.map(r => r.title) || [];
     
+    // Get unique agents who participated (present agents)
+    const presentAgentIds = new Set<string>();
+    filteredAchievements.forEach((a) => {
+      if (a.value > 0 || a.points > 0) {
+        presentAgentIds.add(a.agentId);
+      }
+    });
+    const presentAgentCount = presentAgentIds.size;
+    
+    // Calculate active days (excluding weekends) if competition filter
+    let activeDays = 0;
+    if (filterType === 'competition' && competition?.startsAt && competition?.endsAt) {
+      const start = new Date(competition.startsAt);
+      const end = new Date(competition.endsAt);
+      const now = new Date();
+      const effectiveEnd = now < end ? now : end;
+      
+      let current = new Date(start);
+      while (current <= effectiveEnd) {
+        const day = current.getDay();
+        if (day !== 0 && day !== 6) activeDays++;
+        current.setDate(current.getDate() + 1);
+      }
+      activeDays = Math.max(1, activeDays);
+    }
+    
     const ruleCounts: Record<string, { 
       ruleName: string;
       ruleId: string;
       emoji?: string | null;
       dailyTarget?: number | null;
+      effectiveTarget?: number | null;
       count: number;
       totalValue: number;
       totalPoints: number;
     }> = {};
     
     filteredAchievements.forEach((a) => {
-      // Use ruleName as canonical key to merge V2 and V3 achievements
       const key = a.ruleName || 'unknown';
       if (!ruleCounts[key]) {
         ruleCounts[key] = {
@@ -332,12 +359,17 @@ export default function ReportsPage() {
           totalValue: 0,
           totalPoints: 0,
         };
-        // Get emoji and dailyTarget from competition rules by matching title
         if (competition?.rules) {
           const compRule = competition.rules.find(r => r.title === key);
           if (compRule) {
             ruleCounts[key].emoji = compRule.emoji;
             ruleCounts[key].dailyTarget = compRule.dailyTarget;
+            // effective target = daily target × active days × present agents
+            if (compRule.dailyTarget && activeDays > 0 && presentAgentCount > 0) {
+              ruleCounts[key].effectiveTarget = compRule.dailyTarget * activeDays * presentAgentCount;
+            } else if (compRule.dailyTarget && activeDays > 0) {
+              ruleCounts[key].effectiveTarget = compRule.dailyTarget * activeDays;
+            }
           }
         }
       }
@@ -346,7 +378,6 @@ export default function ReportsPage() {
       ruleCounts[key].totalPoints += a.points || 0;
     });
     
-    // Sort by competition rule order (by title) and filter out rules that didn't match competition rules
     return Object.values(ruleCounts)
       .filter(r => competitionRuleOrder.includes(r.ruleName))
       .sort((a, b) => {
@@ -680,9 +711,10 @@ export default function ReportsPage() {
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {ruleBreakdown.map((rule) => {
-            // Calculate progress towards daily target (if set)
-            const targetProgress = rule.dailyTarget 
-              ? Math.min(100, (rule.totalValue / rule.dailyTarget) * 100)
+            // Use effectiveTarget if available, otherwise daily target
+            const displayTarget = rule.effectiveTarget || rule.dailyTarget;
+            const targetProgress = displayTarget 
+              ? Math.min(100, (rule.totalValue / displayTarget) * 100)
               : null;
             
             return (
@@ -707,11 +739,11 @@ export default function ReportsPage() {
                   </div>
                   
                   {/* Progress towards target (if set) */}
-                  {targetProgress !== null && (
+                  {targetProgress !== null && displayTarget && (
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">vs Target</span>
-                        <span className="font-medium">{rule.totalValue.toLocaleString()} / {rule.dailyTarget}</span>
+                        <span className="font-medium">{rule.totalValue.toLocaleString()} / {displayTarget.toLocaleString()}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
                         <div 
