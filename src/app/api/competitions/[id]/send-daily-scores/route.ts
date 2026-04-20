@@ -268,6 +268,9 @@ export async function POST(
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
             score: cumulativeScore,
+            dailyScore: achievements
+              .filter(a => a.agentId === agentId)
+              .reduce((sum, a) => sum + (a.points ?? a.value), 0),
             scoreLogs: scoreLogsForCard,
           };
         })
@@ -613,6 +616,7 @@ export async function GET(
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
             score: cumulativeScore,
+            dailyScore: agentAchievements.reduce((sum, a) => sum + (a.points ?? a.value), 0),
             hasActivity: agentAchievements.length > 0,
             scoreLogs: scoreLogsForCard,
           };

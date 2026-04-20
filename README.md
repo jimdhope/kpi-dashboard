@@ -1,12 +1,19 @@
-# KPI Quest V3.5.1
+# KPI Quest V3.5.2
 
 A competition tracking and performance management application built with Next.js, Prisma, and PostgreSQL.
 
 ---
 
-## What's New in V3.5.1
+## What's New in V3.5.2
 
 ### Bug Fixes
+- Fixed Teams daily scores card: emojis now display correctly (hybrid rule lookup)
+- Fixed Teams standings to show cumulative competition totals
+- Fixed agent score to display today's score (not cumulative) in the table
+- Fixed emoji key legend showing competition rules (not mixed achievement data)
+- Fixed daily targets showing effective target (daily × active days × agents)
+
+### Bug Fixes (V3.5.1)
 - Fixed competition creation not saving rules to database
 - Fixed competition dashboard not showing stats for new competitions
 - Fixed Reports page showing single day target instead of cumulative target

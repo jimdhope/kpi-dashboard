@@ -2,7 +2,7 @@
 
 ## Project Overview
 - **Name:** KPI Quest
-- **Version:** 3.5.1
+- **Version:** 3.5.2
 - **Stack:** Next.js 16, React, TypeScript, Tailwind CSS, Prisma, PostgreSQL
 - **Location:** `/var/www/kpi-dashboard`
 - **Port:** 9103

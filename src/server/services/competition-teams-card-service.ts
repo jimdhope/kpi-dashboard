@@ -13,6 +13,7 @@ export interface PodAgentStanding {
   teamEmoji: string;
   teamName: string;
   score: number;
+  dailyScore?: number;
   scoreLogs?: AgentScoreLog[];
   hasActivity?: boolean;
 }
@@ -217,7 +218,7 @@ function buildAgentRow(agent: PodAgentStanding): any {
             items: [
               {
                 type: "TextBlock",
-                text: `${agent.score}`,
+                text: `${agent.dailyScore ?? agent.score}`,
                 weight: "Bolder",
                 horizontalAlignment: "Right",
               },
