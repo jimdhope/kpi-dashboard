@@ -177,10 +177,15 @@ export async function POST(
       podRuleTargetsMap.set(podId, ruleTargets);
     }
 
-    // Build competition standings by team (using DAILY scores from achievements)
+    // Build competition standings by team (using CUMULATIVE scores from ALL achievements)
+    // Get ALL achievements for this competition (not just for the selected date)
+    const allCompetitionAchievements = await prisma.dailyAchievement.findMany({
+      where: { competitionId: competitionId },
+    });
+    
     const teamStandings: CompetitionTeamStanding[] = competition.teams.map(team => {
-      // Calculate daily score for this team from achievements
-      const teamDailyScore = achievements
+      // Sum ALL achievements for team members
+      const teamCumulativeScore = allCompetitionAchievements
         .filter(a => team.agentIds.includes(a.agentId))
         .reduce((sum: number, a) => sum + (a.points ?? a.value), 0);
 
@@ -188,7 +193,7 @@ export async function POST(
         teamId: team.id,
         teamName: team.name,
         teamEmoji: team.emoji || '',
-        totalScore: teamDailyScore,
+        totalScore: teamCumulativeScore,
         memberCount: team.agentIds.length,
       };
     }).sort((a, b) => b.totalScore - a.totalScore);
@@ -197,8 +202,15 @@ export async function POST(
     const failed: string[] = [];
     const allPodStandings: PodStandingsForTeams[] = [];
 
-    // Get all entries with users for the competition
+    // Get all entries with users for the competition (may be empty)
     const allEntries = competition.entries.filter((entry: any) => entry.user);
+
+    // Get cumulative scores from ALL achievements (not just today's)
+    const allAchievementsMap = new Map<string, number>();
+    for (const a of allCompetitionAchievements) {
+      const current = allAchievementsMap.get(a.agentId) || 0;
+      allAchievementsMap.set(a.agentId, current + (a.points ?? a.value));
+    }
 
     for (const pod of pods) {
       if (!pod.outgoingWebhook || !pod.outgoingWebhook.isActive) {
@@ -217,21 +229,33 @@ export async function POST(
             team.agentIds.includes(agentId)
           );
 
-          // Get achievements for this agent on this date
+          // Get cumulative score from ALL achievements for this competition
+          const cumulativeScore = allAchievementsMap.get(agentId) || 0;
+
+          // Get achievements for emoji display
           const agentAchievements = achievements.filter(a => a.agentId === agentId);
-          
-          // Calculate DAILY score from achievements
-          const dailyScore = agentAchievements.reduce(
-            (sum: number, a) => sum + (a.points ?? a.value), 
-            0
+
+          // Build emoji representation - hybrid: prefer competition rules, fallback to achievement data
+          // This ensures most emojis match competition, but handles historical achievements
+          const competitionRulesMap = new Map(
+            competition.rules.map(r => [r.id, r])
           );
           
-          // Build emoji representation from achievements
           const scoreLogsForCard: AgentScoreLog[] = agentAchievements.map((a: any) => {
-            const rule = a.ruleId ? ruleMap.get(a.ruleId) : null;
+            // First try to find rule by ID in competition rules
+            let rule = competitionRulesMap.get(a.ruleId);
+            
+            // Fallback: if no match by ID, try matching by title
+            if (!rule && a.ruleName) {
+              rule = competition.rules.find((r: any) => r.title === a.ruleName);
+            }
+            
+            // Final fallback: use emoji stored in the achievement itself
+            const rawEmoji = rule?.emoji || a.ruleEmoji || '📝';
+            const sanitizedEmoji = rawEmoji?.normalize('NFC') || '📝';
             return {
               ruleId: a.ruleId,
-              ruleEmoji: rule?.emoji || '📝',
+              ruleEmoji: sanitizedEmoji,
               ruleTitle: a.ruleName || rule?.title || 'Activity',
               value: a.value,
               isBonus: false,
@@ -243,7 +267,7 @@ export async function POST(
             agentName: agentName,
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
-            score: dailyScore,
+            score: cumulativeScore,
             scoreLogs: scoreLogsForCard,
           };
         })
@@ -269,6 +293,13 @@ export async function POST(
         // Hide pod name if there's only one pod in the competition
         const hidePodName = podIds.length === 1;
         
+        // Get competition rules for the emoji key
+        const competitionRulesForCard = competition.rules.map(r => ({
+          id: r.id,
+          emoji: r.emoji || '📝',
+          title: r.title,
+        }));
+        
         const cardData: DailyScoresCardData = {
           competitionName: competition.name,
           date: new Date(date).toLocaleDateString("en-US", {
@@ -280,6 +311,7 @@ export async function POST(
           pods: [podStandings],
           teamStandings: teamStandings,
           hidePodName,
+          competitionRules: competitionRulesForCard,
         };
 
         const card = buildDailyScoresAdaptiveCard(cardData);
@@ -319,6 +351,13 @@ export async function POST(
         hasWebhook: true,
       };
 
+      // Get competition rules for the emoji key
+      const competitionRulesForCard = competition.rules.map(r => ({
+        id: r.id,
+        emoji: r.emoji || '📝',
+        title: r.title,
+      }));
+
       const cardData: DailyScoresCardData = {
         competitionName: competition.name,
         date: new Date(date).toLocaleDateString("en-US", {
@@ -330,6 +369,7 @@ export async function POST(
         pods: [combinedPodStandings],
         teamStandings: teamStandings,
         hidePodName: true,
+        competitionRules: competitionRulesForCard,
       };
 
       const combinedCard = buildDailyScoresAdaptiveCard(cardData);
@@ -513,6 +553,16 @@ export async function GET(
     // Get all entries with users for the competition
     const allEntries = competition.entries.filter((entry: any) => entry.user);
 
+    // Get cumulative scores from ALL achievements for this competition
+    const allCompetitionAchievementsGet = await prisma.dailyAchievement.findMany({
+      where: { competitionId: competitionId },
+    });
+    const allAchievementsMapGet = new Map<string, number>();
+    for (const a of allCompetitionAchievementsGet) {
+      const current = allAchievementsMapGet.get(a.agentId) || 0;
+      allAchievementsMapGet.set(a.agentId, current + (a.points ?? a.value));
+    }
+
     const podsInCompetition = await prisma.pod.findMany({
       where: { id: { in: competition.podIds } },
       include: {
@@ -530,17 +580,27 @@ export async function GET(
           );
           const agentAchievements = achievements.filter((a: any) => a.agentId === agentId);
           
-          // Calculate DAILY score from achievements
-          const dailyScore = agentAchievements.reduce(
-            (sum: number, a: any) => sum + (a.points ?? a.value), 
-            0
+          // Get cumulative score from ALL achievements
+          const cumulativeScore = allAchievementsMapGet.get(agentId) || 0;
+          
+          // Use hybrid approach for emojis: prefer competition rules, fallback to title match
+          const competitionRulesMap = new Map(
+            competition.rules.map(r => [r.id, r])
           );
           
           const scoreLogsForCard: AgentScoreLog[] = agentAchievements.map((a: any) => {
-            const rule = a.ruleId ? ruleMap.get(a.ruleId) : null;
+            let rule = competitionRulesMap.get(a.ruleId);
+            
+            // Fallback: if no match by ID, try matching by title
+            if (!rule && a.ruleName) {
+              rule = competition.rules.find((r: any) => r.title === a.ruleName);
+            }
+            
+            const rawEmoji = rule?.emoji || '📝';
+            const sanitizedEmoji = rawEmoji?.normalize('NFC') || '📝';
             return {
               ruleId: a.ruleId,
-              ruleEmoji: rule?.emoji || '📝',
+              ruleEmoji: sanitizedEmoji,
               ruleTitle: a.ruleName || rule?.title || 'Activity',
               value: a.value,
               isBonus: false,
@@ -552,7 +612,7 @@ export async function GET(
             agentName: agentName,
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
-            score: dailyScore,
+            score: cumulativeScore,
             hasActivity: agentAchievements.length > 0,
             scoreLogs: scoreLogsForCard,
           };
@@ -574,10 +634,10 @@ export async function GET(
       };
     });
 
-    // Build team standings (using DAILY scores from achievements)
+    // Build team standings (using CUMULATIVE scores from ALL achievements)
     const teamStandings = competition.teams.map((team: any) => {
-      // Calculate daily score from achievements
-      const teamDailyScore = achievements
+      // Sum ALL achievements for team members
+      const teamCumulativeScore = allCompetitionAchievementsGet
         .filter((a: any) => team.agentIds.includes(a.agentId))
         .reduce((sum: number, a: any) => sum + (a.points ?? a.value), 0);
       
@@ -585,7 +645,7 @@ export async function GET(
         teamId: team.id,
         teamName: team.name,
         teamEmoji: team.emoji || '',
-        totalScore: teamDailyScore,
+        totalScore: teamCumulativeScore,
         memberCount: team.agentIds.length,
       };
     }).sort((a: any, b: any) => b.totalScore - a.totalScore);

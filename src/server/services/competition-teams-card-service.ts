@@ -45,7 +45,26 @@ export interface DailyScoresCardData {
   date: string;
   pods: PodStandingsForTeams[];
   teamStandings?: CompetitionTeamStanding[];
-  hidePodName?: boolean; // When true, hides pod names in the card (for combined format)
+  hidePodName?: boolean;
+  competitionRules?: Array<{ id: string; emoji: string | null; title: string }>;
+}
+
+/**
+ * Normalize and sanitize an emoji for consistent rendering in Teams Adaptive Cards
+ */
+function sanitizeEmoji(emoji: string | null): string {
+  if (!emoji) return '📝';
+  
+  // Normalize to NFC form (composed) for consistent encoding
+  let normalized = emoji.normalize('NFC');
+  
+  // Remove any zero-width characters or control characters that might cause issues
+  normalized = normalized.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  
+  // Ensure it's not empty after cleanup
+  if (!normalized || normalized.length === 0) return '📝';
+  
+  return normalized;
 }
 
 /**
@@ -60,13 +79,13 @@ function scoreLogsToEmojis(scoreLogs: AgentScoreLog[]): string {
   // Check if this agent is marked as N/A (absent)
   const hasNA = scoreLogs.some(log => log.ruleId === 'na' || log.ruleTitle === 'N/A');
   if (hasNA) {
-    return 'N/A';
+    return '❌';
   }
   
   // Repeat each emoji based on its value (count)
   return scoreLogs
     .map(log => {
-      const emoji = log.ruleEmoji || '📝';
+      const emoji = sanitizeEmoji(log.ruleEmoji);
       const count = Math.max(1, log.value || 1); // Default to 1 if value is 0/undefined
       return emoji.repeat(Math.min(count, 10)); // Max 10 to prevent abuse
     })
@@ -85,8 +104,9 @@ function buildKeySection(rules: Array<{ emoji: string | null; title: string | nu
   
   if (uniqueRules.length === 0) return [];
   
+  // Normalize emojis for consistency
   const keyText = uniqueRules
-    .map(r => `${r.emoji || '📝'} = ${r.title || 'Unknown'}`)
+    .map(r => `${sanitizeEmoji(r.emoji)} = ${r.title || 'Unknown'}`)
     .join('    ');
   
   return [
@@ -222,14 +242,24 @@ export function buildDailyScoresAdaptiveCard(data: DailyScoresCardData) {
     wrap: true,
   });
   
-  // Collect all unique rules for the key
-  const allRules: Array<{ emoji: string | null; title: string | null }> = [];
-  for (const pod of data.pods) {
-    for (const agent of pod.agents) {
-      if (agent.scoreLogs) {
-        for (const log of agent.scoreLogs) {
-          if (!allRules.find(r => r.emoji === log.ruleEmoji)) {
-            allRules.push({ emoji: log.ruleEmoji, title: log.ruleTitle });
+  // Collect all unique rules for the key - prefer competition rules, fall back to scoreLogs
+  let allRules: Array<{ emoji: string | null; title: string | null }> = [];
+  
+  // Use competition rules if available (the correct approach)
+  if (data.competitionRules && data.competitionRules.length > 0) {
+    allRules = data.competitionRules.map(r => ({
+      emoji: r.emoji,
+      title: r.title,
+    }));
+  } else {
+    // Fallback: collect from scoreLogs (legacy behavior - may show wrong emojis)
+    for (const pod of data.pods) {
+      for (const agent of pod.agents) {
+        if (agent.scoreLogs) {
+          for (const log of agent.scoreLogs) {
+            if (!allRules.find(r => r.emoji === log.ruleEmoji)) {
+              allRules.push({ emoji: log.ruleEmoji, title: log.ruleTitle });
+            }
           }
         }
       }
