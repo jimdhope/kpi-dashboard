@@ -91,9 +91,14 @@ export function TariffComparisonTool() {
             <Card key={tariff.id} className="frosted-glass">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{tariff.name}</CardTitle>
-                    <CardDescription>Enter rates in pence.</CardDescription>
+                  <div className="space-y-1 flex-1 mr-4">
+                    <Label>Tariff Name</Label>
+                    <Input 
+                      type="text" 
+                      placeholder="e.g., E.ON Save" 
+                      value={tariff.name} 
+                      onChange={e => updateTariff(tariff.id, 'name', e.target.value)} 
+                    />
                   </div>
                   {tariffs.length > 1 && (
                     <Button variant="outline" size="icon" onClick={() => removeTariff(tariff.id)}>
@@ -128,23 +133,29 @@ export function TariffComparisonTool() {
               <CardTitle className="text-lg">Comparison</CardTitle>
               <CardDescription>Sorted by cheapest first</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Tariff</TableHead>
-                    <TableHead className="text-right text-xs">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results.map((r, i) => (
-                    <TableRow key={r.id} className={i === 0 ? 'bg-green-500/10' : ''}>
-                      <TableCell className="text-xs font-medium">{r.name}{i === 0 && ' ✓'}</TableCell>
-                      <TableCell className="text-right text-xs font-semibold text-primary">£{r.totalCost.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="space-y-3">
+              {results.map((r, i) => (
+                <div key={r.id} className={`p-3 rounded-lg ${i === 0 ? 'bg-green-500/10 border border-green-500/20' : 'bg-muted/50'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium">{r.name}</span>
+                    {i === 0 && <span className="text-xs text-green-600">✓ Cheapest</span>}
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Annual:</span>
+                      <span className="font-semibold text-primary">£{r.totalCost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Monthly:</span>
+                      <span className="font-semibold">£{(r.totalCost / 12).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Daily:</span>
+                      <span className="font-semibold">£{(r.totalCost / 365).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>

@@ -84,9 +84,6 @@ export default function DirectoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [companyFilter, setCompanyFilter] = useState<string>('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -107,9 +104,6 @@ export default function DirectoryPage() {
     try {
       const params = new URLSearchParams();
       if (search) params.set('search', search);
-      if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
-      if (companyFilter) params.set('company', companyFilter);
-      if (departmentFilter) params.set('department', departmentFilter);
 
       const contactsRes = await fetch(`/api/directory/contacts?${params}`);
       const contactsData = await contactsRes.json();
@@ -119,7 +113,7 @@ export default function DirectoryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, typeFilter, companyFilter, departmentFilter]);
+  }, [search]);
 
   useEffect(() => {
     fetchData();
@@ -127,12 +121,9 @@ export default function DirectoryPage() {
 
   const clearFilters = () => {
     setSearch('');
-    setTypeFilter('all');
-    setCompanyFilter('');
-    setDepartmentFilter('');
   };
 
-  const hasActiveFilters = search || typeFilter !== 'all' || companyFilter || departmentFilter;
+  const hasActiveFilters = !!search;
 
   const handleSaveContact = async () => {
     if (!newContact.name.trim()) {
@@ -361,37 +352,6 @@ export default function DirectoryPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full"
-                />
-              </div>
-              <div className="w-40">
-                <Label className="text-xs text-muted-foreground mb-1 block">Type</Label>
-                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
-                    <SelectItem value="person">Person</SelectItem>
-                    <SelectItem value="department">Department</SelectItem>
-                    <SelectItem value="team">Team</SelectItem>
-                    <SelectItem value="company">Company</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-48">
-                <Label className="text-xs text-muted-foreground mb-1 block">Company</Label>
-                <Input
-                  placeholder="Filter by company..."
-                  value={companyFilter}
-                  onChange={(e) => setCompanyFilter(e.target.value)}
-                />
-              </div>
-              <div className="w-48">
-                <Label className="text-xs text-muted-foreground mb-1 block">Department</Label>
-                <Input
-                  placeholder="Filter by department..."
-                  value={departmentFilter}
-                  onChange={(e) => setDepartmentFilter(e.target.value)}
                 />
               </div>
               {hasActiveFilters && (

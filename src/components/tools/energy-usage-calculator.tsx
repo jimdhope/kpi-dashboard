@@ -48,7 +48,7 @@ export function EnergyUsageCalculator() {
 
   useEffect(() => {
     if (isValid(startDate) && isValid(endDate) && endDate >= startDate) {
-      setNumberOfDays(differenceInCalendarDays(endDate, startDate) + 1);
+      setNumberOfDays(differenceInCalendarDays(endDate, startDate));
     } else {
       setNumberOfDays(null);
     }
@@ -124,10 +124,12 @@ export function EnergyUsageCalculator() {
 
     const totalCostForPeriod = totalElectricCost + totalGasCost;
     const dailyCost = totalCostForPeriod / numberOfDays;
+    const totalElectricUsage = electricUsage1 + electricUsage2 + electricUsage3;
+    const totalGasUsage = convertedGasUsage;
 
     return {
       numberOfDays, electricUsage1, electricCost1, electricUsage2, electricCost2, electricUsage3, electricCost3,
-      totalElectricStandingCharge, totalElectricCost, rawGasUsage, convertedGasUsage, gasCost,
+      totalElectricUsage, totalElectricStandingCharge, totalElectricCost, rawGasUsage, convertedGasUsage, gasCost,
       totalGasStandingCharge, totalGasCost, totalCostForPeriod,
       dailyCost, monthlyCost: dailyCost * AVG_DAYS_IN_MONTH, yearlyCost: dailyCost * 365.25,
     };
@@ -196,7 +198,7 @@ export function EnergyUsageCalculator() {
                     </div>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(d)} disabled={(date) => date < startDate} initialFocus />
+                    <Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(d)} disabled={(date) => startDate && date < startDate} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -301,6 +303,35 @@ export function EnergyUsageCalculator() {
                 <>
                   <div className="flex justify-between"><span className="text-muted-foreground">Days:</span><span>{result.numberOfDays}</span></div>
                   <Separator />
+                  {showElectricFields && (
+                    <>
+                      <div className="text-xs font-medium text-primary">Electricity</div>
+                      {numElectricRates >= 1 && (
+                        <>
+                          <div className="flex justify-between pl-2"><span className="text-muted-foreground">Rate 1:</span><span>{result.electricUsage1.toFixed(2)} kWh @ £{result.electricCost1.toFixed(2)}</span></div>
+                        </>
+                      )}
+                      {numElectricRates >= 2 && (
+                        <div className="flex justify-between pl-2"><span className="text-muted-foreground">Rate 2:</span><span>{result.electricUsage2.toFixed(2)} kWh @ £{result.electricCost2.toFixed(2)}</span></div>
+                      )}
+                      {numElectricRates >= 3 && (
+                        <div className="flex justify-between pl-2"><span className="text-muted-foreground">Rate 3:</span><span>{result.electricUsage3.toFixed(2)} kWh @ £{result.electricCost3.toFixed(2)}</span></div>
+                      )}
+                      <div className="flex justify-between pl-2"><span className="text-muted-foreground">Standing:</span><span>£{result.totalElectricStandingCharge.toFixed(2)}</span></div>
+                      {numElectricRates > 1 && (
+                        <div className="flex justify-between font-semibold pl-2"><span>Subtotal:</span><span>£{result.totalElectricCost.toFixed(2)}</span></div>
+                      )}
+                      <Separator />
+                    </>
+                  )}
+                  {showGasFields && (
+                    <>
+                      <div className="text-xs font-medium text-primary">Gas</div>
+                      <div className="flex justify-between pl-2"><span className="text-muted-foreground">Usage:</span><span>{result.convertedGasUsage.toFixed(2)} kWh @ £{result.gasCost.toFixed(2)}</span></div>
+                      <div className="flex justify-between pl-2"><span className="text-muted-foreground">Standing:</span><span>£{result.totalGasStandingCharge.toFixed(2)}</span></div>
+                      <Separator />
+                    </>
+                  )}
                   <div className="flex justify-between font-bold text-primary text-base"><span>Total Cost:</span><span>£{result.totalCostForPeriod.toFixed(2)}</span></div>
                   <Separator />
                   <div className="flex justify-between"><span className="text-muted-foreground">Daily:</span><span>£{result.dailyCost.toFixed(2)}</span></div>

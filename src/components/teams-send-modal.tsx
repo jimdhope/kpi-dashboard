@@ -31,6 +31,7 @@ interface TeamsSendModalProps {
   defaultCategory?: TeamsChannelCategory;
   trigger?: React.ReactNode;
   onSend?: () => void;
+  context?: Record<string, unknown>;
 }
 
 export function TeamsSendModal({
@@ -39,6 +40,7 @@ export function TeamsSendModal({
   defaultCategory,
   trigger,
   onSend,
+  context,
 }: TeamsSendModalProps) {
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -88,9 +90,10 @@ export function TeamsSendModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           webhookId: channelId,
-          templateId: mode === "template" ? templateId : null,
-          title: mode === "custom" ? title : undefined,
-          message: mode === "custom" ? message : undefined,
+          ...(mode === "template" && templateId ? { templateId } : {}),
+          ...(mode === "custom" && title ? { title } : {}),
+          ...(mode === "custom" && message ? { message } : {}),
+          ...(context ? { context } : {}),
         }),
       });
 

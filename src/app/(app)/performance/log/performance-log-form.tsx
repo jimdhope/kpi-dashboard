@@ -284,7 +284,6 @@ export function PerformanceLogForm({
                     {kpis.map((kpi) => (
                       <TableHead key={kpi.id} className="min-w-[100px] text-center" title={kpi.name}>
                         <div className="flex flex-col items-center">
-                          <span className="font-semibold">{kpi.initials || kpi.name.slice(0, 4)}</span>
                           <span className="text-xs font-normal text-muted-foreground">{kpi.name.slice(0, 10)}{kpi.name.length > 10 ? '...' : ''}</span>
                         </div>
                       </TableHead>

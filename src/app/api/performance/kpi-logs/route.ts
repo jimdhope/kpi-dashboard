@@ -6,8 +6,8 @@ const schema = z.object({
   kpiId: z.string().min(1, "KPI ID is required"),
   userId: z.string().optional(),
   value: z.number().min(0, "Value must be non-negative"),
-  date: z.string().min(1, "Date is required"),  // When the KPI was achieved
-  loggedAt: z.string().optional().nullable(),
+  date: z.string().min(1, "Date is required").optional(),
+  loggedAt: z.string().min(1, "LoggedAt is required").optional(),
 });
 
 export async function GET(request: Request) {
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       kpiId: payload.kpiId,
       userId: payload.userId,
       value: payload.value,
-      date: new Date(payload.date),
+      date: new Date(payload.date || payload.loggedAt || new Date().toISOString()),
       loggedAt: payload.loggedAt ? new Date(payload.loggedAt) : undefined,
     });
 

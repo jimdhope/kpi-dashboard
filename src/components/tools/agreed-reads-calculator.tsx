@@ -46,7 +46,7 @@ export function AgreedReadsCalculator() {
 
   const numberOfDays = useMemo(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
-      return differenceInCalendarDays(endDate, startDate) + 1;
+      return differenceInCalendarDays(endDate, startDate);
     }
     return null;
   }, [startDate, endDate]);
@@ -58,8 +58,7 @@ export function AgreedReadsCalculator() {
     if (!numberOfDays || numberOfDays <= 0) return null;
 
     const totalDays = numberOfDays;
-    const daysToProposed = differenceInCalendarDays(proposedDate, startDate);
-    const daysFromProposed = differenceInCalendarDays(endDate, proposedDate) + 1;
+    const daysFromEndToProposed = differenceInCalendarDays(proposedDate, endDate);
 
     const calcReading = (start: string, end: string) => {
       const s = parseFloat(start) || 0;
@@ -70,7 +69,8 @@ export function AgreedReadsCalculator() {
     return activeSections.map(section => {
       const usage = calcReading(readings[section.startKey], readings[section.endKey]);
       const dailyRate = totalDays > 0 ? usage / totalDays : 0;
-      const agreed = dailyRate * daysToProposed;
+      const endReading = parseFloat(readings[section.endKey]) || 0;
+      const agreed = endReading + (daysFromEndToProposed * dailyRate);
       return { ...section, usage, dailyRate, agreed };
     });
   }, [startDate, endDate, proposedDate, readings, activeSections, numberOfDays]);
@@ -144,7 +144,7 @@ export function AgreedReadsCalculator() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={proposedDate} onSelect={setProposedDate} disabled={(date) => startDate ? date < startDate : false} initialFocus />
+                    <Calendar mode="single" selected={proposedDate} onSelect={setProposedDate} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -179,7 +179,7 @@ export function AgreedReadsCalculator() {
               {results ? (
                 <>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><p className="text-xs text-muted-foreground">Days to Proposed</p><p className="font-bold">{results.length > 0 ? differenceInCalendarDays(proposedDate!, startDate!) : 0}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Days to Proposed</p><p className="font-bold">{results.length > 0 ? differenceInCalendarDays(proposedDate!, endDate!) : 0}</p></div>
                     <div><p className="text-xs text-muted-foreground">Proposed Date</p><p className="font-bold">{proposedDate ? format(proposedDate, 'dd-MM') : '—'}</p></div>
                   </div>
                   <Separator />

@@ -12,6 +12,7 @@ interface TeamsSendButtonProps {
   size?: "default" | "sm" | "lg" | "icon";
   children?: React.ReactNode;
   onSend?: () => void;
+  context?: Record<string, unknown>;
 }
 
 export function TeamsSendButton({
@@ -20,6 +21,7 @@ export function TeamsSendButton({
   size = "default",
   children,
   onSend,
+  context,
 }: TeamsSendButtonProps) {
   const [webhooks, setWebhooks] = useState<TeamsWebhookRecord[]>([]);
   const [templates, setTemplates] = useState<TeamsMessageTemplateRecord[]>([]);
@@ -71,6 +73,7 @@ export function TeamsSendButton({
       webhooks={webhooks}
       templates={templates}
       defaultCategory={category}
+      context={context}
       onSend={onSend}
       trigger={
         <Button variant={variant} size={size}>

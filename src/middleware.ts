@@ -4,13 +4,14 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('kpiq_v3_session');
   const { pathname } = request.nextUrl;
-  
+
   const isLoginPage = pathname === '/login';
   const isPublicPage = pathname === '/';
   const isAuthRoute = pathname.startsWith('/api/auth');
   const isStaticAsset = pathname.startsWith('/_next') || pathname.includes('.');
-  
-  if (isStaticAsset || isAuthRoute) {
+  const isRenderApi = pathname.startsWith('/api/render/');
+
+  if (isStaticAsset || isAuthRoute || isRenderApi) {
     return NextResponse.next();
   }
   

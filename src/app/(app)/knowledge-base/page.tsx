@@ -152,7 +152,7 @@ export default function KnowledgeBasePage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {articles.map((article) => (
                 <Link key={article.id} href={`/knowledge-base/${article.slug}`}>
                   <Card className="glass-card hover:scale-[1.01] transition-transform cursor-pointer h-full">

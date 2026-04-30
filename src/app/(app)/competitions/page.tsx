@@ -221,16 +221,23 @@ const achievementSummary = useMemo(() => {
 
 const teamStandings = useMemo(() => {
     const teams = competitionTeams;
-    const teamScores: Record<string, { id: string; name: string; score: number; emoji?: string }> = {};
+    const teamScores: Record<string, { id: string; name: string; score: number; emoji?: string; memberNames: string }> = {};
 
     // Initialize teams
     teams.forEach((team: any) => {
-      teamScores[team.id] = { id: team.id, name: team.name, emoji: team.emoji, score: 0 };
+      const memberNames = (team.agentIds || [])
+        .map((agentId: string) => {
+          const user = users.find((u: any) => u.id === agentId);
+          return user ? user.name.split(' ')[0] : null;
+        })
+        .filter(Boolean)
+        .join(', ');
+      teamScores[team.id] = { id: team.id, name: team.name, emoji: team.emoji, score: 0, memberNames };
     });
 
     // Calculate scores from achievements by linking agents to teams
     // agentIds now store database IDs (after migration)
-    const unassignedScore = { id: 'unassigned', name: 'Unassigned', score: 0 };
+    const unassignedScore = { id: 'unassigned', name: 'Unassigned', score: 0, memberNames: '' };
     competitionAchievements.forEach((log: any) => {
       const teamWithAgent = teams.find((team: any) => 
         team.agentIds && team.agentIds.includes(log.agentId)
@@ -244,14 +251,14 @@ const teamStandings = useMemo(() => {
     });
 
     const standings = Object.values(teamScores).sort((a, b) => b.score - a.score);
-    
+     
     // Add "Unassigned" if there were agents not on any team
     if (unassignedScore.score > 0) {
       standings.push(unassignedScore);
     }
 
     return standings;
-  }, [competitionTeams, competitionAchievements]);
+  }, [competitionTeams, competitionAchievements, users]);
 
   const agentStandings = useMemo(() => {
     const agentScores: Record<string, { id: string; name: string; score: number }> = {};
@@ -555,7 +562,12 @@ const teamStandings = useMemo(() => {
                                 index + 1
                               )}
                             </TableCell>
-                            <TableCell className="font-medium">{team.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {team.name}
+                              {team.memberNames && (
+                                <span className="text-muted-foreground text-xs ml-2">({team.memberNames})</span>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right font-bold">{team.score.toLocaleString()}</TableCell>
                           </TableRow>
                         ))}

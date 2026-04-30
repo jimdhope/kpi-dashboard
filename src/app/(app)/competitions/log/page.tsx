@@ -617,7 +617,17 @@ export default function LogScoresPage() {
     }
   }, [bonusInputs, selectedPodId, currentUserId, activeCompetitionId, selectedDate, toast]);
 
-  const podAgents = agents.filter(a => a.podIds?.includes(selectedPodId));
+  const allPodAgents = agents.filter(a => a.podIds?.includes(selectedPodId));
+
+  const presentAgents = allPodAgents.filter(agent => 
+    achievementInputs[agent.id!]?.isPresent !== false
+  ).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+  const absentAgents = allPodAgents.filter(agent => 
+    achievementInputs[agent.id!]?.isPresent === false
+  ).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+  const podAgents = [...presentAgents, ...absentAgents];
   const canLog = selectedPodId && podAgents.length > 0 && competitionRules.length > 0;
   const numericRules = useMemo(() => competitionRules.filter(r => !r.isCheckbox), [competitionRules]);
   const checkboxRules = useMemo(() => competitionRules.filter(r => r.isCheckbox), [competitionRules]);

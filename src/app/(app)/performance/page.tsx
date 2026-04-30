@@ -1,4 +1,5 @@
 'use client';
+// DEBUG_VERIFICATION_TOKEN_12345
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth } from 'date-fns';
@@ -11,7 +12,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { AppPod } from '@/lib/contracts';
-import { TeamsSendButton } from "@/components/teams-send-button";
 
 type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
 type KpiSortOrder = 'desc' | 'asc';
@@ -240,6 +240,7 @@ export default function PerformanceDashboard() {
   };
 
   if (isLoading) {
+
     return (
       <div className="space-y-6">
         <div>
@@ -250,9 +251,9 @@ export default function PerformanceDashboard() {
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-48" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-wrap gap-3">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <Skeleton key={i} className="h-64" />
+            <Skeleton key={i} className="min-w-64 h-64" />
           ))}
         </div>
       </div>
@@ -266,9 +267,6 @@ export default function PerformanceDashboard() {
           <h1 className="text-3xl font-bold">Performance Dashboard</h1>
           <p className="text-muted-foreground">KPI Performance Leaderboards</p>
         </div>
-        <TeamsSendButton category="daily_summary">
-          Share Summary
-        </TeamsSendButton>
       </div>
 
       <Card className="frosted-glass">
@@ -317,14 +315,14 @@ export default function PerformanceDashboard() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-wrap gap-3">
           {kpiLeaderboards.map(({ kpi, entries }) => (
-            <Card key={kpi.id} className="frosted-glass overflow-hidden">
+            <Card key={kpi.id} className="frosted-glass overflow-hidden min-w-64">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <span className="text-lg font-bold">{kpi.initials || '📋'}</span>
+                      <span className="text-lg font-bold">📋</span>
                     </div>
                     <div>
                       <CardTitle className="text-base">{kpi.name}</CardTitle>
@@ -379,11 +377,11 @@ export default function PerformanceDashboard() {
                             {generateInitials(entry.agentName)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium truncate block">
-                            {entry.agentName}
-                          </span>
-                        </div>
+                         <div className="flex-1">
+                           <span className="text-sm font-medium">
+                             {entry.agentName}
+                           </span>
+                         </div>
                         <div className="text-right">
                           <span className={cn(
                             "font-bold tabular-nums",

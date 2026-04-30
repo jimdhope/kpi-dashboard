@@ -80,6 +80,10 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   const [locked, setLocked] = useState(false);
   const [lockedRoles, setLockedRoles] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -146,6 +150,68 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
         ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
     );
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagInput.trim()) return;
+    
+    const existingTag = tags.find(t => t.name.toLowerCase() === newTagInput.trim().toLowerCase());
+    if (existingTag) {
+      if (!selectedTags.includes(existingTag.id)) {
+        setSelectedTags(prev => [...prev, existingTag.id]);
+      }
+      setNewTagInput('');
+      return;
+    }
+
+    setIsCreatingTag(true);
+    try {
+      const res = await fetch('/api/kb/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTagInput.trim(), color: '#6366f1' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTags(prev => [...prev, data.tag]);
+        setSelectedTags(prev => [...prev, data.tag.id]);
+        setNewTagInput('');
+      }
+    } catch (error) {
+      console.error('Failed to create tag:', error);
+    } finally {
+      setIsCreatingTag(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryInput.trim()) return;
+    
+    const existingCat = categories.find(c => c.name.toLowerCase() === newCategoryInput.trim().toLowerCase());
+    if (existingCat) {
+      setCategoryId(existingCat.id);
+      setNewCategoryInput('');
+      return;
+    }
+
+    setIsCreatingCategory(true);
+    try {
+      const res = await fetch('/api/kb/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryInput.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCategories(prev => [...prev, data.category]);
+        setCategoryId(data.category.id);
+        setNewCategoryInput('');
+      }
+    } catch (error) {
+      console.error('Failed to create category:', error);
+    } finally {
+      setIsCreatingCategory(false);
+    }
   };
 
   const handleRoleToggle = (role: string) => {
@@ -311,17 +377,37 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select value={categoryId} onValueChange={setCategoryId} disabled={!canUserEdit}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No category</SelectItem>
-                    {categoryTree.map((cat) => (
-                      <CategorySelectItem key={cat.id} category={cat} level={0} />
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Select value={categoryId || 'none'} onValueChange={(v) => setCategoryId(v === 'none' ? '' : v)} disabled={!canUserEdit}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No category</SelectItem>
+                      {categoryTree.map((cat) => (
+                        <CategorySelectItem key={cat.id} category={cat} level={0} />
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {canUserEdit && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Or create new category..."
+                        value={newCategoryInput}
+                        onChange={(e) => setNewCategoryInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateCategory())}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        disabled={!newCategoryInput.trim() || isCreatingCategory}
+                        size="sm"
+                      >
+                        {isCreatingCategory ? '...' : 'Add'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -353,7 +439,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
             <div className="space-y-2">
               <Label>Tags</Label>
               <div className="flex flex-wrap gap-2 p-3 border rounded-lg min-h-[60px]">
-                {tags.length === 0 ? (
+                {tags.length === 0 && newTagInput === '' ? (
                   <p className="text-sm text-muted-foreground">No tags available</p>
                 ) : (
                   tags.map((tag) => (
@@ -381,6 +467,25 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
                   ))
                 )}
               </div>
+              {canUserEdit && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add new tag..."
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateTag())}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleCreateTag}
+                    disabled={!newTagInput.trim() || isCreatingTag}
+                    size="sm"
+                  >
+                    {isCreatingTag ? 'Creating...' : 'Add Tag'}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

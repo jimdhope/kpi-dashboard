@@ -297,7 +297,6 @@ export interface KpiLogRecord {
   id: string;
   kpiId: string;
   kpiName: string;
-  kpiInitials: string;
   userId: string | null;
   userName: string | null;
   value: number;

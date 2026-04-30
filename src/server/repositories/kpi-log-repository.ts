@@ -5,7 +5,6 @@ export interface KpiLogRecord {
   id: string;
   kpiId: string;
   kpiName: string;
-  kpiInitials: string;
   userId: string | null;
   userName: string | null;
   value: number;
@@ -39,7 +38,6 @@ export const kpiLogRepository = {
           select: {
             id: true,
             name: true,
-            initials: true,
           },
         },
         user: {
@@ -55,7 +53,6 @@ export const kpiLogRepository = {
       id: log.id,
       kpiId: log.kpiId,
       kpiName: log.kpi.name,
-      kpiInitials: log.kpi.initials,
       userId: log.userId,
       userName: log.user?.name ?? null,
       value: toNumber(log.value),
@@ -104,7 +101,6 @@ export const kpiLogRepository = {
             select: {
               id: true,
               name: true,
-              initials: true,
             },
           },
           user: {
@@ -121,7 +117,6 @@ export const kpiLogRepository = {
         id: log.id,
         kpiId: log.kpiId,
         kpiName: log.kpi.name,
-        kpiInitials: log.kpi.initials,
         userId: log.userId,
         userName: log.user?.name ?? null,
         value: toNumber(log.value),

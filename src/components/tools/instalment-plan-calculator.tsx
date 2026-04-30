@@ -73,6 +73,8 @@ export function InstalmentPlanCalculator() {
                 <li>We offer multiple payment methods (DD, PP, RCM).</li>
                 <li>Additional payments can be made at any time to reduce the balance.</li>
                 <li>Can they clear the balance or make a partial payment today?</li>
+                <li>Offer Energy efficiency advise to help reduce ongoing costs.</li>
+                <li>Will this instalment plan effect any other priority bills.</li>
                 <li>Free debt advice available from Step Change and Scottish Power Hardship Fund.</li>
                 <li>Instalment plans over 12 months may affect credit score.</li>
               </ul>

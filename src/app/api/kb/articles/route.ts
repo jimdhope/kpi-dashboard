@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
           select: { comments: true, versions: true }
         }
       },
-      orderBy: { updatedAt: 'desc' }
+      orderBy: { title: 'asc' }
     });
 
     return NextResponse.json({ articles });
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, excerpt, categoryName, tagNames, status } = body;
+    const { title, content, excerpt, categoryName, categoryId: incomingCategoryId, tagNames, tagIds, status } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -86,14 +86,14 @@ export async function POST(request: NextRequest) {
       slug = `${slug}-${Date.now()}`;
     }
 
-    // Handle category - create if it doesn't exist
-    let categoryId = null;
-    if (categoryName) {
+    // Handle category - use incomingCategoryId if provided, otherwise fallback to categoryName
+    let finalCategoryId = incomingCategoryId || null;
+    if (!finalCategoryId && categoryName) {
       const existingCategory = await prisma.kBCategory.findFirst({
         where: { name: { equals: categoryName, mode: 'insensitive' } }
       });
       if (existingCategory) {
-        categoryId = existingCategory.id;
+        finalCategoryId = existingCategory.id;
       } else {
         const newCategory = await prisma.kBCategory.create({
           data: { 
@@ -101,29 +101,31 @@ export async function POST(request: NextRequest) {
             slug: generateSlug(categoryName)
           }
         });
-        categoryId = newCategory.id;
+        finalCategoryId = newCategory.id;
       }
     }
 
-    // Handle tags - create if they don't exist
+    // Handle tags - use tagIds if provided, otherwise fallback to creating from tagNames
     let tagConnect = undefined;
-    if (tagNames && tagNames.length > 0) {
-      const tagIds: string[] = [];
+    if (tagIds && tagIds.length > 0) {
+      tagConnect = { connect: tagIds.map((id: string) => ({ id })) };
+    } else if (tagNames && tagNames.length > 0) {
+      const newTagIds: string[] = [];
       for (const tagName of tagNames) {
         const existingTag = await prisma.tag.findFirst({
           where: { name: { equals: tagName, mode: 'insensitive' } }
         });
         if (existingTag) {
-          tagIds.push(existingTag.id);
+          newTagIds.push(existingTag.id);
         } else {
           const newTag = await prisma.tag.create({
             data: { name: tagName, color: '#6366f1' }
           });
-          tagIds.push(newTag.id);
+          newTagIds.push(newTag.id);
         }
       }
-      if (tagIds.length > 0) {
-        tagConnect = { connect: tagIds.map((id: string) => ({ id })) };
+      if (newTagIds.length > 0) {
+        tagConnect = { connect: newTagIds.map((id: string) => ({ id })) };
       }
     }
 
@@ -133,7 +135,7 @@ export async function POST(request: NextRequest) {
         slug,
         content: content || {},
         excerpt,
-        categoryId,
+        categoryId: finalCategoryId,
         status: status || 'draft',
         createdById: session.user.id,
         publishedAt: status === 'published' ? new Date() : null,

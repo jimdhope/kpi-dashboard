@@ -314,7 +314,7 @@ export default function PerformanceChartsPage() {
                 <SelectTrigger><SelectValue placeholder="Select KPI" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All KPIs</SelectItem>
-                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}
+                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

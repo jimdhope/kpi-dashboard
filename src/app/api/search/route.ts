@@ -50,15 +50,17 @@ export async function GET(request: NextRequest) {
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
             { email: { contains: query, mode: 'insensitive' } },
+            { phone: { contains: query, mode: 'insensitive' } },
+            { website: { contains: query, mode: 'insensitive' } },
+            { address: { contains: query, mode: 'insensitive' } },
             { notes: { contains: query, mode: 'insensitive' } },
+            { companyName: { contains: query, mode: 'insensitive' } },
+            { departmentName: { contains: query, mode: 'insensitive' } },
+            { tags: { some: { name: { contains: query, mode: 'insensitive' } } } },
           ],
         },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          type: true,
-          companyName: true,
+        include: {
+          tags: true,
         },
         take: 5,
         orderBy: { name: 'asc' }
@@ -70,6 +72,7 @@ export async function GET(request: NextRequest) {
         title: c.name,
         href: `/directory/contacts/${c.id}`,
         subtitle: c.email || c.companyName || c.type,
+        tags: c.tags?.map(t => t.name).join(', '),
       })));
     }
 

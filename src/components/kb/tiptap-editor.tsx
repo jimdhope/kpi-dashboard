@@ -15,6 +15,7 @@ import CharacterCount from '@tiptap/extension-character-count';
 import Typography from '@tiptap/extension-typography';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import { TableKit } from '@tiptap/extension-table';
 import { TiptapToolbar } from './tiptap-toolbar';
 import { AlertCircle } from 'lucide-react';
 
@@ -80,6 +81,7 @@ export function TiptapEditor({
       TaskItem.configure({
         nested: true,
       }),
+      TableKit,
     ],
     content: parseEditorContent(content),
     editable,
@@ -120,8 +122,10 @@ export function TiptapEditor({
   }, [editor]);
 
   const insertTable = useCallback(() => {
-    // Tables removed for simplicity
-  }, []);
+    if (editor) {
+      editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    }
+  }, [editor]);
 
   if (hasError) {
     return (
@@ -187,6 +191,7 @@ export function TiptapViewer({ content }: { content: string }) {
       TaskItem.configure({
         nested: true,
       }),
+      TableKit,
     ],
     content: parseEditorContent(content),
     editable: false,

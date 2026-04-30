@@ -266,7 +266,7 @@ export default function AdditionalLeaderboardPage() {
                 <SelectTrigger id="kpi-select"><SelectValue placeholder="Select KPI" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="overall">Overall Score</SelectItem>
-                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}
+                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
