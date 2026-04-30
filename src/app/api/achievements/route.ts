@@ -51,66 +51,81 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await authService.requireCurrentUser();
-    const payload = createSchema.parse(await request.json());
-
-    const targetDate = new Date(payload.date);
-    targetDate.setUTCHours(0, 0, 0, 0);
-    const dayEnd = new Date(payload.date);
-    dayEnd.setUTCHours(23, 59, 59, 999);
-
-    // Look for existing achievement to update (upsert)
-    const existing = await prisma.dailyAchievement.findFirst({
-      where: {
-        competitionId: payload.competitionId,
-        agentId: payload.agentId,
-        ruleId: payload.ruleId,
-        date: { gte: targetDate, lte: dayEnd }
-      }
-    });
-
-    let achievement;
-    if (existing) {
-      achievement = await prisma.dailyAchievement.update({
-        where: { id: existing.id },
-        data: {
-          value: payload.value,
-          points: payload.points ?? payload.value,
-          ruleName: payload.ruleName || existing.ruleName,
-          loggedBy: user.id,
-          loggedAt: new Date(),
-        }
-      });
-    } else {
-      achievement = await prisma.dailyAchievement.create({
-        data: {
-          competitionId: payload.competitionId,
-          agentId: payload.agentId,
-          podId: payload.podId,
-          ruleId: payload.ruleId,
-          ruleName: payload.ruleName || null,
-          value: payload.value,
-          points: payload.points ?? payload.value,
-          date: targetDate,
-          loggedBy: user.id,
-          loggedAt: new Date(),
-        },
-      });
-
-      // Log activity for new achievement
-      const agent = await prisma.user.findUnique({
-        where: { id: payload.agentId },
-        select: { name: true },
-      });
-
-      await activityService.logAchievementEarned({
-        achievementName: payload.ruleName || 'Achievement',
-        points: payload.points ?? payload.value,
-        userId: payload.agentId,
-        userName: agent?.name || 'Unknown',
-      });
-    }
-
-    return ok({ achievement }, { status: existing ? 200 : 201 });
+     const payload = createSchema.parse(await request.json());
+ 
+     const targetDate = new Date(payload.date);
+     targetDate.setUTCHours(0, 0, 0, 0);
+     const dayEnd = new Date(payload.date);
+     dayEnd.setUTCHours(23, 59, 59, 999);
+ 
+     // Calculate points. If ruleId is 'na', points are 0.
+     let calculatedPoints = 0;
+     if (payload.ruleId !== 'na') {
+       const rule = await prisma.competitionRule.findUnique({
+         where: { id: payload.ruleId }
+       });
+ 
+       if (!rule) {
+         return errorResponse(400, "Competition rule not found.");
+       }
+       calculatedPoints = payload.value * rule.points;
+     }
+ 
+     // Look for existing achievement to update (upsert)
+     const existing = await prisma.dailyAchievement.findFirst({
+       where: {
+         competitionId: payload.competitionId,
+         agentId: payload.agentId,
+         ruleId: payload.ruleId,
+         date: { gte: targetDate, lte: dayEnd }
+       }
+     });
+ 
+     let achievement;
+     if (existing) {
+       achievement = await prisma.dailyAchievement.update({
+         where: { id: existing.id },
+         data: {
+           value: payload.value,
+           points: calculatedPoints,
+           ruleName: payload.ruleName || existing.ruleName,
+           loggedBy: user.id,
+           loggedAt: new Date(),
+         }
+       });
+     } else {
+       achievement = await prisma.dailyAchievement.create({
+         data: {
+           competitionId: payload.competitionId,
+           agentId: payload.agentId,
+           podId: payload.podId,
+           ruleId: payload.ruleId,
+           ruleName: payload.ruleName || null,
+           value: payload.value,
+           points: calculatedPoints,
+           date: targetDate,
+           loggedBy: user.id,
+           loggedAt: new Date(),
+         }
+       });
+ 
+       // Log activity for new achievement
+       const agent = await prisma.user.findUnique({
+         where: { id: payload.agentId },
+         select: { name: true },
+       });
+ 
+       if (payload.ruleId !== 'na') {
+         await activityService.logAchievementEarned({
+           achievementName: payload.ruleName || 'Achievement',
+           points: calculatedPoints,
+           userId: payload.agentId,
+           userName: agent?.name || 'Unknown',
+         });
+       }
+     }
+ 
+     return ok({ achievement }, { status: existing ? 200 : 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid achievement payload.");

@@ -329,7 +329,7 @@ export default function CompetitionCertificatesPage() {
           }
           
           if (rule && !rule.isCheckbox) {
-            points = log.value * (rule.points || 0);
+            points = rule.points;
           } else {
             console.log(`Rule not found for achievement: ruleId=${log.ruleId}, ruleName=${log.ruleName}`);
           }
