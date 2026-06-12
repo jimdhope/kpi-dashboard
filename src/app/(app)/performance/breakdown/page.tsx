@@ -9,7 +9,6 @@ import {
   isSameDay,
   isWithinInterval,
   startOfWeek,
-  subWeeks,
   subDays,
   startOfMonth,
   endOfMonth,
@@ -54,10 +53,22 @@ const KPI_BREAKDOWN_POD_KEY = 'kpiBreakdown_selectedPodId';
 const KPI_BREAKDOWN_TIMEFRAME_KEY = 'kpiBreakdown_timeframe';
 const KPI_BREAKDOWN_WEEKSTART_KEY = 'kpiBreakdown_weekStartsOn';
 const KPI_BREAKDOWN_VIEWMODE_KEY = 'kpiBreakdown_viewMode';
+const KPI_BREAKDOWN_SORTMODE_KEY = 'kpiBreakdown_kpiSortMode';
 
 type Timeframe = 'last6weeks' | 'thisWeek' | 'thisMonth' | 'allTime' | 'custom';
 type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type ViewMode = 'agent' | 'kpi';
+
+function getKpiTarget(kpi: AdditionalKpi): { value: number; label: string } | null {
+  if (kpi.type === 'scoreOutOf' && kpi.maxValue !== undefined && kpi.maxValue !== null) {
+    return { value: kpi.maxValue, label: String(kpi.maxValue) };
+  }
+  if (kpi.type !== 'scoreOutOf' && kpi.passFailCriteriaEnabled && kpi.passFailValue !== undefined && kpi.passFailValue !== null) {
+    const suffix = kpi.type === 'percentage' ? '%' : '';
+    return { value: kpi.passFailValue, label: `${kpi.passFailValue}${suffix}` };
+  }
+  return null;
+}
 
 interface WeeklyKpiTotals {
   [kpiId: string]: {
@@ -84,6 +95,7 @@ export default function KpiBreakdownPage() {
   const [timeframe, setTimeframe] = useState<Timeframe>('last6weeks');
   const [weekStartsOn, setWeekStartsOn] = useState<WeekStartDay>(4);
   const [viewMode, setViewMode] = useState<ViewMode>('agent');
+  const [kpiSortMode, setKpiSortMode] = useState<'name' | 'score'>('name');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | undefined>(
     { from: subDays(new Date(), 42), to: new Date() }
   );
@@ -99,6 +111,8 @@ export default function KpiBreakdownPage() {
     if (savedWeekStart) setWeekStartsOn(parseInt(savedWeekStart, 10) as WeekStartDay);
     const savedViewMode = localStorage.getItem(KPI_BREAKDOWN_VIEWMODE_KEY) as ViewMode | null;
     if (savedViewMode) setViewMode(savedViewMode);
+    const savedSortMode = localStorage.getItem(KPI_BREAKDOWN_SORTMODE_KEY) as 'name' | 'score' | null;
+    if (savedSortMode) setKpiSortMode(savedSortMode);
   }, []);
 
   const handlePodChange = (podId: string) => { setSelectedPodId(podId); localStorage.setItem(KPI_BREAKDOWN_POD_KEY, podId); };
@@ -112,6 +126,7 @@ export default function KpiBreakdownPage() {
   };
   const handleWeekStartChange = (day: string) => { setWeekStartsOn(parseInt(day, 10) as WeekStartDay); localStorage.setItem(KPI_BREAKDOWN_WEEKSTART_KEY, day); };
   const handleViewModeChange = (mode: string) => { setViewMode(mode as ViewMode); localStorage.setItem(KPI_BREAKDOWN_VIEWMODE_KEY, mode); };
+  const handleSortModeChange = (mode: 'name' | 'score') => { setKpiSortMode(mode); localStorage.setItem(KPI_BREAKDOWN_SORTMODE_KEY, mode); };
 
   useEffect(() => {
     async function fetchData() {
@@ -176,6 +191,7 @@ export default function KpiBreakdownPage() {
     const now = new Date();
     let startDate: Date;
     let endDate: Date = now;
+    let maxDateByKpi: Record<string, Date> | null = null;
     
     switch (timeframe) {
       case 'thisWeek':
@@ -188,8 +204,16 @@ export default function KpiBreakdownPage() {
         break;
       case 'last6weeks':
       default:
-        startDate = startOfWeek(subWeeks(now, 6), { weekStartsOn });
-        endDate = endOfWeek(now, { weekStartsOn });
+        const maxByKpi: Record<string, Date> = {};
+        logs.forEach(log => {
+          const d = new Date(log.date);
+          if (!maxByKpi[log.kpiId] || d > maxByKpi[log.kpiId]) {
+            maxByKpi[log.kpiId] = d;
+          }
+        });
+        maxDateByKpi = maxByKpi;
+        startDate = new Date(0);
+        endDate = new Date();
         break;
       case 'custom':
         if (!customDateRange?.from || !customDateRange?.to) {
@@ -202,14 +226,39 @@ export default function KpiBreakdownPage() {
 
     return logs.filter(log => {
       const logDate = new Date(log.date);
+      if (maxDateByKpi) {
+        const maxDate = maxDateByKpi[log.kpiId];
+        if (!maxDate) return false;
+        return logDate >= subDays(maxDate, 42) && logDate <= maxDate;
+      }
       return logDate >= startDate && logDate <= endDate;
     });
   }, [logs, timeframe, weekStartsOn, customDateRange]);
   
 
-  const { processedData, weekHeaders, podKpis } = useMemo(() => {
+  function getSixWeekScore(
+    weeklyScores: AgentWeeklyData['weeklyScores'],
+    kpiId: string,
+    kpiType: AdditionalKpiType,
+    avgWeeks: string[]
+  ): number {
+    const useWeeklyAverage = kpiType === 'percentage' || kpiType === 'scoreOutOf';
+    let total = 0;
+    avgWeeks.forEach(week => {
+      const data = weeklyScores[week]?.[kpiId];
+      if (data) {
+        total += useWeeklyAverage
+          ? (data.count > 0 ? data.value / data.count : 0)
+          : data.value;
+      }
+    });
+    if (useWeeklyAverage) return total / 6;
+    return total;
+  }
+
+  const { processedData, weekHeaders, podKpis, kpiWeekHeaders, kpiAgentRanks } = useMemo(() => {
     if (filteredLogs.length === 0 || kpis.length === 0) {
-      return { processedData: [], weekHeaders: [], podKpis: [] };
+      return { processedData: [], weekHeaders: [], podKpis: [], kpiWeekHeaders: {}, kpiAgentRanks: {} };
     }
     
     const podAgents = agents.filter(a => {
@@ -219,7 +268,7 @@ export default function KpiBreakdownPage() {
     });
     
     if (podAgents.length === 0) {
-        return { processedData: [], weekHeaders: [], podKpis: [] };
+        return { processedData: [], weekHeaders: [], podKpis: [], kpiWeekHeaders: {}, kpiAgentRanks: {} };
     }
     
     const podKpiIds = new Set(filteredLogs.map(log => log.kpiId));
@@ -257,9 +306,46 @@ export default function KpiBreakdownPage() {
 
     const weekHeaders = Array.from(weeks).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
     
-    return { processedData: agentData.sort((a, b) => a.agentName.localeCompare(b.agentName)), weekHeaders, podKpis };
+    const kpiWeekHeaders: Record<string, string[]> = {};
+    podKpis.forEach(kpi => {
+      const kpiLogs = filteredLogs.filter(log => log.kpiId === kpi.id);
+      if (kpiLogs.length === 0) { kpiWeekHeaders[kpi.id] = []; return; }
+      const weekSet = new Set<string>();
+      kpiLogs.forEach(log => {
+        const ws = startOfWeek(new Date(log.date), { weekStartsOn });
+        weekSet.add(format(ws, 'MMM dd, yyyy'));
+      });
+      kpiWeekHeaders[kpi.id] = Array.from(weekSet)
+        .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+        .slice(-6);
+    });
+    
+    const kpiAgentRanks: Record<string, Record<string, number>> = {};
+    if (filteredLogs.length > 0 && timeframe === 'last6weeks') {
+      podKpis.forEach(kpi => {
+        const avgWeeks = kpiWeekHeaders[kpi.id] || [];
+        if (avgWeeks.length === 0) return;
+        const entries: { agentId: string; score: number }[] = [];
+        agentData.forEach(agent => {
+          const score = getSixWeekScore(agent.weeklyScores, kpi.id, kpi.type, avgWeeks);
+          const hasData = avgWeeks.some(week => agent.weeklyScores[week]?.[kpi.id] !== undefined);
+          if (hasData) entries.push({ agentId: agent.agentId, score });
+        });
+        const lowerIsBetter = kpi.sortOrder === 'asc';
+        entries.sort((a, b) => lowerIsBetter ? a.score - b.score : b.score - a.score);
+        const ranks: Record<string, number> = {};
+        let currentRank = 0;
+        entries.forEach((e, i) => {
+          if (i === 0 || e.score !== entries[i - 1].score) currentRank++;
+          if (currentRank <= 3) ranks[e.agentId] = currentRank;
+        });
+        kpiAgentRanks[kpi.id] = ranks;
+      });
+    }
+    
+    return { processedData: agentData.sort((a, b) => a.agentName.localeCompare(b.agentName)), weekHeaders, podKpis, kpiWeekHeaders, kpiAgentRanks };
 
-  }, [filteredLogs, agents, selectedPodId, kpis, weekStartsOn]);
+  }, [filteredLogs, agents, selectedPodId, kpis, weekStartsOn, timeframe]);
 
   const weekDayOptions = [
     { value: 0, label: 'Sunday' }, { value: 1, label: 'Monday' }, { value: 2, label: 'Tuesday' },
@@ -286,6 +372,19 @@ export default function KpiBreakdownPage() {
   
     return passed ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50';
   };
+
+  const sevenWeekHeaders = useMemo(() => {
+    if (timeframe !== 'last6weeks') return weekHeaders;
+    if (weekHeaders.length === 0) return [];
+    const maxWeekDate = new Date(weekHeaders[weekHeaders.length - 1]);
+    const headers: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(maxWeekDate);
+      d.setDate(d.getDate() - i * 7);
+      headers.push(format(d, 'MMM dd, yyyy'));
+    }
+    return headers;
+  }, [weekHeaders, timeframe]);
 
   const isLongTimeframe = timeframe === 'last6weeks' || timeframe === 'allTime';
 
@@ -372,16 +471,42 @@ export default function KpiBreakdownPage() {
             </CardDescription>
           </div>
           {isLongTimeframe && (
-            <Tabs value={viewMode} onValueChange={handleViewModeChange} className="hidden sm:block">
-              <TabsList className="bg-muted/50 border">
-                <TabsTrigger value="agent" className="flex items-center gap-2">
-                  <User className="h-4 w-4" /> Agent View
-                </TabsTrigger>
-                <TabsTrigger value="kpi" className="flex items-center gap-2">
-                  <LayoutGrid className="h-4 w-4" /> KPI View
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-3">
+              <Tabs value={viewMode} onValueChange={handleViewModeChange} className="hidden sm:block">
+                <TabsList className="bg-muted/50 border">
+                  <TabsTrigger value="agent" className="flex items-center gap-2">
+                    <User className="h-4 w-4" /> Agent View
+                  </TabsTrigger>
+                  <TabsTrigger value="kpi" className="flex items-center gap-2">
+                    <LayoutGrid className="h-4 w-4" /> KPI View
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {viewMode === 'kpi' && timeframe === 'last6weeks' && (
+                <div className="flex items-center gap-1 text-xs">
+                  <button
+                    onClick={() => handleSortModeChange('name')}
+                    className={`px-2.5 py-1.5 rounded-l-md border transition-colors ${
+                      kpiSortMode === 'name'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-input hover:bg-muted/80'
+                    }`}
+                  >
+                    Name A-Z
+                  </button>
+                  <button
+                    onClick={() => handleSortModeChange('score')}
+                    className={`px-2.5 py-1.5 rounded-r-md border transition-colors ${
+                      kpiSortMode === 'score'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-input hover:bg-muted/80'
+                    }`}
+                  >
+                    ↓ Score
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </CardHeader>
         <CardContent className="flex-1 flex flex-col">
@@ -422,20 +547,37 @@ export default function KpiBreakdownPage() {
                           <TableHeader>
                             <TableRow className="bg-gray-100 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
                               <TableHead className="w-[140px] text-xs font-bold uppercase text-gray-700 dark:text-gray-200">KPI</TableHead>
-                              {weekHeaders.map(week => (
+                              {sevenWeekHeaders.map(week => (
                                 <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-gray-700 dark:text-gray-200">
-                                  {format(new Date(week), 'dd/MM')}
+                                  {format(endOfWeek(new Date(week), { weekStartsOn }), 'dd/MM')}
                                 </TableHead>
                               ))}
+                              {timeframe === 'last6weeks' && (
+                                <TableHead className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-primary border-l-2 border-primary">AVG</TableHead>
+                              )}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {podKpis.map((kpi, idx) => (
+                            {podKpis.map((kpi, idx) => {
+                              const avgWeeks = (timeframe === 'last6weeks' ? kpiWeekHeaders[kpi.id] : []);
+                              return (
                               <TableRow key={kpi.id} className={`h-8 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
-                                <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-gray-100/30 dark:bg-gray-700/30 text-gray-800 dark:text-gray-200 truncate max-w-[140px]" title={kpi.name}>
-                                  {kpi.name}
+                                <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-gray-100/30 dark:bg-gray-700/30 text-gray-800 dark:text-gray-200 break-words max-w-[140px]">
+                                  <div className="flex items-center gap-1">
+                                    <span className="break-words">{kpi.name}</span>
+                                    <span className={cn(
+                                      "text-[9px] font-medium shrink-0",
+                                      kpi.sortOrder === 'asc' ? 'text-blue-500' : 'text-green-500'
+                                    )}>
+                                      {kpi.sortOrder === 'asc' ? '↓' : '↑'}
+                                    </span>
+                                    {(() => {
+                                      const t = getKpiTarget(kpi);
+                                      return t ? <span className="text-[9px] text-muted-foreground shrink-0">/{t.label}</span> : null;
+                                    })()}
+                                  </div>
                                 </TableCell>
-                                {weekHeaders.map(week => {
+                                {sevenWeekHeaders.map(week => {
                                   const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
                                   let score: number | undefined;
                                   if (weeklyData) {
@@ -458,8 +600,25 @@ export default function KpiBreakdownPage() {
                                     </TableCell>
                                   );
                                 })}
+                                {timeframe === 'last6weeks' && (
+                                  <TableCell
+                                    className={cn(
+                                      "text-center text-[11px] py-1 px-1 border-l-2 border-primary font-bold tabular-nums",
+                                      kpiAgentRanks[kpi.id]?.[agentData.agentId] === 1 ? 'bg-[#9f8f5e] text-[#EFEFEF]' :
+                                      kpiAgentRanks[kpi.id]?.[agentData.agentId] === 2 ? 'bg-[#969696] text-[#EFEFEF]' :
+                                      kpiAgentRanks[kpi.id]?.[agentData.agentId] === 3 ? 'bg-[#996b4f] text-[#EFEFEF]' :
+                                      'bg-primary/5 text-primary'
+                                    )}
+                                  >
+                                    {(() => {
+                                      const avg = getSixWeekScore(agentData.weeklyScores, kpi.id, kpi.type, avgWeeks);
+                                      return kpi.type === 'percentage' ? `${avg.toFixed(1)}%` : avg.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                                    })()}
+                                  </TableCell>
+                                )}
                               </TableRow>
-                            ))}
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>
@@ -468,12 +627,34 @@ export default function KpiBreakdownPage() {
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-6 justify-center lg:justify-start">
-                  {podKpis.map(kpi => (
+                  {podKpis.map(kpi => {
+                    const kpiWeeks = timeframe === 'last6weeks' ? kpiWeekHeaders[kpi.id] || weekHeaders : weekHeaders;
+                    const lowerIsBetter = kpi.sortOrder === 'asc';
+                    const sortedAgents = kpiSortMode === 'score' && timeframe === 'last6weeks'
+                      ? [...processedData].sort((a, b) => {
+                          const aScore = getSixWeekScore(a.weeklyScores, kpi.id, kpi.type, kpiWeeks);
+                          const bScore = getSixWeekScore(b.weeklyScores, kpi.id, kpi.type, kpiWeeks);
+                          return lowerIsBetter ? aScore - bScore : bScore - aScore;
+                        })
+                      : processedData;
+                    return (
                     <Card key={kpi.id} className="border shadow-sm overflow-hidden flex flex-col bg-card/50 min-w-[380px] flex-1 max-w-[600px]">
                       <CardHeader className="bg-gray-200 dark:bg-gray-700 py-3 px-4 border-b">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <LayoutGrid className="h-4 w-4 text-blue-600 dark:text-blue-400" /> 
-                          <span className="text-gray-800 dark:text-gray-100">{kpi.name}</span>
+                        <CardTitle className="text-base flex items-start gap-2">
+                          <LayoutGrid className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-gray-800 dark:text-gray-100 leading-tight break-words">{kpi.name}</span>
+                            <span className={cn(
+                              "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap shrink-0",
+                              kpi.sortOrder === 'asc' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'
+                            )}>
+                              {kpi.sortOrder === 'asc' ? '↓ Lower' : '↑ Higher'}
+                            </span>
+                            {(() => {
+                              const t = getKpiTarget(kpi);
+                              return t ? <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">Target: {t.label}</span> : null;
+                            })()}
+                          </div>
                         </CardTitle>
                       </CardHeader>
                       <div className="overflow-x-auto">
@@ -481,20 +662,23 @@ export default function KpiBreakdownPage() {
                           <TableHeader>
                             <TableRow className="bg-gray-100 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
                               <TableHead className="w-[140px] text-xs font-bold uppercase text-gray-700 dark:text-gray-200">Agent</TableHead>
-                              {weekHeaders.map(week => (
+                              {kpiWeeks.map(week => (
                                 <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-gray-700 dark:text-gray-200">
-                                  {format(new Date(week), 'dd/MM')}
+                                  {format(endOfWeek(new Date(week), { weekStartsOn }), 'dd/MM')}
                                 </TableHead>
                               ))}
+                              {timeframe === 'last6weeks' && (
+                                <TableHead className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-primary border-l-2 border-primary">AVG</TableHead>
+                              )}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {processedData.map((agentData, idx) => (
+                            {sortedAgents.map((agentData, idx) => (
                               <TableRow key={agentData.agentId} className={`h-8 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
                                 <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-gray-100/30 dark:bg-gray-700/30 text-gray-800 dark:text-gray-200 truncate max-w-[140px]" title={agentData.agentName}>
                                   {agentData.agentName}
                                 </TableCell>
-                                {weekHeaders.map(week => {
+                                {kpiWeeks.map(week => {
                                   const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
                                   let score: number | undefined;
                                   if (weeklyData) {
@@ -517,13 +701,30 @@ export default function KpiBreakdownPage() {
                                     </TableCell>
                                   );
                                 })}
+                                {timeframe === 'last6weeks' && (
+                                  <TableCell
+                                    className={cn(
+                                      "text-center text-[11px] py-1 px-1 border-l-2 border-primary font-bold tabular-nums",
+                                      kpiAgentRanks[kpi.id]?.[agentData.agentId] === 1 ? 'bg-[#9f8f5e] text-[#EFEFEF]' :
+                                      kpiAgentRanks[kpi.id]?.[agentData.agentId] === 2 ? 'bg-[#969696] text-[#EFEFEF]' :
+                                      kpiAgentRanks[kpi.id]?.[agentData.agentId] === 3 ? 'bg-[#996b4f] text-[#EFEFEF]' :
+                                      'bg-primary/5 text-primary'
+                                    )}
+                                  >
+                                    {(() => {
+                                      const avg = getSixWeekScore(agentData.weeklyScores, kpi.id, kpi.type, kpiWeeks);
+                                      return kpi.type === 'percentage' ? `${avg.toFixed(1)}%` : avg.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                                    })()}
+                                  </TableCell>
+                                )}
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
                       </div>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               )
             ) : (

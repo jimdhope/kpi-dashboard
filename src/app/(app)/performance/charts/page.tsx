@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { startOfWeek, endOfWeek, endOfDay, subWeeks, subDays, startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfWeek, endOfWeek, endOfDay, subDays, startOfMonth, endOfMonth, format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -183,6 +183,7 @@ export default function PerformanceChartsPage() {
     const now = new Date();
     let startDate: Date;
     let endDate: Date = now;
+    let maxDateByKpi: Record<string, Date> | null = null;
 
     switch (timeframe) {
         case 'thisWeek':
@@ -194,8 +195,16 @@ export default function PerformanceChartsPage() {
             endDate = endOfMonth(now);
             break;
         case 'last6weeks':
-            startDate = startOfWeek(subWeeks(now, 6), { weekStartsOn: 1 });
-            endDate = endOfWeek(now, { weekStartsOn: 1 });
+            const maxByKpi: Record<string, Date> = {};
+            logs.forEach(log => {
+              const d = new Date(log.date);
+              if (!maxByKpi[log.kpiId] || d > maxByKpi[log.kpiId]) {
+                maxByKpi[log.kpiId] = d;
+              }
+            });
+            maxDateByKpi = maxByKpi;
+            startDate = new Date(0);
+            endDate = new Date();
             break;
         case 'allTime':
         default:
@@ -218,6 +227,11 @@ export default function PerformanceChartsPage() {
       const logDate = new Date(log.date);
       const agentMatch = selectedAgentId === 'all' || log.userId === selectedAgentId;
       const kpiMatch = showAllKpis || log.kpiId === selectedKpiId;
+      if (maxDateByKpi) {
+        const maxDate = maxDateByKpi[log.kpiId];
+        if (!maxDate) return false;
+        return agentMatch && kpiMatch && logDate >= subDays(maxDate, 42) && logDate <= maxDate;
+      }
       return agentMatch && kpiMatch && logDate >= startDate && logDate <= endDate;
     });
 
@@ -314,7 +328,7 @@ export default function PerformanceChartsPage() {
                 <SelectTrigger><SelectValue placeholder="Select KPI" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All KPIs</SelectItem>
-                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>)}
+                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

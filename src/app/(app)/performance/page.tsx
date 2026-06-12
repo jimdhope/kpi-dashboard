@@ -1,8 +1,7 @@
 'use client';
-// DEBUG_VERIFICATION_TOKEN_12345
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth } from 'date-fns';
+import { startOfWeek, endOfWeek, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -12,6 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { AppPod } from '@/lib/contracts';
+import { TeamsSendButton } from "@/components/teams-send-button";
 
 type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
 type KpiSortOrder = 'desc' | 'asc';
@@ -159,10 +159,22 @@ export default function PerformanceDashboard() {
         startDate = startOfMonth(now);
         endDate = endOfMonth(now);
         break;
-      case 'last6weeks':
-        startDate = startOfWeek(subWeeks(now, 6), { weekStartsOn: 1 });
-        endDate = endOfWeek(now, { weekStartsOn: 1 });
-        break;
+      case 'last6weeks': {
+        const maxDateByKpi: Record<string, Date> = {};
+        logs.forEach(log => {
+          const d = new Date(log.date);
+          if (!maxDateByKpi[log.kpiId] || d > maxDateByKpi[log.kpiId]) {
+            maxDateByKpi[log.kpiId] = d;
+          }
+        });
+        return logs.filter(log => {
+          const maxDate = maxDateByKpi[log.kpiId];
+          if (!maxDate) return false;
+          const logDate = new Date(log.date);
+          const windowStart = subDays(maxDate, 42);
+          return logDate >= windowStart && logDate <= maxDate;
+        });
+      }
       case 'allTime':
       default:
         if (logs.length === 0) return [];
@@ -183,10 +195,18 @@ export default function PerformanceDashboard() {
 
     return kpis.map(kpi => {
       const kpiLogs = filteredLogs.filter(log => log.kpiId === kpi.id);
+      const useWeeklyAverage = timeframe === 'last6weeks' && (kpi.type === 'percentage' || kpi.type === 'scoreOutOf');
+
+      const kpiMaxDate = useWeeklyAverage
+        ? kpiLogs.reduce<Date | null>((latest, log) => {
+            const d = new Date(log.date);
+            return !latest || d > latest ? d : latest;
+          }, null)
+        : null;
 
       const agentData: Record<string, { sum: number; count: number }> = {};
       kpiLogs.forEach(log => {
-        if (!log.userId) return; // Skip logs without userId
+        if (!log.userId) return;
         if (!agentData[log.userId]) agentData[log.userId] = { sum: 0, count: 0 };
         agentData[log.userId].sum += log.value;
         agentData[log.userId].count += 1;
@@ -194,7 +214,24 @@ export default function PerformanceDashboard() {
 
       const agentScores: Record<string, number> = {};
       Object.entries(agentData).forEach(([agentId, data]) => {
-        if (kpi.type === 'percentage') {
+        if (useWeeklyAverage && kpiMaxDate) {
+          const agentLogs = kpiLogs.filter(log => log.userId === agentId);
+          const weeklyAverages: number[] = [];
+          for (let i = 0; i < 6; i++) {
+            const weekEnd = new Date(kpiMaxDate);
+            weekEnd.setDate(kpiMaxDate.getDate() - i * 7);
+            weekEnd.setHours(23, 59, 59, 999);
+            const weekStart = new Date(weekEnd);
+            weekStart.setDate(weekEnd.getDate() - 6);
+            weekStart.setHours(0, 0, 0, 0);
+            const weekLogs = agentLogs.filter(log => {
+              const d = new Date(log.date);
+              return d >= weekStart && d <= weekEnd;
+            });
+            weeklyAverages.push(weekLogs.length > 0 ? weekLogs.reduce((s, log) => s + log.value, 0) / weekLogs.length : 0);
+          }
+          agentScores[agentId] = weeklyAverages.reduce((s, avg) => s + avg, 0) / 6;
+        } else if (kpi.type === 'percentage') {
           agentScores[agentId] = data.count > 0 ? data.sum / data.count : 0;
         } else {
           agentScores[agentId] = data.sum;
@@ -228,7 +265,7 @@ export default function PerformanceDashboard() {
         entries: rankedEntries.slice(0, 5),
       };
     });
-  }, [kpis, filteredLogs, agents]);
+  }, [kpis, filteredLogs, agents, timeframe]);
 
   const getTimeframeLabel = () => {
     switch (timeframe) {
@@ -240,7 +277,6 @@ export default function PerformanceDashboard() {
   };
 
   if (isLoading) {
-
     return (
       <div className="space-y-6">
         <div>
@@ -251,9 +287,9 @@ export default function PerformanceDashboard() {
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-48" />
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <Skeleton key={i} className="min-w-64 h-64" />
+            <Skeleton key={i} className="h-64" />
           ))}
         </div>
       </div>
@@ -267,6 +303,9 @@ export default function PerformanceDashboard() {
           <h1 className="text-3xl font-bold">Performance Dashboard</h1>
           <p className="text-muted-foreground">KPI Performance Leaderboards</p>
         </div>
+        <TeamsSendButton category="daily_summary">
+          Share Summary
+        </TeamsSendButton>
       </div>
 
       <Card className="frosted-glass">
@@ -315,14 +354,14 @@ export default function PerformanceDashboard() {
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {kpiLeaderboards.map(({ kpi, entries }) => (
-            <Card key={kpi.id} className="frosted-glass overflow-hidden min-w-64">
+            <Card key={kpi.id} className="frosted-glass overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <span className="text-lg font-bold">📋</span>
+                      <span className="text-lg font-bold">{kpi.initials || '📋'}</span>
                     </div>
                     <div>
                       <CardTitle className="text-base">{kpi.name}</CardTitle>
@@ -377,11 +416,11 @@ export default function PerformanceDashboard() {
                             {generateInitials(entry.agentName)}
                           </AvatarFallback>
                         </Avatar>
-                         <div className="flex-1">
-                           <span className="text-sm font-medium">
-                             {entry.agentName}
-                           </span>
-                         </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate block">
+                            {entry.agentName}
+                          </span>
+                        </div>
                         <div className="text-right">
                           <span className={cn(
                             "font-bold tabular-nums",

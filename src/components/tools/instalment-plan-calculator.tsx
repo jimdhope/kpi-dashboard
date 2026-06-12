@@ -67,16 +67,16 @@ export function InstalmentPlanCalculator() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-4 space-y-6">
           <Card className="frosted-glass">
-            <CardHeader><CardTitle>Discussion Points</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Make sure to discuss the following with the customer:</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <ul className="list-disc space-y-1 pl-5">
-                <li>We offer multiple payment methods (DD, PP, RCM).</li>
-                <li>Additional payments can be made at any time to reduce the balance.</li>
+                <li>We offer multiple payment methods to suit their needs (DD, PP, RCM).</li>
+                <li>Let them know that they can make additional payments at any time to reduce the balance.</li>
                 <li>Can they clear the balance or make a partial payment today?</li>
-                <li>Offer Energy efficiency advise to help reduce ongoing costs.</li>
-                <li>Will this instalment plan effect any other priority bills.</li>
-                <li>Free debt advice available from Step Change and Scottish Power Hardship Fund.</li>
-                <li>Instalment plans over 12 months may affect credit score.</li>
+                <li>Do these payments may impact other essential/priority bills?</li>
+                <li>Free debt advice is available from Step Change, and they may be eligible for help from the Scottish Power Hardship Fund.</li>
+                <li>Provide energy efficiency advice to help reduce their future bills.</li>
+                <li>When setting up an Instalment plan over 12 months, we will notify Credit Reference Agencies and it may affect their credit score.</li>
               </ul>
             </CardContent>
           </Card>

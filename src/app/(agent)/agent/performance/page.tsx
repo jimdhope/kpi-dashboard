@@ -6,7 +6,7 @@ import { BarChart3, TrendingUp } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, startOfWeek } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -117,42 +117,37 @@ export default function AgentPerformancePage() {
     fetchLogs();
   }, [currentUser?.id]);
 
-  const weekHeaders = useMemo(() => {
-    const now = new Date();
-    const weeks: { label: string; start: Date; end: Date }[] = [];
-    
-    let currentWednesday = startOfWeek(now, { weekStartsOn: 3 });
-    const dayOfWeek = now.getDay();
-    const daysSinceWednesday = dayOfWeek === 3 ? 0 : (dayOfWeek + 4) % 7;
-    currentWednesday = new Date(now);
-    currentWednesday.setDate(now.getDate() - daysSinceWednesday);
-    currentWednesday.setHours(0, 0, 0, 0);
-    
-    for (let i = 0; i < 6; i++) {
-      const weekStart = new Date(currentWednesday);
-      weekStart.setDate(currentWednesday.getDate() - (i * 7));
-      const weekEndDate = new Date(weekStart);
-      weekEndDate.setDate(weekStart.getDate() + 6);
-      weekEndDate.setHours(23, 59, 59, 999);
-      
-      weeks.unshift({
-        label: format(weekStart, 'MMM d'),
-        start: weekStart,
-        end: weekEndDate,
-      });
-    }
-    
-    return weeks;
-  }, []);
-
   const weeklyKpiData = useMemo(() => {
     if (logs.length === 0 || kpis.length === 0) return [];
     return kpis.map(kpi => {
+      const kpiLogs = logs.filter(log => log.kpiId === kpi.id);
+      if (kpiLogs.length === 0) {
+        return { kpi, weeklyValues: {}, weekLabels: [], total: 0 };
+      }
+
+      const maxDate = kpiLogs.reduce((latest, log) => {
+        const d = new Date(log.date);
+        return d > latest ? d : latest;
+      }, new Date(0));
+
+      const weeks: { label: string; start: Date; end: Date }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const weekEnd = new Date(maxDate);
+        weekEnd.setDate(maxDate.getDate() - i * 7);
+        weekEnd.setHours(23, 59, 59, 999);
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekEnd.getDate() - 6);
+        weekStart.setHours(0, 0, 0, 0);
+        weeks.push({
+          label: format(weekStart, 'MMM d'),
+          start: weekStart,
+          end: weekEnd,
+        });
+      }
+
       const weeklyValues: Record<string, number> = {};
-      
-      weekHeaders.forEach(week => {
-        const weekLogs = logs.filter(log => {
-          if (log.kpiId !== kpi.id) return false;
+      weeks.forEach(week => {
+        const weekLogs = kpiLogs.filter(log => {
           const logDate = new Date(log.date);
           return logDate >= week.start && logDate <= week.end;
         });
@@ -162,19 +157,39 @@ export default function AgentPerformancePage() {
       return {
         kpi,
         weeklyValues,
+        weekLabels: weeks.map(w => w.label),
         total: Object.values(weeklyValues).reduce((sum, val) => sum + val, 0),
       };
     }).sort((a, b) => b.total - a.total);
-  }, [logs, kpis, weekHeaders]);
+  }, [logs, kpis]);
 
   const chartData = useMemo(() => {
-    if (!selectedKpiId || kpis.length === 0) return [];
-    const kpi = kpis.find(k => k.id === selectedKpiId);
-    if (!kpi) return [];
+    if (!selectedKpiId || kpis.length === 0 || logs.length === 0) return [];
+    const kpiLogs = logs.filter(log => log.kpiId === selectedKpiId);
+    if (kpiLogs.length === 0) return [];
 
-    return weekHeaders.map(week => {
-      const weekLogs = logs.filter(log => {
-        if (log.kpiId !== kpi.id) return false;
+    const maxDate = kpiLogs.reduce((latest, log) => {
+      const d = new Date(log.date);
+      return d > latest ? d : latest;
+    }, new Date(0));
+
+    const weeks: { label: string; start: Date; end: Date }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const weekEnd = new Date(maxDate);
+      weekEnd.setDate(maxDate.getDate() - i * 7);
+      weekEnd.setHours(23, 59, 59, 999);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+      weeks.push({
+        label: format(weekStart, 'MMM d'),
+        start: weekStart,
+        end: weekEnd,
+      });
+    }
+
+    return weeks.map(week => {
+      const weekLogs = kpiLogs.filter(log => {
         const logDate = new Date(log.date);
         return logDate >= week.start && logDate <= week.end;
       });
@@ -183,7 +198,7 @@ export default function AgentPerformancePage() {
         value: weekLogs.reduce((sum, log) => sum + (log.value || 0), 0),
       } as ChartDataPoint;
     });
-  }, [selectedKpiId, kpis, logs, weekHeaders]);
+  }, [selectedKpiId, kpis, logs]);
 
   if (!currentUser) {
     return (
@@ -227,15 +242,16 @@ export default function AgentPerformancePage() {
                   <TableHeader>
                     <TableRow className="border-b border-glass-border/30">
                       <TableHead className="w-[200px]">KPI</TableHead>
-                      {weekHeaders.map(week => (
-                        <TableHead key={week.label} className="text-center min-w-[80px]">
-                          {week.label}
-                        </TableHead>
-                      ))}
+                      <TableHead className="text-center min-w-[80px]">W1</TableHead>
+                      <TableHead className="text-center min-w-[80px]">W2</TableHead>
+                      <TableHead className="text-center min-w-[80px]">W3</TableHead>
+                      <TableHead className="text-center min-w-[80px]">W4</TableHead>
+                      <TableHead className="text-center min-w-[80px]">W5</TableHead>
+                      <TableHead className="text-center min-w-[80px]">W6</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {weeklyKpiData.map(({ kpi, weeklyValues }) => (
+                    {weeklyKpiData.map(({ kpi, weeklyValues, weekLabels }) => (
                       <TableRow 
                         key={kpi.id} 
                         className={selectedKpiId === kpi.id ? 'bg-primary/10' : 'border-b border-glass-border/20'}
@@ -249,14 +265,15 @@ export default function AgentPerformancePage() {
                             <span className="truncate" title={kpi.name}>{kpi.name}</span>
                           </div>
                         </TableCell>
-                        {weekHeaders.map(week => {
-                          const value = weeklyValues[week.label];
+                        {weekLabels.map(label => {
+                          const value = weeklyValues[label];
                           const isPercentage = kpi.type === 'percentage';
                           const displayValue = value > 0 ? (isPercentage ? `${value}%` : value) : '-';
                           const cellClass = value > 0 ? getCellClass(value, kpi) : '';
                           return (
                             <TableCell 
-                              key={week.label} 
+                              key={label} 
+                              title={value > 0 ? `${kpi.name} - week of ${label}` : 'No data'}
                               className={`text-center font-medium rounded-sm ${cellClass}`}
                             >
                               {displayValue}

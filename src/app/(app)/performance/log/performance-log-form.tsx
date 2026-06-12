@@ -19,7 +19,7 @@ interface Kpi { id: string; name: string; initials: string; type: string; }
 interface Agent { id: string; name: string; }
 
 interface KpiInputState {
-  [userId: string]: { [kpiId: string]: { value: string; initialValue: string; } };
+  [userId: string]: { [kpiId: string]: { value: string; initialValue: string; logId?: string; } };
 }
 
 interface KpiLogResponse {
@@ -109,7 +109,7 @@ export function PerformanceLogForm({
           if (!log.userId) return; // Skip logs without userId
           if (!newInputs[log.userId]) newInputs[log.userId] = {};
           const val = String(log.value);
-          newInputs[log.userId][log.kpiId] = { value: val, initialValue: val };
+          newInputs[log.userId][log.kpiId] = { value: val, initialValue: val, logId: log.id };
         });
         setInputs(newInputs);
       })
@@ -136,7 +136,7 @@ export function PerformanceLogForm({
       ...prev,
       [userId]: {
         ...(prev[userId] ?? {}),
-        [kpiId]: { value, initialValue: prev[userId]?.[kpiId]?.initialValue ?? "" },
+        [kpiId]: { value, initialValue: prev[userId]?.[kpiId]?.initialValue ?? "", logId: prev[userId]?.[kpiId]?.logId },
       },
     }));
   };
@@ -153,36 +153,70 @@ export function PerformanceLogForm({
   const handleSaveAll = async () => {
     setIsSaving(true);
     setMessage(null);
-    const logs: { userId: string; kpiId: string; value: number; loggedAt: string }[] = [];
+
+    const toDelete: string[] = [];
+    const toSave: { userId: string; kpiId: string; value: number; date: string; loggedAt: string }[] = [];
+
     for (const userId in inputs) {
       for (const kpiId in inputs[userId]) {
         const entry = inputs[userId][kpiId];
         if (entry.value === entry.initialValue) continue;
+
+        // Field was cleared → delete the record if it exists
+        if ((entry.value === '' || entry.value === '-') && entry.logId) {
+          toDelete.push(entry.logId);
+          continue;
+        }
+
+        // Field has a numeric value → save it
         const num = parseFloat(entry.value);
         if (isNaN(num)) continue;
-        logs.push({ userId, kpiId, value: num, loggedAt: startOfDayUTC(selectedDate).toISOString() });
+        toSave.push({ userId, kpiId, value: num, date: startOfDayUTC(selectedDate).toISOString(), loggedAt: new Date().toISOString() });
       }
     }
 
-    if (logs.length === 0) {
+    if (toDelete.length === 0 && toSave.length === 0) {
       setIsSaving(false);
       return;
     }
 
     try {
-      const res = await fetch("/api/performance/kpi-logs/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logs }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
+      // Perform deletes
+      if (toDelete.length > 0) {
+        await Promise.all(toDelete.map(logId =>
+          fetch(`/api/performance/kpi-logs?id=${logId}`, { method: 'DELETE' }).then(r => {
+            if (!r.ok && r.status !== 404) throw new Error('Delete failed');
+          })
+        ));
+      }
+
+      // Perform saves
+      if (toSave.length > 0) {
+        const res = await fetch("/api/performance/kpi-logs/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ logs: toSave }),
+        });
+        if (!res.ok) throw new Error("Failed to save");
+      }
+
       setMessage({ type: "success", text: "All scores saved successfully." });
-      // Update initialValues to reflect saved state
+
+      // Update state: remove deleted entries, reset initialValues of saved entries
       setInputs((prev) => {
         const next = { ...prev };
         for (const userId in next) {
+          next[userId] = { ...next[userId] };
           for (const kpiId in next[userId]) {
-            next[userId][kpiId] = { ...next[userId][kpiId], initialValue: next[userId][kpiId].value };
+            const entry = next[userId][kpiId];
+            if (toDelete.includes(entry.logId || '')) {
+              delete next[userId][kpiId];
+            } else if (entry.value !== entry.initialValue) {
+              next[userId][kpiId] = { ...entry, initialValue: entry.value, logId: undefined };
+            }
+          }
+          if (Object.keys(next[userId]).length === 0) {
+            delete next[userId];
           }
         }
         return next;
@@ -284,6 +318,7 @@ export function PerformanceLogForm({
                     {kpis.map((kpi) => (
                       <TableHead key={kpi.id} className="min-w-[100px] text-center" title={kpi.name}>
                         <div className="flex flex-col items-center">
+                          <span className="font-semibold">{kpi.initials || kpi.name.slice(0, 4)}</span>
                           <span className="text-xs font-normal text-muted-foreground">{kpi.name.slice(0, 10)}{kpi.name.length > 10 ? '...' : ''}</span>
                         </div>
                       </TableHead>

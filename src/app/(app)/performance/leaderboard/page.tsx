@@ -155,16 +155,29 @@ export default function AdditionalLeaderboardPage() {
   }, [selectedPodId]);
   
   const filteredLogs = useMemo(() => {
+    if (timeframe === 'last6weeks') {
+      const maxDateByKpi: Record<string, Date> = {};
+      logs.forEach(log => {
+        const d = new Date(log.date);
+        if (!maxDateByKpi[log.kpiId] || d > maxDateByKpi[log.kpiId]) {
+          maxDateByKpi[log.kpiId] = d;
+        }
+      });
+      return logs.filter(log => {
+        const maxDate = maxDateByKpi[log.kpiId];
+        if (!maxDate) return false;
+        const logDate = new Date(log.date);
+        const windowStart = new Date(maxDate);
+        windowStart.setDate(windowStart.getDate() - 42);
+        windowStart.setHours(0, 0, 0, 0);
+        return logDate >= windowStart && logDate <= maxDate;
+      });
+    }
     const now = new Date();
     let startDate: Date;
     switch (timeframe) {
       case 'weekly':
         startDate = new Date(now.setDate(now.getDate() - now.getDay()));
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'last6weeks':
-        startDate = new Date(now);
-        startDate.setDate(startDate.getDate() - 42);
         startDate.setHours(0, 0, 0, 0);
         break;
       case 'monthly':
@@ -193,6 +206,14 @@ export default function AdditionalLeaderboardPage() {
         logsToProcess = filteredLogs.filter(log => log.kpiId === selectedKpiId);
       }
     }
+
+    const useWeeklyAverage = timeframe === 'last6weeks' && kpi && (kpi.type === 'percentage' || kpi.type === 'scoreOutOf');
+    const kpiMaxDate = useWeeklyAverage
+      ? logsToProcess.reduce<Date | null>((latest, log) => {
+          const d = new Date(log.date);
+          return !latest || d > latest ? d : latest;
+        }, null)
+      : null;
   
     const agentScores: Record<string, { totalValue: number; count: number }> = {};
     podAgents.forEach(agent => agent.id && (agentScores[agent.id] = { totalValue: 0, count: 0 }));
@@ -204,16 +225,30 @@ export default function AdditionalLeaderboardPage() {
       }
     });
   
-    // Determine the final score for each agent based on the KPI type
     return podAgents.map(agent => {
       const agentData = agent.id ? agentScores[agent.id] : { totalValue: 0, count: 0 };
       let finalScore = 0;
-  
-      if (kpi && kpi.type === 'percentage') {
-        // For percentage, we average the scores
-        finalScore = agentData.count > 0 ? (agentData.totalValue / agentData.count) : 0;
+
+      if (useWeeklyAverage && kpiMaxDate && agent.id) {
+        const agentLogs = logsToProcess.filter(log => log.agentId === agent.id);
+        const weeklyAverages: number[] = [];
+        for (let i = 0; i < 6; i++) {
+          const weekEnd = new Date(kpiMaxDate);
+          weekEnd.setDate(kpiMaxDate.getDate() - i * 7);
+          weekEnd.setHours(23, 59, 59, 999);
+          const weekStart = new Date(weekEnd);
+          weekStart.setDate(weekEnd.getDate() - 6);
+          weekStart.setHours(0, 0, 0, 0);
+          const weekLogs = agentLogs.filter(log => {
+            const d = new Date(log.date);
+            return d >= weekStart && d <= weekEnd;
+          });
+          weeklyAverages.push(weekLogs.length > 0 ? weekLogs.reduce((s, log) => s + log.value, 0) / weekLogs.length : 0);
+        }
+        finalScore = weeklyAverages.reduce((s, avg) => s + avg, 0) / 6;
+      } else if (kpi && kpi.type === 'percentage') {
+        finalScore = agentData.count > 0 ? agentData.totalValue / agentData.count : 0;
       } else {
-        // For 'number', 'scoreOutOf', or 'overall', the score is the sum
         finalScore = agentData.totalValue;
       }
   
@@ -233,7 +268,7 @@ export default function AdditionalLeaderboardPage() {
         // Higher is better (default for 'number', 'scoreOutOf', and 'overall')
         return b.score - a.score;
     });
-  }, [filteredLogs, agents, selectedPodId, selectedKpiId, kpis]);
+  }, [filteredLogs, agents, selectedPodId, selectedKpiId, kpis, timeframe]);
 
   const rankedEntries = useMemo(() => {
     return leaderboardData.map((entry, index) => ({
@@ -266,7 +301,7 @@ export default function AdditionalLeaderboardPage() {
                 <SelectTrigger id="kpi-select"><SelectValue placeholder="Select KPI" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="overall">Overall Score</SelectItem>
-                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>)}
+                  {kpis.map(k => <SelectItem key={k.id} value={k.id}>{k.initials} {k.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

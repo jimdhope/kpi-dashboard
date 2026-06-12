@@ -1,7 +1,7 @@
 import { authService } from "@/server/services/auth-service";
 import { errorResponse, ok } from "@/server/http";
 import { prisma } from "@/server/db/client";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
 
 export async function GET(request: Request) {
   try {
@@ -24,8 +24,7 @@ export async function GET(request: Request) {
         endDate = endOfMonth(now);
         break;
       case "last6weeks":
-        startDate = startOfWeek(subWeeks(now, 5), { weekStartsOn: 1 });
-        endDate = endOfWeek(now, { weekStartsOn: 1 });
+        // No single date range — handled per-tracker below
         break;
       case "allTime":
       default:
@@ -58,12 +57,22 @@ export async function GET(request: Request) {
 
     const logs = await prisma.trackerLog.findMany({
       where: logWhere,
-      select: { trackerKpiId: true, userId: true, value: true },
+      select: { trackerKpiId: true, userId: true, value: true, loggedAt: true },
     });
 
     // Build leaderboards per tracker
     const leaderboards = trackers.map((tracker) => {
-      const trackerLogs = logs.filter((l) => l.trackerKpiId === tracker.id);
+      let trackerLogs = logs.filter((l) => l.trackerKpiId === tracker.id);
+
+      if (timeframe === "last6weeks") {
+        const maxDate = trackerLogs.reduce<Date | null>((latest, l) => {
+          return !latest || l.loggedAt > latest ? l.loggedAt : latest;
+        }, null);
+        if (maxDate) {
+          const windowStart = subDays(maxDate, 42);
+          trackerLogs = trackerLogs.filter((l) => l.loggedAt >= windowStart && l.loggedAt <= maxDate);
+        }
+      }
 
       // Sum values per agent
       const agentTotals: Record<string, number> = {};
@@ -76,7 +85,7 @@ export async function GET(request: Request) {
         .map(([userId, score]) => ({
           agentId: userId,
           agentName: userMap.get(userId)?.name ?? "Unknown",
-          score,
+          score: timeframe === "last6weeks" ? score / 6 : score,
         }))
         .sort((a, b) => b.score - a.score)
         .slice(0, 10)

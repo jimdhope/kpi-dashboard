@@ -109,9 +109,9 @@ export function PerformanceDashboard({ pods }: { pods: Pod[] }) {
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-48" />
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="min-w-64 h-64" />
+            <Skeleton key={i} className="h-64" />
           ))}
         </div>
       </div>
@@ -175,9 +175,9 @@ export function PerformanceDashboard({ pods }: { pods: Pod[] }) {
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {leaderboards.map(({ tracker, entries }) => (
-            <Card key={tracker.id} className="glass-card overflow-hidden min-w-64">
+            <Card key={tracker.id} className="glass-card overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -233,11 +233,11 @@ export function PerformanceDashboard({ pods }: { pods: Pod[] }) {
                             {generateInitials(entry.agentName)}
                           </AvatarFallback>
                         </Avatar>
-                         <div className="flex-1">
-                           <span className="text-sm font-medium">
-                             {entry.agentName}
-                           </span>
-                         </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate block">
+                            {entry.agentName}
+                          </span>
+                        </div>
                         <div className="text-right">
                           <span className={cn(
                             "font-bold tabular-nums",
