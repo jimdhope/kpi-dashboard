@@ -1,39 +1,9 @@
-# Dependencies
 node_modules
-npm-debug.log*
-
-# Build
-.next
-out
-build
-dist
-
-# Git
 .git
 .gitignore
-
-# IDE
-.vscode
-.idea
-
-# Docs
+.env
+.env.local
+.next
+README.md
 *.md
-!README.md
-
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
-
-# Env
-.env*
-!.env.example
-
-# Misc
-.DS_Store
-*.log
-temp_*
-
-# Prisma
-*.db
-*.db-journal
+.cache
