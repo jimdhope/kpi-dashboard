@@ -81,7 +81,7 @@ export default function AdminGamificationPage() {
           badgeRes, allTimeRes, monthlyRes, 
           compRes, championRes
         ] = await Promise.all([
-          fetch('/api/gamification/admin/badges'),
+          fetch('/api/gamification/badges'),
           fetch('/api/gamification/leaderboard?limit=50'),
           fetch(`/api/gamification/leaderboard/monthly?year=${selectedYear}&month=${selectedMonth}`),
           fetch('/api/competitions'),
@@ -115,7 +115,7 @@ export default function AdminGamificationPage() {
   const handleEvaluateAll = async () => {
     setIsEvaluating(true);
     try {
-      const res = await fetch('/api/gamification/evaluate-all', { method: 'POST' });
+      const res = await fetch('/api/gamification/evaluate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ allPending: true }) });
       if (res.ok) {
         toast({ title: 'Evaluation complete', description: 'All competitions evaluated.' });
       } else {
@@ -136,14 +136,14 @@ export default function AdminGamificationPage() {
     }
     setIsCrowning(true);
     try {
-      const res = await fetch('/api/gamification/crown', {
+      const res = await fetch('/api/gamification/crown-monthly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ month: selectedMonth, year: selectedYear }),
       });
       if (res.ok) {
         const data = await res.json();
-        toast({ title: `Champion crowned!`, description: `${data.champion?.name ?? 'Agent'} is the champion.` });
+        toast({ title: `Champion crowned!`, description: `${data.champion ?? 'Agent'} is the champion.` });
         const championRes = await fetch('/api/gamification/crown/current');
         if (championRes.ok) {
           const d = await championRes.json();
