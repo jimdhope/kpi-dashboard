@@ -15,7 +15,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { AppUser } from '@/lib/contracts';
-import { NotificationBell } from '@/components/notification-bell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +56,6 @@ const navItems: NavItemConfig[] = [
       { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare },
       { label: 'Manage', href: '/competitions/manage', icon: Trophy },
       { label: 'Certificates', href: '/competitions/certificates', icon: Award },
-      { label: 'Gamification', href: '/admin/gamification', icon: Award },
       { label: 'Reports', href: '/reports', icon: FileText },
     ]
   },
@@ -482,9 +480,6 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
           </kbd>
         </Button>
         
-        {/* Notifications */}
-        {user && <NotificationBell />}
-
         {/* User Menu */}
         {user && (
           <DropdownMenu>

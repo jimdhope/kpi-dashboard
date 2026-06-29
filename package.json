@@ -39,7 +39,6 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4.2.2",
     "@tiptap/extension-blockquote": "^3.22.3",
     "@tiptap/extension-bullet-list": "^3.22.3",
@@ -78,7 +77,6 @@
     "lowlight": "^3.3.0",
     "lucide-react": "^1.0.1",
     "next": "^16.2.1",
-    "nodemailer": "^9.0.1",
     "pg": "^8.20.0",
     "pg-boss": "^12.14.0",
     "react": "^19.2.4",
@@ -94,7 +92,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.17.50",
-    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4",

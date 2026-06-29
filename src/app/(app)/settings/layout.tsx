@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Settings as SettingsIcon, Megaphone, ShieldCheck, Users, MessageSquare, Zap, Calendar, Database, Download, Hash, GitBranch } from 'lucide-react';
+import { Settings as SettingsIcon, Megaphone, ShieldCheck, Users, MessageSquare, Zap, Calendar, Database, Download, Hash } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OfflineIndicator } from '@/components/offline-indicator';
 
@@ -37,7 +37,6 @@ const settingsMenuItems: MenuItem[] = [
   { label: 'Teams', href: '/settings/teams/channels', icon: MessageSquare },
   { label: 'Automations', href: '/settings/teams/automations', icon: Zap },
   { label: 'Scheduled', href: '/settings/teams/scheduled', icon: Calendar },
-  { label: 'Workflows', href: '/settings/teams/workflows', icon: GitBranch },
   { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
   { label: 'Pods', href: '/settings/pods', icon: ShieldCheck },
   { label: 'Users', href: '/settings/users', icon: Users },

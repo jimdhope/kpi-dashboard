@@ -10,8 +10,6 @@ import {
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { sessionRepository } from "@/server/repositories/session-repository";
 import { userRepository } from "@/server/repositories/user-repository";
-import { passwordResetRepository } from "@/server/repositories/password-reset-repository";
-import { emailService } from "@/server/services/email-service";
 
 function addDays(days: number): Date {
   const expiresAt = new Date();
@@ -113,32 +111,5 @@ export const authService = {
     }
 
     await userRepository.updatePassword(userId, await hashPassword(nextPassword));
-  },
-
-  async forgotPassword(email: string) {
-    const user = await userRepository.findByEmail(email);
-    if (!user) {
-      return;
-    }
-
-    await passwordResetRepository.deleteExpired();
-
-    const token = await passwordResetRepository.create(user.id);
-    const publicUrl = process.env.PUBLIC_URL ?? process.env.APP_URL ?? "http://localhost:9103";
-    const resetUrl = `${publicUrl}/reset-password?token=${token}`;
-
-    await emailService.sendPasswordResetEmail(email, resetUrl);
-  },
-
-  async resetPassword(token: string, newPassword: string) {
-    const tokenHash = passwordResetRepository.hashToken(token);
-    const resetToken = await passwordResetRepository.findValid(tokenHash);
-    if (!resetToken) {
-      throw new Error("Invalid or expired reset token.");
-    }
-
-    const passwordHash = await hashPassword(newPassword);
-    await userRepository.updatePassword(resetToken.userId, passwordHash);
-    await passwordResetRepository.consume(resetToken.id);
   },
 };

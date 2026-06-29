@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Target, BarChart3, Gamepad2, Star, TrendingUp, Award, Zap, Swords, Flame, Crown, Medal, Users } from "lucide-react";
+import { Trophy, Target, BarChart3, Gamepad2, Star, TrendingUp, Award, Zap, Swords } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, startOfWeek, subWeeks, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -64,7 +64,6 @@ export default function AgentDashboard() {
   const [additionalKpis, setAdditionalKpis] = useState<AdditionalKpi[]>([]);
   const [agents, setAgents] = useState<AppUser[]>([]);
   const [rpsLeaderboard, setRpsLeaderboard] = useState<{userId: string; name: string; wins: number}[]>([]);
-  const [gamificationProfile, setGamificationProfile] = useState<any>(null);
 
   // Fetch user session
   useEffect(() => {
@@ -199,22 +198,6 @@ export default function AgentDashboard() {
   useEffect(() => {
     // RPS leaderboard would come from API if implemented
     setRpsLeaderboard([]);
-  }, []);
-
-  // Fetch gamification profile
-  useEffect(() => {
-    async function fetchGamification() {
-      try {
-        const res = await fetch('/api/gamification/profile');
-        if (res.ok) {
-          const data = await res.json();
-          setGamificationProfile(data.profile);
-        }
-      } catch (err) {
-        console.error('Error fetching gamification profile:', err);
-      }
-    }
-    fetchGamification();
   }, []);
 
   // Calculate competition stats
@@ -688,68 +671,6 @@ export default function AgentDashboard() {
                 </table>
                 {performanceStats.kpiBreakdown.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-4">No KPIs configured</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Gamification Card */}
-        <Link href="/agent/gamification">
-          <Card variant="glass" className="glass-card-hover h-full cursor-pointer overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/20">
-                  <TrendingUp className="h-5 w-5 text-amber-500" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Gamification</CardTitle>
-                  <CardDescription>
-                    Level {gamificationProfile?.level ?? 1} — {gamificationProfile?.currentTitle ?? "Rookie"}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {/* XP Progress */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">{gamificationProfile?.totalXp?.toLocaleString() ?? 0} XP</span>
-                    {gamificationProfile?.xpToNextLevel && gamificationProfile.xpToNextLevel > 0 ? (
-                      <span className="text-muted-foreground">{gamificationProfile.xpToNextLevel.toLocaleString()} to go</span>
-                    ) : (
-                      <span className="text-amber-500 font-medium">Max Level!</span>
-                    )}
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"
-                      style={{ width: `${Math.min(100, gamificationProfile?.xpProgress ?? 0)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Latest Badge */}
-                {gamificationProfile?.badges?.length > 0 && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10">
-                    <Award className="h-4 w-4 text-amber-500 shrink-0" />
-                    <span className="text-xs text-muted-foreground">Latest badge:</span>
-                    <span className="text-xs font-medium">{gamificationProfile.badges[gamificationProfile.badges.length - 1].badge.name}</span>
-                  </div>
-                )}
-
-                {/* Active Streak */}
-                {gamificationProfile?.streaks?.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Flame className={`h-4 w-4 ${gamificationProfile.streaks[0].currentCount > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
-                    <span className="text-xs text-muted-foreground capitalize">{gamificationProfile.streaks[0].type} streak:</span>
-                    <span className="text-sm font-bold">{gamificationProfile.streaks[0].currentCount}</span>
-                  </div>
-                )}
-
-                {!gamificationProfile && (
-                  <p className="text-xs text-muted-foreground text-center py-2">No gamification data yet</p>
                 )}
               </div>
             </CardContent>

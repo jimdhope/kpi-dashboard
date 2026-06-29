@@ -166,10 +166,6 @@ model User {
   // Directory relations
   createdContacts        Contact[]
   createdCompanies       Company[]
-
-  // Gamification
-  agentProfile           AgentProfile?
-  xpTransactions         XpTransaction[]
 }
 
 model Role {
@@ -833,100 +829,4 @@ model Contact {
   
   @@index([name])
   @@index([type])
-}
-
-// ══════════════════════════════════════════════════════════════
-// Gamification Models
-// ══════════════════════════════════════════════════════════════
-
-model AgentProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  totalXp   Int      @default(0)
-  level     Int      @default(1)
-  title     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badges    AgentBadge[]
-  results   CompetitionResult[]
-  streaks   Streak[]
-}
-
-model Badge {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  name        String
-  description String
-  icon        String
-  category    String   // "competition" | "streak" | "monthly"
-  svgPath     String?
-  criteria    Json
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  agents      AgentBadge[]
-}
-
-model AgentBadge {
-  id             String       @id @default(cuid())
-  agentProfileId String
-  badgeId        String
-  context        Json?
-  earnedAt       DateTime     @default(now())
-
-  agentProfile   AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
-  badge          Badge        @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-
-  @@unique([agentProfileId, badgeId])
-  @@index([earnedAt])
-}
-
-model CompetitionResult {
-  id             String       @id @default(cuid())
-  agentProfileId String
-  competitionId  String
-  rank           Int
-  totalScore     Int
-  xpEarned       Int
-  wasPresent     Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-
-  agentProfile   AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
-
-  @@unique([agentProfileId, competitionId])
-  @@index([agentProfileId])
-  @@index([competitionId])
-  @@index([xpEarned])
-}
-
-model Streak {
-  id             String       @id @default(cuid())
-  agentProfileId String
-  type           String       // "win" | "podium"
-  currentCount   Int          @default(0)
-  longestCount   Int          @default(0)
-  lastDate       DateTime?
-  updatedAt      DateTime     @updatedAt
-
-  agentProfile   AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
-
-  @@unique([agentProfileId, type])
-}
-
-model XpTransaction {
-  id          String   @id @default(cuid())
-  userId      String
-  amount      Int
-  source      String   // "competition_score" | "rank_bonus"
-  sourceId    String?
-  description String?
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([createdAt])
 }
