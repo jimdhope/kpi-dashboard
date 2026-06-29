@@ -166,6 +166,10 @@ model User {
   // Directory relations
   createdContacts        Contact[]
   createdCompanies       Company[]
+
+  // Gamification relations
+  agentProfile          AgentProfile?
+  xpTransactions        XpTransaction[]
 }
 
 model Role {
@@ -310,6 +314,7 @@ model Competition {
   entries       CompetitionEntry[]
   createdBy     User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
   campaign      Campaign?          @relation(fields: [campaignId], references: [id])
+  results       CompetitionResult[]
 }
 
 model CompetitionRule {
@@ -585,6 +590,91 @@ model ScoreTarget {
   updatedAt    DateTime         @updatedAt
 
   @@index([hashtag])
+}
+
+// =============================================================================
+// Gamification Models
+// =============================================================================
+
+model AgentProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  totalXp   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badges  AgentBadge[]
+  streaks Streak[]
+  results CompetitionResult[]
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  iconUrl     String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agentBadges AgentBadge[]
+}
+
+model AgentBadge {
+  id              String   @id @default(cuid())
+  agentProfileId  String
+  badgeId         String
+  context         Json?
+  earnedAt        DateTime @default(now())
+  agentProfile    AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  badge           Badge       @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([agentProfileId, badgeId])
+}
+
+model CompetitionResult {
+  id              String   @id @default(cuid())
+  agentProfileId  String
+  competitionId   String
+  rank            Int
+  totalScore      Int      @default(0)
+  xpEarned        Int      @default(0)
+  wasPresent      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  agentProfile    AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  competition     Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@unique([agentProfileId, competitionId])
+  @@index([agentProfileId])
+  @@index([competitionId])
+}
+
+model Streak {
+  id              String @id @default(cuid())
+  agentProfileId  String
+  type            String @default("win")
+  currentCount    Int    @default(0)
+  longestCount    Int    @default(0)
+  updatedAt       DateTime @updatedAt
+  agentProfile    AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([agentProfileId, type])
+}
+
+model XpTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Int
+  source      String
+  sourceId    String?
+  description String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 // =============================================================================
