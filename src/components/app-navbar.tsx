@@ -57,6 +57,7 @@ const navItems: NavItemConfig[] = [
       { label: 'Manage', href: '/competitions/manage', icon: Trophy },
       { label: 'Certificates', href: '/competitions/certificates', icon: Award },
       { label: 'Reports', href: '/reports', icon: FileText },
+      { label: 'Gamification', href: '/admin/gamification', icon: Crown },
     ]
   },
   { 
