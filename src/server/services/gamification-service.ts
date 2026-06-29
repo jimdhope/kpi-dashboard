@@ -165,8 +165,6 @@ export const gamificationService = {
         where: { id: profile.id },
         data: {
           totalXp: newTotalXp,
-          level: newLevel,
-          title: newTitle,
         },
       });
 
@@ -192,10 +190,9 @@ export const gamificationService = {
       if (agent.rank === 1) {
         const streak = await prisma.streak.upsert({
           where: { agentProfileId_type: { agentProfileId: profile.id, type: "win" } },
-          create: { agentProfileId: profile.id, type: "win", currentCount: 1, longestCount: 1, lastDate: new Date() },
+          create: { agentProfileId: profile.id, type: "win", currentCount: 1, longestCount: 1 },
           update: {
             currentCount: { increment: 1 },
-            lastDate: new Date(),
           },
         });
         if (streak.currentCount > streak.longestCount) {
@@ -226,10 +223,9 @@ export const gamificationService = {
       if (agent.rank <= 3) {
         await prisma.streak.upsert({
           where: { agentProfileId_type: { agentProfileId: profile.id, type: "podium" } },
-          create: { agentProfileId: profile.id, type: "podium", currentCount: 1, longestCount: 1, lastDate: new Date() },
+          create: { agentProfileId: profile.id, type: "podium", currentCount: 1, longestCount: 1 },
           update: {
             currentCount: { increment: 1 },
-            lastDate: new Date(),
           },
         });
       } else {
@@ -327,8 +323,8 @@ export const gamificationService = {
         userId: p.userId,
         name: p.user.name ?? p.user.email ?? "Unknown",
         totalXp: p.totalXp,
-        level: p.level,
-        title: p.title,
+        level: calculateLevel(p.totalXp).level,
+        title: calculateLevel(p.totalXp).title,
         avatarUrl: p.user.avatarUrl,
         avatarInitials: p.user.avatarInitials,
         avatarBgColor: p.user.avatarBgColor,
@@ -494,7 +490,7 @@ export const gamificationService = {
     const badge = await prisma.badge.findUnique({
       where: { key: badgeKey },
       include: {
-        agents: {
+        agentBadges: {
           include: {
             agentProfile: {
               include: {
@@ -508,7 +504,7 @@ export const gamificationService = {
     });
     if (!badge) throw new Error("Badge not found");
 
-    return badge.agents.map((ab) => ({
+    return badge.agentBadges.map((ab) => ({
       agentProfileId: ab.agentProfileId,
       name: ab.agentProfile.user.name ?? ab.agentProfile.user.email ?? "Unknown",
       earnedAt: ab.earnedAt,
