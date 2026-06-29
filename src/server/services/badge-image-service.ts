@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { Resvg } from "@resvg/resvg-js";
 
 const TEMPLATES_DIR = path.join(process.cwd(), "public", "badges", "templates");
 
@@ -26,6 +25,8 @@ export const badgeImageService = {
     agentName: string;
     variables: Record<string, string>;
   }): Promise<Uint8Array> {
+    const { Resvg } = await import("@resvg/resvg-js");
+
     const templatePath = resolveTemplatePath(params.badgeKey);
     let svg = fs.readFileSync(templatePath, "utf-8");
 

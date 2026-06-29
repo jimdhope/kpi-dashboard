@@ -8,8 +8,10 @@ import {
   setSessionCookie,
 } from "@/server/auth/session-cookie";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
+import { passwordResetRepository } from "@/server/repositories/password-reset-repository";
 import { sessionRepository } from "@/server/repositories/session-repository";
 import { userRepository } from "@/server/repositories/user-repository";
+import { emailService } from "@/server/services/email-service";
 
 function addDays(days: number): Date {
   const expiresAt = new Date();
@@ -97,6 +99,32 @@ export const authService = {
       throw new Error("Forbidden");
     }
     return user;
+  },
+
+  async forgotPassword(email: string) {
+    const user = await userRepository.findByEmail(email);
+    if (!user) {
+      return;
+    }
+    await passwordResetRepository.deleteExpired();
+    const token = await passwordResetRepository.create(user.id);
+    const publicUrl = process.env.PUBLIC_URL ?? "http://localhost:9103";
+    const resetUrl = `${publicUrl}/reset-password?token=${token}`;
+    try {
+      await emailService.sendPasswordResetEmail(email, resetUrl);
+    } catch {
+      console.warn(`Failed to send password reset email to ${email}`);
+    }
+  },
+
+  async resetPassword(token: string, newPassword: string) {
+    const tokenHash = passwordResetRepository.hashToken(token);
+    const resetToken = await passwordResetRepository.findValid(tokenHash);
+    if (!resetToken) {
+      throw new Error("Invalid or expired reset token.");
+    }
+    await userRepository.updatePassword(resetToken.userId, await hashPassword(newPassword));
+    await passwordResetRepository.consume(resetToken.id);
   },
 
   async changePassword(userId: string, currentPassword: string, nextPassword: string) {
