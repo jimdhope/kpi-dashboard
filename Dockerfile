@@ -52,6 +52,14 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'exec node server.js' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
+# Worker entrypoint — waits for DB, skips schema/seed to avoid race with app
+RUN echo '#!/bin/bash' > /worker-entrypoint.sh && \
+    echo 'echo "Worker waiting for database..."' >> /worker-entrypoint.sh && \
+    echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /worker-entrypoint.sh && \
+    echo 'echo "Database ready. Starting worker..."' >> /worker-entrypoint.sh && \
+    echo 'exec node server.js' >> /worker-entrypoint.sh && \
+    chmod +x /worker-entrypoint.sh
+
 # Install su-exec for running commands as different user
 RUN apk add --no-cache su-exec
 
