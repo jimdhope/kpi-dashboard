@@ -17,6 +17,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      kpi_quest_net:
+        ipv4_address: 172.23.0.2
 
   app:
     image: jimdhope/kpi-dashboard:latest
@@ -32,6 +35,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      kpi_quest_net:
+        ipv4_address: 172.23.0.3
 
   worker:
     image: jimdhope/kpi-dashboard:latest
@@ -46,6 +52,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      kpi_quest_net:
+        ipv4_address: 172.23.0.4
 
 volumes:
   postgres_v3_data:
+
+networks:
+  kpi_quest_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16

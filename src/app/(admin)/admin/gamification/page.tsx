@@ -4,13 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Trophy, Award, Flame, TrendingUp, Star, Zap, Shield, Medal, Crown, 
-  Target, Swords, BarChart3, Users, Activity, Loader2, RefreshCw,
-  CheckCircle2, XCircle, UserCheck, FileText, Download
+  Award, TrendingUp, Star, Medal, Crown, 
+  BarChart3, Users, Activity, Loader2, RefreshCw,
+  FileText, Download, Calendar
 } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -25,7 +24,6 @@ interface BadgeDefinition {
   description: string;
   icon: string;
   category: string;
-  earnedCount?: number;
 }
 
 interface LeaderboardEntry {
@@ -39,27 +37,31 @@ interface LeaderboardEntry {
   avatarBgColor?: string;
 }
 
-interface AgentProfile {
-  id: string;
-  totalXp: number;
-  level: number;
-  title: string | null;
-  currentTitle: string;
-  xpProgress: number;
-}
+const LEVEL_DEFINITIONS = [
+  { level: 1, title: "Rookie", minXp: 0, maxXp: 499 },
+  { level: 2, title: "Bronze", minXp: 500, maxXp: 1499 },
+  { level: 3, title: "Silver", minXp: 1500, maxXp: 3499 },
+  { level: 4, title: "Gold", minXp: 3500, maxXp: 6999 },
+  { level: 5, title: "Platinum", minXp: 7000, maxXp: 11999 },
+  { level: 6, title: "Diamond", minXp: 12000, maxXp: Infinity },
+];
+
+type LeaderboardMode = "alltime" | "monthly";
 
 export default function AdminGamificationPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [leaderboardMode, setLeaderboardMode] = useState<LeaderboardMode>("monthly");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [badgeMonth, setBadgeMonth] = useState(new Date().getMonth() + 1);
+  const [badgeYear, setBadgeYear] = useState(new Date().getFullYear());
 
   // Data
   const [badges, setBadges] = useState<BadgeDefinition[]>([]);
   const [allTimeLeaderboard, setAllTimeLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [agentProfiles, setAgentProfiles] = useState<AgentProfile[]>([]);
   const [currentChampion, setCurrentChampion] = useState<any>(null);
 
   // Actions
@@ -67,7 +69,6 @@ export default function AdminGamificationPage() {
   const [isCrowning, setIsCrowning] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [competitions, setCompetitions] = useState<any[]>([]);
-  const [selectedCompId, setSelectedCompId] = useState<string>('');
 
   const refreshPageData = async () => {
     const sessionRes = await fetch('/api/auth/session');
@@ -76,10 +77,7 @@ export default function AdminGamificationPage() {
       if (sessionData.authenticated) setCurrentUser(sessionData.user);
     }
 
-    const [
-      badgeRes, allTimeRes, monthlyRes, 
-      compRes, championRes
-    ] = await Promise.all([
+    const [badgeRes, allTimeRes, monthlyRes, compRes, championRes] = await Promise.all([
       fetch('/api/gamification/badges'),
       fetch('/api/gamification/leaderboard?limit=50'),
       fetch(`/api/gamification/leaderboard/monthly?year=${selectedYear}&month=${selectedMonth}`),
@@ -115,6 +113,12 @@ export default function AdminGamificationPage() {
     });
     const badgeCount = allTimeLeaderboard.reduce((s, e) => s + e.badgeCount, 0);
     return { totalXp, levelCounts, badgeCount, agentCount: allTimeLeaderboard.length };
+  }, [allTimeLeaderboard]);
+
+  const levelLookup = useMemo(() => {
+    const map = new Map<string, { level: number; badgeCount: number }>();
+    allTimeLeaderboard.forEach(e => map.set(e.userId, { level: e.level, badgeCount: e.badgeCount }));
+    return map;
   }, [allTimeLeaderboard]);
 
   const handleEvaluateAll = async () => {
@@ -194,6 +198,8 @@ export default function AdminGamificationPage() {
     );
   }
 
+  const displayEntries = leaderboardMode === "alltime" ? allTimeLeaderboard : monthlyLeaderboard;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -263,20 +269,46 @@ export default function AdminGamificationPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Leaderboards Tab */}
-        <TabsContent value="leaderboards" className="mt-4 space-y-6">
+        {/* Leaderboards Tab — Merged */}
+        <TabsContent value="leaderboards" className="mt-4">
           <Card className="glass-card">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-amber-500" />
-                  All-Time Leaderboard
+                  {leaderboardMode === "alltime" ? <Crown className="h-5 w-5 text-amber-500" /> : <Medal className="h-5 w-5 text-amber-500" />}
+                  {leaderboardMode === "alltime" ? "All-Time Leaderboard" : "Monthly Leaderboard"}
                 </CardTitle>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="text-sm bg-muted rounded-md px-2 py-1 border"
+                    value={leaderboardMode}
+                    onChange={e => setLeaderboardMode(e.target.value as LeaderboardMode)}
+                  >
+                    <option value="alltime">All-Time</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                  {leaderboardMode === "monthly" && (
+                    <>
+                      <select className="text-sm bg-muted rounded-md px-2 py-1 border" value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i + 1} value={i + 1}>{format(new Date(2000, i), 'MMMM')}</option>
+                        ))}
+                      </select>
+                      <select className="text-sm bg-muted rounded-md px-2 py-1 border" value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))}>
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <option key={i} value={new Date().getFullYear() - i}>{new Date().getFullYear() - i}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              {allTimeLeaderboard.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No data yet.</p>
+              {displayEntries.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">
+                  {leaderboardMode === "monthly" ? "No data for this period." : "No data yet."}
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -290,84 +322,30 @@ export default function AdminGamificationPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {allTimeLeaderboard.map((entry: any, i) => (
-                        <TableRow key={entry.userId}>
-                          <TableCell className="font-bold text-lg">
-                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank ?? i + 1}`}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-7 w-7">
-                                <AvatarFallback className="text-xs">{generateInitials(entry.name)}</AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{entry.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">{entry.level}</TableCell>
-                          <TableCell className="text-right font-semibold">{entry.totalXp.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{entry.badgeCount}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Medal className="h-5 w-5 text-amber-500" />
-                  Monthly Leaderboard
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <select className="text-sm bg-muted rounded-md px-2 py-1 border" value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>{format(new Date(2000, i), 'MMMM')}</option>
-                    ))}
-                  </select>
-                  <select className="text-sm bg-muted rounded-md px-2 py-1 border" value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))}>
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <option key={i} value={new Date().getFullYear() - i}>{new Date().getFullYear() - i}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {monthlyLeaderboard.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No data for this period.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Agent</TableHead>
-                        <TableHead className="text-right">Level</TableHead>
-                        <TableHead className="text-right">XP</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {monthlyLeaderboard.slice(0, 20).map((entry: any, i) => (
-                        <TableRow key={entry.userId}>
-                          <TableCell className="font-bold text-lg">
-                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank ?? i + 1}`}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-7 w-7">
-                                <AvatarFallback className="text-xs">{generateInitials(entry.name)}</AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{entry.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">{entry.level}</TableCell>
-                          <TableCell className="text-right font-semibold">{entry.xp.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
+                      {displayEntries.map((entry: any, i) => {
+                        const lookup = leaderboardMode === "monthly" ? levelLookup.get(entry.userId) : null;
+                        const level = leaderboardMode === "alltime" ? entry.level : (lookup?.level ?? 1);
+                        const badgeCount = leaderboardMode === "alltime" ? entry.badgeCount : (lookup?.badgeCount ?? 0);
+                        const xp = leaderboardMode === "alltime" ? entry.totalXp : entry.xp;
+                        return (
+                          <TableRow key={entry.userId}>
+                            <TableCell className="font-bold text-lg">
+                              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank ?? i + 1}`}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-7 w-7">
+                                  <AvatarFallback className="text-xs">{generateInitials(entry.name)}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{entry.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">{level}</TableCell>
+                            <TableCell className="text-right font-semibold">{xp.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{leaderboardMode === "monthly" && !lookup ? "–" : badgeCount}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -376,15 +354,32 @@ export default function AdminGamificationPage() {
           </Card>
         </TabsContent>
 
-        {/* Badge Catalog Tab */}
+        {/* Badge Catalog Tab — Month Selector + Gallery */}
         <TabsContent value="badges" className="mt-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-amber-500" />
-                Badge Catalog
-              </CardTitle>
-              <CardDescription>All available badges and how many agents have earned each</CardDescription>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-amber-500" />
+                  Badge Catalog
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <select className="text-sm bg-muted rounded-md px-2 py-1 border" value={badgeMonth} onChange={e => setBadgeMonth(parseInt(e.target.value))}>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{format(new Date(2000, i), 'MMMM')}</option>
+                    ))}
+                  </select>
+                  <select className="text-sm bg-muted rounded-md px-2 py-1 border" value={badgeYear} onChange={e => setBadgeYear(parseInt(e.target.value))}>
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <option key={i} value={new Date().getFullYear() - i}>{new Date().getFullYear() - i}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <CardDescription>
+                Download badge images with {format(new Date(badgeYear, badgeMonth - 1), 'MMMM yyyy')} context for celebration materials
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {badges.length === 0 ? (
@@ -399,12 +394,9 @@ export default function AdminGamificationPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{badge.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{badge.category}</p>
-                        <p className="text-xs text-amber-500 font-medium mt-0.5">
-                          {badge.earnedCount ?? 0} earned
-                        </p>
                       </div>
                       <a
-                        href={`/api/gamification/badges/${badge.key}/image`}
+                        href={`/api/gamification/badges/${badge.key}/image?month=${badgeMonth}&year=${badgeYear}`}
                         download
                         className="shrink-0 h-8 w-8 rounded-md border flex items-center justify-center hover:bg-muted transition-colors"
                         title="Download badge image"
@@ -507,7 +499,7 @@ export default function AdminGamificationPage() {
           </div>
         </TabsContent>
 
-        {/* Level Distribution Tab */}
+        {/* Level Distribution Tab — Enriched */}
         <TabsContent value="levels" className="mt-4">
           <Card className="glass-card">
             <CardHeader>
@@ -515,33 +507,30 @@ export default function AdminGamificationPage() {
                 <TrendingUp className="h-5 w-5 text-primary" />
                 Level Distribution
               </CardTitle>
-              <CardDescription>How agents are distributed across levels</CardDescription>
+              <CardDescription>Agent count by level with title and XP range</CardDescription>
             </CardHeader>
             <CardContent>
-              {Object.keys(stats.levelCounts).length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No data yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {Object.entries(stats.levelCounts)
-                    .sort(([a], [b]) => Number(a) - Number(b))
-                    .map(([level, count]) => {
-                      const maxCount = Math.max(...Object.values(stats.levelCounts));
-                      const pct = (count / maxCount) * 100;
-                      return (
-                        <div key={level} className="flex items-center gap-3">
-                          <span className="w-16 text-sm font-medium text-right">Level {level}</span>
-                          <div className="flex-1 h-6 rounded-md bg-muted overflow-hidden">
-                            <div
-                              className="h-full rounded-md bg-gradient-to-r from-primary/60 to-primary transition-all"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="w-10 text-sm font-semibold text-right">{count}</span>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
+              <div className="space-y-3">
+                {LEVEL_DEFINITIONS.map((def) => {
+                  const count = stats.levelCounts[def.level] ?? 0;
+                  const allCounts = LEVEL_DEFINITIONS.map(d => stats.levelCounts[d.level] ?? 0);
+                  const maxCount = Math.max(...allCounts, 1);
+                  const pct = (count / maxCount) * 100;
+                  const rangeLabel = def.maxXp === Infinity ? `${def.minXp.toLocaleString()}+ XP` : `${def.minXp.toLocaleString()} – ${def.maxXp.toLocaleString()} XP`;
+                  return (
+                    <div key={def.level} className="flex items-center gap-3">
+                      <span className="w-44 text-sm font-medium text-right shrink-0">Level {def.level} — {def.title}</span>
+                      <div className="flex-1 h-6 rounded-md bg-muted overflow-hidden" title={rangeLabel}>
+                        <div
+                          className="h-full rounded-md bg-gradient-to-r from-primary/60 to-primary transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-10 text-sm font-semibold text-right shrink-0">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
