@@ -136,6 +136,7 @@ export const gamificationService = {
           totalScore: agent.totalScore,
           xpEarned,
           wasPresent: agent.wasPresent,
+          createdAt: competition.endsAt ?? undefined,
         },
       });
       resultsCreated++;
@@ -148,6 +149,7 @@ export const gamificationService = {
             source: "competition_score",
             sourceId: competitionId,
             description: `Score from "${competition.name}"`,
+            createdAt: competition.endsAt ?? undefined,
           },
         });
       }
@@ -160,6 +162,7 @@ export const gamificationService = {
             source: "rank_bonus",
             sourceId: competitionId,
             description: `Rank #${agent.rank} bonus in "${competition.name}"`,
+            createdAt: competition.endsAt ?? undefined,
           },
         });
       }

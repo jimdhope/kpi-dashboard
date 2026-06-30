@@ -114,18 +114,19 @@ async function main() {
           totalScore: agent.totalScore,
           xpEarned,
           wasPresent: agent.wasPresent,
+          createdAt: competition.endsAt ?? undefined,
         },
       });
 
       if (agent.totalScore > 0) {
         await prisma.xpTransaction.create({
-          data: { userId: agent.userId, amount: agent.totalScore, source: "competition_score", sourceId: competition.id },
+          data: { userId: agent.userId, amount: agent.totalScore, source: "competition_score", sourceId: competition.id, createdAt: competition.endsAt ?? undefined },
         });
       }
 
       if (rankBonus > 0) {
         await prisma.xpTransaction.create({
-          data: { userId: agent.userId, amount: rankBonus, source: "rank_bonus", sourceId: competition.id },
+          data: { userId: agent.userId, amount: rankBonus, source: "rank_bonus", sourceId: competition.id, createdAt: competition.endsAt ?? undefined },
         });
       }
 
