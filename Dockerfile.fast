@@ -1,0 +1,38 @@
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN apk add --no-cache netcat-openbsd bash
+
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+COPY public ./public
+COPY prisma ./prisma
+COPY package.json ./
+COPY node_modules ./node_modules
+COPY node_modules/.prisma ./node_modules/.prisma
+COPY node_modules/.bin ./node_modules/.bin
+COPY src ./src
+COPY tsconfig.json ./
+
+RUN echo '#!/bin/bash' > /entrypoint.sh && \
+    echo 'echo "Waiting for database..."' >> /entrypoint.sh && \
+    echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
+    echo 'echo "Database ready! Running prisma db push..."' >> /entrypoint.sh && \
+    echo 'npx prisma db push --url "$DATABASE_URL"' >> /entrypoint.sh && \
+    echo 'echo "Seeding database..."' >> /entrypoint.sh && \
+    echo 'npx tsx prisma/seed.ts' >> /entrypoint.sh && \
+    echo 'echo "Starting application..."' >> /entrypoint.sh && \
+    echo 'exec node server.js' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+RUN echo '#!/bin/bash' > /worker-entrypoint.sh && \
+    echo 'echo "Waiting for database..."' >> /worker-entrypoint.sh && \
+    echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /worker-entrypoint.sh && \
+    echo 'echo "Database ready! Starting worker..."' >> /worker-entrypoint.sh && \
+    echo 'exec npx tsx src/server/jobs/worker.ts' >> /worker-entrypoint.sh && \
+    chmod +x /worker-entrypoint.sh
+
+EXPOSE 9103
+
+CMD ["/bin/bash", "-c", "/entrypoint.sh"]

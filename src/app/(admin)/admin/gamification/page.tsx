@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Trophy, Award, Flame, TrendingUp, Star, Zap, Shield, Medal, Crown, 
   Target, Swords, BarChart3, Users, Activity, Loader2, RefreshCw,
-  CheckCircle2, XCircle, UserCheck, FileText
+  CheckCircle2, XCircle, UserCheck, FileText, Download, Users
 } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -65,34 +65,39 @@ export default function AdminGamificationPage() {
   // Actions
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isCrowning, setIsCrowning] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [competitions, setCompetitions] = useState<any[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<string>('');
+
+  const refreshPageData = async () => {
+    const sessionRes = await fetch('/api/auth/session');
+    if (sessionRes.ok) {
+      const sessionData = await sessionRes.json();
+      if (sessionData.authenticated) setCurrentUser(sessionData.user);
+    }
+
+    const [
+      badgeRes, allTimeRes, monthlyRes, 
+      compRes, championRes
+    ] = await Promise.all([
+      fetch('/api/gamification/badges'),
+      fetch('/api/gamification/leaderboard?limit=50'),
+      fetch(`/api/gamification/leaderboard/monthly?year=${selectedYear}&month=${selectedMonth}`),
+      fetch('/api/competitions'),
+      fetch('/api/gamification/crown/current'),
+    ]);
+
+    if (badgeRes.ok) { const d = await badgeRes.json(); setBadges(d.badges ?? []); }
+    if (allTimeRes.ok) { const d = await allTimeRes.json(); setAllTimeLeaderboard(d.entries ?? []); }
+    if (monthlyRes.ok) { const d = await monthlyRes.json(); setMonthlyLeaderboard(d.entries ?? []); }
+    if (compRes.ok) { const d = await compRes.json(); setCompetitions(d.competitions ?? []); }
+    if (championRes.ok) { const d = await championRes.json(); setCurrentChampion(d.champion ?? null); }
+  };
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const sessionRes = await fetch('/api/auth/session');
-        if (sessionRes.ok) {
-          const sessionData = await sessionRes.json();
-          if (sessionData.authenticated) setCurrentUser(sessionData.user);
-        }
-
-        const [
-          badgeRes, allTimeRes, monthlyRes, 
-          compRes, championRes
-        ] = await Promise.all([
-          fetch('/api/gamification/badges'),
-          fetch('/api/gamification/leaderboard?limit=50'),
-          fetch(`/api/gamification/leaderboard/monthly?year=${selectedYear}&month=${selectedMonth}`),
-          fetch('/api/competitions'),
-          fetch('/api/gamification/crown/current'),
-        ]);
-
-        if (badgeRes.ok) { const d = await badgeRes.json(); setBadges(d.badges ?? []); }
-        if (allTimeRes.ok) { const d = await allTimeRes.json(); setAllTimeLeaderboard(d.entries ?? []); }
-        if (monthlyRes.ok) { const d = await monthlyRes.json(); setMonthlyLeaderboard(d.entries ?? []); }
-        if (compRes.ok) { const d = await compRes.json(); setCompetitions(d.competitions ?? []); }
-        if (championRes.ok) { const d = await championRes.json(); setCurrentChampion(d.champion ?? null); }
+        await refreshPageData();
       } catch (err) {
         console.error('Error fetching gamification admin data:', err);
       } finally {
@@ -117,7 +122,11 @@ export default function AdminGamificationPage() {
     try {
       const res = await fetch('/api/gamification/evaluate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ allPending: true }) });
       if (res.ok) {
-        toast({ title: 'Evaluation complete', description: 'All competitions evaluated.' });
+        const data = await res.json();
+        const summaries = data.summaries ?? [];
+        const totalAgents = summaries.reduce((s: number, sm: any) => s + (sm.agentsProcessed ?? 0), 0);
+        toast({ title: 'Evaluation complete', description: `${summaries.length} competition${summaries.length === 1 ? '' : 's'} evaluated, ${totalAgents} agent${totalAgents === 1 ? '' : 's'} processed.` });
+        await refreshPageData();
       } else {
         const err = await res.json();
         toast({ title: 'Evaluation failed', description: err.error ?? 'Unknown error', variant: 'destructive' });
@@ -126,6 +135,26 @@ export default function AdminGamificationPage() {
       toast({ title: 'Evaluation failed', description: 'Network error', variant: 'destructive' });
     } finally {
       setIsEvaluating(false);
+    }
+  };
+
+  const handleAssignEntries = async () => {
+    setIsAssigning(true);
+    try {
+      const res = await fetch('/api/gamification/assign-entries', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        const total = (data.results ?? []).reduce((s: number, r: any) => s + (r.entriesCreated ?? 0), 0);
+        toast({ title: 'Entries assigned', description: `${total} agent${total === 1 ? '' : 's'} assigned to ${data.results?.length ?? 0} competition${data.results?.length === 1 ? '' : 's'}.` });
+        await refreshPageData();
+      } else {
+        const err = await res.json();
+        toast({ title: 'Failed', description: err.error ?? 'Unknown error', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Failed', description: 'Network error', variant: 'destructive' });
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -144,11 +173,7 @@ export default function AdminGamificationPage() {
       if (res.ok) {
         const data = await res.json();
         toast({ title: `Champion crowned!`, description: `${data.champion ?? 'Agent'} is the champion.` });
-        const championRes = await fetch('/api/gamification/crown/current');
-        if (championRes.ok) {
-          const d = await championRes.json();
-          setCurrentChampion(d.champion ?? null);
-        }
+        await refreshPageData();
       } else {
         const err = await res.json();
         toast({ title: 'Failed', description: err.error ?? 'Unknown error', variant: 'destructive' });
@@ -368,7 +393,7 @@ export default function AdminGamificationPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {badges.map((badge) => (
                     <div key={badge.id} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                      <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
                         <Award className="h-5 w-5 text-amber-500" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -378,6 +403,14 @@ export default function AdminGamificationPage() {
                           {badge.earnedCount ?? 0} earned
                         </p>
                       </div>
+                      <a
+                        href={`/api/gamification/badges/${badge.key}/image`}
+                        download
+                        className="shrink-0 h-8 w-8 rounded-md border flex items-center justify-center hover:bg-muted transition-colors"
+                        title="Download badge image"
+                      >
+                        <Download className="h-4 w-4 text-muted-foreground" />
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -440,6 +473,10 @@ export default function AdminGamificationPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <Button onClick={handleAssignEntries} disabled={isAssigning} variant="outline" className="w-full">
+                  {isAssigning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
+                  Assign Agents to Competitions
+                </Button>
                 <Button onClick={handleEvaluateAll} disabled={isEvaluating} variant="secondary" className="w-full">
                   {isEvaluating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                   Evaluate All Past Competitions

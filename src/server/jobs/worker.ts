@@ -1,10 +1,12 @@
 import { registerTeamsAutomationScheduleWorker } from "@/server/jobs/teams-automation-schedule";
 import { registerTeamsWebhookWorker } from "@/server/jobs/teams-webhooks";
+import { registerGamificationEvaluationWorker } from "@/server/jobs/gamification-evaluation";
 import { getBoss } from "@/server/jobs/boss";
 
 async function main() {
   await registerTeamsWebhookWorker();
   await registerTeamsAutomationScheduleWorker();
+  await registerGamificationEvaluationWorker();
   // Keep the process alive for pg-boss workers.
   await new Promise(() => undefined);
 }

@@ -21,6 +21,9 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "Forbidden") {
       return errorResponse(403, "Forbidden");
     }
+    if (error instanceof Error && error.message === "No participants found for this month") {
+      return errorResponse(404, "No participants found for this month.");
+    }
     return errorResponse(500, "Failed to crown champion.");
   }
 }

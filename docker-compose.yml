@@ -33,5 +33,19 @@ services:
       postgres:
         condition: service_healthy
 
+  worker:
+    image: jimdhope/kpi-dashboard:latest
+    restart: unless-stopped
+    command: ["/bin/bash", "-c", "/worker-entrypoint.sh"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kpi_quest_v3
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - SESSION_COOKIE_SECRET=dev-secret-change-in-production
+      - IS_WORKER=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_v3_data:

@@ -24,7 +24,13 @@ export function getBoss(): Promise<PgBoss> {
         await boss.createQueue(QUEUES.teamsAutomationSchedule);
       }
 
+      const existingEvalQueue = await boss.getQueue(QUEUES.gamificationEvaluation);
+      if (!existingEvalQueue) {
+        await boss.createQueue(QUEUES.gamificationEvaluation);
+      }
+
       await boss.schedule(QUEUES.teamsAutomationSchedule, "* * * * *");
+      await boss.schedule(QUEUES.gamificationEvaluation, "0 * * * *");
 
       return boss;
     });

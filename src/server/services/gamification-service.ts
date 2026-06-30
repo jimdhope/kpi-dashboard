@@ -555,6 +555,49 @@ export const gamificationService = {
     return { results, transactions };
   },
 
+  async assignEntriesForCompetition(competitionId: string) {
+    const competition = await prisma.competition.findUnique({
+      where: { id: competitionId },
+      select: { id: true, name: true, podIds: true },
+    });
+    if (!competition) throw new Error("Competition not found");
+    if (!competition.podIds || competition.podIds.length === 0) return 0;
+
+    const podUsers = await prisma.user.findMany({
+      where: { podId: { in: competition.podIds } },
+      select: { id: true },
+    });
+    if (podUsers.length === 0) return 0;
+
+    const { count } = await prisma.competitionEntry.createMany({
+      data: podUsers.map((u) => ({
+        competitionId: competition.id,
+        userId: u.id,
+      })),
+      skipDuplicates: true,
+    });
+    return count;
+  },
+
+  async assignEntriesForAll() {
+    const competitions = await prisma.competition.findMany({
+      where: {
+        isDraft: false,
+        podIds: { isEmpty: false },
+      },
+      select: { id: true, name: true, podIds: true },
+    });
+
+    const results: { competitionId: string; competitionName: string; entriesCreated: number }[] = [];
+    for (const competition of competitions) {
+      const count = await this.assignEntriesForCompetition(competition.id);
+      if (count > 0) {
+        results.push({ competitionId: competition.id, competitionName: competition.name, entriesCreated: count });
+      }
+    }
+    return results;
+  },
+
   async retroactivelyEvaluateAll() {
     const competitions = await prisma.competition.findMany({
       where: {

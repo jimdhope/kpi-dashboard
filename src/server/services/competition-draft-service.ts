@@ -107,6 +107,7 @@ export const competitionDraftService = {
         description: draftData.description || draft.description,
         startsAt: draftData.startsAt ? new Date(draftData.startsAt) : null,
         endsAt: draftData.endsAt ? new Date(draftData.endsAt) : null,
+        podIds: draftData.podIds ?? [],
         isDraft: false,
         createdById: draft.createdById,
         rules: draftData.rules ? {
@@ -131,6 +132,24 @@ export const competitionDraftService = {
         teams: true,
       },
     });
+
+    // Auto-enroll all users from participating pods
+    const podIds = draftData.podIds ?? [];
+    if (podIds.length > 0) {
+      const podUsers = await prisma.user.findMany({
+        where: { podId: { in: podIds } },
+        select: { id: true },
+      });
+      if (podUsers.length > 0) {
+        await prisma.competitionEntry.createMany({
+          data: podUsers.map((u) => ({
+            competitionId: competition.id,
+            userId: u.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     // Delete the draft
     await competitionDraftRepository.delete(id);

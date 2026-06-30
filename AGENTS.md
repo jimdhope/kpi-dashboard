@@ -35,9 +35,24 @@ npm run jobs:work   # Run background worker
 - Cookie name: `kpiq_v3_session`
 - Secret in `.env.local`
 
-### Service
-- Systemd service: `kpi-dashboard`
-- Restart: `systemctl restart kpi-dashboard`
+### Deploy
+- **Portainer stack:** `migration-bundle` at `/home/ubuntu/migration-bundle/docker-compose.yml`
+- **Docker Hub image:** `jimdhope/kpi-dashboard:latest`
+- **Rebuild & deploy:**
+  ```bash
+  cd /var/www/kpi-dashboard
+  DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kpi_quest_v3 npx prisma generate
+  npm run build
+  docker build -t jimdhope/kpi-dashboard:latest .
+  docker push jimdhope/kpi-dashboard:latest
+  docker compose -p migration-bundle -f /home/ubuntu/migration-bundle/docker-compose.yml pull
+  docker compose -p migration-bundle -f /home/ubuntu/migration-bundle/docker-compose.yml up -d
+  ```
+- **Fast build (skip npm install):**
+  ```bash
+  # Temporarily remove node_modules/.next from .dockerignore, then:
+  docker build -t jimdhope/kpi-dashboard:latest -f Dockerfile.fast .
+  ```
 
 ## Important Conventions
 

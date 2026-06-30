@@ -160,6 +160,23 @@ export const competitionService = {
         })),
       });
     }
+
+    // Auto-enroll all users from participating pods
+    if (competition.podIds && competition.podIds.length > 0) {
+      const podUsers = await prisma.user.findMany({
+        where: { podId: { in: competition.podIds } },
+        select: { id: true },
+      });
+      if (podUsers.length > 0) {
+        await prisma.competitionEntry.createMany({
+          data: podUsers.map((u) => ({
+            competitionId: competition.id,
+            userId: u.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
     
     // Fetch the complete competition with rules and teams
     const completeCompetition = await prisma.competition.findUnique({
