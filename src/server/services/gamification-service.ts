@@ -48,7 +48,7 @@ export const gamificationService = {
       include: {
         teams: true,
         entries: {
-          include: { user: true, scoreLogs: true },
+          include: { user: true },
         },
       },
     });
@@ -57,6 +57,13 @@ export const gamificationService = {
     if (competition.endsAt && competition.endsAt > new Date()) {
       throw new Error("Competition has not ended yet");
     }
+
+    const dailyScores = await prisma.dailyAchievement.groupBy({
+      by: ["agentId"],
+      where: { competitionId },
+      _sum: { points: true },
+    });
+    const scoreMap = new Map(dailyScores.map((d) => [d.agentId, d._sum.points ?? 0]));
 
     const agentScores = new Map<string, {
       userId: string;
@@ -68,7 +75,7 @@ export const gamificationService = {
 
     for (const entry of competition.entries) {
       if (!entry.userId || !entry.user) continue;
-      const score = entry.scoreLogs.reduce((sum, log) => sum + log.value, 0);
+      const score = scoreMap.get(entry.userId) ?? 0;
       const team = competition.teams.find((t) => t.agentIds.includes(entry.userId!));
       agentScores.set(entry.userId, {
         userId: entry.userId,
