@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Trophy, Award, Flame, TrendingUp, Star, Zap, Shield, Medal, Crown, 
   Target, Swords, BarChart3, Users, Activity, Loader2, RefreshCw,
-  CheckCircle2, XCircle, UserCheck, FileText, Download, Users
+  CheckCircle2, XCircle, UserCheck, FileText, Download
 } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
