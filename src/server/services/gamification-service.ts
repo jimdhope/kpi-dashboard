@@ -1,7 +1,9 @@
 import { prisma } from "@/server/db/client";
+import type { Prisma } from "@prisma/client";
 import { badgeService } from "@/server/services/badge-service";
 import { activityService } from "@/server/services/activity-service";
 import { notificationService } from "@/server/services/notification-service";
+import { evaluateCriteria, type RuleContext } from "./rule-evaluator";
 
 const RANK_BONUSES: Record<number, number> = {
   1: 100,
@@ -257,6 +259,7 @@ export const gamificationService = {
         totalScore: agent.totalScore,
         wasPresent: agent.wasPresent,
         previousRank,
+        competitionEndsAt: competition.endsAt ?? undefined,
       });
 
       for (const badgeKey of awarded) {
@@ -418,53 +421,50 @@ export const gamificationService = {
 
     const champion = leaderboard.entries[0];
     const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
+    const lastDay = new Date(year, month, 0);
 
-    const profile = await prisma.agentProfile.findUnique({
-      where: { userId: champion.userId },
+    const monthlyBadges = await prisma.badge.findMany({
+      where: { isActive: true, scope: "MONTHLY" },
     });
-    if (!profile) throw new Error("Agent profile not found");
 
-    const badge = await prisma.badge.findUnique({ where: { key: "monthly_champion" } });
-    if (badge) {
-      const existing = await prisma.agentBadge.findUnique({
-        where: { agentProfileId_badgeId: { agentProfileId: profile.id, badgeId: badge.id } },
-      });
-      if (!existing) {
+    for (const entry of leaderboard.entries) {
+      const p = await prisma.agentProfile.findUnique({ where: { userId: entry.userId } });
+      if (!p) continue;
+
+      for (const badge of monthlyBadges) {
+        const existing = await prisma.agentBadge.findUnique({
+          where: { agentProfileId_badgeId: { agentProfileId: p.id, badgeId: badge.id } },
+        });
+        if (existing) continue;
+
+        const ruleCtx: RuleContext = {
+          rank: entry.rank,
+           totalScore: entry.xp,
+          improvement: 0,
+          wasPresent: true,
+          streak: 0,
+          totalCompetitions: 0,
+        };
+
+        if (!evaluateCriteria(badge.criteria, ruleCtx)) continue;
+
         await prisma.agentBadge.create({
           data: {
-            agentProfileId: profile.id,
+            agentProfileId: p.id,
             badgeId: badge.id,
-            context: { month, year, rank: 1 },
+            context: { month, year, rank: entry.rank } as Prisma.InputJsonValue,
+            earnedAt: lastDay,
           },
         });
 
-        await notificationService.create({
-          userId: champion.userId,
-          type: "score_achievement",
-          title: `👑 ${monthName} Champion!`,
-          message: `You're the ${monthName} ${year} Monthly Champion!`,
-          priority: "high",
-          actionUrl: "/agent/gamification",
-        });
-      }
-    }
-
-    // Also award monthly_top3 to top 3
-    const top3Badge = await prisma.badge.findUnique({ where: { key: "monthly_top3" } });
-    if (top3Badge) {
-      for (const entry of leaderboard.entries.slice(0, 3)) {
-        const p = await prisma.agentProfile.findUnique({ where: { userId: entry.userId } });
-        if (!p) continue;
-        const existing = await prisma.agentBadge.findUnique({
-          where: { agentProfileId_badgeId: { agentProfileId: p.id, badgeId: top3Badge.id } },
-        });
-        if (!existing) {
-          await prisma.agentBadge.create({
-            data: {
-              agentProfileId: p.id,
-              badgeId: top3Badge.id,
-              context: { month, year, rank: entry.rank },
-            },
+        if (entry.userId === champion.userId) {
+          await notificationService.create({
+            userId: champion.userId,
+            type: "score_achievement",
+            title: `👑 ${monthName} Champion!`,
+            message: `You're the ${monthName} ${year} Monthly Champion!`,
+            priority: "high",
+            actionUrl: "/agent/gamification",
           });
         }
       }

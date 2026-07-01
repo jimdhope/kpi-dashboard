@@ -9,22 +9,22 @@
             <path d="M172,36L286.315,102L286.315,234L172,300L57.685,234L57.685,102L172,36Z" style="fill:rgb(159,143,94);stroke:rgb(122,108,64);stroke-width:2px;"/>
         </g>
         <g transform="matrix(2.235989,0,0,2.294635,143.253942,121.655487)">
-            <text x="-26.695px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:48px;fill:white;">#1</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:48px;fill:white;">#1</text>
         </g>
         <g transform="matrix(2.059846,0,0,2.059846,135.065376,143.540678)">
-            <text x="-25.552px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:10px;fill:white;">FIRST WIN</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:10px;fill:white;">FIRST WIN</text>
         </g>
         <g transform="matrix(0.951722,0,0,1,-7.7583,-79.473856)">
             <path d="M250,295L250,315C250,317.76 247.646,320 244.746,320L55.254,320C52.354,320 50,317.76 50,315L50,295C50,292.24 52.354,290 55.254,290L244.746,290C247.646,290 250,292.24 250,295Z" style="fill:rgb(139,0,0);"/>
         </g>
         <g transform="matrix(1,0,0,1,135.027344,229)">
-            <text x="-59.9px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
         </g>
         <g transform="matrix(1,0,0,1,135,171.001045)">
-            <text x="-62.434px" y="0px" style="font-family:'Georgia', serif;font-size:10px;fill:rgb(102,102,102);">{{COMPETITION_NAME}}</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Georgia', serif;font-size:10px;fill:rgb(102,102,102);">{{COMPETITION_NAME}}</text>
         </g>
         <g transform="matrix(1,0,0,1,135.004395,188.99525)">
-            <text x="-17.681px" y="0px" style="font-family:'Helvetica';font-size:9px;fill:rgb(80,80,80);">{{DATE}}</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Helvetica';font-size:9px;fill:rgb(80,80,80);">{{DATE}}</text>
         </g>
     </g>
     <defs>

@@ -10,20 +10,20 @@
                 <path d="M172,36L286.315,102L286.315,234L172,300L57.685,234L57.685,102L172,36Z" style="fill:rgb(159,143,94);stroke:rgb(122,108,64);stroke-width:2px;"/>
             </g>
             <g transform="matrix(1,0,0,1,134.516602,132.158203)">
-                <text x="-54.443px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:20px;fill:white;">M<tspan x="-35.809px -18.278px -1.86px 12.331px 28.748px 41.104px " y="0px 0px 0px 0px 0px 0px ">ONTHLY</tspan></text>
-                <text x="-54.443px" y="20px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:20px;fill:white;">CHAMPION</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:20px;fill:white;">MONTHLY</text>
+                <text x="0" text-anchor="middle" y="20px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:20px;fill:white;">CHAMPION</text>
             </g>
             <g transform="matrix(0.951722,0,0,1,-7.7583,-79.473856)">
                 <path d="M250,295L250,315C250,317.76 247.646,320 244.746,320L55.254,320C52.354,320 50,317.76 50,315L50,295C50,292.24 52.354,290 55.254,290L244.746,290C247.646,290 250,292.24 250,295Z" style="fill:rgb(139,0,0);"/>
             </g>
             <g transform="matrix(1,0,0,1,135.027344,229)">
-                <text x="-59.9px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
             </g>
             <g transform="matrix(1,0,0,1,135.002441,183.76356)">
-                <text x="-25.01px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:10px;fill:rgb(205,205,205);">{{MONTH}}</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:10px;fill:rgb(205,205,205);">{{MONTH}}</text>
             </g>
             <g transform="matrix(1,0,0,1,135.004883,199.324296)">
-                <text x="-20.295px" y="0px" style="font-family:'Helvetica';font-size:10px;fill:rgb(171,171,171);">{{YEAR}}</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'Helvetica';font-size:10px;fill:rgb(171,171,171);">{{YEAR}}</text>
             </g>
             <use xlink:href="#_Image2" x="101" y="34" width="68px" height="68px"/>
         </g>

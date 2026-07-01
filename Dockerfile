@@ -24,8 +24,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install netcat for health check
-RUN apk add --no-cache netcat-openbsd bash
+# Install netcat for health check + fonts for SVG rendering
+RUN apk add --no-cache netcat-openbsd bash fontconfig ttf-dejavu font-noto-emoji
 
 # Copy standalone build output from builder
 COPY --from=builder /app/.next/standalone ./
@@ -44,9 +44,9 @@ COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'echo "Waiting for database..."' >> /entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
-    echo 'echo "Database ready! Running prisma db push..."' >> /entrypoint.sh && \
-    echo 'npx prisma db push --url "$DATABASE_URL"' >> /entrypoint.sh && \
-    echo 'echo "Seeding database..."' >> /entrypoint.sh && \
+     echo 'echo "Database ready! Running prisma db push..."' >> /entrypoint.sh && \
+     echo 'npx prisma db push --accept-data-loss --url "$DATABASE_URL"' >> /entrypoint.sh && \
+     echo 'echo "Seeding database..."' >> /entrypoint.sh && \
     echo 'npx tsx prisma/seed.ts' >> /entrypoint.sh && \
     echo 'echo "Starting application..."' >> /entrypoint.sh && \
     echo 'exec node server.js' >> /entrypoint.sh && \

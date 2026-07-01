@@ -29,6 +29,13 @@ enum NotificationPriority {
   high
 }
 
+enum AwardScope {
+  COMPETITION
+  MONTHLY
+  YEARLY
+  MANUAL
+}
+
 enum TeamsWebhookDirection {
   incoming
   outgoing
@@ -610,14 +617,19 @@ model AgentProfile {
 }
 
 model Badge {
-  id          String   @id @default(cuid())
-  key         String   @unique
+  id          String     @id @default(cuid())
+  key         String     @unique
   name        String
   description String?
-  iconUrl     String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  icon        String?
+  iconType    String?    @default("emoji")
+  scope       AwardScope @default(COMPETITION)
+  criteria    Json?
+  rankTinted  Boolean    @default(false)
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   agentBadges AgentBadge[]
 }

@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
     // Load fonts from public folder
     const mrDafoeFont = readFileSync(join(process.cwd(), "public/fonts/mrdafoe.woff"));
-    const lexendFont = readFileSync(join(process.cwd(), "public/fonts/lexend.woff"));
+    const lexendFont = readFileSync(join(process.cwd(), "public/fonts/lexend-400.ttf"));
 
     return new ImageResponse(
       (

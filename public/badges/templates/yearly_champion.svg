@@ -11,17 +11,17 @@
             </g>
             <use xlink:href="#_Image2" x="97.685" y="21.715" width="76px" height="76px"/>
             <g transform="matrix(1,0,0,1,134.876003,124.87793)">
-                <text x="-81.791px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:24px;fill:white;">END OF <tspan x="15.111px 31.119px " y="0px 0px ">YE</tspan>AR</text>
-                <text x="-65.332px" y="24px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:24px;fill:white;">CHAMPION</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:24px;fill:white;">END OF YEAR</text>
+                <text x="0" text-anchor="middle" y="24px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:24px;fill:white;">CHAMPION</text>
             </g>
             <g transform="matrix(0.951722,0,0,1,-7.073703,-79.473856)">
                 <path d="M250,295L250,315C250,317.76 247.646,320 244.746,320L55.254,320C52.354,320 50,317.76 50,315L50,295C50,292.24 52.354,290 55.254,290L244.746,290C247.646,290 250,292.24 250,295Z" style="fill:rgb(139,0,0);"/>
             </g>
             <g transform="matrix(1,0,0,1,135.711941,229)">
-                <text x="-59.9px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
             </g>
             <g transform="matrix(1,0,0,1,135.72366,184.787974)">
-                <text x="-43.35px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:20px;fill:rgb(171,171,171);">{{YEAR}}</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:20px;fill:rgb(171,171,171);">{{YEAR}}</text>
             </g>
             <use xlink:href="#_Image3" x="108.041" y="34.342" width="59px" height="61px"/>
         </g>

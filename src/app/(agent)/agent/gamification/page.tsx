@@ -181,11 +181,11 @@ export default function AgentGamificationPage() {
                   return (
                     <div
                       key={ab.id}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border ${colorClass} text-center`}
-                      title={ab.badge.description}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border ${colorClass} text-center`}
                     >
                       <Icon className="h-8 w-8" />
                       <span className="text-xs font-medium leading-tight">{ab.badge.name}</span>
+                      <span className="text-[10px] opacity-60 leading-tight">{ab.badge.description}</span>
                       <span className="text-[10px] opacity-60">
                         {format(new Date(ab.earnedAt), 'MMM d, yyyy')}
                       </span>

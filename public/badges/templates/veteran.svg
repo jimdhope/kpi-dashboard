@@ -16,19 +16,19 @@
             <use xlink:href="#_Image3" x="121.591" y="49.088" width="30px" height="25px"/>
         </g>
         <g transform="matrix(1,0,0,1,134.672363,67.486668)">
-            <text x="-12.235px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:22px;fill:rgb(239,239,239);">10</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:22px;fill:rgb(239,239,239);">10</text>
         </g>
         <g transform="matrix(1,0,0,1,136.208496,154.80974)">
-            <text x="-71.675px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:30px;fill:white;">VETERAN</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:30px;fill:white;">VETERAN</text>
         </g>
         <g transform="matrix(0.951722,0,0,1,-7.7583,-79.473856)">
             <path d="M250,295L250,315C250,317.76 247.646,320 244.746,320L55.254,320C52.354,320 50,317.76 50,315L50,295C50,292.24 52.354,290 55.254,290L244.746,290C247.646,290 250,292.24 250,295Z" style="fill:rgb(139,0,0);"/>
         </g>
         <g transform="matrix(1,0,0,1,135.027344,229)">
-            <text x="-59.9px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
         </g>
         <g transform="matrix(1,0,0,1,135.004395,197)">
-                    <text x="-18.921px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:9px;fill:rgb(171,171,171);">{{DATE}}</text>
+                    <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:9px;fill:rgb(171,171,171);">{{DATE}}</text>
         </g>
     </g>
     <defs>

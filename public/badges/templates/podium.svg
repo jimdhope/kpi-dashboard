@@ -31,22 +31,22 @@
             </g>
         </g>
         <g transform="matrix(1,0,0,1,135.007324,144.033203)">
-            <text x="-91.714px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:30px;fill:rgb(239,239,239);">{{POSITION}}</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:30px;fill:rgb(239,239,239);">{{POSITION}}</text>
         </g>
         <g transform="matrix(1,0,0,1,134.985352,170)">
-            <text x="-40px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:20px;fill:white;">PODIUM</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:20px;fill:white;">PODIUM</text>
         </g>
         <g transform="matrix(0.951722,0,0,1,-7.7583,-79.473856)">
             <path d="M250,295L250,315C250,317.76 247.646,320 244.746,320L55.254,320C52.354,320 50,317.76 50,315L50,295C50,292.24 52.354,290 55.254,290L244.746,290C247.646,290 250,292.24 250,295Z" style="fill:rgb(139,0,0);"/>
         </g>
         <g transform="matrix(1,0,0,1,135.027344,229)">
-            <text x="-59.9px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:14px;fill:white;">{{AGENT_NAME}}</text>
         </g>
         <g transform="matrix(1,0,0,1,135,190)">
-            <text x="-62.434px" y="0px" style="font-family:'Georgia', serif;font-size:10px;fill:rgb(205,205,205);">{{COMPETITION_NAME}}</text>
+            <text x="0" text-anchor="middle" y="0px" style="font-family:'Georgia', serif;font-size:10px;fill:rgb(205,205,205);">{{COMPETITION_NAME}}</text>
         </g>
         <g transform="matrix(1,0,0,1,135.004395,202)">
-                <text x="-17.681px" y="0px" style="font-family:'Helvetica';font-size:9px;fill:rgb(171,171,171);">{{DATE}}</text>
+                <text x="0" text-anchor="middle" y="0px" style="font-family:'Helvetica';font-size:9px;fill:rgb(171,171,171);">{{DATE}}</text>
         </g>
     </g>
     <defs>

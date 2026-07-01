@@ -24,6 +24,16 @@ perf/
 check_*.ts
 debug_*.ts
 
+# Development tools
+badge-preview-server/
+
+# macOS
+.DS_Store
+
+# Personal config
+config.json
+cookies.txt
+
 # Local version copies (app is at root level)
 v2/
 v3/

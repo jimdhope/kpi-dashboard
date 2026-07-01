@@ -149,6 +149,56 @@ async function main() {
           update: { currentCount: newCount, longestCount: Math.max(newCount, existingStreak?.longestCount ?? 0) },
         });
       }
+
+      // Check badges
+      const existingAgentBadges = await prisma.agentBadge.findMany({
+        where: { agentProfileId: profile.id },
+        include: { badge: true },
+      });
+      const existingBadgeKeys = new Set(existingAgentBadges.map((ab) => ab.badge.key));
+
+      const resultCount = await prisma.competitionResult.count({
+        where: { agentProfileId: profile.id },
+      });
+
+      const winStreakRecord = await prisma.streak.findUnique({
+        where: { agentProfileId_type: { agentProfileId: profile.id, type: "win" } },
+      });
+      const winStreak = winStreakRecord?.currentCount ?? 0;
+
+      const highestEver = await prisma.competitionResult.findFirst({
+        orderBy: { totalScore: "desc" },
+        select: { totalScore: true },
+      });
+
+      const scriptBadgeChecks = [
+        { key: "first_win", condition: agent.rank === 1 && !existingBadgeKeys.has("first_win") },
+        { key: "podium", condition: agent.rank <= 3 },
+        { key: "veteran", condition: resultCount >= 10 },
+        { key: "streak_3", condition: winStreak >= 3 },
+        { key: "streak_5", condition: winStreak >= 5 },
+        { key: "streak_10", condition: winStreak >= 10 },
+        { key: "three_peat", condition: winStreak === 3 },
+        { key: "perfect_attendance", condition: agent.wasPresent },
+        { key: "score_machine", condition: agent.totalScore > (highestEver?.totalScore ?? 0) },
+      ];
+
+      for (const check of scriptBadgeChecks) {
+        if (!check.condition) continue;
+        const badge = await prisma.badge.findUnique({ where: { key: check.key } });
+        if (!badge) continue;
+        if (!existingBadgeKeys.has(check.key)) {
+          await prisma.agentBadge.create({
+            data: {
+              agentProfileId: profile.id,
+              badgeId: badge.id,
+              context: { competitionId: competition.id, rank: agent.rank },
+              earnedAt: competition.endsAt ?? undefined,
+            },
+          });
+          console.log(`      Badge awarded: ${badge.name}`);
+        }
+      }
     }
 
     console.log(`    Processed ${ranked.length} agents.`);

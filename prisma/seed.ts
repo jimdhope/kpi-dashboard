@@ -84,29 +84,8 @@ async function main() {
     },
   });
 
-  const badgeDefs = [
-    { key: "first_win", name: "First Win", description: "Awarded for finishing 1st in a competition", category: "competition", iconUrl: "/badges/first_win.png" },
-    { key: "podium", name: "Podium Finish", description: "Awarded for placing in the top 3", category: "competition", iconUrl: "/badges/podium.png" },
-    { key: "veteran", name: "Veteran", description: "Completed 10 competitions", category: "achievement", iconUrl: "/badges/veteran.png" },
-    { key: "comeback_kid", name: "Comeback Kid", description: "Massive rank improvement", category: "achievement", iconUrl: "/badges/comeback_kid.png" },
-    { key: "score_machine", name: "Score Machine", description: "Achieved the highest score ever", category: "achievement", iconUrl: "/badges/score_machine.png" },
-    { key: "perfect_attendance", name: "Perfect Attendance", description: "Perfect attendance in a competition", category: "attendance", iconUrl: "/badges/perfect_attendance.png" },
-    { key: "streak_3", name: "3-Win Streak", description: "Won 3 competitions in a row", category: "streak", iconUrl: "/badges/streak_3.png" },
-    { key: "streak_5", name: "5-Win Streak", description: "Won 5 competitions in a row", category: "streak", iconUrl: "/badges/streak_5.png" },
-    { key: "streak_10", name: "10-Win Streak", description: "Won 10 competitions in a row", category: "streak", iconUrl: "/badges/streak_10.png" },
-    { key: "three_peat", name: "Three-Peat", description: "3 consecutive wins", category: "streak", iconUrl: "/badges/three_peat.png" },
-    { key: "monthly_champion", name: "Monthly Champion", description: "Top agent of the month", category: "monthly", iconUrl: "/badges/monthly_champion.png" },
-    { key: "monthly_top3", name: "Monthly Top 3", description: "Among top 3 agents of the month", category: "monthly", iconUrl: "/badges/monthly_top3.png" },
-  ];
-
-  for (let i = 0; i < badgeDefs.length; i++) {
-    const b = badgeDefs[i];
-    await prisma.badge.upsert({
-      where: { key: b.key },
-      update: { name: b.name, description: b.description, iconUrl: b.iconUrl, sortOrder: i },
-      create: { key: b.key, name: b.name, description: b.description, iconUrl: b.iconUrl, sortOrder: i },
-    });
-  }
+  // Badges are now created through the admin UI (Badge Manager).
+  // No hard-coded badge seeding needed — start fresh.
 
   const existingNotifications = await prisma.notification.count({
     where: { userId: admin.id },
