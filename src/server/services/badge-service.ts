@@ -65,6 +65,7 @@ export const badgeService = {
         data: {
           agentProfileId,
           badgeId: badge.id,
+          competitionId: result.competitionId,
           context: {
             competitionId: result.competitionId,
             rank: result.rank,

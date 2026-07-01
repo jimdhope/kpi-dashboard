@@ -322,6 +322,7 @@ model Competition {
   createdBy     User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
   campaign      Campaign?          @relation(fields: [campaignId], references: [id])
   results       CompetitionResult[]
+  agentBadges   AgentBadge[]
 }
 
 model CompetitionRule {
@@ -635,15 +636,18 @@ model Badge {
 }
 
 model AgentBadge {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   agentProfileId  String
   badgeId         String
+  competitionId   String?
   context         Json?
-  earnedAt        DateTime @default(now())
+  earnedAt        DateTime     @default(now())
   agentProfile    AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
-  badge           Badge       @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  badge           Badge        @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  competition     Competition? @relation(fields: [competitionId], references: [id], onDelete: SetNull)
 
   @@unique([agentProfileId, badgeId])
+  @@index([competitionId])
 }
 
 model CompetitionResult {

@@ -5,12 +5,6 @@ import { activityService } from "@/server/services/activity-service";
 import { notificationService } from "@/server/services/notification-service";
 import { evaluateCriteria, type RuleContext } from "./rule-evaluator";
 
-const RANK_BONUSES: Record<number, number> = {
-  1: 100,
-  2: 50,
-  3: 25,
-};
-
 const LEVEL_THRESHOLDS = [
   { minXp: 0, title: "Rookie" },
   { minXp: 500, title: "Bronze" },
@@ -109,8 +103,7 @@ export const gamificationService = {
     const previousRanks = new Map<string, number>();
 
     for (const agent of rankedAgents) {
-      const rankBonus = RANK_BONUSES[agent.rank] ?? 0;
-      const xpEarned = agent.totalScore + rankBonus;
+      const xpEarned = agent.totalScore;
       totalXpAwarded += xpEarned;
 
       let profile = await prisma.agentProfile.findUnique({
@@ -151,19 +144,6 @@ export const gamificationService = {
             source: "competition_score",
             sourceId: competitionId,
             description: `Score from "${competition.name}"`,
-            createdAt: competition.endsAt ?? undefined,
-          },
-        });
-      }
-
-      if (rankBonus > 0) {
-        await prisma.xpTransaction.create({
-          data: {
-            userId: agent.userId,
-            amount: rankBonus,
-            source: "rank_bonus",
-            sourceId: competitionId,
-            description: `Rank #${agent.rank} bonus in "${competition.name}"`,
             createdAt: competition.endsAt ?? undefined,
           },
         });
@@ -355,7 +335,7 @@ export const gamificationService = {
     const transactions = await prisma.xpTransaction.findMany({
       where: {
         createdAt: { gte: start, lte: end },
-        source: { in: ["competition_score", "rank_bonus"] },
+        source: "competition_score",
       },
       include: {
         user: { select: { name: true, email: true } },
@@ -388,7 +368,7 @@ export const gamificationService = {
     const transactions = await prisma.xpTransaction.findMany({
       where: {
         createdAt: { gte: start, lte: end },
-        source: { in: ["competition_score", "rank_bonus"] },
+        source: "competition_score",
       },
       include: {
         user: { select: { name: true, email: true } },
@@ -644,4 +624,4 @@ export const gamificationService = {
 };
 
 // Level thresholds export for admin config
-export { LEVEL_THRESHOLDS, RANK_BONUSES, calculateLevel };
+export { LEVEL_THRESHOLDS, calculateLevel };
