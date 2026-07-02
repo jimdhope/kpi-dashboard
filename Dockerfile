@@ -25,7 +25,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Install netcat for health check + fonts for SVG rendering
-RUN apk add --no-cache netcat-openbsd bash fontconfig ttf-dejavu font-noto-emoji
+RUN apk add --no-cache netcat-openbsd bash fontconfig ttf-dejavu font-noto-emoji postgresql-client
 
 # Copy standalone build output from builder
 COPY --from=builder /app/.next/standalone ./
