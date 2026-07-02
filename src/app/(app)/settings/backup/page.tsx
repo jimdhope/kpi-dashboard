@@ -4,19 +4,16 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Download, Upload, Trash2, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-
-interface RestoreResult {
-  table: string;
-  imported: number;
-  errors: string[];
-}
+import { Loader2, Download, Upload, Trash2, AlertTriangle, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
 
 export default function BackupPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
-  const [restoreResults, setRestoreResults] = useState<RestoreResult[] | null>(null);
+  const [restorePhase, setRestorePhase] = useState<'idle' | 'confirm' | 'backup' | 'restore' | 'done'>('idle');
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [autoBackupPath, setAutoBackupPath] = useState<string | null>(null);
+  const [pendingFileName, setPendingFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -29,28 +26,26 @@ export default function BackupPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to export backup');
+        const err = await response.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(err.error || 'Failed to export backup');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
+
       const contentDisposition = response.headers.get('Content-Disposition');
       const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
-      const filename = filenameMatch ? filenameMatch[1] : `kpi-quest-backup-${new Date().toISOString().split('T')[0]}.json`;
-      
+      const filename = filenameMatch ? filenameMatch[1] : `kpi-quest-backup-${new Date().toISOString().split('T')[0]}.sql.gz`;
+
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
 
-      toast({
-        title: 'Backup exported',
-        description: `Downloaded ${filename}`,
-      });
+      toast({ title: 'Backup exported', description: `Downloaded ${filename}` });
     } catch (error) {
       toast({
         title: 'Export failed',
@@ -62,56 +57,70 @@ export default function BackupPage() {
     }
   };
 
-  const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    if (!file) return;
+    setPendingFileName(file.name);
+    setRestoreError(null);
+    setAutoBackupPath(null);
+    setRestorePhase('confirm');
+  };
+
+  const confirmRestore = async () => {
+    const file = fileInputRef.current?.files?.[0];
     if (!file) return;
 
     setIsRestoring(true);
-    setRestoreResults(null);
+    setRestorePhase('backup');
+    setRestoreError(null);
+    setAutoBackupPath(null);
 
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      setRestorePhase('backup');
 
       const response = await fetch('/api/settings/backup/restore', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: formData,
         credentials: 'include',
       });
+
+      setRestorePhase('restore');
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to restore backup');
+        throw new Error(result.error || 'Restore failed');
       }
 
-      setRestoreResults(result.results);
-      toast({
-        title: 'Backup restored',
-        description: 'Data has been imported successfully',
-      });
+      setAutoBackupPath(result.autoBackupPath || null);
+      setRestorePhase('done');
+      toast({ title: 'Backup restored', description: 'Data has been restored successfully' });
     } catch (error) {
+      setRestoreError(error instanceof Error ? error.message : 'Restore failed');
+      setRestorePhase('done');
       toast({
         title: 'Restore failed',
-        description: error instanceof Error ? error.message : 'Invalid backup file',
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {
       setIsRestoring(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
+  };
+
+  const cancelRestore = () => {
+    setRestorePhase('idle');
+    setPendingFileName(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleClearData = async () => {
     const confirmed = window.confirm(
       'Are you sure you want to clear ALL data? This action cannot be undone!'
     );
-
     if (!confirmed) return;
 
     setIsClearing(true);
@@ -122,13 +131,11 @@ export default function BackupPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to clear data');
+        const err = await response.json().catch(() => ({ error: 'Clear failed' }));
+        throw new Error(err.error || 'Failed to clear data');
       }
 
-      toast({
-        title: 'Data cleared',
-        description: 'All application data has been deleted',
-      });
+      toast({ title: 'Data cleared', description: 'All application data has been deleted' });
     } catch (error) {
       toast({
         title: 'Clear failed',
@@ -145,7 +152,7 @@ export default function BackupPage() {
       <div>
         <h1 className="text-3xl font-bold">Backup & Restore</h1>
         <p className="text-muted-foreground">
-          Export your data for safekeeping or restore from a backup file
+          Export a full database SQL dump or restore from a previous backup
         </p>
       </div>
 
@@ -157,13 +164,14 @@ export default function BackupPage() {
               Export Backup
             </CardTitle>
             <CardDescription>
-              Download all your data as a JSON file
+              Download a full database SQL dump
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Creates a complete backup including competitions, trackers, performance data, 
-              mini-games, directory contacts, knowledge base articles, and settings.
+              Creates a complete SQL dump of the entire database using pg_dump.
+              The file includes all tables, schemas, indexes, and data compressed
+              as a <code>.sql.gz</code> archive.
             </p>
             <Button onClick={handleExport} disabled={isExporting} className="w-full">
               {isExporting ? (
@@ -174,7 +182,7 @@ export default function BackupPage() {
               ) : (
                 <>
                   <Download className="mr-2 h-4 w-4" />
-                  Export Data
+                  Export SQL Dump
                 </>
               )}
             </Button>
@@ -188,24 +196,25 @@ export default function BackupPage() {
               Restore Backup
             </CardTitle>
             <CardDescription>
-              Import data from a backup file
+              Restore from a SQL dump file
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Restore data from a previously exported backup file. Existing records will be 
-              updated if they have the same ID, otherwise new records will be created.
+              Upload a <code>.sql</code> or <code>.sql.gz</code> backup file to restore.
+              An auto-backup of the current database will be created before restoring
+              as a safety net.
             </p>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json"
-              onChange={handleRestore}
+              accept=".sql,.gz,.sql.gz"
+              onChange={handleFileSelect}
               className="hidden"
               id="restore-upload"
             />
-            <Button 
-              onClick={() => fileInputRef.current?.click()} 
+            <Button
+              onClick={() => fileInputRef.current?.click()}
               disabled={isRestoring}
               variant="outline"
               className="w-full"
@@ -213,7 +222,7 @@ export default function BackupPage() {
               {isRestoring ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Restoring...
+                  {restorePhase === 'backup' ? 'Creating auto-backup...' : 'Restoring...'}
                 </>
               ) : (
                 <>
@@ -224,77 +233,151 @@ export default function BackupPage() {
             </Button>
           </CardContent>
         </Card>
-
-        <Card className="glass-card md:col-span-2 border-destructive/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Clear All Data
-            </CardTitle>
-            <CardDescription>
-              Permanently delete all application data
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              This will permanently delete ALL data including users, competitions, trackers, 
-              knowledge base, directory, and settings. Use with extreme caution - this 
-              action cannot be undone!
-            </p>
-            <Button 
-              onClick={handleClearData} 
-              disabled={isClearing}
-              variant="destructive"
-              className="w-full"
-            >
-              {isClearing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Clearing...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear All Data
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
-      {restoreResults && (
-        <Card className="glass-card">
+      {restorePhase === 'confirm' && pendingFileName && (
+        <Card className="glass-card border-amber-500/50">
           <CardHeader>
-            <CardTitle>Restore Results</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-amber-500">
+              <ShieldAlert className="h-5 w-5" />
+              Confirm Restore
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {restoreResults.map((result) => (
-                <div 
-                  key={result.table} 
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                >
-                  <div className="flex items-center gap-2">
-                    {result.errors.length > 0 ? (
-                      <XCircle className="h-4 w-4 text-destructive" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    )}
-                    <span className="font-medium">{result.table}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-medium">{result.imported} imported</span>
-                    {result.errors.length > 0 && (
-                      <p className="text-xs text-destructive">{result.errors[0]}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            <p className="text-sm">
+              You are about to restore from: <strong>{pendingFileName}</strong>
+            </p>
+            <div className="rounded-lg bg-amber-500/10 p-4 text-sm space-y-2">
+              <p className="font-medium">This will:</p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>Create an automatic backup of the current database first</li>
+                <li>Drop all existing tables</li>
+                <li>Restore the database from the uploaded file</li>
+              </ul>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={confirmRestore} disabled={isRestoring} className="flex-1">
+                {isRestoring ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                ) : (
+                  'Confirm Restore'
+                )}
+              </Button>
+              <Button onClick={cancelRestore} variant="outline" disabled={isRestoring}>
+                Cancel
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {isRestoring && (
+        <Card className="glass-card">
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                {restorePhase === 'backup' ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                ) : (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                )}
+                <div>
+                  <p className="font-medium">Creating auto-backup</p>
+                  <p className="text-sm text-muted-foreground">Saving current database state</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {restorePhase === 'restore' ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                ) : restorePhase === 'done' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <div className="h-5 w-5 rounded-full border-2 border-muted" />
+                )}
+                <div>
+                  <p className="font-medium">Restoring data</p>
+                  <p className="text-sm text-muted-foreground">Importing from backup file</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {restorePhase === 'done' && !isRestoring && (
+        <Card className={`glass-card ${restoreError ? 'border-destructive/50' : 'border-green-500/50'}`}>
+          <CardHeader>
+            <CardTitle className={`flex items-center gap-2 ${restoreError ? 'text-destructive' : 'text-green-500'}`}>
+              {restoreError ? (
+                <><XCircle className="h-5 w-5" /> Restore Failed</>
+              ) : (
+                <><CheckCircle className="h-5 w-5" /> Restore Complete</>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {restoreError ? (
+              <p className="text-sm text-destructive">{restoreError}</p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Database has been restored from the backup file.
+                </p>
+                {autoBackupPath && (
+                  <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                    <p className="font-medium mb-1">Auto-backup saved at:</p>
+                    <code className="text-xs break-all">{autoBackupPath}</code>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      A backup of your previous data was created before restoring.
+                      You can delete this file manually if no longer needed.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+            <Button onClick={() => { setRestorePhase('idle'); setRestoreError(null); setAutoBackupPath(null); setPendingFileName(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} variant="outline">
+              Dismiss
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="glass-card border-destructive/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Clear All Data
+          </CardTitle>
+          <CardDescription>
+            Permanently delete all application data
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            This will permanently delete ALL data including users, competitions, trackers,
+            knowledge base, directory, and settings. Use with extreme caution — this
+            action cannot be undone!
+          </p>
+          <Button
+            onClick={handleClearData}
+            disabled={isClearing}
+            variant="destructive"
+            className="w-full"
+          >
+            {isClearing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Clearing...
+              </>
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear All Data
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
