@@ -5,7 +5,7 @@ import pg from "pg";
 
 const RANK_BONUSES: Record<number, number> = { 1: 100, 2: 50, 3: 25 };
 
-function calculateLevel(totalXp: number): { level: number; title: string } {
+function calculateLevel(totalPoints: number): { level: number; title: string } {
   const thresholds = [
     { minXp: 0, title: "Rookie" },
     { minXp: 500, title: "Bronze" },
@@ -17,7 +17,7 @@ function calculateLevel(totalXp: number): { level: number; title: string } {
   let level = 1;
   let title = thresholds[0].title;
   for (let i = thresholds.length - 1; i >= 0; i--) {
-    if (totalXp >= thresholds[i].minXp) {
+    if (totalPoints >= thresholds[i].minXp) {
       level = i + 1;
       title = thresholds[i].title;
       break;
@@ -97,79 +97,64 @@ async function main() {
       return { ...agent, rank: denseRank };
     });
 
+    const endDate = competition.endsAt ?? new Date();
+
     for (const agent of ranked) {
       const rankBonus = RANK_BONUSES[agent.rank] ?? 0;
-      const xpEarned = agent.totalScore + rankBonus;
-
-      let profile = await prisma.agentProfile.findUnique({ where: { userId: agent.userId } });
-      if (!profile) {
-        profile = await prisma.agentProfile.create({ data: { userId: agent.userId } });
-      }
+      const pointsEarned = agent.totalScore + rankBonus;
 
       await prisma.competitionResult.create({
         data: {
-          agentProfileId: profile.id,
+          userId: agent.userId,
           competitionId: competition.id,
           rank: agent.rank,
           totalScore: agent.totalScore,
-          xpEarned,
+          xpEarned: pointsEarned,
           wasPresent: agent.wasPresent,
-          createdAt: competition.endsAt ?? undefined,
+          createdAt: endDate,
         },
       });
 
-      if (agent.totalScore > 0) {
-        await prisma.xpTransaction.create({
-          data: { userId: agent.userId, amount: agent.totalScore, source: "competition_score", sourceId: competition.id, createdAt: competition.endsAt ?? undefined },
-        });
-      }
+      const user = await prisma.user.findUnique({ where: { id: agent.userId } });
+      if (!user) continue;
 
-      if (rankBonus > 0) {
-        await prisma.xpTransaction.create({
-          data: { userId: agent.userId, amount: rankBonus, source: "rank_bonus", sourceId: competition.id, createdAt: competition.endsAt ?? undefined },
-        });
-      }
+      const newTotalPoints = user.totalPoints + pointsEarned;
+      const { level, title } = calculateLevel(newTotalPoints);
 
-      const newTotalXp = profile.totalXp + xpEarned;
-      const { level, title } = calculateLevel(newTotalXp);
-
-      await prisma.agentProfile.update({
-        where: { id: profile.id },
-        data: { totalXp: newTotalXp },
+      await prisma.user.update({
+        where: { id: agent.userId },
+        data: { totalPoints: newTotalPoints },
       });
-
-      if (agent.rank === 1) {
-        const existingStreak = await prisma.streak.findUnique({
-          where: { agentProfileId_type: { agentProfileId: profile.id, type: "win" } },
-        });
-        const newCount = (existingStreak?.currentCount ?? 0) + 1;
-        await prisma.streak.upsert({
-          where: { agentProfileId_type: { agentProfileId: profile.id, type: "win" } },
-          create: { agentProfileId: profile.id, type: "win", currentCount: 1, longestCount: 1 },
-          update: { currentCount: newCount, longestCount: Math.max(newCount, existingStreak?.longestCount ?? 0) },
-        });
-      }
 
       // Check badges
       const existingAgentBadges = await prisma.agentBadge.findMany({
-        where: { agentProfileId: profile.id },
+        where: { userId: agent.userId },
         include: { badge: true },
       });
       const existingBadgeKeys = new Set(existingAgentBadges.map((ab) => ab.badge.key));
 
       const resultCount = await prisma.competitionResult.count({
-        where: { agentProfileId: profile.id },
+        where: { userId: agent.userId },
       });
 
-      const winStreakRecord = await prisma.streak.findUnique({
-        where: { agentProfileId_type: { agentProfileId: profile.id, type: "win" } },
+      // Compute win streak from competition results
+      const winResults = await prisma.competitionResult.findMany({
+        where: { userId: agent.userId },
+        orderBy: { createdAt: "desc" },
+        take: 100,
       });
-      const winStreak = winStreakRecord?.currentCount ?? 0;
+      let winStreak = 0;
+      for (const r of winResults) {
+        if (r.rank === 1) winStreak++;
+        else break;
+      }
 
-      const highestEver = await prisma.competitionResult.findFirst({
+      const mostRecentScore = await prisma.competitionResult.findFirst({
+        where: { totalScore: { gt: 0 } },
         orderBy: { totalScore: "desc" },
         select: { totalScore: true },
       });
+      const highestEver = mostRecentScore?.totalScore ?? 0;
 
       const scriptBadgeChecks = [
         { key: "first_win", condition: agent.rank === 1 && !existingBadgeKeys.has("first_win") },
@@ -180,7 +165,7 @@ async function main() {
         { key: "streak_10", condition: winStreak >= 10 },
         { key: "three_peat", condition: winStreak === 3 },
         { key: "perfect_attendance", condition: agent.wasPresent },
-        { key: "score_machine", condition: agent.totalScore > (highestEver?.totalScore ?? 0) },
+        { key: "score_machine", condition: agent.totalScore > highestEver },
       ];
 
       for (const check of scriptBadgeChecks) {
@@ -190,10 +175,10 @@ async function main() {
         if (!existingBadgeKeys.has(check.key)) {
           await prisma.agentBadge.create({
             data: {
-              agentProfileId: profile.id,
+              userId: agent.userId,
               badgeId: badge.id,
               context: { competitionId: competition.id, rank: agent.rank },
-              earnedAt: competition.endsAt ?? undefined,
+              earnedAt: endDate,
             },
           });
           console.log(`      Badge awarded: ${badge.name}`);

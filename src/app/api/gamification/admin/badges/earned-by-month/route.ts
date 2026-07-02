@@ -19,11 +19,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         badge: { select: { key: true, name: true } },
-        agentProfile: {
-          include: {
-            user: { select: { name: true, email: true } },
-          },
-        },
+        user: { select: { name: true, email: true } },
       },
       orderBy: { earnedAt: "desc" },
     });
@@ -31,7 +27,7 @@ export async function GET(request: NextRequest) {
     const grouped: Record<string, {
       badgeKey: string;
       badgeName: string;
-      agents: Array<{ name: string; earnedAt: string; agentProfileId: string; rank: number | null }>;
+      agents: Array<{ name: string; earnedAt: string; userId: string; rank: number | null }>;
     }> = {};
 
     for (const ab of agentBadges) {
@@ -40,9 +36,9 @@ export async function GET(request: NextRequest) {
         grouped[key] = { badgeKey: key, badgeName: ab.badge.name, agents: [] };
       }
       grouped[key].agents.push({
-        name: ab.agentProfile.user.name ?? ab.agentProfile.user.email ?? "Unknown",
+        name: ab.user.name ?? ab.user.email ?? "Unknown",
         earnedAt: ab.earnedAt.toISOString(),
-        agentProfileId: ab.agentProfileId,
+        userId: ab.userId,
         rank: (ab.context as any)?.rank ?? null,
       });
     }

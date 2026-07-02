@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ badg
 
     const agentBadge = await prisma.agentBadge.findFirst({
       where: {
-        agentProfile: { userId: user.id },
+        userId: user.id,
         badge: { key: badgeKey },
       },
       orderBy: { earnedAt: "desc" },

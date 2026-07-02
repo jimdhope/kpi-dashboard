@@ -28,6 +28,7 @@ export async function POST(request: Request) {
 
     return ok({ summaries });
   } catch (error) {
+    console.error("Gamification evaluation failed:", error);
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid payload.");
     }

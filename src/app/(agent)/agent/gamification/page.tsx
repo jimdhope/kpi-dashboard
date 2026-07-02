@@ -13,9 +13,9 @@ import type { AppUser } from '@/lib/contracts';
 interface AgentProfile {
   id: string;
   level: number;
-  totalXp: number;
-  xpProgress: number;
-  xpToNextLevel: number;
+  totalPoints: number;
+  progress: number;
+  pointsToNextLevel: number;
   currentTitle: string;
   badges: Array<{
     id: string;
@@ -84,7 +84,7 @@ export default function AgentGamificationPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Gamification</h1>
-        <p className="text-muted-foreground mt-1">Your XP, badges, streaks, and rankings</p>
+        <p className="text-muted-foreground mt-1">Your Points, badges, streaks, and rankings</p>
       </div>
 
       {/* Profile Hero */}
@@ -101,17 +101,17 @@ export default function AgentGamificationPage() {
               </p>
               <div className="mt-3">
                 <div className="flex items-center justify-between text-sm mb-1">
-                  <span>{profile?.totalXp?.toLocaleString() ?? 0} XP</span>
+                  <span>{profile?.totalPoints?.toLocaleString() ?? 0} Points</span>
                   <span className="text-muted-foreground">
-                    {profile?.xpToNextLevel && profile.xpToNextLevel > 0
-                      ? `${profile.xpToNextLevel.toLocaleString()} to next level`
+                    {profile?.pointsToNextLevel && profile.pointsToNextLevel > 0
+                      ? `${profile.pointsToNextLevel.toLocaleString()} to next level`
                       : "Max level"}
                   </span>
                 </div>
                 <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"
-                    style={{ width: `${Math.min(100, profile?.xpProgress ?? 0)}%` }}
+                    style={{ width: `${Math.min(100, profile?.progress ?? 0)}%` }}
                   />
                 </div>
               </div>
@@ -223,7 +223,7 @@ export default function AgentGamificationPage() {
                         <AvatarFallback className="text-xs">{generateInitials(entry.name)}</AvatarFallback>
                       </Avatar>
                       <span className="flex-1 font-medium text-sm">{entry.name}</span>
-                      <span className="text-sm font-semibold">{entry.xp.toLocaleString()} XP</span>
+                      <span className="text-sm font-semibold">{entry.points.toLocaleString()} Points</span>
                     </div>
                   ))}
                 </div>
@@ -234,13 +234,14 @@ export default function AgentGamificationPage() {
 
         <TabsContent value="alltime" className="mt-4">
           <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="h-5 w-5 text-amber-500" />
-                All-Time Leaderboard
-              </CardTitle>
-              <CardDescription>Top agents by total XP</CardDescription>
-            </CardHeader>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
+                 <Crown className="h-5 w-5 text-amber-500" />
+                 All-Time Leaderboard
+               </CardTitle>
+               <CardDescription>Top agents by total Points</CardDescription>
+             </CardHeader>
+
             <CardContent>
               {allTimeLeaderboard.length === 0 ? (
                 <p className="text-muted-foreground text-sm py-4 text-center">No rankings yet.</p>
@@ -258,14 +259,15 @@ export default function AgentGamificationPage() {
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="text-xs">{generateInitials(entry.name)}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{entry.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Lvl {entry.level} {entry.title} · {entry.badgeCount} badges
-                        </p>
-                      </div>
-                      <span className="text-sm font-semibold">{entry.totalXp.toLocaleString()} XP</span>
-                    </div>
+                       <div className="flex-1">
+                         <p className="font-medium text-sm">{entry.name}</p>
+                         <p className="text-xs text-muted-foreground">
+                           Lvl {entry.level} {entry.title} · {entry.badgeCount} badges
+                         </p>
+                       </div>
+                       <span className="text-sm font-semibold">{entry.totalPoints.toLocaleString()} Points</span>
+                     </div>
+
                   ))}
                 </div>
               )}
@@ -291,7 +293,7 @@ export default function AgentGamificationPage() {
                     <th className="text-left py-2 font-medium">Date</th>
                     <th className="text-center py-2 font-medium">Rank</th>
                     <th className="text-right py-2 font-medium">Score</th>
-                    <th className="text-right py-2 font-medium">XP Earned</th>
+                    <th className="text-right py-2 font-medium">Points Earned</th>
                   </tr>
                 </thead>
                 <tbody>

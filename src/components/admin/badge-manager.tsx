@@ -9,14 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Loader2, X, GripVertical, AlertCircle } from "lucide-react";
-
-const EMOJIS = [
-  "🏆", "🥇", "🥈", "🥉", "⭐", "🌟", "🔥", "💯", "👑",
-  "🎯", "🎖️", "🏅", "💎", "🔱", "⚡", "🛡️", "🎪", "🎭",
-  "🌈", "🌊", "🔥", "💪", "🧠", "🎨", "🎵", "📈", "🚀",
-  "💥", "✨", "🎉", "🎊", "🏁", "🎲", "♟️", "🔮", "💫",
-];
+import { Plus, Pencil, Trash2, Loader2, X, AlertCircle, Copy } from "lucide-react";
 
 const FIELD_OPTIONS = [
   { value: "rank", label: "Rank" },
@@ -25,6 +18,12 @@ const FIELD_OPTIONS = [
   { value: "wasPresent", label: "Was Present" },
   { value: "streak", label: "Win Streak" },
   { value: "totalCompetitions", label: "Total Competitions" },
+  { value: "bestSingleScore", label: "Best Single Score" },
+  { value: "bestSingleRank", label: "Best Single Rank" },
+  { value: "percentile", label: "Percentile" },
+  { value: "totalParticipants", label: "Total Participants" },
+  { value: "consecutiveCompetitions", label: "Consecutive Competitions" },
+  { value: "attendanceCount", label: "Attendance Count" },
 ];
 
 const OPERATOR_OPTIONS = [
@@ -43,12 +42,31 @@ const SCOPE_OPTIONS = [
   { value: "MANUAL", label: "Manual Only" },
 ];
 
+const RULE_TYPE_OPTIONS = [
+  { value: "simple", label: "Field Comparison" },
+  { value: "percentile", label: "Top X %" },
+  { value: "attendance", label: "Attendance" },
+  { value: "consecutive", label: "Consecutive" },
+  { value: "singleScore", label: "Single Score" },
+  { value: "improvement", label: "Improvement" },
+  { value: "kpiTopN", label: "KPI Top N" },
+];
+
 interface CriteriaRule {
   op?: "and" | "or";
   field?: string;
   operator?: string;
   value?: number | boolean | string;
   rules?: CriteriaRule[];
+  ruleType?: "simple" | "percentile" | "attendance" | "consecutive" | "singleScore" | "improvement" | "kpiTopN";
+  scope?: string;
+  percentile?: number;
+  minCount?: number;
+  totalCount?: number;
+  minConsecutive?: number;
+  minImprovement?: number;
+  kpiRuleName?: string;
+  minKpiRank?: number;
 }
 
 interface BadgeData {
@@ -70,11 +88,311 @@ function generateKey(name: string): string {
 }
 
 function newLeafRule(): CriteriaRule {
-  return { field: "rank", operator: "eq", value: 1 };
+  return { ruleType: "simple", field: "rank", operator: "eq", value: 1 };
+}
+
+function newPercentileRule(): CriteriaRule {
+  return { ruleType: "percentile", scope: "COMPETITION", percentile: 25 };
+}
+
+function newAttendanceRule(): CriteriaRule {
+  return { ruleType: "attendance", scope: "MONTHLY", minCount: 5, totalCount: 10 };
+}
+
+function newConsecutiveRule(): CriteriaRule {
+  return { ruleType: "consecutive", scope: "MONTHLY", minConsecutive: 3 };
+}
+
+function newSingleScoreRule(): CriteriaRule {
+  return { ruleType: "singleScore", field: "totalScore", operator: "gte", value: 1000, scope: "COMPETITION" };
+}
+
+function newImprovementRule(): CriteriaRule {
+  return { ruleType: "improvement", minImprovement: 3 };
+}
+
+function newKpiTopNRule(): CriteriaRule {
+  return { ruleType: "kpiTopN", kpiRuleName: "", minKpiRank: 3, scope: "COMPETITION" };
 }
 
 function newGroupRule(op: "and" | "or"): CriteriaRule {
   return { op, rules: [newLeafRule()] };
+}
+
+function RuleLeafForm({ rule, onChange, onRemove, depth }: {
+  rule: CriteriaRule;
+  onChange: (r: CriteriaRule) => void;
+  onRemove?: () => void;
+  depth: number;
+}) {
+  const ruleType = rule.ruleType ?? "simple";
+
+  return (
+    <div className={`border rounded-lg p-3 space-y-2 ${depth > 0 ? "ml-4 border-dashed" : ""}`}>
+      <div className="flex items-center gap-2">
+        <select
+          className="text-xs font-medium bg-muted rounded px-2 py-1 border"
+          value={ruleType}
+          onChange={e => {
+            const newType = e.target.value as CriteriaRule["ruleType"];
+            switch (newType) {
+              case "simple": onChange(newLeafRule()); break;
+              case "percentile": onChange(newPercentileRule()); break;
+              case "attendance": onChange(newAttendanceRule()); break;
+              case "consecutive": onChange(newConsecutiveRule()); break;
+              case "singleScore": onChange(newSingleScoreRule()); break;
+              case "improvement": onChange(newImprovementRule()); break;
+              case "kpiTopN": onChange(newKpiTopNRule()); break;
+              default: onChange(newLeafRule());
+            }
+          }}
+        >
+          {RULE_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        {onRemove && depth > 0 && (
+          <button onClick={onRemove} className="ml-auto text-muted-foreground hover:text-destructive">
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      {ruleType === "simple" && (
+        <SimpleRuleForm rule={rule} onChange={onChange} />
+      )}
+      {ruleType === "percentile" && (
+        <PercentileRuleForm rule={rule} onChange={onChange} />
+      )}
+      {ruleType === "attendance" && (
+        <AttendanceRuleForm rule={rule} onChange={onChange} />
+      )}
+      {ruleType === "consecutive" && (
+        <ConsecutiveRuleForm rule={rule} onChange={onChange} />
+      )}
+      {ruleType === "singleScore" && (
+        <SingleScoreRuleForm rule={rule} onChange={onChange} />
+      )}
+      {ruleType === "improvement" && (
+        <ImprovementRuleForm rule={rule} onChange={onChange} />
+      )}
+      {ruleType === "kpiTopN" && (
+        <KpiTopNRuleForm rule={rule} onChange={onChange} />
+      )}
+    </div>
+  );
+}
+
+function SimpleRuleForm({ rule, onChange }: { rule: CriteriaRule; onChange: (r: CriteriaRule) => void }) {
+  const isBoolField = rule.field === "wasPresent";
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.field ?? "rank"}
+        onChange={e => onChange({ ...rule, field: e.target.value, value: e.target.value === "wasPresent" ? true : rule.value ?? 1 })}
+      >
+        {FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      {!isBoolField && (
+        <select
+          className="text-sm bg-muted rounded px-2 py-1 border"
+          value={rule.operator ?? "eq"}
+          onChange={e => onChange({ ...rule, operator: e.target.value })}
+        >
+          {OPERATOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      )}
+      {!isBoolField ? (
+        <Input
+          type="number"
+          className="w-20 h-8 text-sm"
+          value={String(rule.value ?? 0)}
+          onChange={e => onChange({ ...rule, value: parseInt(e.target.value, 10) || 0 })}
+        />
+      ) : (
+        <select
+          className="text-sm bg-muted rounded px-2 py-1 border"
+          value={rule.value ? "true" : "false"}
+          onChange={e => onChange({ ...rule, value: e.target.value === "true" })}
+        >
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      )}
+    </div>
+  );
+}
+
+function PercentileRuleForm({ rule, onChange }: { rule: CriteriaRule; onChange: (r: CriteriaRule) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-muted-foreground">Top</span>
+      <Input
+        type="number"
+        className="w-20 h-8 text-sm"
+        min={1}
+        max={100}
+        value={String(rule.percentile ?? 25)}
+        onChange={e => onChange({ ...rule, percentile: parseInt(e.target.value, 10) || 25 })}
+      />
+      <span className="text-xs text-muted-foreground">%</span>
+      <span className="text-xs text-muted-foreground ml-1">in</span>
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.scope ?? "COMPETITION"}
+        onChange={e => onChange({ ...rule, scope: e.target.value })}
+      >
+        <option value="COMPETITION">Competition</option>
+        <option value="MONTHLY">Month</option>
+        <option value="YEARLY">Year</option>
+      </select>
+    </div>
+  );
+}
+
+function AttendanceRuleForm({ rule, onChange }: { rule: CriteriaRule; onChange: (r: CriteriaRule) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-muted-foreground">Present at least</span>
+      <Input
+        type="number"
+        className="w-20 h-8 text-sm"
+        min={1}
+        value={String(rule.minCount ?? 5)}
+        onChange={e => onChange({ ...rule, minCount: parseInt(e.target.value, 10) || 5 })}
+      />
+      <span className="text-xs text-muted-foreground">out of last</span>
+      <Input
+        type="number"
+        className="w-20 h-8 text-sm"
+        min={1}
+        value={String(rule.totalCount ?? 10)}
+        onChange={e => onChange({ ...rule, totalCount: parseInt(e.target.value, 10) || 10 })}
+      />
+      <span className="text-xs text-muted-foreground ml-1">in</span>
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.scope ?? "MONTHLY"}
+        onChange={e => onChange({ ...rule, scope: e.target.value })}
+      >
+        <option value="COMPETITION">Competitions</option>
+        <option value="MONTHLY">Months</option>
+        <option value="YEARLY">Years</option>
+      </select>
+    </div>
+  );
+}
+
+function ConsecutiveRuleForm({ rule, onChange }: { rule: CriteriaRule; onChange: (r: CriteriaRule) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-muted-foreground">At least</span>
+      <Input
+        type="number"
+        className="w-20 h-8 text-sm"
+        min={2}
+        value={String(rule.minConsecutive ?? 3)}
+        onChange={e => onChange({ ...rule, minConsecutive: parseInt(e.target.value, 10) || 3 })}
+      />
+      <span className="text-xs text-muted-foreground">consecutive</span>
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.scope ?? "MONTHLY"}
+        onChange={e => onChange({ ...rule, scope: e.target.value })}
+      >
+        <option value="COMPETITION">Competitions</option>
+        <option value="MONTHLY">Months</option>
+        <option value="YEARLY">Years</option>
+      </select>
+    </div>
+  );
+}
+
+function SingleScoreRuleForm({ rule, onChange }: { rule: CriteriaRule; onChange: (r: CriteriaRule) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.field ?? "totalScore"}
+        onChange={e => onChange({ ...rule, field: e.target.value })}
+      >
+        <option value="totalScore">Score</option>
+        <option value="rank">Rank</option>
+      </select>
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.operator ?? "gte"}
+        onChange={e => onChange({ ...rule, operator: e.target.value })}
+      >
+        {OPERATOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <Input
+        type="number"
+        className="w-20 h-8 text-sm"
+        value={String(rule.value ?? 1000)}
+        onChange={e => onChange({ ...rule, value: parseInt(e.target.value, 10) || 0 })}
+      />
+      <span className="text-xs text-muted-foreground ml-1">in any</span>
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.scope ?? "COMPETITION"}
+        onChange={e => onChange({ ...rule, scope: e.target.value })}
+      >
+        <option value="COMPETITION">Competition</option>
+        <option value="MONTHLY">Month</option>
+        <option value="YEARLY">Year</option>
+      </select>
+    </div>
+  );
+}
+
+function ImprovementRuleForm({ rule, onChange }: { rule: CriteriaRule; onChange: (r: CriteriaRule) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-muted-foreground">Rank improved by at least</span>
+      <Input
+        type="number"
+        className="w-20 h-8 text-sm"
+        min={1}
+        value={String(rule.minImprovement ?? 3)}
+        onChange={e => onChange({ ...rule, minImprovement: parseInt(e.target.value, 10) || 3 })}
+      />
+      <span className="text-xs text-muted-foreground">positions</span>
+    </div>
+  );
+}
+
+function KpiTopNRuleForm({ rule, onChange }: { rule: CriteriaRule; onChange: (r: CriteriaRule) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-muted-foreground">Top</span>
+      <Input
+        type="number"
+        className="w-20 h-8 text-sm"
+        min={1}
+        value={String(rule.minKpiRank ?? 3)}
+        onChange={e => onChange({ ...rule, minKpiRank: parseInt(e.target.value, 10) || 3 })}
+      />
+      <span className="text-xs text-muted-foreground">in</span>
+      <Input
+        type="text"
+        className="w-40 h-8 text-sm"
+        placeholder="e.g. Sales Calls"
+        value={rule.kpiRuleName ?? ""}
+        onChange={e => onChange({ ...rule, kpiRuleName: e.target.value })}
+      />
+      <span className="text-xs text-muted-foreground ml-1">in</span>
+      <select
+        className="text-sm bg-muted rounded px-2 py-1 border"
+        value={rule.scope ?? "COMPETITION"}
+        onChange={e => onChange({ ...rule, scope: e.target.value })}
+      >
+        <option value="COMPETITION">Competition</option>
+        <option value="MONTHLY">Month</option>
+        <option value="YEARLY">Year</option>
+      </select>
+    </div>
+  );
 }
 
 function RuleBuilder({ rule, onChange, onRemove, depth }: {
@@ -145,49 +463,8 @@ function RuleBuilder({ rule, onChange, onRemove, depth }: {
     );
   }
 
-  const isBoolField = rule.field === "wasPresent";
-
   return (
-    <div className={`flex items-center gap-2 flex-wrap ${depth > 0 ? "ml-4" : ""}`}>
-      <select
-        className="text-sm bg-muted rounded px-2 py-1 border"
-        value={rule.field ?? "rank"}
-        onChange={e => onChange({ ...rule, field: e.target.value, value: e.target.value === "wasPresent" ? true : rule.value ?? 1 })}
-      >
-        {FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      {!isBoolField && (
-        <select
-          className="text-sm bg-muted rounded px-2 py-1 border"
-          value={rule.operator ?? "eq"}
-          onChange={e => onChange({ ...rule, operator: e.target.value })}
-        >
-          {OPERATOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      )}
-      {!isBoolField ? (
-        <Input
-          type="number"
-          className="w-20 h-8 text-sm"
-          value={String(rule.value ?? 0)}
-          onChange={e => onChange({ ...rule, value: parseInt(e.target.value, 10) || 0 })}
-        />
-      ) : (
-        <select
-          className="text-sm bg-muted rounded px-2 py-1 border"
-          value={rule.value ? "true" : "false"}
-          onChange={e => onChange({ ...rule, value: e.target.value === "true" })}
-        >
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      )}
-      {onRemove && depth > 0 && (
-        <button onClick={onRemove} className="text-muted-foreground hover:text-destructive">
-          <X className="h-3 w-3" />
-        </button>
-      )}
-    </div>
+    <RuleLeafForm rule={rule} onChange={onChange} onRemove={onRemove} depth={depth} />
   );
 }
 
@@ -262,6 +539,21 @@ export default function BadgeManager({ onBadgeChange }: BadgeManagerProps) {
     setFormIsActive(badge.isActive);
     setFormSortOrder(badge.sortOrder);
     setFormKeyLocked(true);
+    setIsCreating(true);
+  };
+
+  const openDuplicate = (badge: BadgeData) => {
+    setEditingBadge(null);
+    setFormKey(generateKey(badge.name + " copy"));
+    setFormName(badge.name + " (copy)");
+    setFormDescription(badge.description ?? "");
+    setFormIcon(badge.icon ?? "🏆");
+    setFormScope(badge.scope);
+    setFormCriteria(badge.criteria);
+    setFormRankTinted(badge.rankTinted);
+    setFormIsActive(badge.isActive);
+    setFormSortOrder(badge.sortOrder);
+    setFormKeyLocked(false);
     setIsCreating(true);
   };
 
@@ -390,26 +682,20 @@ export default function BadgeManager({ onBadgeChange }: BadgeManagerProps) {
             <Textarea value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="What does this badge represent?" rows={2} />
           </div>
 
-          <div className="space-y-2">
-            <Label>Icon</Label>
-            <div className="flex items-center gap-4">
-              <div className="text-4xl w-14 h-14 flex items-center justify-center rounded-lg border bg-muted/30">{formIcon}</div>
-              <div className="flex-1">
-                <div className="grid grid-cols-10 gap-1">
-                  {EMOJIS.map(emoji => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      className={`w-8 h-8 text-lg flex items-center justify-center rounded hover:bg-muted transition-colors ${formIcon === emoji ? "bg-primary/20 ring-2 ring-primary" : ""}`}
-                      onClick={() => setFormIcon(emoji)}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <div className="flex items-center gap-4">
+                <div className="text-4xl w-14 h-14 flex items-center justify-center rounded-lg border bg-muted/30">{formIcon}</div>
+                <div className="flex-1">
+                  <Input 
+                    value={formIcon} 
+                    onChange={e => setFormIcon(e.target.value)} 
+                    placeholder="Enter emoji" 
+                    className="max-w-[120px] text-center"
+                  />
                 </div>
               </div>
             </div>
-          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -526,6 +812,9 @@ export default function BadgeManager({ onBadgeChange }: BadgeManagerProps) {
                   </button>
                   <button onClick={() => openEdit(badge)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted">
                     <Pencil className="h-3 w-3" />
+                  </button>
+                  <button onClick={() => openDuplicate(badge)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted" title="Duplicate">
+                    <Copy className="h-3 w-3" />
                   </button>
                   <button onClick={() => handleDelete(badge)} className="text-xs text-muted-foreground hover:text-destructive px-2 py-1 rounded hover:bg-destructive/10">
                     <Trash2 className="h-3 w-3" />

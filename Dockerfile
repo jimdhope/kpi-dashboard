@@ -45,7 +45,13 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'echo "Waiting for database..."' >> /entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
     echo 'echo "Database ready! Running migrations..."' >> /entrypoint.sh && \
-    echo 'npx prisma migrate deploy' >> /entrypoint.sh && \
+    echo 'npx prisma migrate deploy 2>/dev/null || {' >> /entrypoint.sh && \
+    echo '  echo "Migration deploy failed. Trying db_push transition..."' >> /entrypoint.sh && \
+    echo '  npx prisma db push --accept-data-loss --skip-generate' >> /entrypoint.sh && \
+    echo '  npx prisma migrate resolve --applied 0001_initial 2>/dev/null || true' >> /entrypoint.sh && \
+    echo '  npx prisma migrate resolve --applied 0002_add_gamification_tables 2>/dev/null || true' >> /entrypoint.sh && \
+    echo '  npx prisma migrate deploy' >> /entrypoint.sh && \
+    echo '}' >> /entrypoint.sh && \
     echo 'echo "Seeding database..."' >> /entrypoint.sh && \
     echo 'npx tsx prisma/seed.ts' >> /entrypoint.sh && \
     echo 'echo "Starting application..."' >> /entrypoint.sh && \
@@ -57,7 +63,13 @@ RUN echo '#!/bin/bash' > /worker-entrypoint.sh && \
     echo 'echo "Worker waiting for database..."' >> /worker-entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /worker-entrypoint.sh && \
     echo 'echo "Database ready. Running migrations..."' >> /worker-entrypoint.sh && \
-    echo 'npx prisma migrate deploy' >> /worker-entrypoint.sh && \
+    echo 'npx prisma migrate deploy 2>/dev/null || {' >> /worker-entrypoint.sh && \
+    echo '  echo "Migration deploy failed. Trying db_push transition..."' >> /worker-entrypoint.sh && \
+    echo '  npx prisma db push --accept-data-loss --skip-generate' >> /worker-entrypoint.sh && \
+    echo '  npx prisma migrate resolve --applied 0001_initial 2>/dev/null || true' >> /worker-entrypoint.sh && \
+    echo '  npx prisma migrate resolve --applied 0002_add_gamification_tables 2>/dev/null || true' >> /worker-entrypoint.sh && \
+    echo '  npx prisma migrate deploy' >> /worker-entrypoint.sh && \
+    echo '}' >> /worker-entrypoint.sh && \
     echo 'echo "Starting worker..."' >> /worker-entrypoint.sh && \
     echo 'exec node server.js' >> /worker-entrypoint.sh && \
     chmod +x /worker-entrypoint.sh

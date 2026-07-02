@@ -11,13 +11,13 @@ export async function GET() {
     const latest = await prisma.agentBadge.findFirst({
       where: { badgeId: badge.id },
       orderBy: { earnedAt: "desc" },
-      include: { agentProfile: { include: { user: true } } },
+      include: { user: { select: { name: true } } },
     });
     if (!latest) return ok({ champion: null });
 
     const ctx = (latest.context as { month?: number; year?: number }) ?? {};
     const monthDate = ctx.year && ctx.month ? new Date(ctx.year, ctx.month - 1) : latest.earnedAt;
-    return ok({ champion: { name: latest.agentProfile.user.name, monthDate } });
+    return ok({ champion: { name: latest.user.name, monthDate } });
   } catch {
     return errorResponse(500, "Failed to fetch current champion.");
   }

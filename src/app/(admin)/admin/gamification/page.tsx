@@ -21,7 +21,7 @@ import BadgeManager from '@/components/admin/badge-manager';
 interface LeaderboardEntry {
   userId: string;
   name: string;
-  totalXp: number;
+  totalPoints: number;
   level: number;
   title: string;
   badgeCount: number;
@@ -30,12 +30,12 @@ interface LeaderboardEntry {
 }
 
 const LEVEL_DEFINITIONS = [
-  { level: 1, title: "Rookie", minXp: 0, maxXp: 499 },
-  { level: 2, title: "Bronze", minXp: 500, maxXp: 1499 },
-  { level: 3, title: "Silver", minXp: 1500, maxXp: 3499 },
-  { level: 4, title: "Gold", minXp: 3500, maxXp: 6999 },
-  { level: 5, title: "Platinum", minXp: 7000, maxXp: 11999 },
-  { level: 6, title: "Diamond", minXp: 12000, maxXp: Infinity },
+  { level: 1, title: "Rookie", minPoints: 0, maxPoints: 499 },
+  { level: 2, title: "Bronze", minPoints: 500, maxPoints: 1499 },
+  { level: 3, title: "Silver", minPoints: 1500, maxPoints: 3499 },
+  { level: 4, title: "Gold", minPoints: 3500, maxPoints: 6999 },
+  { level: 5, title: "Platinum", minPoints: 7000, maxPoints: 11999 },
+  { level: 6, title: "Diamond", minPoints: 12000, maxPoints: Infinity },
 ];
 
 type LeaderboardMode = "alltime" | "monthly" | "yearly";
@@ -65,6 +65,10 @@ export default function AdminGamificationPage() {
   const [earnedByMonth, setEarnedByMonth] = useState<any[]>([]);
   const [earnedByCompetition, setEarnedByCompetition] = useState<any[]>([]);
   const [competitions, setCompetitions] = useState<any[]>([]);
+
+  // Tab tracking — refetch badge data when badges tab activates
+  const [activeTab, setActiveTab] = useState("leaderboards");
+  const [badgeTabRefresh, setBadgeTabRefresh] = useState(0);
 
   // Actions
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -102,39 +106,58 @@ export default function AdminGamificationPage() {
   }, []);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    const fetchMonthlyLeaderboard = async () => {
       try {
         const res = await fetch(`/api/gamification/leaderboard/monthly?year=${lbYear}&month=${lbMonth}`);
-        if (res.ok) { const d = await res.json(); setMonthlyLeaderboard(d.entries ?? []); }
+        if (!cancelled && res.ok) {
+          const d = await res.json();
+          setMonthlyLeaderboard(d.entries ?? []);
+        }
       } catch {}
-    })();
-  }, [lbMonth, lbYear]);
+    };
 
-  useEffect(() => {
-    (async () => {
+    const fetchEarnedByMonth = async () => {
       try {
         const res = await fetch(`/api/gamification/admin/badges/earned-by-month?year=${badgeYear}&month=${badgeMonth}`);
-        if (res.ok) { const d = await res.json(); setEarnedByMonth(d.entries ?? []); }
+        if (!cancelled && res.ok) {
+          const d = await res.json();
+          setEarnedByMonth(d.entries ?? []);
+        }
       } catch {}
-    })();
-  }, [badgeMonth, badgeYear]);
+    };
 
-  useEffect(() => {
-    if (!selectedCompetitionId) { setEarnedByCompetition([]); return; }
-    (async () => {
+    const fetchEarnedByCompetition = async () => {
+      if (!selectedCompetitionId) {
+        if (!cancelled) setEarnedByCompetition([]);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/gamification/admin/badges/earned-by-competition?competitionId=${selectedCompetitionId}`);
-        if (res.ok) { const d = await res.json(); setEarnedByCompetition(d.entries ?? []); }
+        if (!cancelled && res.ok) {
+          const d = await res.json();
+          setEarnedByCompetition(d.entries ?? []);
+        }
       } catch {}
-    })();
-  }, [selectedCompetitionId]);
+    };
+
+    void fetchMonthlyLeaderboard();
+    void fetchEarnedByMonth();
+    void fetchEarnedByCompetition();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lbMonth, lbYear, badgeMonth, badgeYear, badgeTabRefresh, selectedCompetitionId]);
 
   const derivedStats = useMemo(() => {
-    const totalXp = allTimeLeaderboard.reduce((s, e) => s + e.totalXp, 0);
+    const totalPoints = allTimeLeaderboard.reduce((s, e) => s + e.totalPoints, 0);
     const levelCounts: Record<number, number> = {};
     allTimeLeaderboard.forEach(e => { levelCounts[e.level] = (levelCounts[e.level] ?? 0) + 1; });
     const badgeCount = allTimeLeaderboard.reduce((s, e) => s + e.badgeCount, 0);
-    return { totalXp, levelCounts, badgeCount, agentCount: allTimeLeaderboard.length };
+    return { totalPoints, levelCounts, badgeCount, agentCount: allTimeLeaderboard.length };
   }, [allTimeLeaderboard]);
 
   const handleEvaluateAll = async () => {
@@ -192,17 +215,18 @@ export default function AdminGamificationPage() {
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Agent</TableHead>
-              <TableHead className="text-right">Level</TableHead>
-              <TableHead className="text-right">XP</TableHead>
-              <TableHead className="text-right">Badges</TableHead>
-            </TableRow>
+                <TableRow>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Agent</TableHead>
+                  <TableHead className="text-right">Level</TableHead>
+                  <TableHead className="text-right">Points</TableHead>
+                  <TableHead className="text-right">Badges</TableHead>
+                </TableRow>
+
           </TableHeader>
           <TableBody>
             {entries.map((entry: any, i: number) => (
-              <TableRow key={entry.userId}>
+              <TableRow key={`${entry.userId ?? 'unknown'}-${entry.rank ?? i}-${entry.totalPoints ?? entry.points ?? 0}`}>
                 <TableCell className="font-bold text-lg">
                   {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank ?? i + 1}`}
                 </TableCell>
@@ -215,7 +239,8 @@ export default function AdminGamificationPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right">{entry.level ?? '-'}</TableCell>
-                <TableCell className="text-right font-semibold">{(entry.totalXp ?? entry.xp ?? 0).toLocaleString()}</TableCell>
+                 <TableCell className="text-right font-semibold">{(entry.totalPoints ?? entry.points ?? 0).toLocaleString()}</TableCell>
+
                 <TableCell className="text-right">{entry.badgeCount ?? '-'}</TableCell>
               </TableRow>
             ))}
@@ -225,8 +250,8 @@ export default function AdminGamificationPage() {
     )
   );
 
-  const renderBadgeCard = (badge: any, agents: any[], badgeMonth_: number, badgeYear_: number) => (
-    <div key={badge.id} className="p-3 rounded-lg border bg-muted/30 flex flex-col gap-2">
+  const renderBadgeCard = (badge: any, agents: any[], badgeMonth_: number, badgeYear_: number, listKey?: string) => (
+    <div key={listKey ?? `${badge.id ?? badge.key ?? 'badge'}-${badgeMonth_}-${badgeYear_}`} className="p-3 rounded-lg border bg-muted/30 flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
           <Award className="h-4 w-4 text-amber-500" />
@@ -242,9 +267,9 @@ export default function AdminGamificationPage() {
             {agents.length} agent{agents.length === 1 ? "" : "s"} earned this badge:
           </p>
           <div className="flex flex-wrap gap-1">
-            {agents.map((a: any) => (
+            {agents.map((a: any, index: number) => (
               <a
-                key={a.agentProfileId}
+                key={`${badge.key ?? badge.id ?? 'badge'}-${a.userId ?? 'unknown'}-${index}`}
                 href={`/api/gamification/badges/${badge.key}/image?month=${badgeMonth_}&year=${badgeYear_}&rank=${a.rank}&agentName=${encodeURIComponent(a.name?.split(' ')[0] || 'Agent')}`}
                 download={`${badge.name.replace(/\s+/g, '-')}-${format(new Date(badgeYear_, badgeMonth_ - 1), 'MMM-yyyy')}-${a.rank === 1 ? '1st' : a.rank === 2 ? '2nd' : '3rd'}-${a.name?.split(' ')[0] || 'Agent'}.png`}
                 className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-primary/5 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
@@ -264,20 +289,21 @@ export default function AdminGamificationPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Gamification</h1>
-          <p className="text-muted-foreground mt-1">Manage XP, badges, leaderboards, and champions</p>
-        </div>
+          <div>
+            <h1 className="text-3xl font-bold">Gamification</h1>
+            <p className="text-muted-foreground mt-1">Manage Points, badges, leaderboards, and champions</p>
+          </div>
+
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total XP</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Points</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{ (stats?.totalXpAwarded ?? derivedStats.totalXp).toLocaleString() }</p>
+            <p className="text-2xl font-bold">{ (stats?.totalPointsAwarded ?? derivedStats.totalPoints).toLocaleString() }</p>
           </CardContent>
         </Card>
         <Card className="glass-card">
@@ -306,7 +332,10 @@ export default function AdminGamificationPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="leaderboards" className="w-full">
+      <Tabs value={activeTab} onValueChange={(v) => {
+        setActiveTab(v);
+        if (v === "badges") setBadgeTabRefresh((n) => n + 1);
+      }} className="w-full">
         <TabsList>
           <TabsTrigger value="leaderboards" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -435,7 +464,7 @@ export default function AdminGamificationPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {badges.map((badge) => {
                     const earned = earnedByMonth.find((e: any) => e.badgeKey === badge.key);
-                    return renderBadgeCard(badge, earned?.agents ?? [], badgeMonth, badgeYear);
+                    return renderBadgeCard(badge, earned?.agents ?? [], badgeMonth, badgeYear, `${badge.key ?? badge.id ?? 'badge'}-${badgeMonth}-${badgeYear}`);
                   })}
                 </div>
               ) : (
@@ -448,7 +477,7 @@ export default function AdminGamificationPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {earnedByCompetition.map((entry: any) => {
                         const badge = badges.find((b: any) => b.key === entry.badgeKey) ?? { id: entry.badgeKey, key: entry.badgeKey, name: entry.badgeName, description: "" };
-                        return renderBadgeCard(badge, entry.agents, new Date().getMonth() + 1, new Date().getFullYear());
+                        return renderBadgeCard(badge, entry.agents, new Date().getMonth() + 1, new Date().getFullYear(), `${badge.key ?? badge.id ?? 'badge'}-competition-${entry.badgeKey ?? entry.badgeName ?? 'unknown'}`);
                       })}
                     </div>
                   )}
@@ -476,7 +505,7 @@ export default function AdminGamificationPage() {
                   const allCounts = LEVEL_DEFINITIONS.map(d => derivedStats.levelCounts[d.level] ?? 0);
                   const maxCount = Math.max(...allCounts, 1);
                   const pct = (count / maxCount) * 100;
-                  const rangeLabel = def.maxXp === Infinity ? `${def.minXp.toLocaleString()}+ XP` : `${def.minXp.toLocaleString()} – ${def.maxXp.toLocaleString()} XP`;
+                  const rangeLabel = def.maxPoints === Infinity ? `${def.minPoints.toLocaleString()}+ Points` : `${def.minPoints.toLocaleString()} – ${def.maxPoints.toLocaleString()} Points`;
                   return (
                     <div key={def.level} className="flex items-center gap-3">
                       <span className="w-44 text-sm font-medium text-right shrink-0">Level {def.level} — {def.title}</span>
@@ -535,7 +564,8 @@ export default function AdminGamificationPage() {
                     <Activity className="h-5 w-5 text-primary" />
                     <span className="text-sm font-medium">Evaluate Competitions</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Manually trigger XP and badge evaluation for past competitions</p>
+                   <p className="text-xs text-muted-foreground">Manually trigger Points and badge evaluation for past competitions</p>
+
                   <Button onClick={handleEvaluateAll} disabled={isEvaluating} size="sm" variant="secondary" className="w-full">
                     {isEvaluating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                     Evaluate All
