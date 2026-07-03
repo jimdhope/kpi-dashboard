@@ -71,6 +71,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ badg
     if (hasOverride) {
       if (overrideCompetitionName) {
         variables.COMPETITION_NAME = overrideCompetitionName;
+      } else {
+        const compId = ctx.competitionId as string | undefined;
+        if (compId) {
+          const comp = await prisma.competition.findUnique({
+            where: { id: compId },
+            select: { name: true },
+          });
+          if (comp) variables.COMPETITION_NAME = comp.name;
+        }
       }
 
       if (overrideStreak) {

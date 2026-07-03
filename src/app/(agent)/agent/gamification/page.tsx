@@ -20,6 +20,7 @@ interface AgentProfile {
   badges: Array<{
     id: string;
     badge: { id: string; key: string; name: string; description: string; icon: string; };
+    competition: { name: string } | null;
     earnedAt: string;
   }>;
   streaks: Array<{
@@ -158,6 +159,9 @@ export default function AgentGamificationPage() {
                     <span className="text-xs font-medium leading-tight">{ab.badge.name}</span>
                     {ab.badge.description && (
                       <span className="text-[10px] opacity-60 leading-tight line-clamp-2">{ab.badge.description}</span>
+                    )}
+                    {ab.competition?.name && (
+                      <span className="text-[10px] font-medium opacity-70">{ab.competition.name}</span>
                     )}
                     <span className="text-[10px] opacity-60 mt-auto pt-1">
                       {format(new Date(ab.earnedAt), 'MMM d, yyyy')}

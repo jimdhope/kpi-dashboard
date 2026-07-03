@@ -8,8 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { 
   Award, TrendingUp, Medal, Crown, 
-  BarChart3, Users, Activity, Loader2, RefreshCw,
-  FileText, Download, Calendar, Settings2, Trophy
+  BarChart3, Activity, Loader2, RefreshCw,
+  FileText, Download, Calendar, Settings2
 } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -72,9 +72,6 @@ export default function AdminGamificationPage() {
 
   // Actions
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [isCrowning, setIsCrowning] = useState(false);
-  const [crownMonth, setCrownMonth] = useState(new Date().getMonth() + 1);
-  const [crownYear, setCrownYear] = useState(new Date().getFullYear());
 
   const refreshPageData = async () => {
     const sessionRes = await fetch('/api/auth/session');
@@ -179,26 +176,6 @@ export default function AdminGamificationPage() {
     } finally { setIsEvaluating(false); }
   };
 
-  const handleCrownChampion = async () => {
-    setIsCrowning(true);
-    try {
-      const res = await fetch('/api/gamification/crown-monthly', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month: crownMonth, year: crownYear }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        toast({ title: 'Champion crowned!', description: `${data.champion ?? 'Agent'} is the champion.` });
-      } else {
-        const err = await res.json();
-        toast({ title: 'Failed', description: err.error ?? 'Unknown error', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'Failed', description: 'Network error', variant: 'destructive' });
-    } finally { setIsCrowning(false); }
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -250,41 +227,64 @@ export default function AdminGamificationPage() {
     )
   );
 
-  const renderBadgeCard = (badge: any, agents: any[], badgeMonth_: number, badgeYear_: number, listKey?: string) => (
-    <div key={listKey ?? `${badge.id ?? badge.key ?? 'badge'}-${badgeMonth_}-${badgeYear_}`} className="p-3 rounded-lg border bg-muted/30 flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-          <Award className="h-4 w-4 text-amber-500" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{badge.name}</p>
-          <p className="text-[11px] text-muted-foreground/50 line-clamp-2 mt-0.5">{badge.description || ""}</p>
+  const METAL_GRADIENTS: Record<string, { bg: string; border: string }> = {
+    bronze: { bg: 'linear-gradient(135deg, #cd7f32, #8b5a2b, #cd7f32)', border: '#5c3a21' },
+    silver: { bg: 'linear-gradient(135deg, #e0e0e0, #9e9e9e, #ffffff, #9e9e9e)', border: '#616161' },
+    gold: { bg: 'linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c)', border: '#825a13' },
+    platinum: { bg: 'linear-gradient(135deg, #e5e4e2, #b0c4de, #e5e4e2, #778899)', border: '#4a5d73' },
+  };
+
+  const MiniBadgePreview = ({ badgeIcon, badgeName, type }: { badgeIcon: string; badgeName: string; type: string }) => {
+    const metal = METAL_GRADIENTS[type] || METAL_GRADIENTS.gold;
+    return (
+      <div className="w-24 h-24 rounded-lg shrink-0 overflow-hidden" style={{ background: metal.bg, border: `2px solid ${metal.border}` }}>
+        <div className="m-0.5 rounded-[5px] bg-slate-900/80 border border-white/20 flex-1 h-[calc(100%-4px)] flex flex-col items-center justify-center gap-0.5 p-1">
+          <span className="text-3xl leading-none">{badgeIcon || "🏅"}</span>
+          <span className="text-[7px] text-white font-bold uppercase text-center leading-tight px-0.5">{badgeName}</span>
         </div>
       </div>
-      {agents.length > 0 ? (
-        <div className="border-t pt-2 mt-1">
-          <p className="text-xs text-muted-foreground mb-1">
-            {agents.length} agent{agents.length === 1 ? "" : "s"} earned this badge:
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {agents.map((a: any, index: number) => (
-              <a
-                key={`${badge.key ?? badge.id ?? 'badge'}-${a.userId ?? 'unknown'}-${index}`}
-                href={`/api/gamification/badges/${badge.key}/image?month=${badgeMonth_}&year=${badgeYear_}&rank=${a.rank}&agentName=${encodeURIComponent(a.name?.split(' ')[0] || 'Agent')}`}
-                download={`${badge.name.replace(/\s+/g, '-')}-${format(new Date(badgeYear_, badgeMonth_ - 1), 'MMM-yyyy')}-${a.rank === 1 ? '1st' : a.rank === 2 ? '2nd' : '3rd'}-${a.name?.split(' ')[0] || 'Agent'}.png`}
-                className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-primary/5 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-              >
-                <Users className="h-3 w-3" />
-                {a.name}
-              </a>
-            ))}
+    );
+  };
+
+  const BadgeAwardEntry = ({ entry }: { entry: any }) => {
+    const rank = entry.rank ?? 1;
+    const badgeType = entry.badgeRankTinted ? (rank === 1 ? 'gold' : rank === 2 ? 'silver' : 'bronze') : 'gold';
+    const earnedDate = new Date(entry.earnedAt);
+    const month = earnedDate.getMonth() + 1;
+    const year = earnedDate.getFullYear();
+    const agentFirstName = entry.agentName?.split(' ')[0] || 'Agent';
+
+    return (
+      <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-muted/30 text-center">
+        <MiniBadgePreview badgeIcon={entry.badgeIcon} badgeName={entry.badgeName} type={badgeType} />
+        <div className="min-w-0">
+          <h4 className="font-medium">{entry.badgeName}</h4>
+          {entry.badgeDescription && (
+            <p className="text-sm text-muted-foreground mt-0.5">{entry.badgeDescription}</p>
+          )}
+          <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
+            <p>Agent: {entry.agentName}</p>
+            {entry.competitionName && <p>Competition: {entry.competitionName}</p>}
+            <p>Earned: {format(earnedDate, 'MMM d, yyyy')}</p>
+            {entry.kpiDetail && (
+              <p>{entry.kpiDetail.ruleName}: {entry.kpiDetail.value} (rank {entry.kpiDetail.rank}/{entry.kpiDetail.totalParticipants})</p>
+            )}
+            {entry.totalScore != null && !entry.kpiDetail && (
+              <p>Score: {entry.totalScore.toLocaleString()} pts</p>
+            )}
           </div>
+          <a
+            href={`/api/gamification/badges/${entry.badgeKey}/image?month=${month}&year=${year}&rank=${rank}&agentName=${encodeURIComponent(agentFirstName)}${entry.competitionName ? `&competitionName=${encodeURIComponent(entry.competitionName)}` : ''}`}
+            download={`${entry.badgeName.replace(/\s+/g, '-')}-${format(earnedDate, 'MMM-yyyy')}-${rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd'}-${agentFirstName}.png`}
+            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded bg-primary/5 text-primary hover:bg-primary/10 transition-colors mt-2"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download PNG
+          </a>
         </div>
-      ) : (
-        <p className="text-xs text-muted-foreground italic">No one earned this badge</p>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -458,15 +458,16 @@ export default function AdminGamificationPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {badges.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No badges defined.</p>
-              ) : badgeViewMode === "monthly" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {badges.map((badge) => {
-                    const earned = earnedByMonth.find((e: any) => e.badgeKey === badge.key);
-                    return renderBadgeCard(badge, earned?.agents ?? [], badgeMonth, badgeYear, `${badge.key ?? badge.id ?? 'badge'}-${badgeMonth}-${badgeYear}`);
-                  })}
-                </div>
+              {badgeViewMode === "monthly" ? (
+                earnedByMonth.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-4">No monthly badges earned in this period.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {earnedByMonth.map((entry: any) => (
+                      <BadgeAwardEntry key={entry.id} entry={entry} />
+                    ))}
+                  </div>
+                )
               ) : (
                 <div>
                   {!selectedCompetitionId ? (
@@ -474,11 +475,10 @@ export default function AdminGamificationPage() {
                   ) : earnedByCompetition.length === 0 ? (
                     <p className="text-muted-foreground text-sm text-center py-4">No badges were earned in this competition.</p>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {earnedByCompetition.map((entry: any) => {
-                        const badge = badges.find((b: any) => b.key === entry.badgeKey) ?? { id: entry.badgeKey, key: entry.badgeKey, name: entry.badgeName, description: "" };
-                        return renderBadgeCard(badge, entry.agents, new Date().getMonth() + 1, new Date().getFullYear(), `${badge.key ?? badge.id ?? 'badge'}-competition-${entry.badgeKey ?? entry.badgeName ?? 'unknown'}`);
-                      })}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {earnedByCompetition.map((entry: any) => (
+                        <BadgeAwardEntry key={entry.id} entry={entry} />
+                      ))}
                     </div>
                   )}
                 </div>
@@ -530,34 +530,10 @@ export default function AdminGamificationPage() {
                 <Activity className="h-5 w-5 text-primary" />
                 Quick Actions
               </CardTitle>
-              <CardDescription>Administrative actions for competitions and champions</CardDescription>
+              <CardDescription>Administrative actions for competitions</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
-                {/* Crown Champion */}
-                <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-5 w-5 text-amber-500" />
-                    <span className="text-sm font-medium">Crown Monthly Champion</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select className="flex-1 text-sm bg-background rounded-md px-2 py-1 border" value={crownMonth} onChange={e => setCrownMonth(parseInt(e.target.value))}>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>{format(new Date(2000, i), 'MMMM')}</option>
-                      ))}
-                    </select>
-                    <select className="flex-1 text-sm bg-background rounded-md px-2 py-1 border" value={crownYear} onChange={e => setCrownYear(parseInt(e.target.value))}>
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <option key={i} value={new Date().getFullYear() - i}>{new Date().getFullYear() - i}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button onClick={handleCrownChampion} disabled={isCrowning} size="sm" className="w-full">
-                    {isCrowning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Crown className="h-4 w-4 mr-2" />}
-                    Crown Champion
-                  </Button>
-                </div>
-
                 {/* Evaluate */}
                 <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
                   <div className="flex items-center gap-2">

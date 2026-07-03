@@ -229,7 +229,7 @@ export const gamificationService = {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        badges: { include: { badge: true }, orderBy: { earnedAt: "desc" } },
+        badges: { include: { badge: true, competition: { select: { name: true } } }, orderBy: { earnedAt: "desc" } },
       },
     });
 
@@ -482,6 +482,137 @@ export const gamificationService = {
     }
 
     return { champion: champion.name, month, year };
+  },
+
+  async crownYearlyChampion(year: number) {
+    const leaderboard = await this.getYearlyLeaderboard(year);
+    if (leaderboard.entries.length === 0) {
+      throw new Error("No participants found for this year");
+    }
+
+    const champion = leaderboard.entries[0];
+    const lastDay = new Date(year, 11, 31);
+
+    const yearlyBadges = await prisma.badge.findMany({
+      where: { isActive: true, scope: "YEARLY" },
+    });
+
+    const totalParticipants = leaderboard.entries.length;
+
+    // Pre-compute per-KPI rankings for kpiTopN rules
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+    const dailyByRule = await prisma.dailyAchievement.groupBy({
+      by: ["ruleName", "agentId"],
+      where: {
+        date: { gte: yearStart, lte: yearEnd },
+        ruleName: { not: null },
+      },
+      _sum: { points: true },
+    });
+    const yearlyKpiRankings = new Map<string, Map<string, number>>();
+    const ruleGroups = new Map<string, Map<string, number>>();
+    for (const d of dailyByRule) {
+      if (!d.ruleName) continue;
+      let agents = ruleGroups.get(d.ruleName);
+      if (!agents) {
+        agents = new Map();
+        ruleGroups.set(d.ruleName, agents);
+      }
+      agents.set(d.agentId, d._sum.points ?? 0);
+    }
+    for (const [ruleName, agentPoints] of ruleGroups) {
+      const sorted = Array.from(agentPoints.entries())
+        .sort(([, a], [, b]) => b - a);
+      const ranks = new Map<string, number>();
+      sorted.forEach(([agentId], idx) => ranks.set(agentId, idx + 1));
+      yearlyKpiRankings.set(ruleName, ranks);
+    }
+
+    for (const entry of leaderboard.entries) {
+      const user = await prisma.user.findUnique({ where: { id: entry.userId } });
+      if (!user) continue;
+
+      const yearlyResults = await prisma.competitionResult.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      });
+
+      const totalYears = await prisma.competitionResult.count({ where: { userId: user.id } });
+
+      const bestSingleScore = Math.max(...yearlyResults.map(r => r.totalScore), 0);
+      const bestSingleRank = Math.min(...yearlyResults.map(r => r.rank), 999);
+      const previousRanks = yearlyResults.slice(0, 6).map(r => r.rank);
+      const improvement = entry.rank < bestSingleRank ? bestSingleRank - entry.rank : 0;
+
+      const attendanceRecent = yearlyResults.slice(0, 6);
+      const attendanceCount = attendanceRecent.filter(r => r.wasPresent).length;
+      const attendanceTotal = attendanceRecent.length || 1;
+
+      const consecutiveCompetitions = yearlyResults.length;
+
+      let streak = 0;
+      for (const res of yearlyResults) {
+        if (res.rank === 1) streak++;
+        else break;
+      }
+
+      for (const badge of yearlyBadges) {
+        const existing = await prisma.agentBadge.findFirst({
+          where: { userId: user.id, badgeId: badge.id, competitionId: null },
+        });
+        if (existing) continue;
+
+        const userKpiRanks: Record<string, number> = {};
+        for (const [ruleName, ranks] of yearlyKpiRankings) {
+          const r = ranks.get(user.id);
+          if (r !== undefined) userKpiRanks[ruleName] = r;
+        }
+
+        const ruleCtx: RuleContext = {
+          rank: entry.rank,
+          totalScore: entry.points,
+          improvement,
+          wasPresent: true,
+          streak,
+          totalCompetitions: totalYears,
+          percentile: totalParticipants > 0 ? (entry.rank / totalParticipants) * 100 : undefined,
+          totalParticipants,
+          consecutiveCompetitions,
+          attendanceCount,
+          attendanceTotal,
+          bestSingleScore,
+          bestSingleRank,
+          previousRanks,
+          kpiRanks: userKpiRanks,
+        };
+
+        if (!evaluateCriteria(badge.criteria, ruleCtx)) continue;
+
+        await prisma.agentBadge.create({
+          data: {
+            userId: user.id,
+            badgeId: badge.id,
+            context: { year, rank: entry.rank } as Prisma.InputJsonValue,
+            earnedAt: lastDay,
+          },
+        });
+
+        if (entry.userId === champion.userId) {
+          await notificationService.create({
+            userId: champion.userId,
+            type: "score_achievement",
+            title: `🏆 ${year} Champion!`,
+            message: `You're the ${year} Yearly Champion!`,
+            priority: "high",
+            actionUrl: "/agent/gamification",
+          });
+        }
+      }
+    }
+
+    return { champion: champion.name, year };
   },
 
   async getBadgeCatalog(userId?: string) {
