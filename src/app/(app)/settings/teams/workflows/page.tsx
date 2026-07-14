@@ -8,6 +8,7 @@ import { teamsMessageTemplateService } from "@/server/services/teams-message-tem
 import { teamsWebhookService } from "@/server/services/teams-webhook-service";
 import { competitionService } from "@/server/services/competition-service";
 import { prisma } from "@/server/db/client";
+import { permissionService } from "@/server/services/permission-service";
 
 export default async function TeamsWorkflowsPage() {
   const session = await authService.getCurrentSession();
@@ -15,7 +16,8 @@ export default async function TeamsWorkflowsPage() {
     redirect("/login");
   }
 
-  if (!session.user.roles.includes("admin")) {
+  const isAdmin = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+  if (!isAdmin) {
     redirect("/dashboard");
   }
 

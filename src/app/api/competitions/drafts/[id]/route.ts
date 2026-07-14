@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { competitionDraftService } from "@/server/services/competition-draft-service";
+import { authService } from "@/server/services/auth-service";
 
 const updateSchema = z.object({
   name: z.string().min(2).max(120).optional(),
@@ -52,6 +53,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authService.requireCurrentUser();
     const { id } = await params;
     const body = await request.json();
     const payload = updateSchema.parse(body);
@@ -89,6 +91,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authService.requireCurrentUser();
     const { id } = await params;
     await competitionDraftService.delete(id);
     return ok({ success: true });

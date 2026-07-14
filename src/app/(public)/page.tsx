@@ -108,15 +108,6 @@ const mainFeatures = [
     stats: 'Track daily KPIs',
   },
   {
-    id: 'trackers',
-    title: 'Daily Trackers',
-    description: 'Log daily achievements and monitor team progress over time',
-    icon: Target,
-    color: 'text-green',
-    bgColor: 'bg-green/10',
-    stats: 'Monitor trends',
-  },
-  {
     id: 'minigames',
     title: 'Mini-Games',
     description: 'Rock Paper Scissors with team leaderboards for engagement',

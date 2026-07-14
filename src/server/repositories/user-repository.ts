@@ -8,6 +8,11 @@ const userInclude = {
       role: true,
     },
   },
+  podMemberships: {
+    select: {
+      podId: true,
+    },
+  },
 } satisfies Prisma.UserInclude;
 
 type UserRecord = Prisma.UserGetPayload<{
@@ -15,12 +20,18 @@ type UserRecord = Prisma.UserGetPayload<{
 }>;
 
 function mapUser(record: UserRecord): AppUser {
+  const podIds = [...new Set([
+    ...record.podMemberships.map((membership) => membership.podId),
+    ...(record.podId ? [record.podId] : []),
+  ])];
+
   return {
     id: record.id,
     firebaseUid: record.firebaseUid,
     email: record.email,
     name: record.name,
     roles: record.userRoles.map((entry) => entry.role.key as UserRole),
+    podIds,
     avatarUrl: record.avatarUrl,
     avatarInitials: record.avatarInitials,
     avatarBgColor: record.avatarBgColor,
@@ -57,6 +68,37 @@ export const userRepository = {
 
   async list() {
     const users = await prisma.user.findMany({
+      include: {
+        ...userInclude,
+        podMemberships: {
+          select: {
+            podId: true,
+          },
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return users.map((user) => {
+      const mapped = mapUser(user);
+      return {
+        ...mapped,
+        podIds: user.podMemberships.map((m) => m.podId),
+      };
+    });
+  },
+
+  async listByPodIds(podIds: string[]) {
+    const users = await prisma.user.findMany({
+      where: {
+        podMemberships: {
+          some: {
+            podId: { in: podIds },
+          },
+        },
+      },
       include: {
         ...userInclude,
         podMemberships: {

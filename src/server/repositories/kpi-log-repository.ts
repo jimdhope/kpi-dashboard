@@ -130,6 +130,64 @@ export const kpiLogRepository = {
     }
   },
 
+  async listByPodIds(podIds: string[], filters?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<KpiLogRecord[]> {
+    if (podIds.length === 0) return [];
+
+    const memberships = await prisma.podMembership.findMany({
+      where: { podId: { in: podIds } },
+      select: { userId: true },
+    });
+    const legacyPodUsers = await prisma.user.findMany({
+      where: { podId: { in: podIds } },
+      select: { id: true },
+    });
+    const userIds = [...new Set([
+      ...memberships.map((membership) => membership.userId),
+      ...legacyPodUsers.map((user) => user.id),
+    ])];
+
+    const where: Prisma.KpiLogWhereInput = {
+      userId: { in: userIds },
+    };
+
+    if (filters?.startDate) {
+      where.date = {
+        ...(where.date as any || {}),
+        gte: new Date(filters.startDate),
+      };
+    }
+    if (filters?.endDate) {
+      where.date = {
+        ...(where.date as any || {}),
+        lte: new Date(filters.endDate),
+      };
+    }
+
+    const logs = await prisma.kpiLog.findMany({
+      where,
+      include: {
+        kpi: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true } },
+      },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    });
+
+    return logs.map((log) => ({
+      id: log.id,
+      kpiId: log.kpiId,
+      kpiName: log.kpi.name,
+      userId: log.userId,
+      userName: log.user?.name ?? null,
+      value: toNumber(log.value),
+      date: log.date.toISOString(),
+      loggedAt: log.loggedAt.toISOString(),
+      createdAt: log.createdAt.toISOString(),
+    }));
+  },
+
   async delete(id: string): Promise<void> {
     await prisma.kpiLog.delete({
       where: { id },

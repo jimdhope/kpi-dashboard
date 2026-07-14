@@ -108,14 +108,6 @@ const navigationRoutes: SearchResult[] = [
     category: 'navigation',
   },
   {
-    id: 'nav-trackers',
-    label: 'Trackers',
-    description: 'Track KPI progress',
-    icon: Target,
-    href: '/trackers',
-    category: 'navigation',
-  },
-  {
     id: 'nav-performance',
     label: 'Performance',
     description: 'View performance metrics',
@@ -179,32 +171,6 @@ const navigationRoutes: SearchResult[] = [
     description: 'View earned certificates',
     icon: Award,
     href: '/competitions/certificates',
-    category: 'navigation',
-  },
-  
-  // Trackers sub-items
-  {
-    id: 'trackers-dashboard',
-    label: 'Trackers > Dashboard',
-    description: 'View trackers overview',
-    icon: Home,
-    href: '/trackers',
-    category: 'navigation',
-  },
-  {
-    id: 'trackers-setup',
-    label: 'Trackers > Setup Trackers',
-    description: 'Configure your trackers',
-    icon: Settings,
-    href: '/trackers/setup',
-    category: 'navigation',
-  },
-  {
-    id: 'trackers-log',
-    label: 'Trackers > Log Scores',
-    description: 'Log tracker scores',
-    icon: CheckSquare,
-    href: '/trackers/log',
     category: 'navigation',
   },
   

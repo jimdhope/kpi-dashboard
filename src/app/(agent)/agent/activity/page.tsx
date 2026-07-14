@@ -24,7 +24,6 @@ const CATEGORIES: CategoryInfo[] = [
   { id: 'all', label: 'All Activity', icon: <Activity className="h-5 w-5" />, color: 'text-blue-500', bgColor: 'bg-blue-500/20', types: [] },
   { id: 'competitions', label: 'Competitions', icon: <Trophy className="h-5 w-5" />, color: 'text-yellow-500', bgColor: 'bg-yellow-500/20', types: ['competition_started', 'competition_joined', 'competition_completed', 'competition_won', 'competition_score_logged', 'competition_milestone', 'competition_absent', 'achievement_earned', 'milestone_reached', 'badge_earned'] },
   { id: 'kpis', label: 'KPI Updates', icon: <Target className="h-5 w-5" />, color: 'text-green-500', bgColor: 'bg-green-500/20', types: ['kpi_updated', 'kpi_created', 'kpi_goal_reached', 'kpi_goal_achieved', 'kpi_trend_improved'] },
-  { id: 'trackers', label: 'Trackers', icon: <Clock className="h-5 w-5" />, color: 'text-blue-500', bgColor: 'bg-blue-500/20', types: ['tracker_entry_logged', 'tracker_created', 'tracker_milestone'] },
   { id: 'games', label: 'Games', icon: <Gamepad2 className="h-5 w-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500/20', types: ['game_played', 'game_won', 'game_high_score', 'game_achievement'] },
 ];
 

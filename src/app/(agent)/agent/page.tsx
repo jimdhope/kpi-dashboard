@@ -2,420 +2,447 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Target, BarChart3, Gamepad2, Star, TrendingUp, Award, Zap, Swords } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, startOfWeek, subWeeks, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { generateInitials } from '@/lib/utils';
-import type { AppUser, CompetitionRecord, PerformanceLogRecord } from '@/lib/contracts';
+import { Trophy, BarChart3, Gamepad2, Swords, Medal, User as UserIcon, Loader2 } from "lucide-react";
+import { cn, generateInitials } from '@/lib/utils';
+import { endOfWeek, format, startOfWeek, subDays } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { AppUser } from '@/lib/contracts';
 
-interface DailyAchievementLog {
-  id: string;
-  agentId: string;
-  competitionId: string;
-  ruleId: string;
-  date: string;
-  points: number;
-  value: number;
-}
-
-interface TrackerLog {
-  id: string;
-  agentId: string;
-  trackerKpiId: string;
-  date: string;
-  value: number;
-}
-
-interface TrackerKpi {
-  id: string;
-  name: string;
-  initials: string;
-}
-
-interface AdditionalKpi {
+interface KpiDefinition {
   id: string;
   name: string;
   initials: string;
   type: string;
+  maxValue?: number;
+  sortOrder?: 'asc' | 'desc';
   passFailCriteriaEnabled?: boolean;
   passFailOperator?: 'gte' | 'lte';
   passFailValue?: number;
 }
 
-interface WeekHeader {
-  label: string;
-  start: Date;
-  end: Date;
+interface KpiLog {
+  id: string;
+  kpiId: string;
+  kpiName: string;
+  userId: string | null;
+  userName: string | null;
+  value: number;
+  date: string;
+  loggedAt: string;
 }
 
-const LEADERBOARD_COMPETITION_KEY = 'agentDashboard_selectedCompetitionId';
+interface Competition {
+  id: string;
+  name: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  podIds?: string[];
+  rules?: Array<{ id: string; title: string; points: number }>;
+  teams?: Array<{ id: string; name: string; agentIds?: string[]; emoji?: string }>;
+}
 
-export default function AgentDashboard() {
+interface Pod {
+  id: string;
+  name: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  podId?: string | null;
+  email?: string;
+  roles: string[];
+}
+
+interface Achievement {
+  id: string;
+  agentId: string;
+  podId: string;
+  competitionId: string;
+  ruleId: string;
+  ruleName?: string;
+  value: number;
+  points: number;
+  date: string;
+  agentName?: string;
+}
+
+interface GameLeaderboardEntry {
+  userId: string;
+  name: string;
+  score: number;
+  rank: number;
+}
+
+interface GameLeaderboard {
+  id: string;
+  name: string;
+  scoreLabel: string;
+  entries: GameLeaderboardEntry[];
+}
+
+const COMPETITION_DASHBOARD_KEY = 'competitionDashboard_selectedCompetitionId';
+const COMPETITION_DASHBOARD_POD_KEY = 'competitionDashboard_selectedPodId';
+
+export function AgentDashboard() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [competitions, setCompetitions] = useState<CompetitionRecord[]>([]);
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [pods, setPods] = useState<Pod[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [kpis, setKpis] = useState<KpiDefinition[]>([]);
+  const [kpiLogs, setKpiLogs] = useState<KpiLog[]>([]);
+  const [rpsLeaderboard, setRpsLeaderboard] = useState<GameLeaderboardEntry[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
-  const [achievementLogs, setAchievementLogs] = useState<DailyAchievementLog[]>([]);
-  const [trackerLogs, setTrackerLogs] = useState<TrackerLog[]>([]);
-  const [trackerKpis, setTrackerKpis] = useState<TrackerKpi[]>([]);
-  const [performanceLogs, setPerformanceLogs] = useState<PerformanceLogRecord[]>([]);
-  const [additionalKpis, setAdditionalKpis] = useState<AdditionalKpi[]>([]);
-  const [agents, setAgents] = useState<AppUser[]>([]);
-  const [rpsLeaderboard, setRpsLeaderboard] = useState<{userId: string; name: string; wins: number}[]>([]);
+  const [selectedPodId, setSelectedPodId] = useState<string>('all');
 
-  // Fetch user session
+  // Load selections from localStorage on mount
   useEffect(() => {
-    async function fetchSession() {
+    const savedCompId = localStorage.getItem(COMPETITION_DASHBOARD_KEY);
+    const savedPodId = localStorage.getItem(COMPETITION_DASHBOARD_POD_KEY);
+    if (savedCompId) setSelectedCompetitionId(savedCompId);
+    if (savedPodId) setSelectedPodId(savedPodId);
+  }, []);
+
+  useEffect(() => {
+    async function init() {
       try {
-        const res = await fetch('/api/auth/session');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated && data.user) {
-            setCurrentUser(data.user);
+        const [sessionRes, compsRes, podsRes, usersRes, kpisRes, gamesRes, achievementsRes] = await Promise.all([
+          fetch('/api/auth/session'),
+          fetch('/api/competitions'),
+          fetch('/api/pods'),
+          fetch('/api/users'),
+          fetch('/api/kpis'),
+          fetch('/api/rps-games?limit=100'),
+          fetch('/api/achievements'),
+        ]);
+
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (sessionData.authenticated && sessionData.user) {
+            setCurrentUser(sessionData.user);
           }
         }
+
+        if (compsRes.ok) {
+          const compsData = await compsRes.json();
+          const comps = compsData.competitions || [];
+          setCompetitions(comps);
+          
+          // Auto-select active competition if none selected yet
+          if (!selectedCompetitionId) {
+            const now = new Date();
+            const active = comps.find((c: any) => {
+              const start = c.startsAt ? new Date(c.startsAt) : null;
+              const end = c.endsAt ? new Date(c.endsAt) : null;
+              return start && end && now >= start && now <= end;
+            });
+            const selected = active || (comps.length > 0 ? comps[0] : null);
+            if (selected) setSelectedCompetitionId(selected.id);
+          }
+        }
+
+        if (podsRes.ok) {
+          const podsData = await podsRes.json();
+          setPods(podsData.pods || []);
+        }
+
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          setUsers(usersData.users || []);
+        }
+
+        if (kpisRes.ok) {
+          const kpisData = await kpisRes.json();
+          setKpis(kpisData.kpis || []);
+        }
+
+        if (gamesRes.ok) {
+          const gamesData = await gamesRes.json();
+          setRpsLeaderboard(gamesData.leaderboard || []);
+        }
+
+        if (achievementsRes.ok) {
+          const achievementsData = await achievementsRes.json();
+          setAchievements(achievementsData.achievements || []);
+        }
       } catch (err) {
-        console.error('Error fetching session:', err);
+        console.error('Error initializing dashboard:', err);
       }
       setIsLoading(false);
     }
-    fetchSession();
+    init();
   }, []);
 
-  // Fetch competitions
+  // Persist competition selection
   useEffect(() => {
-    async function fetchCompetitions() {
-      try {
-        const res = await fetch('/api/competitions');
-        if (res.ok) {
-          const data = await res.json();
-          setCompetitions(data.competitions || []);
-          
-          if (data.competitions?.length > 0) {
-            const now = new Date();
-            const currentComp = data.competitions.find((comp: any) => {
-              const start = comp.startsAt ? new Date(comp.startsAt) : null;
-              const end = comp.endsAt ? new Date(comp.endsAt) : null;
-              return start && end && now >= start && now <= end;
-            });
-            
-            if (currentComp) {
-              setSelectedCompetitionId(currentComp.id);
-              localStorage.setItem(LEADERBOARD_COMPETITION_KEY, currentComp.id);
-            } else {
-              const savedCompId = localStorage.getItem(LEADERBOARD_COMPETITION_KEY);
-              if (savedCompId && data.competitions.some((c: any) => c.id === savedCompId)) {
-                setSelectedCompetitionId(savedCompId);
-              } else {
-                setSelectedCompetitionId(data.competitions[0].id);
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching competitions:', err);
-      }
+    if (selectedCompetitionId) {
+      localStorage.setItem(COMPETITION_DASHBOARD_KEY, selectedCompetitionId);
     }
-    fetchCompetitions();
-  }, []);
-
-  // Fetch all agents for leaderboard names
-  useEffect(() => {
-    async function fetchAgents() {
-      try {
-        const res = await fetch('/api/users');
-        if (res.ok) {
-          const data = await res.json();
-          setAgents(data.users || []);
-        }
-      } catch (err) {
-        console.error('Error fetching agents:', err);
-      }
-    }
-    fetchAgents();
-  }, []);
-
-  // Fetch achievement logs
-  useEffect(() => {
-    async function fetchAchievements() {
-      if (!selectedCompetitionId) {
-        setAchievementLogs([]);
-        return;
-      }
-      try {
-        const res = await fetch(`/api/competitions/${selectedCompetitionId}/achievements`);
-        if (res.ok) {
-          const data = await res.json();
-          setAchievementLogs(data.achievements || []);
-        }
-      } catch (err) {
-        console.error('Error fetching achievements:', err);
-      }
-    }
-    fetchAchievements();
   }, [selectedCompetitionId]);
 
-  // Fetch tracker KPIs
+  // Persist pod selection
   useEffect(() => {
-    async function fetchTrackerKpis() {
-      try {
-        const res = await fetch('/api/trackers');
-        if (res.ok) {
-          const data = await res.json();
-          setTrackerKpis(data.trackers || []);
-        }
-      } catch (err) {
-        console.error('Error fetching tracker KPIs:', err);
-      }
+    if (selectedPodId === 'all') {
+      localStorage.removeItem(COMPETITION_DASHBOARD_POD_KEY);
+    } else {
+      localStorage.setItem(COMPETITION_DASHBOARD_POD_KEY, selectedPodId);
     }
-    fetchTrackerKpis();
-  }, []);
+  }, [selectedPodId]);
 
-  // Fetch performance logs (all time)
-  useEffect(() => {
-    async function fetchPerformanceLogs() {
-      if (!currentUser?.id) {
-        setPerformanceLogs([]);
-        return;
+  const selectedCompetition = competitions.find((c) => c.id === selectedCompetitionId);
+
+  // Use database rules first, fallback to draftData rules (for legacy competitions)
+  const competitionRules = useMemo(() => {
+    if (!selectedCompetition) return [];
+    const dbRules = selectedCompetition.rules || [];
+    const draftDataRules = (selectedCompetition as any).draftData?.rules || [];
+    return dbRules.length > 0 ? dbRules : draftDataRules;
+  }, [selectedCompetition]);
+
+  // Use database teams first, fallback to draftData teams
+  const competitionTeams = useMemo(() => {
+    if (!selectedCompetition) return [];
+    const dbTeams = selectedCompetition.teams || [];
+    const draftDataTeams = (selectedCompetition as any).draftData?.teams || [];
+    return dbTeams.length > 0 ? dbTeams : draftDataTeams;
+  }, [selectedCompetition]);
+
+  const availablePods = useMemo(() => {
+    if (!selectedCompetition) return [];
+    return pods.filter((p) => selectedCompetition.podIds?.includes(p.id));
+  }, [selectedCompetition, pods]);
+
+  const filteredPods = selectedPodId === 'all' ? availablePods : availablePods.filter((p) => p.id === selectedPodId);
+  const filteredPodIds = filteredPods.map((p) => p.id);
+
+  const competitionAchievements = useMemo(() => {
+    if (!selectedCompetitionId) return [];
+    return achievements.filter((a) => a.competitionId === selectedCompetitionId);
+  }, [achievements, selectedCompetitionId]);
+
+  const achievementSummary = useMemo(() => {
+    if (!competitionRules || competitionAchievements.length === 0) return [];
+
+    return competitionRules.map((rule: any) => {
+      const ruleLogs = competitionAchievements.filter((log: any) => {
+        const matchesRule = log.ruleId === rule.id || log.ruleName === rule.title;
+        const matchesPod = filteredPodIds.length === 0 || filteredPodIds.includes(log.podId);
+        return matchesRule && matchesPod;
+      });
+
+      const totalValue = ruleLogs.reduce((sum: number, log: any) => sum + log.value, 0);
+      const totalPoints = ruleLogs.reduce((sum: number, log: any) => sum + log.points, 0);
+
+      return { rule, totalValue, totalPoints };
+    });
+  }, [competitionRules, competitionAchievements, filteredPodIds]);
+
+  const podStandings = useMemo(() => {
+    if (competitionAchievements.length === 0) return [];
+
+    const podScores: Record<string, { id: string; name: string; score: number }> = {};
+    const availablePodIds = new Set(availablePods.map(p => p.id));
+
+    // Initialize pods from competition
+    availablePods.forEach((pod) => {
+      podScores[pod.id] = { id: pod.id, name: pod.name, score: 0 };
+    });
+
+    // Track achievements with unknown pods
+    let unknownPodScore = 0;
+
+    competitionAchievements.forEach((log) => {
+      if (availablePodIds.has(log.podId) && podScores[log.podId]) {
+        podScores[log.podId].score += log.points;
+      } else {
+        // Fallback: group achievements with missing podIds into "Unknown Pod"
+        unknownPodScore += log.points;
       }
+    });
+
+    const standings = Object.values(podScores).sort((a, b) => b.score - a.score);
+    
+    // Add "Unknown Pod" if there were achievements with missing podIds
+    if (unknownPodScore > 0) {
+      standings.push({ id: 'unknown', name: 'Unknown Pod', score: unknownPodScore });
+    }
+
+    return standings;
+  }, [competitionAchievements, availablePods]);
+
+  const teamStandings = useMemo(() => {
+    const teams = competitionTeams;
+    const teamScores: Record<string, { id: string; name: string; score: number; emoji?: string; memberNames: string }> = {};
+
+    // Initialize teams
+    teams.forEach((team: any) => {
+      const memberNames = (team.agentIds || [])
+        .map((agentId: string) => {
+          const user = users.find((u: any) => u.id === agentId);
+          return user ? user.name.split(' ')[0] : null;
+        })
+        .filter(Boolean)
+        .join(', ');
+      teamScores[team.id] = { id: team.id, name: team.name, emoji: team.emoji, score: 0, memberNames };
+    });
+
+    // Calculate scores from achievements by linking agents to teams
+    const unassignedScore = { id: 'unassigned', name: 'Unassigned', score: 0, memberNames: '' };
+    competitionAchievements.forEach((log: any) => {
+      const teamWithAgent = teams.find((team: any) => 
+        team.agentIds && team.agentIds.includes(log.agentId)
+      );
+      if (teamWithAgent && teamScores[teamWithAgent.id]) {
+        teamScores[teamWithAgent.id].score += log.points;
+      } else {
+        // Agent not on any team - add to unassigned
+        unassignedScore.score += log.points;
+      }
+    });
+
+    const standings = Object.values(teamScores).sort((a, b) => b.score - a.score);
+     
+    // Add "Unassigned" if there were agents not on any team
+    if (unassignedScore.score > 0) {
+      standings.push(unassignedScore);
+    }
+
+    return standings;
+  }, [competitionTeams, competitionAchievements, users]);
+
+  const agentStandings = useMemo(() => {
+    const agentScores: Record<string, { id: string; name: string; score: number }> = {};
+
+    competitionAchievements.forEach((log) => {
+      const matchesPod = filteredPodIds.length === 0 || filteredPodIds.includes(log.podId);
+      if (!matchesPod) return;
+
+      if (!agentScores[log.agentId]) {
+        const user = users.find((u) => u.id === log.agentId);
+        agentScores[log.agentId] = {
+          id: log.agentId,
+          name: log.agentName || user?.name || 'Unknown',
+          score: 0,
+        };
+      }
+      agentScores[log.agentId].score += log.points;
+    });
+
+    return Object.values(agentScores).sort((a, b) => b.score - a.score);
+  }, [competitionAchievements, users, filteredPodIds]);
+
+  const handleCompetitionChange = (value: string) => {
+    setSelectedCompetitionId(value);
+    // Reset pod filter when competition changes
+    setSelectedPodId('all');
+  };
+
+  const handlePodChange = (value: string) => {
+    setSelectedPodId(value);
+  };
+
+  useEffect(() => {
+    const uid = currentUser?.id;
+    if (!uid) { setKpiLogs([]); return; }
+    async function fetchKpiLogs() {
       try {
-        const res = await fetch('/api/performance/logs');
+        const res = await fetch('/api/performance/kpi-logs');
         if (res.ok) {
           const data = await res.json();
-          const userLogs = (data.logs || []).filter((log: any) => log.agentId === currentUser.id);
-          setPerformanceLogs(userLogs);
+          setKpiLogs((data.logs || []).filter((log: KpiLog) => log.userId === uid));
         }
       } catch (err) {
-        console.error('Error fetching performance logs:', err);
+        console.error('Error fetching KPI logs:', err);
       }
     }
-    fetchPerformanceLogs();
+    fetchKpiLogs();
   }, [currentUser?.id]);
 
-  // Fetch RPS leaderboard
-  useEffect(() => {
-    // RPS leaderboard would come from API if implemented
-    setRpsLeaderboard([]);
-  }, []);
+  const gameLeaderboards = useMemo((): GameLeaderboard[] => [{
+    id: 'rock-paper-scissors',
+    name: 'Rock Paper Scissors',
+    scoreLabel: 'Wins',
+    entries: rpsLeaderboard,
+  }], [rpsLeaderboard]);
 
-  // Calculate competition stats
-  const competitionStats = useMemo(() => {
-    if (!selectedCompetitionId || competitions.length === 0) {
-      return { 
-        competitionName: '', 
-        teamLeaderboard: [], 
-        agentLeaderboard: [],
-        userRank: '-',
-        userScore: 0 
-      };
+  const agentPerformanceData = useMemo(() => {
+    const weekStartsOn = 4 as const;
+    if (kpis.length === 0 || kpiLogs.length === 0) {
+      return { kpis: [] as KpiDefinition[], weekHeaders: [] as string[], weeklyScores: {} as Record<string, Record<string, { value: number; count: number }>>, kpiWeekHeaders: {} as Record<string, string[]> };
     }
 
-    const competition = competitions.find(c => c.id === selectedCompetitionId);
-    if (!competition) {
-      return { 
-        competitionName: '', 
-        teamLeaderboard: [], 
-        agentLeaderboard: [],
-        userRank: '-',
-        userScore: 0 
-      };
-    }
-
-    // Calculate team scores
-    const teamScores: Record<string, number> = {};
-    competition.teams?.forEach(team => {
-      teamScores[team.id] = 0;
+    const maxDateByKpi: Record<string, Date> = {};
+    kpiLogs.forEach((log) => {
+      const date = new Date(log.date);
+      if (!maxDateByKpi[log.kpiId] || date > maxDateByKpi[log.kpiId]) maxDateByKpi[log.kpiId] = date;
     });
 
-    achievementLogs.forEach(log => {
-      const team = competition.teams?.find(t => {
-        // This is simplified - real implementation would need user-to-team mapping
-        return true;
-      });
-      if (team) {
-        teamScores[team.id] = (teamScores[team.id] || 0) + (log.points || 0);
-      }
+    const filteredLogs = kpiLogs.filter((log) => {
+      const maxDate = maxDateByKpi[log.kpiId];
+      const date = new Date(log.date);
+      return maxDate && date >= subDays(maxDate, 42) && date <= maxDate;
+    });
+    const activeKpiIds = new Set(filteredLogs.map((log) => log.kpiId));
+    const activeKpis = kpis
+      .filter((kpi) => activeKpiIds.has(kpi.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const weeklyScores: Record<string, Record<string, { value: number; count: number }>> = {};
+    const weeks = new Set<string>();
+
+    filteredLogs.forEach((log) => {
+      const week = format(startOfWeek(new Date(log.date), { weekStartsOn }), 'MMM dd, yyyy');
+      weeks.add(week);
+      weeklyScores[week] ||= {};
+      weeklyScores[week][log.kpiId] ||= { value: 0, count: 0 };
+      weeklyScores[week][log.kpiId].value += log.value;
+      weeklyScores[week][log.kpiId].count += 1;
     });
 
-    const teamLeaderboard = competition.teams
-      ?.map(team => ({
-        id: team.id,
-        name: team.name,
-        score: teamScores[team.id] || 0,
-      }))
-      .sort((a, b) => b.score - a.score) || [];
-
-    // Calculate agent scores
-    const agentScores: Record<string, number> = {};
-    achievementLogs.forEach(log => {
-      if (!agentScores[log.agentId]) {
-        agentScores[log.agentId] = 0;
-      }
-      agentScores[log.agentId] += log.points || 0;
+    const availableWeeks = Array.from(weeks).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    const maxWeekDate = new Date(availableWeeks[availableWeeks.length - 1]);
+    const weekHeaders = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(maxWeekDate);
+      date.setDate(date.getDate() - (6 - index) * 7);
+      return format(date, 'MMM dd, yyyy');
+    });
+    const kpiWeekHeaders: Record<string, string[]> = {};
+    activeKpis.forEach((kpi) => {
+      kpiWeekHeaders[kpi.id] = Array.from(new Set(
+        filteredLogs
+          .filter((log) => log.kpiId === kpi.id)
+          .map((log) => format(startOfWeek(new Date(log.date), { weekStartsOn }), 'MMM dd, yyyy'))
+      )).sort((a, b) => new Date(a).getTime() - new Date(b).getTime()).slice(-6);
     });
 
-    const uniqueAgents = [...new Set(achievementLogs.map(log => log.agentId))];
-    
-    const agentLeaderboard = uniqueAgents
-      .map(agentId => {
-        const agent = agents.find(a => a.id === agentId);
-        return {
-          agentId,
-          name: agent?.name || 'Unknown',
-          score: agentScores[agentId] || 0,
-        };
-      })
-      .sort((a, b) => b.score - a.score);
-
-    let userRank = '-';
-    let userScore = 0;
-    if (currentUser?.id) {
-      const userIndex = agentLeaderboard.findIndex(a => a.agentId === currentUser.id);
-      if (userIndex !== -1) {
-        userRank = String(userIndex + 1);
-        userScore = agentLeaderboard[userIndex].score;
-      }
-    }
-
-    return { 
-      competitionName: competition.name,
-      teamLeaderboard,
-      agentLeaderboard,
-      userRank,
-      userScore,
-    };
-  }, [selectedCompetitionId, competitions, achievementLogs, agents, currentUser?.id]);
-
-  // Calculate tracker stats
-  const trackerStats = useMemo(() => {
-    const today = startOfDay(new Date()).toISOString();
-    const todayLogs = trackerLogs.filter(log => {
-      const logDate = new Date(log.date).toISOString().split('T')[0];
-      const todayStr = today.split('T')[0];
-      return logDate === todayStr;
-    });
-    
-    const agentCounts: Record<string, number> = {};
-    todayLogs
-      .filter(log => log.agentId === currentUser?.id)
-      .forEach(log => {
-        if (!agentCounts[log.trackerKpiId]) {
-          agentCounts[log.trackerKpiId] = 0;
-        }
-        agentCounts[log.trackerKpiId] += log.value || 0;
-      });
-
-    const agentTrackerData = trackerKpis.map(kpi => ({
-      ...kpi,
-      count: agentCounts[kpi.id] || 0,
-    })).sort((a, b) => b.count - a.count);
-
-    // Calculate leaderboard (all agents)
-    const allAgentCounts: Record<string, Record<string, number>> = {};
-    todayLogs.forEach(log => {
-      if (!allAgentCounts[log.agentId]) {
-        allAgentCounts[log.agentId] = {};
-      }
-      if (!allAgentCounts[log.agentId][log.trackerKpiId]) {
-        allAgentCounts[log.agentId][log.trackerKpiId] = 0;
-      }
-      allAgentCounts[log.agentId][log.trackerKpiId] += log.value || 0;
-    });
-
-    const leaderboard = Object.entries(allAgentCounts)
-      .map(([agentId, counts]) => {
-        const agent = agents.find(a => a.id === agentId);
-        const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
-        return {
-          agentId,
-          name: agent?.name || 'Unknown',
-          total,
-          counts,
-        };
-      })
-      .sort((a, b) => b.total - a.total);
-
-    let userRank = '-';
-    if (currentUser?.id) {
-      const userIndex = leaderboard.findIndex(a => a.agentId === currentUser.id);
-      if (userIndex !== -1) {
-        userRank = String(userIndex + 1);
-      }
-    }
-
-    return { agentTrackerData, leaderboard, userRank };
-  }, [trackerLogs, trackerKpis, agents, currentUser?.id]);
-
-  // Generate 6 weeks of data
-  const weekHeaders = useMemo((): WeekHeader[] => {
-    const now = new Date();
-    const weeks: WeekHeader[] = [];
-    
-    let currentWednesday = startOfWeek(now, { weekStartsOn: 3 });
-    const dayOfWeek = now.getDay();
-    const daysSinceWednesday = dayOfWeek === 3 ? 0 : (dayOfWeek + 4) % 7;
-    currentWednesday = new Date(now);
-    currentWednesday.setDate(now.getDate() - daysSinceWednesday);
-    currentWednesday.setHours(0, 0, 0, 0);
-    
-    for (let i = 0; i < 6; i++) {
-      const weekStart = new Date(currentWednesday);
-      weekStart.setDate(currentWednesday.getDate() - (i * 7));
-      const weekEndDate = new Date(weekStart);
-      weekEndDate.setDate(weekStart.getDate() + 6);
-      weekEndDate.setHours(23, 59, 59, 999);
-      
-      weeks.unshift({
-        label: format(weekStart, 'MMM d'),
-        start: weekStart,
-        end: weekEndDate,
-      });
-    }
-    
-    return weeks;
-  }, []);
-
-  // Calculate performance stats
-  const performanceStats = useMemo(() => {
-    const weekPoints = performanceLogs.reduce((sum, log) => sum + (log.value || 0), 0);
-    
-    const kpiBreakdown = additionalKpis.map(kpi => {
-      const weeklyValues: Record<string, number> = {};
-      
-      weekHeaders.forEach(week => {
-        const weekLogs = performanceLogs.filter(log => {
-          if (log.trackerKpiId !== kpi.id) return false;
-          const logDate = new Date(log.loggedAt);
-          return logDate >= week.start && logDate <= week.end;
-        });
-        
-        weeklyValues[week.label] = weekLogs.reduce((sum, log) => sum + (log.value || 0), 0);
-      });
-
-      return {
-        kpi,
-        weeklyValues,
-        total: Object.values(weeklyValues).reduce((sum, val) => sum + val, 0),
-      };
-    }).sort((a, b) => b.total - a.total);
-    
-    return { weekPoints, kpiBreakdown };
-  }, [performanceLogs, additionalKpis, weekHeaders]);
+    return { kpis: activeKpis, weekHeaders, weeklyScores, kpiWeekHeaders };
+  }, [kpis, kpiLogs]);
 
   if (isLoading || !currentUser) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-6 md:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-48" />
-          ))}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-80" />)}
         </div>
       </div>
     );
   }
+
+  const getCellClass = (value: number | undefined, kpi: KpiDefinition): string => {
+    if (value === undefined) return '';
+    if (!kpi.passFailCriteriaEnabled || kpi.passFailValue === undefined || kpi.passFailValue === null) return '';
+    const passed = kpi.passFailOperator === 'gte'
+      ? value >= kpi.passFailValue
+      : value <= kpi.passFailValue;
+    return passed ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50';
+  };
 
   return (
     <div className="space-y-6">
@@ -423,193 +450,201 @@ export default function AgentDashboard() {
         <h1 className="text-3xl font-bold">Welcome back, {currentUser.name?.split(' ')[0] || 'Agent'}!</h1>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Competitions Card */}
-        <Link href="/competitions">
-          <Card variant="glass" className="glass-card-hover h-full cursor-pointer overflow-hidden">
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+
+        {/* Competition Card */}
+        <Link href="/agent/competitions">
+          <Card variant="glass" className="glass-card-hover cursor-pointer overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/20">
                   <Trophy className="h-5 w-5 text-primary" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <CardTitle className="text-base">Competitions</CardTitle>
-                  <CardDescription className="line-clamp-1">{competitionStats.competitionName || 'No active competition'}</CardDescription>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <Select value={selectedCompetitionId} onValueChange={handleCompetitionChange}>
+                      <SelectTrigger className="w-[180px] md:w-[220px] glass-input">
+                        <SelectValue placeholder="Select competition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {competitions.map((comp) => (
+                          <SelectItem key={comp.id} value={comp.id}>
+                            {comp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={selectedPodId} onValueChange={handlePodChange}>
+                      <SelectTrigger className="w-[120px] md:w-[150px] glass-input">
+                        <SelectValue placeholder="All Pods" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Pods</SelectItem>
+                        {availablePods.map((pod) => (
+                          <SelectItem key={pod.id} value={pod.id}>
+                            {pod.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Team Standings</p>
-                  <div className="space-y-1">
-                    {competitionStats.teamLeaderboard.slice(0, 5).map((team, index) => (
-                      <div 
-                        key={team.id} 
-                        className={`flex items-center justify-between p-2 rounded-lg ${
-                          index === 0 ? 'bg-yellow-500/10' : index === 1 ? 'bg-gray-400/10' : index === 2 ? 'bg-orange-400/10' : 'bg-glass/20'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                            index === 0 ? 'bg-yellow-500/30 text-yellow-400' :
-                            index === 1 ? 'bg-gray-400/30 text-gray-300' :
-                            index === 2 ? 'bg-orange-400/30 text-orange-400' :
-                            'bg-glass text-muted-foreground'
-                          }`}>
-                            {index + 1}
-                          </span>
-                          <span className="text-sm font-medium">{team.name}</span>
-                        </div>
-                        <span className="text-sm font-bold">{team.score.toLocaleString()}</span>
-                      </div>
-                    ))}
-                    {competitionStats.teamLeaderboard.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-2">No teams</p>
-                    )}
-                  </div>
-                </div>
+            <CardContent className="p-3 pt-0">
+              {!selectedCompetitionId ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No competitions available</p>
+              ) : competitionAchievements.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No achievements logged yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Pod Standings */}
+                  {availablePods.length > 1 && (
+                    <div className="[&>div]:overflow-visible">
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Pod Standings</p>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">#</TableHead>
+                            <TableHead>Pod</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {podStandings.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-4 text-xs">No pods in this competition</TableCell>
+                            </TableRow>
+                          ) : (
+                            podStandings.map((pod, index) => {
+                              const isCurrentUserPod = currentUser?.podIds?.includes(pod.id) ?? false;
+                              return (
+                              <TableRow key={pod.id} className={isCurrentUserPod ? 'bg-primary/10' : ''}>
+                                <TableCell className="font-bold">
+                                  {index < 3 ? (
+                                    <Medal className={`h-5 w-5 ${
+                                      index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
+                                    }`} />
+                                  ) : (
+                                    index + 1
+                                  )}
+                                </TableCell>
+                                <TableCell className={`font-medium ${isCurrentUserPod ? 'text-primary font-semibold' : ''}`}>{pod.name}</TableCell>
+                                <TableCell className={`text-right font-bold ${isCurrentUserPod ? 'text-primary' : ''}`}>{pod.score.toLocaleString()}</TableCell>
+                              </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
 
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Agent Leaderboard</p>
-                  <div className="space-y-1">
-                    {competitionStats.agentLeaderboard.slice(0, 3).map((agent, index) => {
-                      const isCurrentUser = agent.agentId === currentUser?.id;
-                      const displayName = isCurrentUser ? 'You' : agent.name.split(' ')[0];
-                      return (
-                        <div 
-                          key={agent.agentId} 
-                          className={`flex items-center justify-between p-2 rounded-lg ${
-                            isCurrentUser ? 'bg-primary/20 ring-1 ring-primary/50' : 'bg-glass/20'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                              index === 0 ? 'bg-yellow-500/30 text-yellow-400' :
-                              index === 1 ? 'bg-gray-400/30 text-gray-300' :
-                              index === 2 ? 'bg-orange-400/30 text-orange-400' :
-                              'bg-glass text-muted-foreground'
-                            }`}>
-                              {index + 1}
-                            </span>
-                            <span className={`text-sm truncate max-w-[100px] ${isCurrentUser ? 'font-medium text-primary' : ''}`}>
-                              {displayName}
-                            </span>
-                          </div>
-                          <span className={`text-sm font-bold ${isCurrentUser ? 'text-primary' : ''}`}>
-                            {agent.score.toLocaleString()}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {competitionStats.userRank !== '-' && parseInt(competitionStats.userRank) > 3 && (
-                      <>
-                        <div className="flex items-center center py-1">
-                          <span className="text-xs text-muted-foreground">...</span>
-                        </div>
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-primary/20 ring-1 ring-primary/50">
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold bg-primary/30 text-primary">
-                              {competitionStats.userRank}
-                            </span>
-                            <span className="text-sm font-medium text-primary">You</span>
-                          </div>
-                          <span className="text-sm font-bold text-primary">
-                            {competitionStats.userScore.toLocaleString()}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                    {competitionStats.agentLeaderboard.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-2">No agents</p>
-                    )}
+                  {/* Team Standings */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Team Standings</p>
+                    <div className="[&>div]:overflow-visible">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">#</TableHead>
+                            <TableHead>Team</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {teamStandings.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-4 text-xs">No teams configured</TableCell>
+                            </TableRow>
+                          ) : (
+                            teamStandings.map((team, index) => {
+                              const competitionTeam = competitionTeams.find((candidate: any) => candidate.id === team.id);
+                              const isCurrentUserTeam = competitionTeam?.agentIds?.includes(currentUser?.id) ?? false;
+                              return (
+                              <TableRow key={team.id} className={isCurrentUserTeam ? 'bg-primary/10' : ''}>
+                                <TableCell className="font-bold">
+                                  {index < 3 ? (
+                                    <Medal className={`h-5 w-5 ${
+                                      index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
+                                    }`} />
+                                  ) : (
+                                    index + 1
+                                  )}
+                                </TableCell>
+                                <TableCell className={`font-medium ${isCurrentUserTeam ? 'text-primary font-semibold' : ''}`}>
+                                  {team.name}
+                                  {team.memberNames && (
+                                    <span className="text-muted-foreground text-xs ml-2" title={team.memberNames}>
+                                      ({team.memberNames.length > 25 ? team.memberNames.substring(0, 25) + '...' : team.memberNames})
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell className={`text-right font-bold ${isCurrentUserTeam ? 'text-primary' : ''}`}>{team.score.toLocaleString()}</TableCell>
+                              </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
 
-        {/* Trackers Card */}
-        <Link href="/trackers/log">
-          <Card variant="glass" className="glass-card-hover h-full cursor-pointer overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/20">
-                  <Target className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Trackers</CardTitle>
-                  <CardDescription>Rolling tracker performance</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Your Trackers</p>
-                  <div className="space-y-1">
-                    {trackerStats.agentTrackerData.slice(0, 5).map(kpi => (
-                      <div key={kpi.id} className="flex items-center justify-between p-2 rounded-lg bg-glass/20">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                            <span className="text-[10px] font-bold text-green-500">{kpi.initials}</span>
-                          </div>
-                          <span className="text-sm truncate max-w-[80px]">{kpi.name}</span>
-                        </div>
-                        <span className="text-sm font-bold text-green-500">{kpi.count}</span>
-                      </div>
-                    ))}
-                    {trackerStats.agentTrackerData.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-2">No data</p>
-                    )}
+                  {/* Agent Standings */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Agent Standings</p>
+                    <div className="[&>div]:overflow-visible">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">#</TableHead>
+                            <TableHead>Agent</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {agentStandings.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-4 text-xs">No achievements logged yet</TableCell>
+                            </TableRow>
+                          ) : (
+                            agentStandings.slice(0, 20).map((agent, index) => {
+                              const isCurrentUser = agent.id === currentUser?.id;
+                              return (
+                                <TableRow key={agent.id} className={isCurrentUser ? 'bg-primary/10' : ''}>
+                                  <TableCell className="font-bold">
+                                    {index < 3 ? (
+                                      <Medal className={`h-5 w-5 ${
+                                        index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
+                                      }`} />
+                                    ) : (
+                                      index + 1
+                                    )}
+                                  </TableCell>
+                                  <TableCell className={`font-medium ${isCurrentUser ? 'text-primary font-semibold' : ''}`}>
+                                    {isCurrentUser ? 'You' : agent.name}
+                                  </TableCell>
+                                  <TableCell className={`text-right font-bold ${isCurrentUser ? 'text-primary' : ''}`}>
+                                    {agent.score.toLocaleString()}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
-
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Leaderboard</p>
-                  <div className="space-y-1">
-                    {trackerStats.leaderboard.slice(0, 5).map((agent, index) => {
-                      const isCurrentUser = agent.agentId === currentUser?.id;
-                      return (
-                        <div 
-                          key={agent.agentId} 
-                          className={`flex items-center justify-between p-2 rounded-lg ${
-                            isCurrentUser ? 'bg-primary/20 ring-1 ring-primary/50' : 'bg-glass/20'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                              index === 0 ? 'bg-yellow-500/30 text-yellow-400' :
-                              index === 1 ? 'bg-gray-400/30 text-gray-300' :
-                              index === 2 ? 'bg-orange-400/30 text-orange-400' :
-                              'bg-glass text-muted-foreground'
-                            }`}>
-                              {index + 1}
-                            </span>
-                            <span className={`text-sm truncate max-w-[80px] ${isCurrentUser ? 'text-primary font-medium' : ''}`}>
-                              {isCurrentUser ? 'You' : agent.name.split(' ')[0]}
-                            </span>
-                          </div>
-                          <span className={`text-sm font-bold ${isCurrentUser ? 'text-primary' : ''}`}>
-                            {agent.total}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {trackerStats.leaderboard.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-2">No data</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </Link>
 
         {/* Performance Card */}
-        <Link href="/performance">
-          <Card variant="glass" className="glass-card-hover h-full cursor-pointer overflow-hidden">
+        <Link href="/agent/performance">
+          <Card variant="glass" className="glass-card-hover cursor-pointer overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/20">
@@ -621,121 +656,155 @@ export default function AgentDashboard() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="overflow-hidden">
-              <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-card z-10">
-                    <tr className="border-b border-glass-border/30">
-                      <th className="text-left py-1 px-1 font-medium text-muted-foreground">KPI</th>
-                      {weekHeaders.slice(-6).map(week => (
-                        <th key={week.label} className="text-center py-1 px-1 font-medium text-muted-foreground min-w-[32px]">
-                          {format(new Date(week.start), 'MMM d')}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {performanceStats.kpiBreakdown.map(({ kpi, weeklyValues }) => (
-                      <tr key={kpi.id} className="border-b border-glass-border/20">
-                        <td className="py-1 px-1">
-                          <div className="flex items-center gap-1">
-                            <div className="w-4 h-4 rounded-full bg-blue-500/20 flex items-center justify-center">
-                              <span className="text-[7px] font-bold text-blue-500">{kpi.initials}</span>
+            <CardContent className="overflow-hidden p-0">
+              {agentPerformanceData.kpis.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No KPI data available</p>
+              ) : (
+                <div>
+                  <div className="bg-gray-200 dark:bg-gray-700 py-3 px-4 border-y text-base font-semibold flex items-center gap-2">
+                    <UserIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-gray-800 dark:text-gray-100">{currentUser.name}</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-100 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                        <TableHead className="w-[140px] text-xs font-bold uppercase text-gray-700 dark:text-gray-200">KPI</TableHead>
+                        {agentPerformanceData.weekHeaders.map((week) => (
+                          <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-gray-700 dark:text-gray-200">
+                            {format(endOfWeek(new Date(week), { weekStartsOn: 4 }), 'dd/MM')}
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-primary border-l-2 border-primary">AVG</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {agentPerformanceData.kpis.map((kpi, index) => (
+                        <TableRow key={kpi.id} className={`h-8 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${index % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
+                          <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-gray-100/30 dark:bg-gray-700/30 text-gray-800 dark:text-gray-200 break-words max-w-[140px]">
+                            <div className="flex items-center gap-1">
+                              <span className="break-words">{kpi.name}</span>
+                              <span className={cn('text-[9px] font-medium shrink-0', kpi.sortOrder === 'asc' ? 'text-blue-500' : 'text-green-500')}>
+                                {kpi.sortOrder === 'asc' ? '↓' : '↑'}
+                              </span>
+                              {kpi.type === 'scoreOutOf' && kpi.maxValue !== undefined && (
+                                <span className="text-[9px] text-muted-foreground shrink-0">/{kpi.maxValue}</span>
+                              )}
+                              {kpi.type !== 'scoreOutOf' && kpi.passFailCriteriaEnabled && kpi.passFailValue !== undefined && (
+                                <span className="text-[9px] text-muted-foreground shrink-0">/{kpi.passFailValue}{kpi.type === 'percentage' ? '%' : ''}</span>
+                              )}
                             </div>
-                            <span className="truncate max-w-[60px]">{kpi.name}</span>
-                          </div>
-                        </td>
-                        {weekHeaders.slice(-6).map(week => {
-                          const value = weeklyValues[week.label];
-                          const isPercentage = kpi.type === 'percentage';
-                          const passed = kpi.passFailCriteriaEnabled && kpi.passFailValue !== undefined
-                            ? (kpi.passFailOperator === 'gte' ? value >= kpi.passFailValue : value <= kpi.passFailValue)
-                            : null;
-                          return (
-                            <td 
-                              key={week.label} 
-                              className={`text-center py-1 px-1 rounded-sm ${
-                                value === 0 ? 'text-muted-foreground/50' :
-                                passed === true ? 'bg-green-500/30 text-green-600 dark:text-green-400' :
-                                passed === false ? 'bg-red-500/30 text-red-600 dark:text-red-400' :
-                                'text-blue-500'
-                              }`}
-                            >
-                              {value > 0 ? (isPercentage ? `${value}%` : value) : '-'}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {performanceStats.kpiBreakdown.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">No KPIs configured</p>
-                )}
-              </div>
+                          </TableCell>
+                          {agentPerformanceData.weekHeaders.map((week) => {
+                            const weeklyData = agentPerformanceData.weeklyScores[week]?.[kpi.id];
+                            const score = weeklyData
+                              ? (kpi.type === 'percentage' ? weeklyData.value / weeklyData.count : weeklyData.value)
+                              : undefined;
+                            return (
+                              <TableCell key={week} className={cn('text-center text-[11px] py-1 px-1 border-l bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 tabular-nums font-medium', getCellClass(score, kpi))}>
+                                {score !== undefined ? (kpi.type === 'percentage' ? `${score.toFixed(0)}%` : score.toLocaleString()) : '-'}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-center text-[11px] py-1 px-1 border-l-2 border-primary font-bold tabular-nums bg-primary/5 text-primary">
+                            {(() => {
+                              const averageWeeks = agentPerformanceData.kpiWeekHeaders[kpi.id] || [];
+                              const total = averageWeeks.reduce((sum, week) => {
+                                const data = agentPerformanceData.weeklyScores[week]?.[kpi.id];
+                                if (!data) return sum;
+                                return sum + ((kpi.type === 'percentage' || kpi.type === 'scoreOutOf') ? data.value / data.count : data.value);
+                              }, 0);
+                              const average = (kpi.type === 'percentage' || kpi.type === 'scoreOutOf') ? total / 6 : total;
+                              return kpi.type === 'percentage' ? `${average.toFixed(1)}%` : average.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                            })()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </Link>
 
         {/* Mini Games Card */}
-        <Link href="/mini-games">
-          <Card variant="glass" className="glass-card-hover h-full cursor-pointer overflow-hidden">
+        <Link href="/agent/mini-games">
+          <Card variant="glass" className="glass-card-hover cursor-pointer overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-purple-500/20">
-                  <Swords className="h-5 w-5 text-purple-500" />
+                  <Gamepad2 className="h-5 w-5 text-purple-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Rock Paper Scissors</CardTitle>
-                  <CardDescription>All-time Top 10</CardDescription>
+                  <CardTitle className="text-base">Mini Games</CardTitle>
+                  <CardDescription>Top 10 scores for each game</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-1">
-                {rpsLeaderboard.slice(0, 10).map((entry, index) => {
-                  const isCurrentUser = entry.userId === currentUser?.id;
-                  const rank = index + 1;
-                  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
-                  
-                  return (
-                    <div 
-                      key={entry.userId} 
-                      className={`flex items-center justify-between py-1 px-2 rounded-lg ${
-                        isCurrentUser 
-                          ? 'bg-purple-500/20 ring-1 ring-purple-500/50' 
-                          : index < 3 ? 'bg-yellow-500/5' : 'bg-glass/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`w-6 text-center font-bold ${
-                          rank === 1 ? 'text-yellow-400' : 
-                          rank === 2 ? 'text-gray-300' : 
-                          rank === 3 ? 'text-orange-400' : 
-                          'text-muted-foreground'
-                        }`}>
-                          {medal || `#${rank}`}
-                        </span>
-                        <span className={`text-sm truncate max-w-[100px] ${isCurrentUser ? 'font-medium text-purple-400' : ''}`}>
-                          {isCurrentUser ? 'YOU' : entry.name.split(' ')[0]}
-                        </span>
+              {gameLeaderboards.every((game) => game.entries.length === 0) ? (
+                <div className="text-center py-4">
+                  <Swords className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs text-muted-foreground">Play RPS to see the leaderboard</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {gameLeaderboards.map((game) => game.entries.length > 0 && (
+                    <div key={game.id}>
+                      <div className="mb-2 flex items-center justify-between border-b pb-2">
+                        <span className="text-sm font-semibold">{game.name}</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{game.scoreLabel}</span>
                       </div>
-                      <span className={`text-sm font-bold tabular-nums ${
-                        isCurrentUser ? 'text-purple-400' : 'text-muted-foreground'
-                      }`}>
-                        {entry.wins}
-                      </span>
+                      <div className="space-y-0.5">
+                        {game.entries.slice(0, 10).map((entry) => {
+                          const isCurrentUser = entry.userId === currentUser.id;
+                          return (
+                            <div key={entry.userId} className={`flex items-center gap-2 p-1.5 rounded transition-colors ${isCurrentUser ? 'bg-purple-500/20 ring-1 ring-purple-500/50' : 'hover:bg-muted/30'}`}>
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold border ${
+                                entry.rank === 1 ? 'bg-yellow-500/30 text-yellow-400 border-yellow-500/50' :
+                                entry.rank === 2 ? 'bg-gray-400/30 text-gray-300 border-gray-400/50' :
+                                entry.rank === 3 ? 'bg-orange-400/30 text-orange-400 border-orange-400/50' :
+                                'bg-muted/30 text-muted-foreground border-muted'
+                              }`}>
+                                {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
+                              </div>
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-[8px]">{generateInitials(entry.name)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <span className={`text-xs truncate block ${isCurrentUser ? 'font-semibold text-purple-400' : 'font-medium'}`}>
+                                  {isCurrentUser ? 'You' : entry.name}
+                                </span>
+                              </div>
+                              <span className={`text-xs font-bold tabular-nums ${isCurrentUser ? 'text-purple-400' : ''}`}>{entry.score}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  );
-                })}
-                {rpsLeaderboard.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">Play RPS to see the leaderboard</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </Link>
       </div>
+    </div>
+  );
+}
+
+export default function LegacyAgentDashboard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/dashboard?view=agent');
+  }, [router]);
+
+  return (
+    <div className="flex min-h-[400px] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { authService } from '@/server/services/auth-service';
+import { permissionService } from '@/server/services/permission-service';
 
 export async function PUT(
   request: NextRequest,
@@ -53,7 +54,8 @@ export async function DELETE(
     }
 
     // Only admins can delete categories
-    if (!session.user.roles?.includes('admin')) {
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+    if (!isAdmin) {
       return NextResponse.json({ error: 'Only admins can delete categories' }, { status: 403 });
     }
 

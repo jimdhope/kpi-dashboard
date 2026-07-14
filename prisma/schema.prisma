@@ -181,12 +181,29 @@ model User {
 }
 
 model Role {
-  id        String     @id @default(cuid())
-  key       RoleKey    @unique
-  name      String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  userRoles UserRole[]
+  id          String           @id @default(cuid())
+  key         RoleKey          @unique
+  name        String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  userRoles   UserRole[]
+  permissions RolePermission[]
+}
+
+enum PermissionLevel {
+  NONE
+  VIEW
+  MANAGE
+}
+
+model RolePermission {
+  id       String          @id @default(cuid())
+  roleId   String
+  role     Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  resource String
+  level    PermissionLevel @default(NONE)
+
+  @@unique([roleId, resource])
 }
 
 model UserRole {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { authService } from '@/server/services/auth-service';
+import { permissionService } from '@/server/services/permission-service';
 
 export async function PUT(
   request: NextRequest,
@@ -22,7 +23,8 @@ export async function PUT(
     }
 
     // Only the author or admin can edit
-    if (comment.createdById !== session.user.id && !session.user.roles?.includes('admin')) {
+    const isAdminEdit = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+    if (comment.createdById !== session.user.id && !isAdminEdit) {
       return NextResponse.json({ error: 'Not authorized to edit this comment' }, { status: 403 });
     }
 
@@ -67,7 +69,8 @@ export async function DELETE(
     }
 
     // Only the author or admin can delete
-    if (comment.createdById !== session.user.id && !session.user.roles?.includes('admin')) {
+    const isAdminDel = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+    if (comment.createdById !== session.user.id && !isAdminDel) {
       return NextResponse.json({ error: 'Not authorized to delete this comment' }, { status: 403 });
     }
 

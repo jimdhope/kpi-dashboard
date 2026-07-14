@@ -32,7 +32,7 @@ interface AdditionalKpi {
 
 interface PerformanceLog {
   id: string;
-  agentId: string;
+  userId: string;
   kpiId: string;
   date: string;
   value: number;
@@ -103,10 +103,10 @@ export default function AgentPerformancePage() {
       }
       setIsLoadingData(true);
       try {
-        const res = await fetch('/api/performance/logs');
+        const res = await fetch('/api/performance/kpi-logs');
         if (res.ok) {
           const data = await res.json();
-          const userLogs = (data.logs || []).filter((log: any) => log.agentId === currentUser.id);
+          const userLogs = (data.logs || []).filter((log: PerformanceLog) => log.userId === currentUser.id);
           setLogs(userLogs);
         }
       } catch (err) {

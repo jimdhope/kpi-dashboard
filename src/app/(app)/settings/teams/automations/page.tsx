@@ -6,6 +6,7 @@ import { podService } from "@/server/services/pod-service";
 import { teamsAutomationService } from "@/server/services/teams-automation-service";
 import { teamsMessageTemplateService } from "@/server/services/teams-message-template-service";
 import { teamsWebhookService } from "@/server/services/teams-webhook-service";
+import { permissionService } from "@/server/services/permission-service";
 
 export default async function TeamsAutomationsPage() {
   const session = await authService.getCurrentSession();
@@ -13,7 +14,8 @@ export default async function TeamsAutomationsPage() {
     redirect("/login");
   }
 
-  if (!session.user.roles.includes("admin")) {
+  const isAdmin = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+  if (!isAdmin) {
     redirect("/dashboard");
   }
 

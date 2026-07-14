@@ -4,20 +4,47 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Trophy, Users, Star, Target } from "lucide-react";
+import { Trophy, Users, Star, Target, Calendar, Award, CheckSquare, TrendingUp } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { AppUser, CompetitionRecord } from '@/lib/contracts';
 
+interface Pod {
+  id: string;
+  name: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  podId?: string | null;
+  email?: string;
+  roles: string[];
+}
+
+interface Achievement {
+  id: string;
+  agentId: string;
+  podId: string;
+  competitionId: string;
+  ruleId: string;
+  ruleName?: string;
+  value: number;
+  points: number;
+  date: string;
+}
+
 const AGENT_COMPETITION_KEY = 'agentCompetitionPage_selectedCompetitionId';
 
 export default function AgentCompetitionsPage() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [competitions, setCompetitions] = useState<CompetitionRecord[]>([]);
+  const [pods, setPods] = useState<Pod[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
-  const [achievementLogs, setAchievementLogs] = useState<any[]>([]);
+  const [achievementLogs, setAchievementLogs] = useState<Achievement[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
@@ -40,34 +67,56 @@ export default function AgentCompetitionsPage() {
   useEffect(() => {
     async function fetchCompetitions() {
       try {
-        const res = await fetch('/api/competitions');
-        if (res.ok) {
-          const data = await res.json();
+        const [compsRes, podsRes, usersRes, achRes] = await Promise.all([
+          fetch('/api/competitions'),
+          fetch('/api/pods'),
+          fetch('/api/users'),
+          fetch('/api/achievements'),
+        ]);
+
+        let compsData: { competitions: CompetitionRecord[] } | null = null;
+        
+        if (compsRes.ok) {
+          const data = await compsRes.json();
+          compsData = data;
           setCompetitions(data.competitions || []);
-          
-          if (data.competitions?.length > 0 && !selectedCompetitionId) {
-            const now = new Date();
-            const currentComp = data.competitions.find((comp: any) => {
-              const start = comp.startsAt ? new Date(comp.startsAt) : null;
-              const end = comp.endsAt ? new Date(comp.endsAt) : null;
-              return start && end && now >= start && now <= end;
-            });
-            
-            if (currentComp) {
-              setSelectedCompetitionId(currentComp.id);
+        }
+        if (podsRes.ok) {
+          const data = await podsRes.json();
+          setPods(data.pods || []);
+        }
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          setUsers(data.users || []);
+        }
+        if (achRes.ok) {
+          const data = await achRes.json();
+          setAchievementLogs(data.achievements || []);
+        }
+
+        if (compsData && compsData.competitions && compsData.competitions.length > 0 && !selectedCompetitionId) {
+          const now = new Date();
+          const currentComp = compsData.competitions.find((comp: any) => {
+            const start = comp.startsAt ? new Date(comp.startsAt) : null;
+            const end = comp.endsAt ? new Date(comp.endsAt) : null;
+            return start && end && now >= start && now <= end;
+          });
+
+          if (currentComp) {
+            setSelectedCompetitionId(currentComp.id);
+          } else {
+            const savedCompId = localStorage.getItem(AGENT_COMPETITION_KEY);
+            if (savedCompId && compsData.competitions.some((c: any) => c.id === savedCompId)) {
+              setSelectedCompetitionId(savedCompId);
             } else {
-              const savedCompId = localStorage.getItem(AGENT_COMPETITION_KEY);
-              if (savedCompId && data.competitions.some((c: any) => c.id === savedCompId)) {
-                setSelectedCompetitionId(savedCompId);
-              } else {
-                setSelectedCompetitionId(data.competitions[0].id);
-              }
+              setSelectedCompetitionId(compsData.competitions[0].id);
             }
           }
         }
       } catch (err) {
         console.error('Error fetching competitions:', err);
       }
+      setIsLoadingData(false);
     }
     fetchCompetitions();
   }, [selectedCompetitionId]);
@@ -279,6 +328,7 @@ export default function AgentCompetitionsPage() {
               <div className="max-h-[400px] overflow-y-auto">
                 {agentScores.slice(0, 15).map((agent, index) => {
                   const isCurrentUser = agent.agentId === currentUser?.id;
+                  const agentUser = users.find(u => u.id === agent.agentId);
                   return (
                     <div 
                       key={agent.agentId} 
@@ -296,8 +346,7 @@ export default function AgentCompetitionsPage() {
                           {index + 1}
                         </div>
                         <span className={`text-sm truncate max-w-[120px] ${isCurrentUser ? 'font-medium' : ''}`}>
-                          {isCurrentUser ? 'You' : 'Agent'}
-                          {isCurrentUser && ' (You)'}
+                          {isCurrentUser ? 'You' : (agentUser?.name?.split(' ')[0] || 'Agent')}
                         </span>
                       </div>
                       <span className={`text-sm font-bold ${isCurrentUser ? 'text-primary' : ''}`}>

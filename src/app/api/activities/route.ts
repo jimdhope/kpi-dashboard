@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { activityRepository } from '@/server/repositories/activity-repository';
 import { authService } from '@/server/services/auth-service';
+import { permissionService } from '@/server/services/permission-service';
 import { prisma } from '@/server/db/client';
 
 // GET /api/activities - List activities with filters
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = {};
 
     // User filter: if not admin, only show own activities
-    const isAdmin = user.roles?.includes('admin');
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(user.roles);
     if (userId) {
       // Admin can view any user's activities
       if (!isAdmin && userId !== user.id) {

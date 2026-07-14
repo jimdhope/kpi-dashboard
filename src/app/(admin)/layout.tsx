@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppNavBar } from '@/components/app-navbar';
 import { AnimatedGradient } from '@/components/animated-gradient';
 import { AppUser } from '@/lib/contracts';
@@ -11,6 +12,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -21,17 +23,43 @@ export default function AdminLayout({
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated) {
+            const isAdmin = data.user.roles.some((r: string) => r === "admin");
+            if (!isAdmin) {
+              router.replace('/agent');
+              return;
+            }
             setUser(data.user);
+          } else {
+            router.replace('/login');
+            return;
           }
+        } else {
+          router.replace('/login');
+          return;
         }
       } catch (error) {
         console.error('Failed to fetch session:', error);
+        router.replace('/login');
+        return;
       } finally {
         setIsLoading(false);
       }
     }
     fetchSession();
-  }, []);
+  }, [router]);
+
+  if (isLoading) {
+    return (
+      <>
+        <AnimatedGradient />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+        </div>
+      </>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <>

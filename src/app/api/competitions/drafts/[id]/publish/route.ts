@@ -2,12 +2,14 @@ import { errorResponse, ok } from "@/server/http";
 import { competitionDraftService } from "@/server/services/competition-draft-service";
 import { prisma } from "@/server/db/client";
 import { Prisma } from "@prisma/client";
+import { requireCompetitionEditor } from "@/server/services/authorization";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireCompetitionEditor();
     const { id } = await params;
     console.log(`[Publish] Attempting to publish draft: ${id}`);
     

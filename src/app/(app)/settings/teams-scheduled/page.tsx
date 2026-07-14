@@ -4,6 +4,7 @@ import { authService } from "@/server/services/auth-service";
 import { teamsAutomationService } from "@/server/services/teams-automation-service";
 import { teamsMessageTemplateService } from "@/server/services/teams-message-template-service";
 import { teamsWebhookService } from "@/server/services/teams-webhook-service";
+import { permissionService } from "@/server/services/permission-service";
 
 export default async function TeamsScheduledPage() {
   const session = await authService.getCurrentSession();
@@ -11,7 +12,8 @@ export default async function TeamsScheduledPage() {
     redirect("/login");
   }
 
-  if (!session.user.roles.includes("admin")) {
+  const isAdmin = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+  if (!isAdmin) {
     redirect("/dashboard");
   }
 

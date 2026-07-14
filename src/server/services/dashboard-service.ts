@@ -5,13 +5,14 @@ import { activityRepository } from "@/server/repositories/activity-repository";
 import { trackerRepository } from "@/server/repositories/tracker-repository";
 import { authService } from "@/server/services/auth-service";
 import { competitionService } from "@/server/services/competition-service";
-import { hasAdminAccess } from "@/lib/contracts";
+import { permissionService } from "@/server/services/permission-service";
 
 export const dashboardService = {
   async getDashboard(): Promise<DashboardSummary> {
     const user = await authService.requireCurrentUser();
     const allPods = await podRepository.list();
-    const assignedPods = hasAdminAccess(user.roles)
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(user.roles);
+    const assignedPods = isAdmin
       ? allPods
       : allPods.filter((pod) => pod.members.some((member) => member.id === user.id));
     const recentActivities = await activityRepository.listRecent(10);
@@ -60,7 +61,7 @@ export const dashboardService = {
       dailyKpiSum: kpiSummary._sum.value?.toNumber() || 0,
       podComparisons: podComparisons.sort((a, b) => b.dailyScore - a.dailyScore),
       leaderboard,
-      metrics: hasAdminAccess(user.roles) ? {
+      metrics: isAdmin ? {
         campaigns: await prisma.campaign.count(),
         pods: await prisma.pod.count(),
         users: await prisma.user.count(),

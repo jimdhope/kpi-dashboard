@@ -9,6 +9,11 @@ const sessionInclude = {
           role: true,
         },
       },
+      podMemberships: {
+        select: {
+          podId: true,
+        },
+      },
     },
   },
 } satisfies Prisma.SessionInclude;

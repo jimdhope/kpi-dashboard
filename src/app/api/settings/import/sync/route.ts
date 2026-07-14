@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dataImportService } from '@/server/services/data-import-service';
 import { authService } from '@/server/services/auth-service';
+import { permissionService } from '@/server/services/permission-service';
 
 export async function POST(request: NextRequest) {
   try {
     const user = await authService.requireCurrentUser();
-    
-    // Check admin role
-    const isAdmin = user.roles?.some((r: any) => r === 'admin');
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(user.roles);
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }

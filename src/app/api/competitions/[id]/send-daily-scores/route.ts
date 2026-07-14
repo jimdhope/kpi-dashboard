@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
+import { permissionService } from "@/server/services/permission-service";
 import { ok, errorResponse } from "@/server/http";
 import { buildDailyScoresAdaptiveCard, DailyScoresCardData, PodStandingsForTeams, CompetitionTeamStanding, RuleTargetProgress } from "@/server/services/competition-teams-card-service";
 
@@ -30,7 +31,7 @@ export async function POST(
   try {
     const session = await authService.getCurrentSession();
     const userRoles = session.user?.roles || [];
-    const isAuthorized = userRoles.includes('admin') || userRoles.includes('teamLeader') || userRoles.includes('podManager');
+    const isAuthorized = await permissionService.hasNavAccess(userRoles, 'competitions', 'MANAGE');
     if (!session.user || !isAuthorized) {
       return errorResponse(403, "Forbidden");
     }
@@ -422,7 +423,7 @@ export async function GET(
   try {
     const session = await authService.getCurrentSession();
     const userRoles = session.user?.roles || [];
-    const isAuthorized = userRoles.includes('admin') || userRoles.includes('teamLeader') || userRoles.includes('podManager');
+    const isAuthorized = await permissionService.hasNavAccess(userRoles, 'competitions', 'MANAGE');
     if (!session.user || !isAuthorized) {
       return errorResponse(403, "Forbidden");
     }

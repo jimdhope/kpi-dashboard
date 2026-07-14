@@ -49,15 +49,9 @@ interface Competition {
   endsAt: string | null;
 }
 
-interface TrackerKpi {
-  id: string;
-  name: string;
-}
-
 export default function ScoreTargetsPage() {
   const [targets, setTargets] = useState<ScoreTarget[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
-  const [trackerKpis, setTrackerKpis] = useState<TrackerKpi[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<ScoreTarget | null>(null);
@@ -67,9 +61,8 @@ export default function ScoreTargetsPage() {
   const [formData, setFormData] = useState({
     hashtag: '',
     name: '',
-    targetType: 'tracker' as 'competition' | 'tracker',
+    targetType: 'competition' as const,
     competitionId: '',
-    trackerKpiId: '',
     defaultPoints: '1',
   });
 
@@ -79,15 +72,14 @@ export default function ScoreTargetsPage() {
 
   async function fetchData() {
     try {
-      const [targetsRes, competitionsRes, trackersRes] = await Promise.all([
+      const [targetsRes, competitionsRes] = await Promise.all([
         fetch('/api/settings/score-targets'),
         fetch('/api/competitions'),
-        fetch('/api/trackers'),
       ]);
 
       if (targetsRes.ok) {
         const data = await targetsRes.json();
-        setTargets(data.targets || []);
+        setTargets((data.targets || []).filter((target: ScoreTarget) => target.targetType === 'competition'));
       }
 
       if (competitionsRes.ok) {
@@ -100,10 +92,6 @@ export default function ScoreTargetsPage() {
         setCompetitions(activeCompetitions);
       }
 
-      if (trackersRes.ok) {
-        const data = await trackersRes.json();
-        setTrackerKpis(data.trackers || []);
-      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -117,9 +105,8 @@ export default function ScoreTargetsPage() {
     setFormData({
       hashtag: '',
       name: '',
-      targetType: 'tracker',
+      targetType: 'competition',
       competitionId: '',
-      trackerKpiId: '',
       defaultPoints: '1',
     });
     setIsFormOpen(true);
@@ -131,9 +118,8 @@ export default function ScoreTargetsPage() {
     setFormData({
       hashtag: target.hashtag,
       name: target.name,
-      targetType: target.targetType,
+      targetType: 'competition',
       competitionId: target.competitionId || '',
-      trackerKpiId: target.trackerKpiId || '',
       defaultPoints: String(target.defaultPoints),
     });
     setIsFormOpen(true);
@@ -146,7 +132,7 @@ export default function ScoreTargetsPage() {
         name: formData.name,
         targetType: formData.targetType,
         competitionId: formData.targetType === 'competition' && formData.competitionId ? formData.competitionId : null,
-        trackerKpiId: formData.targetType === 'tracker' && formData.trackerKpiId ? formData.trackerKpiId : null,
+        trackerKpiId: null,
         defaultPoints: parseInt(formData.defaultPoints) || 1,
       };
 
@@ -236,13 +222,8 @@ export default function ScoreTargetsPage() {
   };
 
   const getTargetDetails = (target: ScoreTarget) => {
-    if (target.targetType === 'competition') {
-      const comp = competitions.find(c => c.id === target.competitionId);
-      return comp ? comp.name : 'Unknown competition';
-    } else {
-      const tracker = trackerKpis.find(t => t.id === target.trackerKpiId);
-      return tracker ? tracker.name : 'Unknown tracker';
-    }
+    const comp = competitions.find(c => c.id === target.competitionId);
+    return comp ? comp.name : 'Unknown competition';
   };
 
   if (isLoading) {
@@ -295,44 +276,7 @@ export default function ScoreTargetsPage() {
                   placeholder="Smart Sales"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Target Type</Label>
-                <Select
-                  value={formData.targetType}
-                  onValueChange={(value: 'competition' | 'tracker') =>
-                    setFormData({ ...formData, targetType: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tracker">Tracker KPI</SelectItem>
-                    <SelectItem value="competition">Competition</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {formData.targetType === 'tracker' && (
-                <div className="space-y-2">
-                  <Label>Tracker KPI</Label>
-                  <Select
-                    value={formData.trackerKpiId}
-                    onValueChange={(value) => setFormData({ ...formData, trackerKpiId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a tracker" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {trackerKpis.map((tracker) => (
-                        <SelectItem key={tracker.id} value={tracker.id}>
-                          {tracker.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {formData.targetType === 'competition' && (
+              {(
                 <div className="space-y-2">
                   <Label>Competition</Label>
                   <Select

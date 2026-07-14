@@ -6,11 +6,16 @@ import { activityService } from "@/server/services/activity-service";
 import { teamsAutomationService } from "@/server/services/teams-automation-service";
 import { teamsEventService } from "@/server/services/teams-event-service";
 import { prisma } from "@/server/db/client";
+import { permissionService } from "@/server/services/permission-service";
 
 export const performanceService = {
   async listLogs() {
-    await authService.requireCurrentUser();
-    return performanceRepository.listLogs();
+    const currentUser = await authService.requireCurrentUser();
+    const podIds = currentUser.podIds ?? [];
+    if (podIds.length === 0) {
+      return [];
+    }
+    return performanceRepository.listLogsByPodIds(podIds);
   },
 
   async listLogsByPodIds(podIds: string[]) {
@@ -102,8 +107,14 @@ export const performanceService = {
 
   // KPI Log functions
   async listKpiLogs(filters?: { podId?: string; startDate?: string; endDate?: string }) {
-    await authService.requireCurrentUser();
-    return performanceRepository.listKpiLogs(filters);
+    const currentUser = await authService.requireCurrentUser();
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
+    if (isAdmin) {
+      return performanceRepository.listKpiLogs(filters);
+    }
+    const userPodIds = currentUser.podIds ?? [];
+    if (userPodIds.length === 0) return [];
+    return performanceRepository.listKpiLogs({ ...filters, podId: userPodIds[0] });
   },
 
   async createKpiLog(input: { kpiId: string; userId?: string; value: number; date: Date; loggedAt?: string | null }) {

@@ -65,7 +65,6 @@ export function DashboardOverview({ summary }: DashboardOverviewProps) {
               ...(admin ? [
                 { href: "/campaigns", title: "Campaigns", desc: "Manage the first core aggregate in the new service layer." },
                 { href: "/pods", title: "Pods & memberships", desc: "Assign users to pods under the new Postgres ownership model." },
-                { href: "/trackers", title: "Trackers", desc: "Define KPI trackers and targets in the V3 schema." },
                 { href: "/competitions/manage", title: "Manage Competitions", desc: "Configure rules, teams, and standings on the V3 backend." },
               ] : []),
               { href: "/performance", title: "Performance", desc: "Log KPI values and inspect new Postgres-backed rollups." },

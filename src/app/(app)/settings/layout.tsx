@@ -3,24 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Settings as SettingsIcon, Megaphone, ShieldCheck, Users, MessageSquare, Zap, Calendar, Database, Download, Hash } from 'lucide-react';
+import { Settings as SettingsIcon, Megaphone, ShieldCheck, Users, MessageSquare, Zap, Calendar, Database, Download, Hash, Shield } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OfflineIndicator } from '@/components/offline-indicator';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
-}
-
-interface UserRole {
-  key: string;
-  name: string;
-}
-
-interface AppUser {
-  id: string;
-  name?: string;
-  email?: string;
-  roles?: UserRole[];
 }
 
 interface MenuItem {
@@ -40,14 +29,14 @@ const settingsMenuItems: MenuItem[] = [
   { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
   { label: 'Pods', href: '/settings/pods', icon: ShieldCheck },
   { label: 'Users', href: '/settings/users', icon: Users },
+  { label: 'Permissions', href: '/settings/permissions', icon: Shield },
 ];
-
-const rolesWithSettingsAccess = ['admin', 'campaignManager', 'podManager', 'teamLeader', 'competitionRunner'] as const;
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+
+  const [currentUser, setCurrentUser] = useState<{ id: string; roles?: { key: string }[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -56,10 +45,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
         const res = await fetch('/api/users/me');
         if (res.ok) {
           const data = await res.json();
-          console.log('Settings layout - user data:', JSON.stringify(data.user, null, 2));
           setCurrentUser(data.user);
-        } else {
-          console.log('Settings layout - fetch failed:', res.status);
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -67,9 +53,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
         setIsLoading(false);
       }
     }
-
     fetchUser();
   }, []);
+
+  const roleKeys = currentUser?.roles?.map((r) => r.key) || [];
+  const { getNavLevel, isLoading: permsLoading } = usePermissions(roleKeys);
+  const hasSettingsAccess = !permsLoading && getNavLevel('settings') === 'MANAGE';
 
   useEffect(() => {
     if (!isLoading && pathname === '/settings') {
@@ -77,9 +66,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     }
   }, [isLoading, pathname, router]);
 
-  const hasSettingsAccess = currentUser?.roles?.some((role) => (rolesWithSettingsAccess as unknown as string[]).includes(role as unknown as string));
-
-  if (isLoading) {
+  if (isLoading || permsLoading) {
     return (
       <div className="flex relative min-h-screen w-full flex-col">
         {/* Mobile breadcrumbs */}

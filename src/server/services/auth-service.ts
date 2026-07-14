@@ -11,6 +11,7 @@ import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { passwordResetRepository } from "@/server/repositories/password-reset-repository";
 import { sessionRepository } from "@/server/repositories/session-repository";
 import { userRepository } from "@/server/repositories/user-repository";
+import { permissionService } from "@/server/services/permission-service";
 import { emailService } from "@/server/services/email-service";
 
 function addDays(days: number): Date {
@@ -93,9 +94,8 @@ export const authService = {
 
   async requireAdmin() {
     const user = await authService.requireCurrentUser();
-    const hasAdmin = user.roles.some((r: any) => r === "admin"); 
-    // Wait, let's use the central logic if possible.
-    if (!hasAdmin) {
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(user.roles);
+    if (!isAdmin) {
       throw new Error("Forbidden");
     }
     return user;

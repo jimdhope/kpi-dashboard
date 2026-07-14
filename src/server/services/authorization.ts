@@ -1,9 +1,10 @@
-import { hasAdminAccess, isCompetitionEditor } from "@/lib/contracts";
 import { authService } from "@/server/services/auth-service";
+import { permissionService } from "@/server/services/permission-service";
 
 export async function requireAdminUser() {
   const currentUser = await authService.requireCurrentUser();
-  if (!hasAdminAccess(currentUser.roles)) {
+  const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
+  if (!isAdmin) {
     throw new Error("Forbidden");
   }
   return currentUser;
@@ -11,7 +12,8 @@ export async function requireAdminUser() {
 
 export async function requireCompetitionEditor() {
   const currentUser = await authService.requireCurrentUser();
-  if (!isCompetitionEditor(currentUser.roles)) {
+  const canManage = await permissionService.hasNavAccess(currentUser.roles, "competitions", "MANAGE");
+  if (!canManage) {
     throw new Error("Forbidden");
   }
   return currentUser;

@@ -2,6 +2,7 @@ import { kpiLogRepository, KpiLogRecord } from "@/server/repositories/kpi-log-re
 import { authService } from "@/server/services/auth-service";
 import { activityService } from "@/server/services/activity-service";
 import { kpiRepository } from "@/server/repositories/kpi-repository";
+import { permissionService } from "@/server/services/permission-service";
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -45,7 +46,17 @@ export const kpiLogService = {
     endDate?: string;
   }): Promise<KpiLogRecord[]> {
     try {
-      // Authentication is optional for reading logs
+      const currentUser = await authService.requireCurrentUser();
+      const userPodIds = currentUser.podIds ?? [];
+
+      const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
+      if (!isAdmin) {
+        return await kpiLogRepository.listByPodIds(userPodIds, {
+          startDate: filters?.startDate,
+          endDate: filters?.endDate,
+        });
+      }
+
       return await kpiLogRepository.list(filters);
     } catch (error) {
       console.error("kpiLogService.list error:", error);

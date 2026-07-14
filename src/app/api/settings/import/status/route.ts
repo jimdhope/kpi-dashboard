@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dataImportService } from '@/server/services/data-import-service';
 import { authService } from '@/server/services/auth-service';
+import { permissionService } from '@/server/services/permission-service';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('[status] Checking auth...');
     let user;
     try {
       user = await authService.requireCurrentUser();
     } catch (authError: any) {
-      console.log('[status] Auth error:', authError.message);
       return NextResponse.json({ 
         error: 'Unauthorized - you need to be logged in as admin',
         details: authError.message 
       }, { status: 401 });
     }
-    console.log('[status] User:', user?.email, 'roles:', user?.roles);
     
-    // Check admin role
-    const isAdmin = user?.roles?.some((r: any) => r === 'admin');
-    console.log('[status] isAdmin:', isAdmin);
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(user.roles);
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }

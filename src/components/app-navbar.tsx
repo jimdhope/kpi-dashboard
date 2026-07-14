@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { usePermissions } from '@/hooks/use-permissions';
 import { cn, generateInitials } from '@/lib/utils';
 import { 
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
@@ -26,7 +27,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { NavDropdown, NavigationProvider, type NavDropdownItem } from './nav-dropdown';
 
-interface NavItemConfig {
+export interface NavItemConfig {
   key: string;
   label: string;
   href: string;
@@ -58,17 +59,6 @@ const navItems: NavItemConfig[] = [
       { label: 'Certificates', href: '/competitions/certificates', icon: Award },
       { label: 'Reports', href: '/reports', icon: FileText },
       { label: 'Gamification', href: '/admin/gamification', icon: Crown },
-    ]
-  },
-  { 
-    key: 'trackers',
-    label: 'Trackers', 
-    href: '/trackers', 
-    icon: Target,
-    items: [
-      { label: 'Dashboard', href: '/trackers', icon: Home },
-      { label: 'Setup Trackers', href: '/trackers/setup', icon: Settings },
-      { label: 'Log Scores', href: '/trackers/log', icon: CheckSquare },
     ]
   },
   { 
@@ -127,90 +117,13 @@ const navItems: NavItemConfig[] = [
   },
 ];
 
-// Simplified role permissions for V3
-const rolePermissions: Record<string, Record<string, 'admin' | 'agent' | 'none'>> = {
-  admin: {
-    knowledgeBase: 'admin',
-    directory: 'admin',
-    competitions: 'admin',
-    trackers: 'admin',
-    performance: 'admin',
-    reports: 'admin',
-    miniGames: 'admin',
-    usefulTools: 'agent',
-    activity: 'admin',
-    settings: 'admin',
-  },
-  campaignManager: {
-    knowledgeBase: 'admin',
-    directory: 'admin',
-    competitions: 'admin',
-    trackers: 'admin',
-    performance: 'admin',
-    reports: 'admin',
-    miniGames: 'admin',
-    usefulTools: 'agent',
-    activity: 'admin',
-    settings: 'admin',
-  },
-  podManager: {
-    knowledgeBase: 'admin',
-    directory: 'admin',
-    competitions: 'admin',
-    trackers: 'admin',
-    performance: 'admin',
-    reports: 'admin',
-    miniGames: 'admin',
-    usefulTools: 'agent',
-    activity: 'admin',
-    settings: 'admin',
-  },
-  teamLeader: {
-    knowledgeBase: 'admin',
-    directory: 'admin',
-    competitions: 'admin',
-    trackers: 'admin',
-    performance: 'agent',
-    reports: 'agent',
-    miniGames: 'agent',
-    usefulTools: 'agent',
-    activity: 'agent',
-    settings: 'admin',
-  },
-  competitionRunner: {
-    knowledgeBase: 'admin',
-    directory: 'admin',
-    competitions: 'admin',
-    trackers: 'agent',
-    performance: 'agent',
-    reports: 'agent',
-    miniGames: 'agent',
-    usefulTools: 'agent',
-    activity: 'agent',
-    settings: 'admin',
-  },
-  agent: {
-    knowledgeBase: 'agent',
-    directory: 'agent',
-    competitions: 'agent',
-    trackers: 'agent',
-    performance: 'agent',
-    reports: 'none',
-    miniGames: 'agent',
-    usefulTools: 'agent',
-    activity: 'agent',
-    settings: 'none',
-    integrations: 'none',
-  },
-};
-
 const roleDashboardHrefs: Record<string, string> = {
   admin: '/dashboard',
   campaignManager: '/dashboard',
   podManager: '/dashboard',
   teamLeader: '/dashboard',
   competitionRunner: '/dashboard',
-  agent: '/agent',
+  agent: '/dashboard',
 };
 
 const roleDashboardLabels: Record<string, string> = {
@@ -233,11 +146,12 @@ const roleIcons: Record<string, React.ElementType> = {
 
 const rolePriority = ['admin', 'campaignManager', 'podManager', 'teamLeader', 'competitionRunner', 'agent'];
 
-export function AppNavBar({ user, className }: { user: AppUser | null; className?: string }) {
+export function AppNavBar({ user, items, className }: { user: AppUser | null; items?: NavItemConfig[]; className?: string }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   const userRoles = user?.roles as string[] || [];
+  const { getNavLevel, isLoading: permsLoading } = usePermissions(userRoles);
 
   const getHighestRole = (): string => {
     for (const role of rolePriority) {
@@ -251,17 +165,15 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
   const primaryRole = getHighestRole();
 
   const getHighestAccess = (key: string): 'admin' | 'agent' | 'none' => {
-    let highest: 'admin' | 'agent' | 'none' = 'none';
-    for (const role of userRoles) {
-      const permission = rolePermissions[role]?.[key];
-      if (permission === 'admin') {
-        return 'admin';
-      }
-      if (permission === 'agent') {
-        highest = 'agent';
-      }
+    if (!permsLoading) {
+      const level = getNavLevel(key);
+      if (level === 'MANAGE') return 'admin';
+      if (level === 'VIEW') return 'agent';
+      return 'none';
     }
-    return highest;
+    // Fallback while permissions load: admins get full access for correct initial render
+    if (userRoles.includes('admin')) return 'admin';
+    return 'none';
   };
 
   const getNavHref = (item: NavItemConfig): string | null => {
@@ -274,15 +186,13 @@ export function AppNavBar({ user, className }: { user: AppUser | null; className
     return item.href;
   };
 
-  const visibleNavItems = navItems.filter(item => getNavHref(item) !== null);
+  const visibleNavItems = items ?? navItems.filter(item => getNavHref(item) !== null);
 
   const dashboardHref = roleDashboardHrefs[primaryRole] || '/dashboard';
   const dashboardLabel = roleDashboardLabels[primaryRole] || 'Dashboard';
   const RoleIcon = roleIcons[primaryRole] || User;
 
-  const hasSettingsAccess = userRoles.some(role => 
-    ['admin', 'campaignManager', 'podManager', 'teamLeader', 'competitionRunner'].includes(role)
-  );
+  const hasSettingsAccess = getHighestAccess('settings') !== 'none';
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

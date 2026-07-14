@@ -5,7 +5,7 @@ import { prisma } from "@/server/db/client";
 export async function GET() {
   try {
     const session = await authService.getCurrentSession();
-    if (!session) {
+    if (!session.user) {
       return errorResponse(401, "Unauthorized");
     }
 

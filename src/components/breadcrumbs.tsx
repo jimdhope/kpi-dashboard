@@ -62,8 +62,6 @@ const routeLabels: Record<string, string> = {
 const parentLabels: Record<string, string> = {
   '/competitions': 'Competitions',
   '/agent/competations': 'Competitions',
-  '/trackers': 'Trackers',
-  '/agent/trackers': 'Trackers',
   '/performance': 'Performance',
   '/agent/performance': 'Performance',
   '/settings': 'Settings',

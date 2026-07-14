@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AppUser } from "@/lib/contracts";
+import { getRoleBasedDashboard, type AppUser } from "@/lib/contracts";
 
 function getDefaultRoute(user: AppUser): string {
-  return "/dashboard";
+  return getRoleBasedDashboard(user.roles);
 }
 
 export function LoginForm() {

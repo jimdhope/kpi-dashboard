@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { authService } from '@/server/services/auth-service';
+import { permissionService } from '@/server/services/permission-service';
 import { activityService } from '@/server/services/activity-service';
 
 function generateSlug(title: string): string {
@@ -97,7 +98,8 @@ export async function PUT(
     }
 
     // Check if user can edit (lock check)
-    if (article.locked && session.user.roles?.includes('admin')) {
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+    if (article.locked && isAdmin) {
       // Admins can always edit
     } else if (article.locked && lockedRoles?.length) {
       const userRole = session.user.roles?.[0];
@@ -180,7 +182,8 @@ export async function DELETE(
     }
 
     // Only admins can delete
-    if (!session.user.roles?.includes('admin')) {
+    const isAdminDel = await permissionService.hasEffectiveAdminAccess(session.user.roles);
+    if (!isAdminDel) {
       return NextResponse.json({ error: 'Only admins can delete articles' }, { status: 403 });
     }
 

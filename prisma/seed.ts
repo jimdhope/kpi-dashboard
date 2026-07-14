@@ -84,6 +84,10 @@ async function main() {
     },
   });
 
+  // Seed default role permissions
+  const { permissionService } = await import("@/server/services/permission-service");
+  await permissionService.seedDefaults();
+
   // Badges are now created through the admin UI (Badge Manager).
   // No hard-coded badge seeding needed — start fresh.
 

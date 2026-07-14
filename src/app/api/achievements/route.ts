@@ -41,7 +41,19 @@ export async function GET(request: Request) {
       orderBy: { loggedAt: 'desc' },
     });
 
-    return ok({ achievements });
+    const agentIds = [...new Set(achievements.map((achievement) => achievement.agentId))];
+    const agents = await prisma.user.findMany({
+      where: { id: { in: agentIds } },
+      select: { id: true, name: true },
+    });
+    const agentNames = new Map(agents.map((agent) => [agent.id, agent.name]));
+
+    return ok({
+      achievements: achievements.map((achievement) => ({
+        ...achievement,
+        agentName: agentNames.get(achievement.agentId) || 'Unknown',
+      })),
+    });
   } catch (error) {
     console.error('GET /api/achievements error:', error);
     return errorResponse(401, "Unauthorized");

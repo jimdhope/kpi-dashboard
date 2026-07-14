@@ -59,7 +59,6 @@ const dateRangePresets: { value: DateRangePreset; label: string; getRange: () =>
 
 // Category icons
 const categoryIcons: Record<Exclude<ActivityCategory, 'all'>, React.ElementType> = {
-  trackers: Target,
   competitions: Trophy,
   scores: Award,
   kpis: BarChart3,
@@ -168,7 +167,6 @@ export function ActivityTimeline({
   const categoryCounts = useMemo(() => {
     const counts: Record<ActivityCategory, number> = {
       all: activities.length,
-      trackers: 0,
       competitions: 0,
       scores: 0,
       kpis: 0,
@@ -188,7 +186,7 @@ export function ActivityTimeline({
 
   // Get categories with activities
   const availableCategories = useMemo(() => {
-    return (['all', 'trackers', 'competitions', 'scores', 'kpis', 'games'] as ActivityCategory[]).filter(
+    return (['all', 'competitions', 'scores', 'kpis', 'games'] as ActivityCategory[]).filter(
       cat => cat === 'all' || categoryCounts[cat] > 0
     );
   }, [categoryCounts]);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { competitionEntryService } from "@/server/services/competition-entry-service";
+import { authService } from "@/server/services/auth-service";
 
 const scoreSchema = z.object({
   ruleId: z.string().optional(),
@@ -14,6 +15,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string; entryId: string }> }
 ) {
   try {
+    await authService.requireCurrentUser();
+
     const body = await request.json();
     const payload = scoreSchema.parse(body);
     const { entryId } = await params;

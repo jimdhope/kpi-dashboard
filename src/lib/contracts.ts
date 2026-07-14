@@ -9,6 +9,24 @@ export const USER_ROLES = [
 
 export type UserRole = (typeof USER_ROLES)[number];
 
+export const NAV_RESOURCES = [
+  "knowledgeBase",
+  "directory",
+  "competitions",
+  "performance",
+  "reports",
+  "miniGames",
+  "usefulTools",
+  "activity",
+  "settings",
+  "integrations",
+] as const;
+
+export type NavResource = (typeof NAV_RESOURCES)[number];
+
+export const PERMISSION_LEVELS = ["NONE", "VIEW", "MANAGE"] as const;
+export type PermissionLevel = (typeof PERMISSION_LEVELS)[number];
+
 export const ADMIN_ROLES: UserRole[] = ["admin"];
 
 export const COMPETITION_EDITOR_ROLES: UserRole[] = [
@@ -522,19 +540,7 @@ export function isCompetitionEditor(roles: UserRole[]): boolean {
 }
 
 export function getRoleBasedDashboard(roles: UserRole[]): string {
-  if (hasAdminAccess(roles)) {
-    return '/admin';
-  }
-  if (roles.includes('campaignManager') || roles.includes('podManager')) {
-    return '/admin';
-  }
-  if (roles.includes('teamLeader')) {
-    return '/team-leader';
-  }
-  if (roles.includes('competitionRunner')) {
-    return '/competition-runner';
-  }
-  return '/agent';
+  return '/dashboard';
 }
 
 export interface ActivityRecord {
@@ -601,14 +607,14 @@ export const ACTIVITY_TYPES = [
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 // Activity category for filtering
-export type ActivityCategory = 'all' | 'trackers' | 'competitions' | 'scores' | 'kpis' | 'games' | 'profile';
+export type ActivityCategory = 'all' | 'competitions' | 'scores' | 'kpis' | 'games' | 'profile';
 
 // Map activity types to categories
 export const ACTIVITY_TYPE_CATEGORIES: Record<ActivityType, ActivityCategory> = {
   // Tracker activities
-  tracker_created: 'trackers',
-  tracker_entry_logged: 'trackers',
-  tracker_milestone: 'trackers',
+  tracker_created: 'kpis',
+  tracker_entry_logged: 'kpis',
+  tracker_milestone: 'kpis',
   // Competition activities
   competition_joined: 'competitions',
   competition_completed: 'competitions',
@@ -640,7 +646,6 @@ export const ACTIVITY_TYPE_CATEGORIES: Record<ActivityType, ActivityCategory> = 
 // Category display labels
 export const ACTIVITY_CATEGORY_LABELS: Record<ActivityCategory, string> = {
   all: 'All Activities',
-  trackers: 'Trackers',
   competitions: 'Competitions',
   scores: 'Scores & Achievements',
   kpis: 'KPIs',

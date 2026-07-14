@@ -1,11 +1,16 @@
 import { podRepository } from "@/server/repositories/pod-repository";
 import { requireAdminUser } from "@/server/services/authorization";
 import { authService } from "@/server/services/auth-service";
+import { permissionService } from "@/server/services/permission-service";
 
 export const podService = {
   async listPods() {
-    await authService.requireCurrentUser(); // Any authenticated user can view
-    return podRepository.list();
+    const currentUser = await authService.requireCurrentUser();
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
+    if (isAdmin) {
+      return podRepository.list();
+    }
+    return podRepository.listForUser(currentUser.id);
   },
 
   async createPod(input: {

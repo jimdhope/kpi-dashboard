@@ -136,14 +136,6 @@ export default function CompetitionRunnerDashboard() {
       bgColor: 'bg-primary/20',
     },
     {
-      title: 'Trackers',
-      description: 'Track metrics',
-      href: '/trackers',
-      icon: Target,
-      color: 'text-green-500',
-      bgColor: 'bg-green-500/20',
-    },
-    {
       title: 'Performance',
       description: 'View analytics',
       href: '/performance',

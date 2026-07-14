@@ -126,14 +126,6 @@ export default function CampaignManagerDashboard() {
       bgColor: 'bg-primary/20',
     },
     {
-      title: 'Trackers',
-      description: 'Track team metrics',
-      href: '/trackers',
-      icon: Target,
-      color: 'text-green-500',
-      bgColor: 'bg-green-500/20',
-    },
-    {
       title: 'Performance',
       description: 'View performance analytics',
       href: '/performance',

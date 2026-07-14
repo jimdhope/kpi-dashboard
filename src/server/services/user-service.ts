@@ -4,6 +4,7 @@ import { authService } from "@/server/services/auth-service";
 import { activityService } from "@/server/services/activity-service";
 import { userRepository } from "@/server/repositories/user-repository";
 import { requireAdminUser } from "@/server/services/authorization";
+import { permissionService } from "@/server/services/permission-service";
 
 export const userService = {
   async getCurrentUser() {
@@ -11,8 +12,13 @@ export const userService = {
   },
 
   async listUsers() {
-    await authService.requireCurrentUser(); // Any authenticated user can view
-    return userRepository.list();
+    const currentUser = await authService.requireCurrentUser();
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
+    if (isAdmin) {
+      return userRepository.list();
+    }
+    const podIds = currentUser.podIds ?? [];
+    return userRepository.listByPodIds(podIds);
   },
 
   async listUsersForMemberships() {

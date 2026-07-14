@@ -2,6 +2,7 @@ import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { competitionEntryService } from "@/server/services/competition-entry-service";
 import { authService } from "@/server/services/auth-service";
+import { requireCompetitionEditor } from "@/server/services/authorization";
 
 export async function GET(
   request: Request,
@@ -22,6 +23,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireCompetitionEditor();
+
     const { id } = await params;
     const body = await request.json();
     const userId = body.userId;
