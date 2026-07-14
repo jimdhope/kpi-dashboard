@@ -56,7 +56,7 @@ KPI Quest organizes participants hierarchically. Getting this structure right is
 
 ### Campaigns (`/settings/campaigns`)
 * **Represent lines of business** (e.g., "Outbound Gas", "General Customer Care").
-* Competitions and performance trackers are bound to specific Campaigns.
+* Competitions and KPI definitions can be organised around specific Campaigns.
 * You can toggle Campaigns active or inactive. Deactivating a Campaign hides it from general selection but preserves historical records.
 
 ### Pods (`/settings/pods`)
@@ -108,7 +108,7 @@ You can use merge tags in templates, such as:
 Automations link events to outbound webhooks.
 * **Triggers:**
   - `incomingWebhookReceived`: Triggered when an external service hits an inbound endpoint.
-  - `performanceLogged`: Triggered when an agent submits daily tracker statistics.
+  - `performanceLogged`: Triggered when KPI performance is logged for an agent.
   - `competitionScoreLogged`: Triggered when points are logged inside a competition.
 * **Batching and Windows:**
   - To prevent chat spam, you can set a **Batch Window** (e.g., 5 minutes) which accumulates scores and sends a unified summary.
@@ -127,8 +127,7 @@ Agents can log scores without opening the web app by typing registered hashtags 
 3. Define the configuration:
    - **Hashtag:** The trigger word (e.g., `#Smart`, `#Sale`).
    - **Name:** Friendly identifier.
-   - **Target Type:** Specify whether this logs to a **Competition Rule** or an ongoing **Performance Tracker**.
-   - **Target ID:** Select the target competition rule or tracker KPI.
+   - **Competition:** Select the competition that should receive the score.
    - **Default Points:** Specify how many points this hashtag logs per occurrence (e.g., `#Smart` = 1 point, `#GrandSlam` = 5 points).
 4. Ensure your Teams channel webhook or bot is configured to forward messages containing these hashtags to KPI Quest's inbound endpoint.
 

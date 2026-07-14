@@ -6,13 +6,11 @@ Welcome to the **KPI Quest User Guide**! Whether you are an **Agent** working ha
 
 ## 🚪 Logging In & Role-Based Dashboards
 
-KPI Quest features **automatic role-based redirects**. When you log in, the system determines your role and presents you with a dashboard custom-tailored to your daily activities:
+KPI Quest uses a unified `/dashboard` address. When you log in, the system determines your roles and presents the appropriate dashboard:
 
-* **Agents:** Landing automatically on the `/agent` dashboard. Focuses on personal targets, today's accomplishments, current active competitions, gamification stats (badges, points, levels), and personal performance charts.
-* **Team Leaders / Pod Managers:** Automatically routed to `/team-leader` or `/pod-manager` respectively. Focuses on pod comparisons, tracking team performance, review logs, and motivating team members.
-* **Competition Runners:** Routed to `/competition-runner` to manage ongoing scoreboards.
-* **Campaign Managers:** Directed to `/campaign-manager` to configure rules and review logs.
-* **Administrators:** Routed to `/admin` to control configuration settings, data, and system integrity.
+* **Agents:** See the agent dashboard, focused on competition standings, personal KPI performance, and mini-game scores.
+* **Administrators and management roles:** See the management dashboard with pod performance, the latest competition, and top performers.
+* **Multi-role users:** Accounts that have both Agent and management access can switch between Admin view and Agent view from the dashboard.
 
 *Note: Your primary email and temporary password will be provided by your Administrator. On your first login, you will be prompted to choose a secure, custom password.*
 
@@ -38,14 +36,14 @@ Competitions are gamified challenges running over a set period (e.g., Daily, Wee
 
 ---
 
-## 📊 Performance Tracking & Daily Trackers
+## 📊 KPI Performance
 
-Trackers are used for ongoing, campaign-wide KPI analysis separate from short-term competitions.
+The **Performance** area records and analyses ongoing KPI data separately from short-term competitions.
 
-### Daily Trackers
-* Navigate to **Trackers** in your sidebar.
-* Select the relevant Tracker KPI (e.g., "Inbound Support Tickets") and record your value.
-* This updates your ongoing metrics and assists your Team Leader in tracking performance averages.
+### Logging KPI Scores
+* Navigate to **Performance → Log Scores**.
+* Select the relevant KPI, agent, date, and value.
+* Use **KPI Breakdown** to compare agent results and **Performance Charts** to review trends.
 
 ### Performance Charts
 * Go to the **Performance** tab to view your performance overview.

@@ -22,7 +22,7 @@ KPI Quest is structured around four foundational pillars, each designed to optim
 ```
 
 ### 1. Performance Tracking & Logging
-* **KPI Trackers:** Log daily numerical data across core business indicators (e.g., calls made, issues resolved, sales volume).
+* **KPI Performance:** Log daily numerical data across core business indicators (e.g., calls made, issues resolved, sales volume).
 * **Granular Visualizations:** Interactive real-time charts showing personal and team trends, allowing team leaders to easily identify top performers or coaching opportunities.
 * **Aggregated Dashboards:** Dynamic dashboard panels specialized for different roles, showing daily statistics and overall achievements at the Campaign, Pod, or Agent level.
 
@@ -57,4 +57,4 @@ To help you navigate the system, here are the key organizational units and entit
   * **Competition Runner:** Has rights to create, modify, and start competitions.
   * **Agent:** Individual contributor who logs scores, participates in mini-games, and views personal performance charts.
 * **KPI Rule:** Point-scoring logic defined within a competition. It specifies the points awarded, the associated emoji, and the daily targets.
-* **Score Target:** A mapping configuration linking a specific hashtag (like `#Smart`) to a competition rule or a performance tracker, enabling instant automated scoring.
+* **Score Target:** A mapping configuration linking a specific hashtag (like `#Smart`) to a competition, enabling instant automated scoring.

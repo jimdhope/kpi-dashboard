@@ -108,7 +108,7 @@ Our Prisma model schema (`prisma/schema.prisma`) represents a multi-tenant layou
 ### Crucial Relational Subsystems:
 * **User (`User`):** Holds accounts, optional Firebase reference hashes, XP gamification points, and password metrics. Linked to role arrays via joint-table `UserRole` mapping to the `Role` master.
 * **Campaign & Pod (`Campaign`, `Pod`, `PodMembership`):** Core organizational hierarchy. Users join a `Pod` via `PodMembership` records, which links to a specific `Campaign`. Webhooks can be mapped on the Campaign or Pod levels to narrow automated scopes.
-* **Trackers (`TrackerKpi`, `TrackerLog`):** Ongoing numeric logs recorded by agents or webhook payloads. Logs store the raw numeric `value` and reference a `userId`.
+* **KPI Performance (`Kpi`, `KpiLog`):** Ongoing numeric KPI results recorded for agents and used by breakdowns, charts, and role-specific dashboards. Legacy `TrackerKpi` and `TrackerLog` records remain in the schema only for historical restore compatibility.
 * **Competitions (`Competition`, `CompetitionRule`, `CompetitionEntry`, `CompetitionResult`):** Holds point systems, rule definitions, and live participant entries. Results represent finalized statistics, assigning experience points (XP) and podium placements.
 * **Teams Automation (`TeamsWebhookEndpoint`, `TeamsAutomation`, `TeamsMessageTemplate`):** Outbound message orchestration system. Webhooks represent API channels; templates host JSON patterns for message cards or adaptive structures; automations link triggers (like `competitionScoreLogged`) to outbound deliveries.
 * **Knowledge Base & Directory (`KBArticle`, `KBCategory`, `KBVersion`, `KBComment`, `Contact`, `Company`, `Tag`):** Internal documents. Rich text editor content is saved as JSON configurations representing standard Tiptap schema objects.
@@ -143,10 +143,10 @@ The Microsoft Teams integration manages both inbound scoring and outbound event 
                      ▼
   [Parsed by `ScoreTargetService`]
     - Matches hashtag to registered target
-    - Resolves active Competition Rule or Tracker ID
+    - Resolves the active Competition target
                      │
                      ▼
-  [Score / Performance Record Logged]
+  [Competition Score Logged]
     - Increments agent score inside the DB
     - Triggers live scoreboard update
 ```
