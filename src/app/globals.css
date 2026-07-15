@@ -82,42 +82,20 @@
   }
 }
 
-/* Static atmospheric backdrop: detailed enough to read through glass without
-   requiring pointer listeners, timers, or a client-side animation loop. */
+/* Full-window dark gradient with enough tonal change for glass surfaces to
+   remain visible, without motion or decorative layers. */
 .atmospheric-background {
   position: fixed;
   inset: 0;
   z-index: -10;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 75% 55% at 8% 10%, rgba(20, 184, 166, 0.2), transparent 68%),
-    radial-gradient(ellipse 58% 52% at 92% 18%, rgba(56, 189, 248, 0.13), transparent 70%),
-    radial-gradient(ellipse 65% 60% at 72% 100%, rgba(13, 148, 136, 0.16), transparent 72%),
-    linear-gradient(145deg, #08111f 0%, #101d2e 46%, #0a1725 100%);
-}
-
-.atmospheric-background::before,
-.atmospheric-background::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-
-.atmospheric-background::before {
-  opacity: 0.24;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: linear-gradient(to bottom, black, transparent 85%);
-}
-
-.atmospheric-background::after {
-  background:
-    radial-gradient(circle at 28% 62%, rgba(45, 212, 191, 0.1) 0 1px, transparent 2px),
-    radial-gradient(circle at 74% 36%, rgba(125, 211, 252, 0.08) 0 1px, transparent 2px);
-  background-size: 42px 42px, 56px 56px;
-  opacity: 0.35;
+  background: linear-gradient(
+    to bottom right,
+    #050a14 0%,
+    #0a1825 34%,
+    #0d2931 67%,
+    #10212b 100%
+  );
 }
 
 /* Glassmorphic Base */
@@ -165,6 +143,19 @@
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Floating navigation needs stronger separation than persistent glass such as
+   the navbar, otherwise underlying headings and tables compete with the menu. */
+.glass-menu {
+  background: linear-gradient(145deg, rgba(22, 39, 55, 0.94), rgba(9, 23, 36, 0.92));
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 24px 55px -18px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45);
 }
 
 /* Frosted Glass - Stronger */

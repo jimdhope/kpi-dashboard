@@ -201,7 +201,7 @@ export function NavDropdown({ items, trigger, href, align = 'left', className, o
         )}
       >
         <div className={cn(
-          "glass-sidebar rounded-xl p-2 shadow-xl",
+          "glass-menu rounded-xl p-2",
           alignmentClasses[align]
         )}>
           {items.map((item, index) => {
