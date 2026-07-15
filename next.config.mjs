@@ -2,6 +2,12 @@
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  async redirects() {
+    return [
+      { source: '/admin', destination: '/dashboard', permanent: false },
+      { source: '/agent', destination: '/dashboard?view=agent', permanent: false },
+    ];
+  },
   async headers() {
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
