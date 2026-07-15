@@ -28,6 +28,35 @@ function calculateResult(player: z.infer<typeof throwSchema>, opponent: z.infer<
 }
 
 export const rpsService = {
+  async leaderboard() {
+    const topPlayers = await prisma.rpsGame.groupBy({
+      by: ["playerId"],
+      where: { result: "win" },
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 50,
+    });
+    const players = await prisma.user.findMany({
+      where: { id: { in: topPlayers.map((entry) => entry.playerId) } },
+      select: { id: true, name: true, email: true },
+    });
+    const playerDetails = new Map(players.map((player) => [player.id, player]));
+
+    return topPlayers
+      .map((entry) => {
+        const player = playerDetails.get(entry.playerId);
+        return {
+          userId: entry.playerId,
+          name: player?.name || "Unknown",
+          score: entry._count.id,
+          email: player?.email,
+        };
+      })
+      .filter((entry) => !entry.email?.toLowerCase().endsWith("@test.com"))
+      .slice(0, 10)
+      .map(({ email: _email, ...entry }, index) => ({ ...entry, rank: index + 1 }));
+  },
+
   async play(user: AppUser, input: unknown) {
     const playerThrow = throwSchema.parse(input);
     const opponentThrow = throws[randomInt(throws.length)];

@@ -18,7 +18,7 @@ const AGENT_NAV_ITEMS: NavItemConfig[] = [
     icon: BookMarked,
     items: [
       { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen },
-      { label: 'Directory', href: '/directory', icon: Contact },
+      { label: 'Directory', href: '/directory', icon: Contact, permissionKey: 'directory' },
     ] as NavDropdownItem[],
   },
   {

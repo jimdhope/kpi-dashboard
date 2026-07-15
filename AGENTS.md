@@ -38,6 +38,13 @@ npm run jobs:work   # Run background worker
 validation. Use `db:push` only for disposable local prototyping; committed
 migrations are required for application schema changes.
 
+## Next.js DevTools MCP
+
+- Project configuration lives in `.mcp.json` and uses Vercel's `next-devtools-mcp`.
+- Start `npm run dev` before requesting live route, runtime-error, page-metadata, or server-log diagnostics.
+- Restart the coding-agent session after changing `.mcp.json` so the MCP server is rediscovered.
+- MCP is a local development aid only; do not add it to production dependencies or invoke it from application code.
+
 ## Key Configuration
 
 ### Database

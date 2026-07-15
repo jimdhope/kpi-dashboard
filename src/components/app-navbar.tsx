@@ -45,7 +45,7 @@ const navItems: NavItemConfig[] = [
     icon: BookMarked,
     items: [
       { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen },
-      { label: 'Directory', href: '/directory', icon: Contact },
+      { label: 'Directory', href: '/directory', icon: Contact, permissionKey: 'directory' },
     ]
   },
   { 
@@ -55,11 +55,11 @@ const navItems: NavItemConfig[] = [
     icon: Trophy,
     items: [
       { label: 'Dashboard', href: '/competitions', icon: Home },
-      { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare },
-      { label: 'Manage', href: '/competitions/manage', icon: Trophy },
-      { label: 'Certificates', href: '/competitions/certificates', icon: Award },
-      { label: 'Reports', href: '/reports', icon: FileText },
-      { label: 'Gamification', href: '/admin/gamification', icon: Crown },
+      { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, requiredLevel: 'MANAGE' },
+      { label: 'Manage', href: '/competitions/manage', icon: Trophy, requiredLevel: 'MANAGE' },
+      { label: 'Certificates', href: '/competitions/certificates', icon: Award, requiredLevel: 'MANAGE' },
+      { label: 'Reports', href: '/reports', icon: FileText, permissionKey: 'reports' },
+      { label: 'Gamification', href: '/admin/gamification', icon: Crown, permissionKey: 'settings', requiredLevel: 'MANAGE' },
     ]
   },
   { 
@@ -69,8 +69,8 @@ const navItems: NavItemConfig[] = [
     icon: BarChart3,
     items: [
       { label: 'Dashboard', href: '/performance', icon: Home },
-      { label: 'Setup KPIs', href: '/performance/kpis', icon: Settings },
-      { label: 'Log Scores', href: '/performance/log', icon: CheckSquare },
+      { label: 'Setup KPIs', href: '/performance/kpis', icon: Settings, requiredLevel: 'MANAGE' },
+      { label: 'Log Scores', href: '/performance/log', icon: CheckSquare, requiredLevel: 'MANAGE' },
       { label: 'KPI Breakdown', href: '/performance/breakdown', icon: BarChart3 },
       { label: 'Performance Charts', href: '/performance/charts', icon: LineChart },
     ]
@@ -110,13 +110,13 @@ const navItems: NavItemConfig[] = [
     href: '/settings/general', 
     icon: SettingsIcon,
     items: [
-      { label: 'General', href: '/settings/general', icon: SettingsIcon },
-      { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone },
-      { label: 'Pods', href: '/settings/pods', icon: Shield },
-      { label: 'Users', href: '/settings/users', icon: Users },
-      { label: 'Activity', href: '/agent/activity', icon: Activity },
-      { label: 'Teams Webhooks', href: '/settings/teams-webhooks', icon: SettingsIcon },
-      { label: 'Teams Workflows', href: '/settings/teams/workflows', icon: SettingsIcon },
+      { label: 'General', href: '/settings/general', icon: SettingsIcon, requiredLevel: 'MANAGE' },
+      { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone, requiredLevel: 'MANAGE' },
+      { label: 'Pods', href: '/settings/pods', icon: Shield, requiredLevel: 'MANAGE' },
+      { label: 'Users', href: '/settings/users', icon: Users, requiredLevel: 'MANAGE' },
+      { label: 'Activity', href: '/agent/activity', icon: Activity, permissionKey: 'activity' },
+      { label: 'Teams Webhooks', href: '/settings/teams-webhooks', icon: SettingsIcon, requiredLevel: 'MANAGE' },
+      { label: 'Teams Workflows', href: '/settings/teams/workflows', icon: SettingsIcon, requiredLevel: 'MANAGE' },
     ]
   },
 ];
@@ -185,6 +185,11 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
     return 'none';
   };
 
+  const hasRequiredAccess = (key: string, requiredLevel: 'VIEW' | 'MANAGE' = 'VIEW') => {
+    const access = getHighestAccess(key);
+    return requiredLevel === 'MANAGE' ? access === 'admin' : access !== 'none';
+  };
+
   const getNavHref = (item: NavItemConfig): string | null => {
     const access = getHighestAccess(item.key);
     if (access === 'none') return null;
@@ -195,13 +200,28 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
     return item.href;
   };
 
-  const visibleNavItems = items ?? navItems.filter(item => getNavHref(item) !== null);
+  const sourceItems = items ?? navItems;
+  const visibleNavItems = sourceItems
+    .filter(item => getNavHref(item) !== null)
+    .map(item => ({
+      ...item,
+      items: item.items.filter(subItem => hasRequiredAccess(
+        subItem.permissionKey ?? item.key,
+        subItem.requiredLevel,
+      )),
+    }));
 
   const dashboardHref = roleDashboardHrefs[primaryRole] || '/dashboard';
   const dashboardLabel = roleDashboardLabels[primaryRole] || 'Dashboard';
   const RoleIcon = roleIcons[primaryRole] || User;
 
   const hasSettingsAccess = getHighestAccess('settings') !== 'none';
+  const visibleSettingsItems = navItems
+    .find(item => item.key === 'settings')
+    ?.items.filter(subItem => hasRequiredAccess(
+      subItem.permissionKey ?? 'settings',
+      subItem.requiredLevel,
+    )) ?? [];
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -247,7 +267,7 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
                   </Button>
                 </Link>
               </SheetClose>
-              {visibleNavItems.map((item) => {
+              {visibleNavItems.filter(item => item.key !== 'settings').map((item) => {
                 const Icon = item.icon;
                 const href = getNavHref(item);
                 if (!href) return null;
@@ -284,7 +304,7 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
                   <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Settings
                   </p>
-                  {navItems.find(item => item.key === 'settings')?.items.map((subItem) => {
+                  {visibleSettingsItems.map((subItem) => {
                     const SubIcon = subItem.icon;
                     return (
                       <SheetClose asChild key={subItem.href}>

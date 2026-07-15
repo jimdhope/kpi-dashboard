@@ -15,11 +15,24 @@ const PUBLIC_API_PREFIXES = new Set([
 ]);
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-// Page routes requiring manage-level on a specific resource
-const PAGE_GUARDS: Array<{ prefix: string; resource: string }> = [
-  { prefix: "/admin", resource: "settings" },
-  { prefix: "/settings", resource: "settings" },
-  { prefix: "/reports", resource: "reports" },
+// Order specific write/manage destinations before their view-level parents.
+const PAGE_GUARDS: Array<{ prefix: string; resource: NavResource; minLevel: "VIEW" | "MANAGE" }> = [
+  { prefix: "/competitions/manage", resource: "competitions", minLevel: "MANAGE" },
+  { prefix: "/competitions/log", resource: "competitions", minLevel: "MANAGE" },
+  { prefix: "/competitions/certificates", resource: "competitions", minLevel: "MANAGE" },
+  { prefix: "/performance/kpis", resource: "performance", minLevel: "MANAGE" },
+  { prefix: "/performance/log", resource: "performance", minLevel: "MANAGE" },
+  { prefix: "/admin", resource: "settings", minLevel: "MANAGE" },
+  { prefix: "/settings", resource: "settings", minLevel: "MANAGE" },
+  { prefix: "/reports", resource: "reports", minLevel: "VIEW" },
+  { prefix: "/competitions", resource: "competitions", minLevel: "VIEW" },
+  { prefix: "/performance", resource: "performance", minLevel: "VIEW" },
+  { prefix: "/knowledge-base", resource: "knowledgeBase", minLevel: "VIEW" },
+  { prefix: "/directory", resource: "directory", minLevel: "VIEW" },
+  { prefix: "/mini-games", resource: "miniGames", minLevel: "VIEW" },
+  { prefix: "/tools", resource: "usefulTools", minLevel: "VIEW" },
+  { prefix: "/call-flow", resource: "usefulTools", minLevel: "VIEW" },
+  { prefix: "/meter-reading-guide", resource: "usefulTools", minLevel: "VIEW" },
 ];
 
 // API routes requiring manage-level on a specific resource
@@ -103,10 +116,10 @@ export async function proxy(request: NextRequest) {
 
   const userRoles = session.user.userRoles.map((ur) => ur.role.key) as string[];
 
-  // Check page guards — require MANAGE on the resource
+  // Check page guards using the same resource and level shown in navigation.
   for (const guard of PAGE_GUARDS) {
     if (pathname === guard.prefix || pathname.startsWith(guard.prefix + "/")) {
-      const hasAccess = await permissionService.hasNavAccess(userRoles, guard.resource as NavResource, "MANAGE");
+      const hasAccess = await permissionService.hasNavAccess(userRoles, guard.resource, guard.minLevel);
       if (!hasAccess) {
         return NextResponse.redirect(new URL("/agent", request.url));
       }

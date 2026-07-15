@@ -240,6 +240,18 @@ npm run dev:inspect
 ```
 Set `ENABLE_RUNTIME_METRICS=true` to emit periodic structured process-memory
 measurements. Do not enable high-frequency metrics without reviewing log volume.
+
+### Next.js DevTools MCP
+
+The root `.mcp.json` enables Vercel's `next-devtools-mcp` for compatible coding
+agents. With `npm run dev` running, it can inspect live Next.js errors, logs,
+routes, page metadata, project metadata, and Server Actions through Next.js's
+development-only `/_next/mcp` endpoint.
+
+The coding-agent session may need to be restarted after the MCP configuration is
+added or changed. This is a local diagnostic tool; it is not an application
+dependency and is not included in production.
+
 Start the production server:
 ```bash
 npm run start

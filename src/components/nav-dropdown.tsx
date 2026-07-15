@@ -11,6 +11,10 @@ export interface NavDropdownItem {
   href: string;
   icon?: React.ElementType;
   openInNewTab?: boolean;
+  /** Permission resource to use when it differs from the parent menu section. */
+  permissionKey?: string;
+  /** Minimum permission needed to display this destination. */
+  requiredLevel?: 'VIEW' | 'MANAGE';
 }
 
 interface NavDropdownProps {

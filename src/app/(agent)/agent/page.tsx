@@ -119,88 +119,49 @@ export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser |
   useEffect(() => {
     async function init() {
       try {
-        const [sessionRes, compsRes, podsRes, usersRes, kpisRes, gamesRes, achievementsRes, dailyGamesRes] = await Promise.all([
-          initialUser ? Promise.resolve(null) : fetch('/api/auth/session'),
-          fetch('/api/competitions'),
-          fetch('/api/pods'),
-          fetch('/api/users'),
-          fetch('/api/kpis'),
-          fetch('/api/rps-games?limit=100'),
-          fetch('/api/achievements'),
-          fetch('/api/mini-games/daily'),
-        ]);
+        const response = await fetch('/api/dashboard/agent');
+        if (!response.ok) throw new Error('Failed to load dashboard data');
+        const data = await response.json();
 
-        if (sessionRes?.ok) {
-          const sessionData = await sessionRes.json();
-          if (sessionData.authenticated && sessionData.user) {
-            setCurrentUser(sessionData.user);
-          }
-        }
-
-        if (compsRes.ok) {
-          const compsData = await compsRes.json();
-          const comps = compsData.competitions || [];
-          setCompetitions(comps);
+        setCurrentUser(data.user || initialUser);
+        const comps = data.competitions || [];
+        setCompetitions(comps);
+        setPods(data.pods || []);
+        setUsers(data.users || []);
+        setKpis(data.kpis || []);
+        setKpiLogs(data.kpiLogs || []);
+        setRpsLeaderboard(data.rpsLeaderboard || []);
+        setAchievements(data.achievements || []);
           
-          // Auto-select active competition if none selected yet
-          if (!selectedCompetitionId) {
-            const now = new Date();
-            const active = comps.find((c: any) => {
-              const start = c.startsAt ? new Date(c.startsAt) : null;
-              const end = c.endsAt ? new Date(c.endsAt) : null;
-              return start && end && now >= start && now <= end;
-            });
-            const selected = active || (comps.length > 0 ? comps[0] : null);
-            if (selected) setSelectedCompetitionId(selected.id);
-          }
+        if (!selectedCompetitionId) {
+          const now = new Date();
+          const active = comps.find((c: Competition) => {
+            const start = c.startsAt ? new Date(c.startsAt) : null;
+            const end = c.endsAt ? new Date(c.endsAt) : null;
+            return start && end && now >= start && now <= end;
+          });
+          const selected = active || comps[0];
+          if (selected) setSelectedCompetitionId(selected.id);
         }
 
-        if (podsRes.ok) {
-          const podsData = await podsRes.json();
-          setPods(podsData.pods || []);
-        }
-
-        if (usersRes.ok) {
-          const usersData = await usersRes.json();
-          setUsers(usersData.users || []);
-        }
-
-        if (kpisRes.ok) {
-          const kpisData = await kpisRes.json();
-          setKpis(kpisData.kpis || []);
-        }
-
-        if (gamesRes.ok) {
-          const gamesData = await gamesRes.json();
-          setRpsLeaderboard(gamesData.leaderboard || []);
-        }
-
-        if (dailyGamesRes.ok) {
-          const dailyData = await dailyGamesRes.json();
-          const names: Record<string, string> = {
-            'higher-lower:default': 'Higher or Lower',
-            'daily-word:default': 'Daily Word',
-            'sudoku:easy': 'Sudoku · Easy',
-            'sudoku:medium': 'Sudoku · Medium',
-            'sudoku:hard': 'Sudoku · Hard',
-          };
-          setDailyGameLeaderboards((dailyData.games || []).map((game: any) => ({
-            id: `${game.gameKey}:${game.variant}`,
-            name: names[`${game.gameKey}:${game.variant}`] || game.gameKey,
-            scoreLabel: game.gameKey === 'higher-lower' ? 'Streak' : game.gameKey === 'daily-word' ? 'Guesses' : 'Time',
-            entries: (game.leaderboard || []).map((entry: any) => ({
-              ...entry,
-              score: game.gameKey === 'daily-word'
-                ? entry.guesses
-                : game.gameKey === 'sudoku' ? formatGameTime(entry.score) : entry.score,
-            })),
-          })));
-        }
-
-        if (achievementsRes.ok) {
-          const achievementsData = await achievementsRes.json();
-          setAchievements(achievementsData.achievements || []);
-        }
+        const names: Record<string, string> = {
+          'higher-lower:default': 'Higher or Lower',
+          'daily-word:default': 'Daily Word',
+          'sudoku:easy': 'Sudoku · Easy',
+          'sudoku:medium': 'Sudoku · Medium',
+          'sudoku:hard': 'Sudoku · Hard',
+        };
+        setDailyGameLeaderboards((data.dailyGames || []).map((game: any) => ({
+          id: `${game.gameKey}:${game.variant}`,
+          name: names[`${game.gameKey}:${game.variant}`] || game.gameKey,
+          scoreLabel: game.gameKey === 'higher-lower' ? 'Streak' : game.gameKey === 'daily-word' ? 'Guesses' : 'Time',
+          entries: (game.leaderboard || []).map((entry: any) => ({
+            ...entry,
+            score: game.gameKey === 'daily-word'
+              ? entry.guesses
+              : game.gameKey === 'sudoku' ? formatGameTime(entry.score) : entry.score,
+          })),
+        })));
       } catch (err) {
         console.error('Error initializing dashboard:', err);
       }
@@ -376,24 +337,6 @@ export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser |
   const handlePodChange = (value: string) => {
     setSelectedPodId(value);
   };
-
-  useEffect(() => {
-    const uid = currentUser?.id;
-    if (!uid) { setKpiLogs([]); return; }
-    const userId = uid;
-    async function fetchKpiLogs() {
-      try {
-        const res = await fetch(`/api/performance/kpi-logs?userId=${encodeURIComponent(userId)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setKpiLogs((data.logs || []).filter((log: KpiLog) => log.userId === uid));
-        }
-      } catch (err) {
-        console.error('Error fetching KPI logs:', err);
-      }
-    }
-    fetchKpiLogs();
-  }, [currentUser?.id]);
 
   const gameLeaderboards = useMemo((): GameLeaderboard[] => [{
     id: 'rock-paper-scissors',
