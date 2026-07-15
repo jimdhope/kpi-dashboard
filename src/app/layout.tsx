@@ -1,6 +1,6 @@
 import "@/app/globals.css";
 import { ReactNode } from "react";
-import { AnimatedGradient } from "@/components/animated-gradient";
+import { AtmosphericBackground } from "@/components/atmospheric-background";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className="dark">
       <body className="min-h-screen bg-background antialiased">
         <TooltipProvider>
-          <AnimatedGradient />
+          <AtmosphericBackground />
           {children}
           <Toaster />
         </TooltipProvider>

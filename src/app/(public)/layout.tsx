@@ -1,20 +1,14 @@
 
-'use client';
-
-import React from 'react';
-import { AnimatedGradient } from '@/components/animated-gradient';
+import type { ReactNode } from 'react';
 
 export default function PublicLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <>
-      <AnimatedGradient />
-      <div className="min-h-screen">
-        {children}
-      </div>
-    </>
+    <div className="min-h-screen">
+      {children}
+    </div>
   );
 }
