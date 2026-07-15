@@ -1,5 +1,3 @@
-'use client';
-
 import { BurnsTestCalculator } from '@/components/tools/burns-test-calculator';
 
 export default function BurnsTestPage() {

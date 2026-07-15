@@ -1,5 +1,3 @@
-'use client';
-
 import { EnergyUsageCalculator } from '@/components/tools/energy-usage-calculator';
 
 export default function EnergyUsagePage() {

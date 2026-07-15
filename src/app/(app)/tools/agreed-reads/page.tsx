@@ -1,5 +1,3 @@
-'use client';
-
 import { AgreedReadsCalculator } from '@/components/tools/agreed-reads-calculator';
 
 export default function AgreedReadsPage() {

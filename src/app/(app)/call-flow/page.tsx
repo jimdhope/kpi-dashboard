@@ -1,5 +1,3 @@
-'use client';
-
 import { CallFlow } from '@/components/tools/call-flow';
 
 export default function CallFlowPage() {

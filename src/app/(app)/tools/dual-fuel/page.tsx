@@ -1,5 +1,3 @@
-'use client';
-
 import { DualFuelCalculator } from '@/components/tools/dual-fuel-calculator';
 
 export default function DualFuelPage() {

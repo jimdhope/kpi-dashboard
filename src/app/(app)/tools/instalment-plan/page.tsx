@@ -1,5 +1,3 @@
-'use client';
-
 import { InstalmentPlanCalculator } from '@/components/tools/instalment-plan-calculator';
 
 export default function InstalmentPlanPage() {

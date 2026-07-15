@@ -1,5 +1,3 @@
-'use client';
-
 import { TariffComparisonTool } from '@/components/tools/tariff-comparison-tool';
 
 export default function TariffComparisonPage() {
