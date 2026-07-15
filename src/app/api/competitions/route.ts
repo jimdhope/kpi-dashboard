@@ -43,9 +43,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = schema.parse(await request.json());
-    console.log('[POST /api/competitions] Creating competition:', { name: payload.name, rulesCount: payload.rules?.length });
     const competition = await competitionService.createCompetition(payload);
-    console.log('[POST /api/competitions] Created:', competition.id);
     return ok(competition, { status: 201 });
   } catch (error) {
     console.error('[POST /api/competitions] Error:', error);
@@ -54,9 +52,6 @@ export async function POST(request: Request) {
     }
     if (error instanceof Error && error.message === "Forbidden") {
       return errorResponse(403, "Forbidden - You don't have permission to create competitions");
-    }
-    if (error instanceof Error) {
-      return errorResponse(400, error.message);
     }
     return errorResponse(500, "Failed to create competition.");
   }

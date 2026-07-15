@@ -16,8 +16,7 @@ export async function POST(request: Request) {
   try {
     await requireAdminUser();
     const rawBody = await request.text();
-    const payloadSize = rawBody.length;
-    console.log(`[Teams Send] Raw incoming payload size: ${payloadSize} bytes`);
+    const payloadSize = Buffer.byteLength(rawBody, "utf8");
 
     if (payloadSize > 30000) {
       console.error(`[Teams Send] REJECTED: Incoming payload too large (${payloadSize} bytes)`);
@@ -26,10 +25,6 @@ export async function POST(request: Request) {
 
     const payload = schema.parse(JSON.parse(rawBody));
     
-    if (payload.context) {
-      console.log(`[Teams Send] Context size: ${JSON.stringify(payload.context).length} bytes`);
-    }
-
     const webhook = await teamsWebhookRepository.findById(payload.webhookId);
     if (!webhook) return errorResponse(400, "Teams channel not found");
     if (!webhook.isActive) return errorResponse(400, "This Teams channel is not active");
@@ -85,8 +80,10 @@ export async function POST(request: Request) {
       deliveryFormat,
     });
 
-    const finalPayloadSize = JSON.stringify(cardPayload).length;
-    console.log(`[Teams Send] Final Adaptive Card payload size: ${finalPayloadSize} bytes`);
+    const finalPayloadSize = Buffer.byteLength(JSON.stringify(cardPayload), "utf8");
+    if (finalPayloadSize > 25000) {
+      return errorResponse(400, "Generated Teams message is too large. Please reduce its content.");
+    }
 
     try {
       const response = await fetch(webhook.url, {

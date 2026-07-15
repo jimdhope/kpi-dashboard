@@ -74,11 +74,9 @@ function mapTemplate(record: {
 
 export const teamsMessageTemplateRepository = {
   async list() {
-    console.log('teamsMessageTemplateRepository.list() called');
     const templates = await prisma.teamsMessageTemplate.findMany({
       orderBy: [{ isActive: "desc" }, { name: "asc" }],
     });
-    console.log('Found in database:', templates.length, 'templates');
 
     return templates.map((template) => mapTemplate(template as never));
   },
@@ -109,7 +107,6 @@ export const teamsMessageTemplateRepository = {
     isDefault?: boolean;
     isActive: boolean;
   }) {
-    console.log('teamsMessageTemplateRepository.create() called with:', input.name, input.category);
     const template = await prisma.teamsMessageTemplate.create({
       data: {
         name: input.name,

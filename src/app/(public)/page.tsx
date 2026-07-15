@@ -1,6 +1,3 @@
-'use client';
-
-import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -110,7 +107,7 @@ const mainFeatures = [
   {
     id: 'minigames',
     title: 'Mini-Games',
-    description: 'Rock Paper Scissors with team leaderboards for engagement',
+    description: 'Daily word, number and Sudoku challenges plus Rock Paper Scissors',
     icon: Gamepad2,
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',

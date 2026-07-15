@@ -52,12 +52,6 @@ export async function POST(request: Request) {
       draftData.podIds = payload.podIds;
     }
     
-    console.log('[POST /api/competitions/drafts] Creating draft:', {
-      name: payload.name,
-      rulesCount: payload.rules?.length || 0,
-      teamsCount: payload.teams?.length || 0,
-    });
-
     const draft = await competitionDraftService.create({
       name: payload.name,
       description: payload.description ?? undefined,
@@ -68,7 +62,6 @@ export async function POST(request: Request) {
       podIds: payload.podIds ?? undefined,
     });
 
-    console.log('[POST /api/competitions/drafts] Created draft:', draft.id);
     return ok({ draft }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
