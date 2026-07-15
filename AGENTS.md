@@ -31,7 +31,6 @@ npm run db:generate  # Generate Prisma client
 npm run db:migrate   # Create/apply a migration in local development
 npm run db:push     # Push schema to DB
 npm run db:seed     # Seed database
-npm run db:import   # Import from Firebase
 npm run jobs:work   # Run background worker
 ```
 

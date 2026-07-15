@@ -1,8 +1,5 @@
-'use client';
-
-import React from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Home, Gamepad2 } from 'lucide-react';
+import { Home, Gamepad2, ArrowUpDown, Grid3X3, WholeWord } from 'lucide-react';
 import { OfflineIndicator } from '@/components/offline-indicator';
 
 interface MiniGamesLayoutProps {
@@ -12,6 +9,9 @@ interface MiniGamesLayoutProps {
 const miniGamesMenuItems = [
   { label: 'Dashboard', href: '/mini-games', icon: Home },
   { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
+  { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: ArrowUpDown },
+  { label: 'Daily Word', href: '/mini-games/daily-word', icon: WholeWord },
+  { label: 'Daily Sudoku', href: '/mini-games/sudoku', icon: Grid3X3 },
 ];
 
 export default function MiniGamesLayout({ children }: MiniGamesLayoutProps) {

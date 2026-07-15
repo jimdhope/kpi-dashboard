@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import JSZip from 'jszip';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -505,6 +504,7 @@ export default function CompetitionCertificatesPage() {
 
     setIsDownloading(true);
     try {
+      const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
       const date = format(new Date(), 'MMMM-d-yyyy');
       const folderName = `certificates-${date}`;

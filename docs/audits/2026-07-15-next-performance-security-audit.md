@@ -5,6 +5,15 @@ Application version: 3.5.2
 Audit basis: local source, lockfile, existing build output, local OrbStack PostgreSQL metadata, and current npm/GitHub advisories  
 Change policy: no application code, database data, migrations, or production systems were changed
 
+> **Historical audit:** This report preserves the evidence observed at the time
+> of the review. Subsequent local remediation upgraded Next.js and related
+> dependencies, removed the destructive migration fallback, introduced a
+> non-root slim runtime image, added session and authorization hardening,
+> bounded sensitive uploads, added database indexes, and reduced dashboard
+> request overhead. Current state must be determined from the source, lockfile,
+> migrations, and a fresh validation run rather than treating every finding
+> below as unresolved.
+
 ## Executive summary
 
 KPI Quest is already on Next.js 16. The proposed Next.js work is therefore a low-complexity but urgent patch from installed version 16.2.3 to 16.2.10, not a major framework migration. The installed version is covered by multiple high-severity denial-of-service, SSRF, and Proxy bypass advisories. The bypasses matter particularly here because every API and most page-level access control begins in `proxy.ts`.

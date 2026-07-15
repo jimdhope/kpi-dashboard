@@ -95,8 +95,20 @@ Navigate to **Tools** in the top navigation to find:
 - **Dual Fuel Calculator:** Consolidate gas and electricity figures to verify dual-fuel discounts.
 - **Meter Reading Guide:** Read step-by-step instructions on assisting customers with submitting manual meter reads for credit/debit balances.
 
-### Mini-Games: Rock, Paper, Scissors (RPS)
-Take a quick mental break or engage in a friendly duel:
-- Go to **Mini-Games → Rock Paper Scissors**.
-- Throw Rock, Paper, or Scissors against the computerized opponent.
-- Keep track of your score, win streaks, and earn points for your profile!
+### Mini-Games
+
+All signed-in users can play the available mini-games and view their top-ten
+leaderboards:
+
+- **Rock Paper Scissors:** Choose a throw against the server-generated opponent.
+  A completed play has a 15-minute cooldown.
+- **Higher or Lower:** Predict whether the next number is higher or lower. Each
+  user receives one scored run per UK calendar day.
+- **Daily Word:** Solve a shared five-letter word in no more than six valid
+  guesses. Invalid dictionary words do not consume a guess.
+- **Daily Sudoku:** Complete separate Easy, Medium, and Hard shared puzzles,
+  with notes, conflict highlighting, hints, mistakes, and resumable progress.
+
+Daily challenges reset at midnight in the `Europe/London` timezone. Progress is
+stored on the server, so refreshing the page does not grant a new attempt or
+discard an in-progress game.

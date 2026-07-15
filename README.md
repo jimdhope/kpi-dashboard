@@ -21,7 +21,7 @@ A competition tracking and performance management application built with Next.js
 
 ### Features (V3.5)
 - **Backup & Restore** - Export all data (competitions, trackers, KB, directory) as JSON, restore from backup, clear all data
-- **MS Teams Webhook Hashtag Scoring** - Agents can post hashtags like #Smart in Teams to auto-log scores to competitions/trackers
+- **MS Teams Webhook Hashtag Scoring** - Agents can post configured hashtags in Teams to log scores to active competitions
 - **Role-Based Dashboards** - Automatic redirect to appropriate dashboard based on role (admin, teamLeader, competitionRunner, agent)
 
 ---
@@ -157,38 +157,18 @@ curl http://localhost:9103
 
 ## First Login
 
-After a fresh installation, use the default admin credentials:
-
-- **Email:** admin@kpiquest.local
-- **Password:** admin123!
-
-You will be prompted to change your password on first login.
+For an intentional initial seed, supply `SEED_ADMIN_EMAIL` and a strong
+`SEED_ADMIN_PASSWORD` in the environment before running `npm run db:seed`.
+Production does not rely on a documented default password.
 
 ---
 
-## Data Import
+## Data Transfer
 
-To import data from your Firebase Firestore database:
-
-1. Navigate to `/settings/data-import` in your browser
-2. Upload your Firebase service account JSON file (download from Firebase Console → Project Settings → Service Accounts → Generate New Private Key)
-3. Click "Import from Firebase"
-
-The import will pull:
-- Users (mapped from Firebase UIDs)
-- Pods (linked to campaigns)
-- Competitions (published status)
-- Competition Rules
-- Daily Achievements
-- Tracker KPIs and Logs
-- Pod Memberships
-
-**After import**, run the password reset script:
-
-```bash
-cd /var/www/kpi-dashboard
-npx tsx scripts/reset-passwords.ts
-```
+Use **Settings → General** to create and restore KPI Quest backups. Restores
+replace local application data and should be performed only against a verified
+backup by an authorized administrator. Use **Settings → Users** for supported
+password resets; password changes invalidate the user's existing sessions.
 
 ---
 
@@ -213,9 +193,9 @@ sudo systemctl stop kpi-dashboard
 - **Knowledge Base** - Article management with rich text editor (Tiptap), typed categories and tags, single-column browse view
 - **Competitions** - Create weekly competitions with custom KPI rules and leaderboards
 - **Performance Tracking** - Campaign-wide KPI tracking with real-time dashboards
-- **Daily Trackers** - Log daily KPIs and track trends over time
+- **KPI Performance** - Log daily KPI results and track trends over time
 - **Useful Tools** - Calculator tools for instalment plans, energy usage, meter readings, and more
-- **Mini-Games** - Rock Paper Scissors game for team engagement
+- **Mini-Games** - Rock Paper Scissors, Higher or Lower, Daily Word, and Daily Sudoku
 - **Pod Management** - Organize agents into teams with role-based access
 - **Activity Logging** - Full audit trail of all system actions
 
@@ -223,7 +203,7 @@ sudo systemctl stop kpi-dashboard
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS
 - **Backend:** Next.js API Routes, Prisma ORM
 - **Database:** PostgreSQL
 - **Authentication:** Custom session-based auth

@@ -1,4 +1,5 @@
 import { AppUser, SessionPayload } from "@/lib/contracts";
+import { cache } from "react";
 import { SESSION_DURATION_DAYS } from "@/server/auth/config";
 import {
   clearSessionCookie,
@@ -39,6 +40,23 @@ async function replaceUserSessions(userId: string): Promise<void> {
   });
   await setSessionCookie(sessionToken, expiresAt);
 }
+
+const readCurrentSession = cache(async (): Promise<SessionPayload> => {
+  const token = await getSessionTokenFromCookie();
+  if (!token) {
+    return mapSessionPayload(null, null);
+  }
+
+  const session = await sessionRepository.findByTokenHash(hashSessionToken(token));
+  if (!session || session.expiresAt <= new Date()) {
+    // Reading a session can happen during Server Component rendering, where
+    // mutating cookies is not allowed. Expired cookies are ignored and are
+    // removed by logout or the next successful authentication response.
+    return mapSessionPayload(null, null);
+  }
+
+  return mapSessionPayload(userRepository.mapUser(session.user), session.expiresAt);
+});
 
 export const authService = {
   async login(email: string, password: string) {
@@ -82,18 +100,7 @@ export const authService = {
   },
 
   async getCurrentSession(): Promise<SessionPayload> {
-    const token = await getSessionTokenFromCookie();
-    if (!token) {
-      return mapSessionPayload(null, null);
-    }
-
-    const session = await sessionRepository.findByTokenHash(hashSessionToken(token));
-    if (!session || session.expiresAt <= new Date()) {
-      await clearSessionCookie();
-      return mapSessionPayload(null, null);
-    }
-
-    return mapSessionPayload(userRepository.mapUser(session.user), session.expiresAt);
+    return readCurrentSession();
   },
 
   async requireCurrentUser() {

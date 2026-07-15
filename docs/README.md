@@ -32,6 +32,9 @@ This documentation is divided into multiple parts, tailored to different audienc
    - Webhook automation engine & adaptive card rendering with Resvg.
    - Developer commands, building, deployment, and testing.
 
+5. [**Local Performance and Memory Baseline**](./performance-baseline.md)
+   - Repeatable build, bundle-analysis, instrumentation, and memory diagnostics.
+
 ---
 
 ## 🚀 Getting Started Quick Links

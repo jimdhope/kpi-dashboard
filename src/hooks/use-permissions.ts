@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-type PermissionMap = Record<string, 'MANAGE' | 'VIEW' | 'NONE'>;
+export type PermissionMap = Record<string, 'MANAGE' | 'VIEW' | 'NONE'>;
 
 const cached: { data: PermissionMap | null; roleKey: string | null } = { data: null, roleKey: null };
 
-export function usePermissions(roleKeys: string[]) {
-  const [permissions, setPermissions] = useState<PermissionMap>({});
-  const [isLoading, setIsLoading] = useState(true);
+export function usePermissions(roleKeys: string[], initialPermissions?: PermissionMap) {
+  const [permissions, setPermissions] = useState<PermissionMap>(initialPermissions ?? {});
+  const [isLoading, setIsLoading] = useState(!initialPermissions);
 
   const fetchPermissions = useCallback(async () => {
-    const key = roleKeys.sort().join(',');
+    const key = [...roleKeys].sort().join(',');
     if (cached.roleKey === key && cached.data) {
       setPermissions(cached.data);
       setIsLoading(false);
@@ -35,13 +35,21 @@ export function usePermissions(roleKeys: string[]) {
   }, [roleKeys]);
 
   useEffect(() => {
+    if (initialPermissions) {
+      const key = [...roleKeys].sort().join(',');
+      cached.data = initialPermissions;
+      cached.roleKey = key;
+      setPermissions(initialPermissions);
+      setIsLoading(false);
+      return;
+    }
     if (roleKeys.length > 0) {
       setIsLoading(true);
       fetchPermissions();
     } else {
       setIsLoading(false);
     }
-  }, [roleKeys, fetchPermissions]);
+  }, [roleKeys, fetchPermissions, initialPermissions]);
 
   function getNavLevel(key: string): 'MANAGE' | 'VIEW' | 'NONE' {
     return permissions[`nav.${key}`] || 'NONE';

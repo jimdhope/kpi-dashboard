@@ -29,7 +29,7 @@ KPI Quest is built upon a high-performance, modern React and Node.js ecosystem d
 * **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Lucide icons, Recharts (for dashboards & performance tracking graphs), Tiptap editor suite.
 * **Backend:** Next.js Server Components, API routes (`/api/...`), and Server Actions for mutation requests.
 * **Database & ORM:** Prisma ORM with a PostgreSQL relational database.
-* **Asynchronous Tasks:** Queue processing and automated scheduler via `pg-boss` (utilizing native PostgreSQL queues) powered by a lightweight TSX background worker.
+* **Asynchronous Tasks:** Queue processing and automated scheduling via `pg-boss`. The production worker is bundled separately from the web server.
 * **Image Synthesis:** `@vercel/og` engine producing visual card leaderboards using dynamic JSX components.
 
 ---
@@ -57,6 +57,8 @@ kpi-dashboard/
     │   ├── api/                # Next.js API Routes (JSON endpoints)
     │   ├── globals.css         # Main styles and Tiptap custom definitions
     │   └── layout.tsx          # Root HTML frame
+    ├── instrumentation.ts      # Optional startup and runtime memory telemetry
+    ├── proxy.ts                # Next.js 16 request Proxy entry point
     ├── components/             # React visual components (admin, activity, tools, ui)
     ├── hooks/                  # Custom shared React hooks (toast notifications)
     ├── lib/                    # Shared TypeScript contracts, helpers, and utilities
@@ -83,6 +85,11 @@ KPI Quest implements a custom, secure cookie-based session verification engine r
 Security checks are implemented using stateless authorization guards located at `src/server/services/authorization.ts`:
 * **`requireAdminUser()`**: Confirms the authenticated user holds the `"admin"` role, throwing an exception if unauthorized.
 * **`requireCompetitionEditor()`**: Confirms roles match either `"admin"`, `"campaignManager"`, `"podManager"`, `"teamLeader"`, or `"competitionRunner"`.
+
+Proxy provides fast request rejection and navigation redirects, but it is not a
+definitive authorization boundary. Every Route Handler, Server Action, and
+service mutation must authenticate and authorize independently, validate
+client-controlled input at runtime, and enforce ownership where applicable.
 
 **Example Page Guard:**
 ```typescript
@@ -175,9 +182,9 @@ The system starts a persistent listener thread wrapping:
 ## ⚙️ Developer Commands Reference
 
 ### Dependency Installation
-Always install dependencies with peer conflict bypasses due to high React 19 dependencies:
+Install the exact locked dependency tree:
 ```bash
-npm install --legacy-peer-deps
+npm ci
 ```
 
 ### Configuration & Local Development
@@ -199,10 +206,7 @@ npm run jobs:work
 # Generate Prisma types based on schema changes
 npm run db:generate
 
-# Push schema directly to PostgreSQL database (local/dev setup)
-npm run db:push
-
-# Create migration files (production environments)
+# Create and apply a reviewed migration in local development
 npm run db:migrate
 
 # Seed standard user roles and admin login
@@ -211,6 +215,10 @@ npm run db:seed
 # Access interactive database browser
 npm run db:studio
 ```
+
+`prisma db push` is reserved for disposable local prototyping. Application
+schema changes require a committed migration; production applies them with
+`prisma migrate deploy` and fails closed if migration fails.
 
 ### Building & Testing
 Validate code integrity by verifying TypeScript compilation:
@@ -221,6 +229,17 @@ Verify production Next.js compilation:
 ```bash
 npm run build
 ```
+Inspect a production build's memory behaviour or bundle graph when needed:
+```bash
+npm run build:memory
+npm run analyze
+```
+Run the development server with the Node inspector for heap snapshots:
+```bash
+npm run dev:inspect
+```
+Set `ENABLE_RUNTIME_METRICS=true` to emit periodic structured process-memory
+measurements. Do not enable high-frequency metrics without reviewing log volume.
 Start the production server:
 ```bash
 npm run start

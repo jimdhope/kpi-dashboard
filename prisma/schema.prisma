@@ -776,7 +776,7 @@ model RpsGame {
   points         Int      @default(0)
   createdAt      DateTime @default(now())
 
-  @@index([playerId])
+  @@index([playerId, createdAt])
 }
 
 model DailyGameChallenge {

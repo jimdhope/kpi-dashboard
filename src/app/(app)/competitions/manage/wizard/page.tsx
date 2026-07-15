@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,7 +46,7 @@ import {
   Shuffle,
 } from 'lucide-react';
 import { format, addDays, startOfDay } from 'date-fns';
-import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
 import {
   Popover as DialogPopover,
   PopoverContent as DialogPopoverContent,
@@ -60,6 +61,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import Link from 'next/link';
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
+  loading: () => <Skeleton className="h-[350px] w-[300px]" />,
+});
 
 interface Campaign {
   id: string;

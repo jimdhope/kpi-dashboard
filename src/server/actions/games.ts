@@ -1,59 +1,17 @@
 "use server";
 
 import { authService } from "@/server/services/auth-service";
-import { activityService } from "@/server/services/activity-service";
-import { RpsGameResult } from "@/lib/contracts";
-import { prisma } from "@/server/db/client";
+import { rpsService } from "@/server/services/rps-service";
 
-const RPS_COOLDOWN_MINUTES = 15;
-const GAME_ID = "rock-paper-scissors";
-const GAME_NAME = "Rock Paper Scissors";
-
-export async function playRps(playerThrow: "rock" | "paper" | "scissors") {
+export async function playRps(playerThrow: unknown) {
   const user = await authService.requireCurrentUser();
-
-  const opponentThrow = (["rock", "paper", "scissors"] as const)[
-    Math.floor(Math.random() * 3)
-  ];
-
-  const result = calculateRpsWinner(playerThrow, opponentThrow);
-
-  // Log activity based on result
-  if (result === 'win') {
-    await activityService.logGameWon({
-      gameId: GAME_ID,
-      gameName: GAME_NAME,
-      userId: user.id,
-      userName: user.name,
-    });
-  } else {
-    await activityService.logGamePlayed({
-      gameId: GAME_ID,
-      gameName: GAME_NAME,
-      result,
-      userId: user.id,
-      userName: user.name,
-    });
-  }
-
+  const { game, cooldownSeconds } = await rpsService.play(user, playerThrow);
   return {
-    playerThrow,
-    opponentThrow,
-    result,
-    cooldownSeconds: RPS_COOLDOWN_MINUTES * 60,
-  } as RpsGameResult;
-}
-
-function calculateRpsWinner(player: string, opponent: string): "win" | "loss" | "draw" {
-  if (player === opponent) return "draw";
-  if (
-    (player === "rock" && opponent === "scissors") ||
-    (player === "scissors" && opponent === "paper") ||
-    (player === "paper" && opponent === "rock")
-  ) {
-    return "win";
-  }
-  return "loss";
+    playerThrow: game.playerThrow,
+    opponentThrow: game.opponentThrow,
+    result: game.result,
+    cooldownSeconds,
+  };
 }
 
 export async function getRpsDailyStats() {

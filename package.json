@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 9103",
+    "dev:inspect": "NODE_OPTIONS=--inspect next dev -p 9103",
     "build": "next build",
+    "build:memory": "next build --experimental-debug-memory-usage",
+    "analyze": "next experimental-analyze --output",
     "start": "next start -p 9103",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "jobs:work": "tsx --env-file=.env src/server/jobs/worker.ts",
@@ -13,8 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "node --import tsx/esm prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "db:import": "tsx scripts/import-from-firebase.ts"
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

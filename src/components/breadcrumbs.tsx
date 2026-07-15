@@ -26,7 +26,6 @@ const routeLabels: Record<string, string> = {
   log: 'Log',
   certificates: 'Certificates',
   dashboard: 'Dashboard',
-  trackers: 'Trackers',
   setup: 'Setup',
   performance: 'Performance',
   breakdown: 'Breakdown',
@@ -97,7 +96,7 @@ export function Breadcrumbs({ className, homeHref = '/', sectionItems }: Breadcr
   const segments = pathname.split('/').filter(Boolean);
   
   // Check if this is a dashboard/base route
-  const baseRoutes = ['competitions', 'trackers', 'performance', 'settings', 'admin', 'agent', 'campaign-manager', 'pod-manager', 'team-leader', 'competition-runner', 'mini-games'];
+  const baseRoutes = ['competitions', 'performance', 'settings', 'admin', 'agent', 'campaign-manager', 'pod-manager', 'team-leader', 'competition-runner', 'mini-games'];
   const isBaseRoute = segments.length === 0 || (segments.length === 1 && baseRoutes.includes(segments[0]));
   
   // Build breadcrumb items (only for non-dashboard routes)

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { usePermissions } from '@/hooks/use-permissions';
+import type { PermissionMap } from '@/hooks/use-permissions';
 import { cn, generateInitials } from '@/lib/utils';
 import { 
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
@@ -149,12 +150,17 @@ const roleIcons: Record<string, React.ElementType> = {
 
 const rolePriority = ['admin', 'campaignManager', 'podManager', 'teamLeader', 'competitionRunner', 'agent'];
 
-export function AppNavBar({ user, items, className }: { user: AppUser | null; items?: NavItemConfig[]; className?: string }) {
+export function AppNavBar({ user, items, className, initialPermissions }: {
+  user: AppUser | null;
+  items?: NavItemConfig[];
+  className?: string;
+  initialPermissions?: PermissionMap;
+}) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   const userRoles = user?.roles as string[] || [];
-  const { getNavLevel, isLoading: permsLoading } = usePermissions(userRoles);
+  const { getNavLevel, isLoading: permsLoading } = usePermissions(userRoles, initialPermissions);
 
   const getHighestRole = (): string => {
     for (const role of rolePriority) {

@@ -23,10 +23,9 @@ KPI Quest has a robust **Role-Based Access Control (RBAC)** system. Roles determ
      - **Agent:** Direct contributor; logs performance and views personal targets.
 3. **Password Management:**
    - When creating a user or resetting their password, you can toggle **"Must Change Password on Next Login"**. This forces them to a password reset page before they can access dashboards.
-   - In emergencies, admins can trigger password resets directly or use the administrative command-line reset script:
-     ```bash
-     npx tsx scripts/reset-passwords.ts
-     ```
+   - In emergencies, administrators can issue a reset through the supported
+     user-management interface. Password changes invalidate the user's existing
+     sessions.
 
 ---
 
@@ -97,7 +96,7 @@ Each endpoint can be categorized by purpose: `daily_summary`, `leaderboard`, `al
 Templates define what the Teams posts look like. You can write templates in three formats:
 - **Message Cards:** Legacy Office 365 connector format. Simple, Markdown-compatible.
 - **Adaptive Cards:** Rich interactive layout format. JSON structured.
-- **Adaptive Cards with Image:** Generates an Adaptive Card embedded with a dynamic PNG image. KPI Quest renders these images on-the-fly using `@resvg/resvg-js` to showcase visually stunning leaderboard bar charts directly in the Teams chat!
+- **Adaptive Cards with Image:** Generates an Adaptive Card embedded with a dynamic PNG image. KPI Quest renders these images through its authenticated Next.js image endpoints.
 
 You can use merge tags in templates, such as:
 - `${agentName}` / `${score}`

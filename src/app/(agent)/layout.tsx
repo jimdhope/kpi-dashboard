@@ -1,14 +1,11 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { AppNavBar, type NavItemConfig } from '@/components/app-navbar';
+import { redirect } from "next/navigation";
+import type { NavItemConfig } from '@/components/app-navbar';
+import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
 import type { NavDropdownItem } from '@/components/nav-dropdown';
-import { AnimatedGradient } from '@/components/animated-gradient';
-import { AppUser } from '@/lib/contracts';
+import { authService } from "@/server/services/auth-service";
 import {
   BookMarked, BookOpen, Contact,
-  Gamepad2,
+  Gamepad2, ArrowUpDown, Grid3X3, WholeWord,
   Wrench, Phone, BookOpen as BookOpenIcon,
   CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2,
 } from 'lucide-react';
@@ -31,6 +28,9 @@ const AGENT_NAV_ITEMS: NavItemConfig[] = [
     icon: Gamepad2,
     items: [
       { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
+      { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: ArrowUpDown },
+      { label: 'Daily Word', href: '/mini-games/daily-word', icon: WholeWord },
+      { label: 'Daily Sudoku', href: '/mini-games/sudoku', icon: Grid3X3 },
     ] as NavDropdownItem[],
   },
   {
@@ -51,64 +51,17 @@ const AGENT_NAV_ITEMS: NavItemConfig[] = [
   },
 ];
 
-export default function AgentLayout({
+export default async function AgentLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchSession() {
-      try {
-        const res = await fetch('/api/auth/session');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated) {
-            setUser(data.user);
-          } else {
-            router.replace('/login');
-            return;
-          }
-        } else {
-          router.replace('/login');
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to fetch session:', error);
-        router.replace('/login');
-        return;
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchSession();
-  }, [router]);
-
-  if (isLoading) {
-    return (
-      <>
-        <AnimatedGradient />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
-        </div>
-      </>
-    );
-  }
-
-  if (!user) return null;
+  const session = await authService.getCurrentSession();
+  if (!session.user) redirect("/login");
 
   return (
-    <>
-      <AnimatedGradient />
-      <div className="min-h-screen">
-        <AppNavBar user={user} items={AGENT_NAV_ITEMS} />
-        <main className="px-4 md:px-6 pb-6">
-          {children}
-        </main>
-      </div>
-    </>
+    <AuthenticatedShell user={session.user} items={AGENT_NAV_ITEMS} showCommandPalette={false}>
+      {children}
+    </AuthenticatedShell>
   );
 }

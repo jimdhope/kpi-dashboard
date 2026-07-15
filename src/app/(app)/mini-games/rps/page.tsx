@@ -135,18 +135,6 @@ export default function RpsGamePage() {
     }
   };
 
-  const calculateWinner = (player: Throw, opponent: Throw): Result => {
-    if (player === opponent) return 'draw';
-    if (
-      (player === 'rock' && opponent === 'scissors') ||
-      (player === 'scissors' && opponent === 'paper') ||
-      (player === 'paper' && opponent === 'rock')
-    ) {
-      return 'win';
-    }
-    return 'loss';
-  };
-
   const fetchDailyStats = useCallback(async (userId: string) => {
     try {
       const res = await fetch('/api/rps-games?limit=100');
@@ -298,34 +286,33 @@ export default function RpsGamePage() {
     setIsLoading(true);
     setPlayerThrow(choice);
 
-    const throws: Throw[] = ['rock', 'paper', 'scissors'];
-    const opponentChoice = throws[Math.floor(Math.random() * throws.length)];
-    setOpponentThrow(opponentChoice);
-
-    const gameResult = calculateWinner(choice, opponentChoice);
-    setResult(gameResult);
-
     try {
       const res = await fetch('/api/rps-games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerThrow: choice,
-          opponentThrow: opponentChoice,
-          result: gameResult,
-        }),
+        body: JSON.stringify({ playerThrow: choice }),
       });
 
       if (!res.ok) {
-        throw new Error('Failed to save game');
+        const errorPayload = await res.json().catch(() => ({}));
+        if (res.status === 429 && typeof errorPayload.retryAfterSeconds === 'number') {
+          const nextPlayableTime = Date.now() + errorPayload.retryAfterSeconds * 1000;
+          localStorage.setItem(RPS_COOLDOWN_KEY, String(nextPlayableTime));
+          setCooldown(errorPayload.retryAfterSeconds);
+        }
+        throw new Error(errorPayload.error || 'Failed to save game');
       }
 
-      const { game } = await res.json();
+      const { game, cooldownSeconds } = await res.json();
+      const opponentChoice = game.opponentThrow as Throw;
+      const gameResult = game.result as Result;
+      setOpponentThrow(opponentChoice);
+      setResult(gameResult);
       setPodGameResults(prev => [...prev, { ...game, playerId: currentUser.id }]);
 
-      const nextPlayableTime = new Date().getTime() + 15 * 60 * 1000;
+      const nextPlayableTime = Date.now() + cooldownSeconds * 1000;
       localStorage.setItem(RPS_COOLDOWN_KEY, nextPlayableTime.toString());
-      setCooldown(900);
+      setCooldown(cooldownSeconds);
 
       toast({
         title: `You ${gameResult === 'draw' ? 'drew' : gameResult}!`,
@@ -335,7 +322,11 @@ export default function RpsGamePage() {
       await fetchDailyStats(currentUser.id);
     } catch (error) {
       console.error('Error saving game result:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not save your game. Please try again.' });
+      toast({
+        variant: 'destructive',
+        title: 'Unable to play',
+        description: error instanceof Error ? error.message : 'Could not save your game. Please try again.',
+      });
     } finally {
       setIsLoading(false);
     }

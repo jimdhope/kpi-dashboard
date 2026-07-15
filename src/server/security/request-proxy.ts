@@ -133,24 +133,3 @@ export async function proxy(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: [
-    "/admin/:path*",
-    "/agent/:path*",
-    "/settings/:path*",
-    "/dashboard/:path*",
-    "/competitions/:path*",
-    "/performance/:path*",
-    "/directory/:path*",
-    "/knowledge-base/:path*",
-    "/reports/:path*",
-    "/mini-games/:path*",
-    "/tools/:path*",
-    "/team-leader/:path*",
-    "/pod-manager/:path*",
-    "/call-flow/:path*",
-    "/meter-reading-guide/:path*",
-    "/api/:path*",
-  ],
-};

@@ -40,7 +40,7 @@ KPI Quest is structured around four foundational pillars, each designed to optim
 ### 4. Knowledge Management & Utilities
 * **Modern Knowledge Base (KB):** Built-in collaborative article space featuring a powerful Rich Text Editor (Tiptap) with real-time category, subcategory, and tag classifications.
 * **Interactive Shared Directory:** An internal organizational directory where team members can find contact details, filter by department or company, and search instantly.
-* **Productivity Tools:** Dynamic calculators (for energy usage, instalment plans, tariff comparisons, etc.) and mini-games (like Rock Paper Scissors) to build culture and assist agents in daily duties.
+* **Productivity Tools:** Dynamic calculators (for energy usage, instalment plans, tariff comparisons, etc.) and mini-games including Rock Paper Scissors, Higher or Lower, Daily Word, and Daily Sudoku.
 
 ---
 

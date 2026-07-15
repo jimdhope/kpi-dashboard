@@ -1,73 +1,14 @@
-'use client';
+import { redirect } from "next/navigation";
+import { AuthenticatedShell } from "@/components/layout/authenticated-shell";
+import { authService } from "@/server/services/auth-service";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { AppNavBar } from '@/components/app-navbar';
-import { CommandPalette } from '@/components/command-palette';
-import { OfflineIndicator } from '@/components/offline-indicator';
-import { AnimatedGradient } from '@/components/animated-gradient';
-import { AppUser } from '@/lib/contracts';
-import { Loader2 } from 'lucide-react';
-
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const session = await authService.getCurrentSession();
+  if (!session.user) redirect("/login");
 
-  useEffect(() => {
-    async function fetchSession() {
-      try {
-        const res = await fetch('/api/auth/session', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated) {
-            setUser(data.user);
-          } else {
-            router.replace('/login');
-          }
-        } else {
-          router.replace('/login');
-        }
-      } catch (error) {
-        console.error('Failed to fetch session:', error);
-        router.replace('/login');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchSession();
-  }, [router]);
-
-  if (isLoading) {
-    return (
-      <>
-        <AnimatedGradient />
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  return (
-    <>
-      <AnimatedGradient />
-      <div className="min-h-screen">
-        <AppNavBar user={user} />
-        <OfflineIndicator />
-        <CommandPalette />
-        <main className="px-4 md:px-6 pb-6">
-          {children}
-        </main>
-      </div>
-    </>
-  );
+  return <AuthenticatedShell user={session.user}>{children}</AuthenticatedShell>;
 }

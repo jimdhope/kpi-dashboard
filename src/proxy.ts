@@ -1,7 +1,7 @@
 // Next.js discovers Proxy beside a `src/app` tree. Keep the implementation at
 // the repository boundary so security policy has one source of truth, while
 // declaring the matcher here so Next can analyse it statically at build time.
-export { proxy } from "../proxy";
+export { proxy } from "@/server/security/request-proxy";
 
 export const config = {
   matcher: [
