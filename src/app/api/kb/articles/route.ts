@@ -45,7 +45,15 @@ export async function GET(request: NextRequest) {
 
     const articles = await prisma.kBArticle.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        status: true,
+        views: true,
+        createdAt: true,
+        updatedAt: true,
         category: true,
         tags: true,
         createdBy: {
