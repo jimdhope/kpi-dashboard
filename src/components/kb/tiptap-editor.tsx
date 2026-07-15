@@ -3,8 +3,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import { Color } from '@tiptap/extension-color';
@@ -47,12 +45,12 @@ export function TiptapEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline cursor-pointer',
+      StarterKit.configure({
+        link: {
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'text-primary underline cursor-pointer',
+          },
         },
       }),
       TextAlign.configure({
@@ -84,6 +82,7 @@ export function TiptapEditor({
       TableKit,
     ],
     content: parseEditorContent(content),
+    immediatelyRender: true,
     editable,
     onUpdate: ({ editor }) => {
       if (onChange) {
@@ -164,12 +163,12 @@ export function TiptapEditor({
 export function TiptapViewer({ content }: { content: string }) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: {
-          class: 'text-primary underline cursor-pointer',
+      StarterKit.configure({
+        link: {
+          openOnClick: true,
+          HTMLAttributes: {
+            class: 'text-primary underline cursor-pointer',
+          },
         },
       }),
       TextAlign.configure({
@@ -194,6 +193,7 @@ export function TiptapViewer({ content }: { content: string }) {
       TableKit,
     ],
     content: parseEditorContent(content),
+    immediatelyRender: false,
     editable: false,
   });
 
