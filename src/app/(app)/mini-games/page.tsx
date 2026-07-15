@@ -1,25 +1,20 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpDown, Grid3X3, Loader2, Swords, Type, Trophy } from 'lucide-react';
+import { ArrowUpDown, Grid3X3, Swords, Type, Trophy } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DailyLeaderboard, type DailyLeaderboardEntry } from '@/components/mini-games/daily-leaderboard';
+import { authService } from '@/server/services/auth-service';
+import { dailyGameService } from '@/server/services/daily-game-service';
+import { rpsService } from '@/server/services/rps-service';
 
 interface DailySummary { gameKey: string; variant: string; attempt: { status: string }; leaderboard: DailyLeaderboardEntry[] }
 
-export default function MiniGamesDashboard() {
-  const [daily, setDaily] = useState<DailySummary[]>([]);
-  const [rps, setRps] = useState<DailyLeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    Promise.all([fetch('/api/mini-games/daily'), fetch('/api/rps-games?limit=100')]).then(async ([dailyRes, rpsRes]) => {
-      if (dailyRes.ok) setDaily((await dailyRes.json()).games || []);
-      if (rpsRes.ok) setRps((await rpsRes.json()).leaderboard || []);
-    }).finally(() => setLoading(false));
-  }, []);
-  if (loading) return <div className="flex min-h-80 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+export default async function MiniGamesDashboard() {
+  const user = await authService.requireCurrentUser();
+  const [daily, rps] = await Promise.all([
+    dailyGameService.summaries(user.id) as Promise<DailySummary[]>,
+    rpsService.leaderboard() as Promise<DailyLeaderboardEntry[]>,
+  ]);
   const cards = [
     { key: 'higher-lower:default', game: 'higher-lower' as const, title: 'Higher or Lower', description: 'One daily run. Build the longest streak.', href: '/mini-games/higher-lower', icon: ArrowUpDown, color: 'text-blue-500' },
     { key: 'daily-word:default', game: 'daily-word' as const, title: 'Daily Word', description: 'Find the five-letter word in six guesses.', href: '/mini-games/daily-word', icon: Type, color: 'text-green-500' },
