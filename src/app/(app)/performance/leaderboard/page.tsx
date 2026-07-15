@@ -25,8 +25,7 @@ interface AdditionalKpi {
 
 interface AdditionalKpiLog {
   id: string;
-  agentId: string;
-  podId: string;
+  userId: string | null;
   kpiId: string;
   date: string;
   value: number;
@@ -77,6 +76,7 @@ export default function AdditionalLeaderboardPage() {
   const [timeframe, setTimeframe] = useState<Timeframe>('weekly');
   
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedInitialData = React.useRef(false);
 
   // Load saved filters
   useEffect(() => {
@@ -106,24 +106,16 @@ export default function AdditionalLeaderboardPage() {
     async function fetchData() {
       setIsLoading(true);
       try {
-        const [podsRes, kpisRes, usersRes] = await Promise.all([
-          fetch('/api/pods'),
-          fetch('/api/kpis'),
-          fetch('/api/users'),
-        ]);
-        
-        if (podsRes.ok) {
-          const podsData = await podsRes.json();
-          setPods(podsData.pods || []);
-        }
-        if (kpisRes.ok) {
-          const kpisData = await kpisRes.json();
-          setKpis(kpisData.kpis || []);
-        }
-        if (usersRes.ok) {
-          const usersData = await usersRes.json();
-          setAgents(usersData.users || []);
-        }
+        const savedPodId = localStorage.getItem(LEADERBOARD_POD_KEY);
+        const query = savedPodId && savedPodId !== 'all' ? `?podId=${encodeURIComponent(savedPodId)}` : '';
+        const response = await fetch(`/api/performance/dashboard${query}`);
+        if (!response.ok) throw new Error('Failed to load performance leaderboard');
+        const data = await response.json();
+        setPods(data.pods || []);
+        setKpis(data.kpis || []);
+        setAgents(data.users || []);
+        setLogs(data.logs || []);
+        hasLoadedInitialData.current = true;
       } catch (err) {
         console.error('Error fetching data:', err);
       }
@@ -134,10 +126,11 @@ export default function AdditionalLeaderboardPage() {
 
   // Fetch logs based on pod filter
   useEffect(() => {
+    if (!hasLoadedInitialData.current) return;
     async function fetchLogs() {
       setIsLoading(true);
       try {
-        let url = '/api/performance/logs';
+        let url = '/api/performance/kpi-logs';
         if (selectedPodId !== 'all') {
           url += `?podId=${selectedPodId}`;
         }
@@ -219,9 +212,9 @@ export default function AdditionalLeaderboardPage() {
     podAgents.forEach(agent => agent.id && (agentScores[agent.id] = { totalValue: 0, count: 0 }));
   
     logsToProcess.forEach(log => {
-      if (agentScores.hasOwnProperty(log.agentId)) {
-        agentScores[log.agentId].totalValue += log.value;
-        agentScores[log.agentId].count++;
+      if (log.userId && agentScores.hasOwnProperty(log.userId)) {
+        agentScores[log.userId].totalValue += log.value;
+        agentScores[log.userId].count++;
       }
     });
   
@@ -230,7 +223,7 @@ export default function AdditionalLeaderboardPage() {
       let finalScore = 0;
 
       if (useWeeklyAverage && kpiMaxDate && agent.id) {
-        const agentLogs = logsToProcess.filter(log => log.agentId === agent.id);
+        const agentLogs = logsToProcess.filter(log => log.userId === agent.id);
         const weeklyAverages: number[] = [];
         for (let i = 0; i < 6; i++) {
           const weekEnd = new Date(kpiMaxDate);

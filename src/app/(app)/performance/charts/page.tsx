@@ -81,6 +81,7 @@ export default function PerformanceChartsPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedInitialData = React.useRef(false);
 
   useEffect(() => {
     const savedPodId = localStorage.getItem(CHARTS_POD_KEY);
@@ -97,24 +98,16 @@ export default function PerformanceChartsPage() {
     async function fetchData() {
       setIsLoading(true);
       try {
-        const [podsRes, kpisRes, usersRes] = await Promise.all([
-          fetch('/api/pods'),
-          fetch('/api/kpis'),
-          fetch('/api/users'),
-        ]);
-        
-        if (podsRes.ok) {
-          const podsData = await podsRes.json();
-          setPods(podsData.pods || []);
-        }
-        if (kpisRes.ok) {
-          const kpisData = await kpisRes.json();
-          setKpis(kpisData.kpis || []);
-        }
-        if (usersRes.ok) {
-          const usersData = await usersRes.json();
-          setAgents(usersData.users || []);
-        }
+        const savedPodId = localStorage.getItem(CHARTS_POD_KEY);
+        const query = savedPodId && savedPodId !== 'all' ? `?podId=${encodeURIComponent(savedPodId)}` : '';
+        const response = await fetch(`/api/performance/dashboard${query}`);
+        if (!response.ok) throw new Error('Failed to load performance charts');
+        const data = await response.json();
+        setPods(data.pods || []);
+        setKpis(data.kpis || []);
+        setAgents(data.users || []);
+        setLogs(data.logs || []);
+        hasLoadedInitialData.current = true;
       } catch (err) {
         console.error('Error fetching data:', err);
       }
@@ -124,6 +117,7 @@ export default function PerformanceChartsPage() {
   }, []);
 
   useEffect(() => {
+    if (!hasLoadedInitialData.current) return;
     async function fetchLogs() {
       setIsLoading(true);
       try {
