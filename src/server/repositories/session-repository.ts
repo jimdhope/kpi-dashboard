@@ -6,7 +6,16 @@ const sessionInclude = {
     include: {
       userRoles: {
         include: {
-          role: true,
+          role: {
+            include: {
+              permissions: {
+                select: {
+                  resource: true,
+                  level: true,
+                },
+              },
+            },
+          },
         },
       },
       podMemberships: {

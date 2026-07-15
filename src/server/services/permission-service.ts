@@ -3,36 +3,6 @@ import { prisma } from "@/server/db/client";
 
 type PermissionMap = Record<string, PermissionLevel>;
 
-async function getRolePermissions(roleIds: string[]): Promise<PermissionMap> {
-  const perms = await prisma.rolePermission.findMany({
-    where: { roleId: { in: roleIds } },
-    select: { resource: true, level: true, role: { select: { key: true } } },
-  });
-
-  const map: PermissionMap = {};
-  for (const p of perms) {
-    const current = map[p.resource];
-    const levelOrder: PermissionLevel[] = ["NONE", "VIEW", "MANAGE"];
-    if (!current || levelOrder.indexOf(p.level as PermissionLevel) > levelOrder.indexOf(current)) {
-      map[p.resource] = p.level as PermissionLevel;
-    }
-  }
-  return map;
-}
-
-async function getPermissionLevelForResource(roleKeys: string[], resource: string): Promise<PermissionLevel> {
-  const permission = await prisma.rolePermission.findFirst({
-    where: { resource, role: { key: { in: roleKeys as any } }, level: "MANAGE" },
-    select: { level: true },
-  });
-  if (permission) return "MANAGE";
-  const viewPermission = await prisma.rolePermission.findFirst({
-    where: { resource, role: { key: { in: roleKeys as any } }, level: "VIEW" },
-    select: { level: true },
-  });
-  return viewPermission ? "VIEW" : "NONE";
-}
-
 export const permissionService = {
   async getPermissionsForRoles(roleKeys: string[]) {
     const perms = await prisma.rolePermission.findMany({
@@ -51,8 +21,8 @@ export const permissionService = {
   },
 
   async hasEffectiveAdminAccess(roleKeys: string[]): Promise<boolean> {
-    const level = await getPermissionLevelForResource(roleKeys, "nav.settings");
-    return level === "MANAGE";
+    const permissions = await permissionService.getPermissionsForRoles(roleKeys);
+    return permissions["nav.settings"] === "MANAGE";
   },
 
   async hasNavAccess(roleKeys: string[], resource: NavResource, minLevel: PermissionLevel = "VIEW"): Promise<boolean> {
