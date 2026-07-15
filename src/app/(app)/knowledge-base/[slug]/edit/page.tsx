@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { TiptapEditor } from '@/components/kb/tiptap-editor';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Save, Eye, X, History, Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -17,6 +17,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RoleKey } from '@prisma/client';
+
+const TiptapEditor = dynamic(
+  () => import('@/components/kb/tiptap-editor').then((module) => module.TiptapEditor),
+  { ssr: false, loading: () => <Skeleton className="h-[360px] w-full" /> },
+);
 
 interface Category {
   id: string;

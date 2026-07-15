@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 9103",
+    "dev:metrics": "ENABLE_RUNTIME_METRICS=true next dev -p 9103",
     "dev:inspect": "NODE_OPTIONS=--inspect next dev -p 9103",
     "build": "next build",
     "build:memory": "next build --experimental-debug-memory-usage",

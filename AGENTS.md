@@ -24,6 +24,7 @@ Next.js version and are the source of truth; do not replace them separately.
 
 ```bash
 npm run dev      # Start dev server (port 9103)
+npm run dev:metrics  # Start dev server with periodic memory telemetry
 npm run build   # Production build
 npm run start   # Start production server
 npm run typecheck  # Type check only (no lint)

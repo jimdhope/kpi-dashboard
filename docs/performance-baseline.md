@@ -33,6 +33,8 @@ Targeted lazy loading now defers:
 
 ## Runtime diagnostics
 
+- `npm run dev:metrics` starts development with structured memory telemetry
+  enabled once per minute.
 - `npm run dev:inspect` starts development with the Node inspector for manual
   heap snapshots.
 - `ENABLE_RUNTIME_METRICS=true` enables structured memory measurements every
