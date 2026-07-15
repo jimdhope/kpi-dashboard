@@ -3,7 +3,16 @@ import test from "node:test";
 import {
   getApiPermissionRequirement,
   getPagePermissionRequirement,
+  permissionLevelSatisfies,
 } from "./authorization-policy";
+
+test("permission levels enforce none, view, and manage boundaries", () => {
+  assert.equal(permissionLevelSatisfies("NONE", "VIEW"), false);
+  assert.equal(permissionLevelSatisfies("VIEW", "VIEW"), true);
+  assert.equal(permissionLevelSatisfies("VIEW", "MANAGE"), false);
+  assert.equal(permissionLevelSatisfies("MANAGE", "VIEW"), true);
+  assert.equal(permissionLevelSatisfies("MANAGE", "MANAGE"), true);
+});
 
 test("view pages and their management pages require the expected levels", () => {
   assert.deepEqual(getPagePermissionRequirement("/performance"), {
@@ -73,4 +82,22 @@ test("specific knowledge-base comment rules win over article management rules", 
     minLevel: "MANAGE",
   });
   assert.equal(getApiPermissionRequirement("/api/auth/session", "GET"), null);
+});
+
+test("privileged API families reject view-only mutations at the policy boundary", () => {
+  const managedMutations = [
+    ["/api/settings/general", "PATCH", "settings"],
+    ["/api/integrations/teams-webhooks", "POST", "integrations"],
+    ["/api/kpis", "DELETE", "performance"],
+    ["/api/directory/contacts", "POST", "directory"],
+    ["/api/achievements", "POST", "competitions"],
+    ["/api/task-logs", "POST", "competitions"],
+    ["/api/bonus-logs", "DELETE", "competitions"],
+  ] as const;
+  for (const [path, method, resource] of managedMutations) {
+    const requirement = getApiPermissionRequirement(path, method);
+    assert.deepEqual(requirement, { resource, minLevel: "MANAGE" });
+    assert.equal(permissionLevelSatisfies("VIEW", requirement.minLevel), false);
+    assert.equal(permissionLevelSatisfies("MANAGE", requirement.minLevel), true);
+  }
 });

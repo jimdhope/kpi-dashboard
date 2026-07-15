@@ -8,6 +8,7 @@ import type { NavResource, PermissionLevel } from "@/lib/contracts";
 import {
   getApiPermissionRequirement,
   getPagePermissionRequirement,
+  permissionLevelSatisfies,
   SAFE_METHODS,
 } from "@/server/security/authorization-policy";
 
@@ -46,7 +47,7 @@ function deny(pathname: string, request: NextRequest, status: number, message: s
 function hasSessionNavAccess(
   session: NonNullable<Awaited<ReturnType<typeof sessionRepository.findByTokenHash>>>,
   resource: NavResource,
-  minLevel: PermissionLevel,
+  minLevel: Exclude<PermissionLevel, "NONE">,
 ) {
   const levelOrder: PermissionLevel[] = ["NONE", "VIEW", "MANAGE"];
   const permissionResource = `nav.${resource}`;
@@ -61,7 +62,7 @@ function hasSessionNavAccess(
       }
     }
   }
-  return levelOrder.indexOf(granted) >= levelOrder.indexOf(minLevel);
+  return permissionLevelSatisfies(granted, minLevel);
 }
 
 export async function proxy(request: NextRequest) {

@@ -6,6 +6,14 @@ export type PermissionRequirement = {
 };
 
 export const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+const LEVEL_ORDER = ["NONE", "VIEW", "MANAGE"] as const;
+
+export function permissionLevelSatisfies(
+  granted: (typeof LEVEL_ORDER)[number],
+  required: PermissionRequirement["minLevel"],
+) {
+  return LEVEL_ORDER.indexOf(granted) >= LEVEL_ORDER.indexOf(required);
+}
 
 const PAGE_GUARDS: Array<PermissionRequirement & { prefix: string }> = [
   { prefix: "/knowledge-base/new", resource: "knowledgeBase", minLevel: "MANAGE" },
