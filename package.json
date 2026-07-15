@@ -12,6 +12,7 @@
     "analyze": "next experimental-analyze --output",
     "start": "next start -p 9103",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test:permissions": "node --import tsx/esm --test src/server/security/authorization-policy.test.ts",
     "jobs:work": "tsx --env-file=.env src/server/jobs/worker.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
