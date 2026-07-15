@@ -24,29 +24,27 @@ export function ManagementDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch competitions
-        const compsRes = await fetch('/api/competitions');
+        const [compsRes, podsRes, usersRes, achievementsRes] = await Promise.all([
+          fetch('/api/competitions'),
+          fetch('/api/pods'),
+          fetch('/api/users'),
+          fetch('/api/achievements'),
+        ]);
         if (compsRes.ok) {
           const compsData = await compsRes.json();
           setCompetitions(compsData.competitions || []);
         }
 
-        // Fetch pods
-        const podsRes = await fetch('/api/pods');
         if (podsRes.ok) {
           const podsData = await podsRes.json();
           setPods(podsData.pods || []);
         }
 
-        // Fetch users
-        const usersRes = await fetch('/api/users');
         if (usersRes.ok) {
           const usersData = await usersRes.json();
           setUsers(usersData.users || []);
         }
 
-        // Fetch competition achievement data
-        const achievementsRes = await fetch('/api/achievements');
         if (achievementsRes.ok) {
           const achievementsData = await achievementsRes.json();
           setAchievementLogs(achievementsData.achievements || []);

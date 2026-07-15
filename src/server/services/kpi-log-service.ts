@@ -40,8 +40,13 @@ export class InternalError extends Error {
 }
 
 export const kpiLogService = {
+  async canManageTarget(currentUser: Awaited<ReturnType<typeof authService.requireCurrentUser>>, targetUserId: string) {
+    if (targetUserId === currentUser.id) return true;
+    return permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+  },
   async list(filters?: {
     podId?: string;
+    userId?: string;
     startDate?: string;
     endDate?: string;
   }): Promise<KpiLogRecord[]> {
@@ -50,6 +55,12 @@ export const kpiLogService = {
       const userPodIds = currentUser.podIds ?? [];
 
       const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
+      if (filters?.userId) {
+        if (!(await kpiLogService.canManageTarget(currentUser, filters.userId))) {
+          throw new ForbiddenError();
+        }
+        return await kpiLogRepository.listByUserId(filters.userId, filters);
+      }
       if (!isAdmin) {
         return await kpiLogRepository.listByPodIds(userPodIds, {
           startDate: filters?.startDate,
@@ -59,6 +70,7 @@ export const kpiLogService = {
 
       return await kpiLogRepository.list(filters);
     } catch (error) {
+      if (error instanceof ForbiddenError) throw error;
       console.error("kpiLogService.list error:", error);
       throw new InternalError(
         error instanceof Error ? error.message : "Failed to fetch KPI logs"
@@ -78,6 +90,10 @@ export const kpiLogService = {
       const currentUser = await authService.requireCurrentUser();
 
       const userId = input.userId || currentUser.id;
+
+      if (!(await kpiLogService.canManageTarget(currentUser, userId))) {
+        throw new ForbiddenError();
+      }
 
       if (!input.kpiId) {
         throw new ValidationError("KPI ID is required");
@@ -140,6 +156,10 @@ export const kpiLogService = {
       for (const log of logs) {
         const userId = log.userId || currentUser.id;
 
+        if (!(await kpiLogService.canManageTarget(currentUser, userId))) {
+          throw new ForbiddenError();
+        }
+
         if (!log.kpiId) {
           throw new ValidationError("KPI ID is required for all logs");
         }
@@ -183,10 +203,17 @@ export const kpiLogService = {
 
   async delete(id: string): Promise<void> {
     try {
-      await authService.requireCurrentUser();
+      const currentUser = await authService.requireCurrentUser();
+      const ownerId = await kpiLogRepository.findOwnerId(id);
+      if (ownerId === undefined) throw new NotFoundError("KPI log not found");
+      if (!ownerId || !(await kpiLogService.canManageTarget(currentUser, ownerId))) {
+        throw new ForbiddenError();
+      }
       await kpiLogRepository.delete(id);
     } catch (error) {
       if (error instanceof UnauthorizedError) throw error;
+      if (error instanceof ForbiddenError) throw error;
+      if (error instanceof NotFoundError) throw error;
       console.error("kpiLogService.delete error:", error);
       throw new InternalError(
         error instanceof Error ? error.message : "Failed to delete KPI log"

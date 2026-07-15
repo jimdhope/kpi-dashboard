@@ -322,7 +322,7 @@ export const competitionService = {
   },
 
   async logScore(input: { competitionId: string; userId?: string | null; score: number }) {
-    const user = await authService.requireCurrentUser();
+    const user = await requireCompetitionEditor();
     const targetUserId = input.userId || user.id;
 
     const entry = await prisma.competitionEntry.findFirst({

@@ -21,21 +21,33 @@ async function getRolePermissions(roleIds: string[]): Promise<PermissionMap> {
 }
 
 async function getPermissionLevelForResource(roleKeys: string[], resource: string): Promise<PermissionLevel> {
-  const roles = await prisma.role.findMany({
-    where: { key: { in: roleKeys as any } },
-    select: { id: true },
+  const permission = await prisma.rolePermission.findFirst({
+    where: { resource, role: { key: { in: roleKeys as any } }, level: "MANAGE" },
+    select: { level: true },
   });
-  const perms = await getRolePermissions(roles.map((r) => r.id));
-  return perms[resource] ?? "NONE";
+  if (permission) return "MANAGE";
+  const viewPermission = await prisma.rolePermission.findFirst({
+    where: { resource, role: { key: { in: roleKeys as any } }, level: "VIEW" },
+    select: { level: true },
+  });
+  return viewPermission ? "VIEW" : "NONE";
 }
 
 export const permissionService = {
   async getPermissionsForRoles(roleKeys: string[]) {
-    const roles = await prisma.role.findMany({
-      where: { key: { in: roleKeys as any } },
-      select: { id: true },
+    const perms = await prisma.rolePermission.findMany({
+      where: { role: { key: { in: roleKeys as any } } },
+      select: { resource: true, level: true },
     });
-    return getRolePermissions(roles.map((r) => r.id));
+    const map: PermissionMap = {};
+    const levelOrder: PermissionLevel[] = ["NONE", "VIEW", "MANAGE"];
+    for (const permission of perms) {
+      const level = permission.level as PermissionLevel;
+      if (!map[permission.resource] || levelOrder.indexOf(level) > levelOrder.indexOf(map[permission.resource])) {
+        map[permission.resource] = level;
+      }
+    }
+    return map;
   },
 
   async hasEffectiveAdminAccess(roleKeys: string[]): Promise<boolean> {

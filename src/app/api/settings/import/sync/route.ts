@@ -11,7 +11,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const declaredSize = Number(request.headers.get('content-length') || 0);
+    if (declaredSize > 2 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Import request exceeds the 2 MB limit' }, { status: 413 });
+    }
+    const rawBody = await request.text();
+    if (Buffer.byteLength(rawBody) > 2 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Import request exceeds the 2 MB limit' }, { status: 413 });
+    }
+    const body = JSON.parse(rawBody);
     const source = body.source || 'existing';
 
     // Handle Firebase source - import directly from Firestore
@@ -43,7 +51,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error running import sync:', error);
     return NextResponse.json(
-      { error: `Import failed: ${error}` },
+      { error: 'Import failed. Check the server logs for details.' },
       { status: 500 }
     );
   }

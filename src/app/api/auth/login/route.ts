@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ok, errorResponse } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 import { getRoleBasedDashboard } from "@/lib/contracts";
+import { consumeRateLimit, privateRateLimitKey, requestClientKey } from "@/server/security/rate-limit";
 
 const schema = z.object({
   email: z.email(),
@@ -11,6 +12,16 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     const body = schema.parse(await request.json());
+    const rate = consumeRateLimit(
+      `login:${requestClientKey(request)}:${privateRateLimitKey(body.email)}`,
+      { limit: 10, windowMs: 15 * 60 * 1000 },
+    );
+    if (!rate.allowed) {
+      return new Response(JSON.stringify({ error: "Too many login attempts. Please try again later." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", "Retry-After": String(rate.retryAfterSeconds) },
+      });
+    }
     const session = await authService.login(body.email, body.password);
 
     const redirectUrl = getRoleBasedDashboard(session.user.roles);

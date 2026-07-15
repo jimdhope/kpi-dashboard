@@ -1,33 +1,25 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
-export async function proxy(request: NextRequest) {
-  const sessionCookie = request.cookies.get('kpiq_v3_session');
-  const { pathname } = request.nextUrl;
-
-  const isLoginPage = pathname === '/login';
-  const isPublicPage = pathname === '/';
-  const isAuthRoute = pathname.startsWith('/api/auth');
-  const isStaticAsset = pathname.startsWith('/_next') || pathname.includes('.');
-  const isRenderApi = pathname.startsWith('/api/render/');
-
-  if (isStaticAsset || isAuthRoute || isRenderApi) {
-    return NextResponse.next();
-  }
-  
-  if (!sessionCookie?.value && !isLoginPage && !isPublicPage) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-  
-  if (sessionCookie?.value && (isLoginPage || isPublicPage)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-  
-  return NextResponse.next();
-}
+// Next.js discovers Proxy beside a `src/app` tree. Keep the implementation at
+// the repository boundary so security policy has one source of truth, while
+// declaring the matcher here so Next can analyse it statically at build time.
+export { proxy } from "../proxy";
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\..*$).*)',
+    "/admin/:path*",
+    "/agent/:path*",
+    "/settings/:path*",
+    "/dashboard/:path*",
+    "/competitions/:path*",
+    "/performance/:path*",
+    "/directory/:path*",
+    "/knowledge-base/:path*",
+    "/reports/:path*",
+    "/mini-games/:path*",
+    "/tools/:path*",
+    "/team-leader/:path*",
+    "/pod-manager/:path*",
+    "/call-flow/:path*",
+    "/meter-reading-guide/:path*",
+    "/api/:path*",
   ],
 };

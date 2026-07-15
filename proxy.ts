@@ -8,7 +8,12 @@ import type { NavResource } from "@/lib/contracts";
 import { permissionService } from "@/server/services/permission-service";
 
 const PUBLIC_ROUTES = new Set(["/", "/login", "/forgot-password", "/reset-password"]);
-const PUBLIC_API_PREFIXES = new Set(["/api/auth/"]);
+const PUBLIC_API_PREFIXES = new Set([
+  "/api/auth/",
+  // External Teams callbacks authenticate with their high-entropy endpoint ID.
+  "/api/integrations/teams/incoming/",
+]);
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // Page routes requiring manage-level on a specific resource
 const PAGE_GUARDS: Array<{ prefix: string; resource: string }> = [
@@ -55,6 +60,25 @@ function deny(pathname: string, request: NextRequest, status: number, message: s
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Reject browser cross-site mutations before any application handler runs.
+  if (!SAFE_METHODS.has(request.method)) {
+    const fetchSite = request.headers.get("sec-fetch-site");
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("host");
+    if (fetchSite === "cross-site") {
+      return NextResponse.json({ error: "Cross-site request rejected" }, { status: 403 });
+    }
+    if (origin && host) {
+      try {
+        if (new URL(origin).host !== host) {
+          return NextResponse.json({ error: "Cross-site request rejected" }, { status: 403 });
+        }
+      } catch {
+        return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+      }
+    }
+  }
+
   // Allow public routes
   if (PUBLIC_ROUTES.has(pathname)) return NextResponse.next();
   for (const prefix of PUBLIC_API_PREFIXES) {
@@ -100,8 +124,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // Block non-admins from mutating users (POST/PUT/DELETE on /api/users)
-  const isAdmin = await permissionService.hasEffectiveAdminAccess(userRoles);
   if (pathname.startsWith("/api/users") && pathname !== "/api/users/me") {
+    const isAdmin = await permissionService.hasEffectiveAdminAccess(userRoles);
     if (request.method !== "GET" && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -117,7 +141,6 @@ export const config = {
     "/settings/:path*",
     "/dashboard/:path*",
     "/competitions/:path*",
-    "/trackers/:path*",
     "/performance/:path*",
     "/directory/:path*",
     "/knowledge-base/:path*",

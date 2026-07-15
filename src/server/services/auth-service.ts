@@ -28,6 +28,18 @@ function mapSessionPayload(user: AppUser | null, expiresAt: Date | null): Sessio
   };
 }
 
+async function replaceUserSessions(userId: string): Promise<void> {
+  await sessionRepository.deleteByUserId(userId);
+  const sessionToken = generateSessionToken();
+  const expiresAt = addDays(SESSION_DURATION_DAYS);
+  await sessionRepository.create({
+    userId,
+    sessionTokenHash: hashSessionToken(sessionToken),
+    expiresAt,
+  });
+  await setSessionCookie(sessionToken, expiresAt);
+}
+
 export const authService = {
   async login(email: string, password: string) {
     const user = await userRepository.findByEmail(email);
@@ -125,6 +137,7 @@ export const authService = {
     }
     await userRepository.updatePassword(resetToken.userId, await hashPassword(newPassword));
     await passwordResetRepository.consume(resetToken.id);
+    await sessionRepository.deleteByUserId(resetToken.userId);
   },
 
   async changePassword(userId: string, currentPassword: string, nextPassword: string) {
@@ -139,5 +152,6 @@ export const authService = {
     }
 
     await userRepository.updatePassword(userId, await hashPassword(nextPassword));
+    await replaceUserSessions(userId);
   },
 };

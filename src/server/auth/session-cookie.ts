@@ -18,10 +18,10 @@ export async function setSessionCookie(token: string, expiresAt: Date): Promise<
   const cookieStore = await cookies();
   const signedValue = `${token}.${signSessionToken(token)}`;
 
-  // Check if running with HTTPS (production with URL env var set to https)
-  // Otherwise don't set secure flag so cookies work over HTTP
-  const hasHttps = process.env.URL?.startsWith("https://") ?? false;
-  const secure = process.env.NODE_ENV === "production" && hasHttps;
+  // Production cookies are secure by default. Local production-mode HTTP testing can
+  // opt out explicitly without coupling cookie security to one of several URL vars.
+  const secure = process.env.NODE_ENV === "production"
+    && process.env.ALLOW_INSECURE_COOKIES !== "true";
 
   cookieStore.set(SESSION_COOKIE_NAME, signedValue, {
     httpOnly: true,

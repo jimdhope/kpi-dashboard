@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: kpi_quest_v3
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_v3_data:/var/lib/postgresql/data
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
@@ -27,11 +27,12 @@ services:
     ports:
       - "9103:9103"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kpi_quest_v3
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/kpi_quest_v3
       - NODE_ENV=production
       - PORT=9103
       - DB_HOST=postgres
-      - SESSION_COOKIE_SECRET=dev-secret-change-in-production
+      - SESSION_COOKIE_SECRET=${SESSION_COOKIE_SECRET:?SESSION_COOKIE_SECRET is required}
+      - RUN_SEED_ON_STARTUP=${RUN_SEED_ON_STARTUP:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,11 +45,12 @@ services:
     restart: unless-stopped
     command: ["/bin/bash", "-c", "/worker-entrypoint.sh"]
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kpi_quest_v3
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/kpi_quest_v3
       - NODE_ENV=production
       - DB_HOST=postgres
-      - SESSION_COOKIE_SECRET=dev-secret-change-in-production
+      - SESSION_COOKIE_SECRET=${SESSION_COOKIE_SECRET:?SESSION_COOKIE_SECRET is required}
       - IS_WORKER=true
+      - SKIP_MIGRATIONS=true
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,0 +1,13 @@
+CREATE INDEX "KpiLog_userId_date_idx" ON "KpiLog"("userId", "date");
+CREATE INDEX "KpiLog_kpiId_userId_date_idx" ON "KpiLog"("kpiId", "userId", "date");
+CREATE INDEX "Session_expiresAt_idx" ON "Session"("expiresAt");
+CREATE INDEX "PasswordResetToken_userId_idx" ON "PasswordResetToken"("userId");
+CREATE INDEX "PasswordResetToken_expiresAt_idx" ON "PasswordResetToken"("expiresAt");
+CREATE INDEX "Competition_startsAt_endsAt_idx" ON "Competition"("startsAt", "endsAt");
+CREATE INDEX "Competition_isDraft_createdAt_idx" ON "Competition"("isDraft", "createdAt");
+CREATE INDEX "CompetitionRule_competitionId_idx" ON "CompetitionRule"("competitionId");
+CREATE INDEX "CompetitionTeam_competitionId_idx" ON "CompetitionTeam"("competitionId");
+CREATE INDEX "CompetitionEntry_competitionId_idx" ON "CompetitionEntry"("competitionId");
+CREATE INDEX "CompetitionEntry_userId_idx" ON "CompetitionEntry"("userId");
+CREATE INDEX "CompetitionEntry_competitionId_userId_idx" ON "CompetitionEntry"("competitionId", "userId");
+CREATE INDEX "CompetitionScoreLog_entryId_loggedAt_idx" ON "CompetitionScoreLog"("entryId", "loggedAt");

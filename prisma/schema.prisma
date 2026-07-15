@@ -134,6 +134,8 @@ model KpiLog {
   @@index([userId])
   @@index([loggedAt])
   @@index([date])
+  @@index([userId, date])
+  @@index([kpiId, userId, date])
 }
 
 model User {
@@ -178,6 +180,7 @@ model User {
   totalPoints           Int                       @default(0)
   badges                AgentBadge[]
   competitionResults    CompetitionResult[]
+  dailyGameAttempts     DailyGameAttempt[]
 }
 
 model Role {
@@ -226,6 +229,7 @@ model Session {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {
@@ -236,6 +240,9 @@ model PasswordResetToken {
   createdAt  DateTime @default(now())
   consumedAt DateTime?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model AuditLog {
@@ -341,6 +348,9 @@ model Competition {
   campaign      Campaign?          @relation(fields: [campaignId], references: [id])
   results       CompetitionResult[]
   agentBadges   AgentBadge[]
+
+  @@index([startsAt, endsAt])
+  @@index([isDraft, createdAt])
 }
 
 model CompetitionResult {
@@ -372,6 +382,8 @@ model CompetitionRule {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId])
 }
 
 model CompetitionTeam {
@@ -383,6 +395,8 @@ model CompetitionTeam {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId])
 }
 
 model CompetitionEntry {
@@ -397,6 +411,10 @@ model CompetitionEntry {
   competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   scoreLogs     CompetitionScoreLog[]
+
+  @@index([competitionId])
+  @@index([userId])
+  @@index([competitionId, userId])
 }
 
 model CompetitionScoreLog {
@@ -409,6 +427,8 @@ model CompetitionScoreLog {
   loggedAt      DateTime          @default(now())
   createdAt     DateTime          @default(now())
   entry         CompetitionEntry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId, loggedAt])
 }
 
 model CompetitionRuleTemplate {
@@ -757,6 +777,43 @@ model RpsGame {
   createdAt      DateTime @default(now())
 
   @@index([playerId])
+}
+
+model DailyGameChallenge {
+  id            String             @id @default(cuid())
+  gameKey       String
+  challengeDate String
+  variant       String             @default("default")
+  content       Json
+  solution      Json
+  createdAt     DateTime           @default(now())
+  attempts      DailyGameAttempt[]
+
+  @@unique([gameKey, challengeDate, variant])
+  @@index([challengeDate])
+}
+
+model DailyGameAttempt {
+  id          String             @id @default(cuid())
+  challengeId String
+  userId      String
+  status      String             @default("in_progress")
+  score       Int                @default(0)
+  durationMs  Int?
+  guesses     Int?
+  mistakes    Int                @default(0)
+  hints       Int                @default(0)
+  state       Json
+  metrics     Json?
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime           @updatedAt
+  challenge   DailyGameChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([challengeId, status, score])
+  @@index([userId, startedAt])
 }
 
 model ImportLog {

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
+import { requireCompetitionEditor } from "@/server/services/authorization";
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
@@ -34,7 +35,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await authService.requireCurrentUser();
+    const user = await requireCompetitionEditor();
     const body = await request.json();
     const payload = createSchema.parse(body);
     
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return errorResponse(401, "Unauthorized");
     }
+    if (error instanceof Error && error.message === "Forbidden") return errorResponse(403, "Forbidden");
     console.error("POST /api/competition-rule-templates error:", error);
     return errorResponse(500, "Failed to create template.");
   }

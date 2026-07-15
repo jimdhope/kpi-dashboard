@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { writeFile, unlink } from "fs/promises";
 import { existsSync } from "fs";
+import { basename } from "path";
+import { randomUUID } from "crypto";
 import { backupService } from "@/server/services/backup-service";
 import { requireAdminUser } from "@/server/services/authorization";
 
@@ -15,7 +17,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const fileName = file.name;
+    if (file.size > 100 * 1024 * 1024) {
+      return NextResponse.json({ error: "Backup exceeds the 100 MB upload limit" }, { status: 413 });
+    }
+
+    const fileName = basename(file.name).replace(/[^a-zA-Z0-9._-]/g, "_");
     if (!fileName.endsWith(".sql") && !fileName.endsWith(".sql.gz") && !fileName.endsWith(".gz")) {
       return NextResponse.json(
         { error: "Invalid file type. Expected .sql or .sql.gz" },
@@ -23,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const uploadPath = `/tmp/kpi-quest-upload-${Date.now()}-${fileName}`;
+    const uploadPath = `/tmp/kpi-quest-upload-${randomUUID()}-${fileName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(uploadPath, buffer);
 
@@ -55,14 +61,14 @@ export async function POST(request: Request) {
       });
     } finally {
       try {
-        if (existsSync(uploadPath)) await unlink(uploadPath);
-        if (isGzip && existsSync(sqlPath)) await unlink(sqlPath);
+        if (existsSync(/* turbopackIgnore: true */ uploadPath)) await unlink(uploadPath);
+        if (isGzip && existsSync(/* turbopackIgnore: true */ sqlPath)) await unlink(sqlPath);
       } catch { /* ignore cleanup errors */ }
     }
   } catch (error) {
     console.error("Backup restore error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to restore backup" },
+      { error: "Failed to restore backup. Check the server logs for details." },
       { status: 500 }
     );
   }

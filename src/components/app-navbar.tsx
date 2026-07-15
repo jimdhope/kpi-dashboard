@@ -82,6 +82,9 @@ const navItems: NavItemConfig[] = [
     items: [
       { label: 'Dashboard', href: '/mini-games', icon: Home },
       { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
+      { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: Gamepad2 },
+      { label: 'Daily Word', href: '/mini-games/daily-word', icon: Gamepad2 },
+      { label: 'Sudoku', href: '/mini-games/sudoku', icon: Gamepad2 },
     ]
   },
   { 

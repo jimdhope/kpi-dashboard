@@ -3,6 +3,7 @@ import { errorResponse, ok } from "@/server/http";
 import { prisma } from "@/server/db/client";
 import { z } from "zod";
 import { startOfDay, endOfDay } from "date-fns";
+import { permissionService } from "@/server/services/permission-service";
 
 const batchSchema = z.object({
   logs: z.array(z.object({
@@ -15,7 +16,9 @@ const batchSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await authService.requireCurrentUser();
+    const currentUser = await authService.requireCurrentUser();
+    const canManage = await permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+    if (!canManage) return errorResponse(403, "Forbidden");
     const { logs } = batchSchema.parse(await request.json());
 
     // For each log entry, find an existing log for the same user/tracker/day and update or create

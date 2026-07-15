@@ -2,6 +2,7 @@ import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
+import { requireCompetitionEditor } from "@/server/services/authorization";
 
 const createSchema = z.object({
   competitionId: z.string().min(1),
@@ -15,7 +16,7 @@ const createSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await authService.requireCurrentUser();
+    await requireCompetitionEditor();
     const url = new URL(request.url);
     const competitionId = url.searchParams.get('competitionId');
     const date = url.searchParams.get('date');
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid task log payload.");
     }
+    if (error instanceof Error && error.message === "Forbidden") return errorResponse(403, "Forbidden");
     console.error('POST /api/task-logs error:', error);
     return errorResponse(500, "Failed to create task log.");
   }

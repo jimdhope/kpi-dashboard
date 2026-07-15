@@ -4,6 +4,7 @@ import { authService } from "@/server/services/auth-service";
 import { activityService } from "@/server/services/activity-service";
 import { competitionSseService } from "@/server/services/competition-sse-service";
 import { prisma } from "@/server/db/client";
+import { requireCompetitionEditor } from "@/server/services/authorization";
 
 export const competitionEntryService = {
   async listByCompetition(competitionId: string) {
@@ -15,6 +16,7 @@ export const competitionEntryService = {
   },
 
   async enrollUser(competitionId: string, userId: string) {
+    await requireCompetitionEditor();
     const competition = await competitionRepository.findById(competitionId);
     if (!competition) {
       throw new Error("Competition not found");
@@ -55,6 +57,7 @@ export const competitionEntryService = {
   },
 
   async updatePresence(entryId: string, present: boolean) {
+    await requireCompetitionEditor();
     const entry = await competitionEntryRepository.update(entryId, { present });
     
     // Get competition and user details for activity logging
@@ -96,6 +99,7 @@ export const competitionEntryService = {
     isBonus?: boolean;
     bonusTeamId?: string;
   }) {
+    await requireCompetitionEditor();
     const entry = await competitionEntryRepository.findById(input.entryId);
     if (!entry) {
       throw new Error("Entry not found");
@@ -151,6 +155,7 @@ export const competitionEntryService = {
     isBonus?: boolean;
     bonusTeamId?: string;
   }>) {
+    await requireCompetitionEditor();
     const results = [];
 
     // Get competition details for activity logging

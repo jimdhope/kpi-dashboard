@@ -1,6 +1,8 @@
 import { prisma } from "@/server/db/client";
 import * as fs from 'fs';
 import * as path from 'path';
+import { tmpdir } from 'os';
+import { randomUUID } from 'crypto';
 
 export interface ImportResult {
   collection: string;
@@ -808,21 +810,14 @@ export const dataImportService = {
    */
   async syncFromFirebase(serviceAccountJson: string): Promise<{ results: ImportResult[]; duration: number; success: boolean; error?: string }> {
     console.log('[Firebase Import] Starting Firebase import...');
-    console.log('[Firebase Import] Service account length:', serviceAccountJson?.length);
-    
-    const debugLogPath = path.join(process.cwd(), 'firebase_import_log.txt');
     const startTime = Date.now();
-    
-    // Write start marker to debug log
-    fs.writeFileSync(debugLogPath, `=== Firebase Import Started at ${new Date().toISOString()} ===\n`);
     
     return new Promise((resolve) => {
       const { spawn } = require('child_process');
       
       // Write service account to temp file
-      const tempCredPath = path.join(process.cwd(), 'temp_firebase_creds.json');
-      fs.writeFileSync(tempCredPath, serviceAccountJson);
-      console.log('[Firebase Import] Wrote temp credentials to:', tempCredPath);
+      const tempCredPath = path.join(tmpdir(), `kpi-quest-firebase-${randomUUID()}.json`);
+      fs.writeFileSync(tempCredPath, serviceAccountJson, { mode: 0o600 });
       
       const child = spawn('npx', ['tsx', 'scripts/import-from-firebase.ts', tempCredPath], {
         cwd: process.cwd(),
@@ -840,9 +835,7 @@ export const dataImportService = {
       
       child.stdout.on('data', (data: Buffer) => {
         const chunk = data.toString();
-        stdout += chunk;
-        // Log to file
-        fs.appendFileSync(debugLogPath, chunk);
+        if (stdout.length + chunk.length <= 10 * 1024 * 1024) stdout += chunk;
         // Log to console
         const lines = chunk.split('\n').filter(l => l.trim());
         lines.forEach(line => {
@@ -854,8 +847,7 @@ export const dataImportService = {
       
       child.stderr.on('data', (data: Buffer) => {
         const text = data.toString();
-        stderr += text;
-        fs.appendFileSync(debugLogPath, `[ERROR] ${text}`);
+        if (stderr.length + text.length <= 1024 * 1024) stderr += text;
         console.log('[Firebase Import ERROR]', text.trim());
       });
       
@@ -919,8 +911,7 @@ export const dataImportService = {
           });
         }
         
-        // Log completion
-        fs.appendFileSync(debugLogPath, `\n=== Import completed in ${Date.now() - startTime}ms ===\n`);
+        console.log(`[Firebase Import] Completed in ${Date.now() - startTime}ms`);
       });
       
       child.on('error', (err: Error) => {

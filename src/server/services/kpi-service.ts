@@ -4,10 +4,12 @@ import { activityService } from "@/server/services/activity-service";
 
 export const kpiService = {
   async list() {
+    await authService.requireCurrentUser();
     return kpiRepository.list();
   },
 
   async getById(id: string) {
+    await authService.requireCurrentUser();
     return kpiRepository.getById(id);
   },
 

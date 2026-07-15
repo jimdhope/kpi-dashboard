@@ -43,6 +43,10 @@ export const sessionRepository = {
     });
   },
 
+  async deleteByUserId(userId: string) {
+    await prisma.session.deleteMany({ where: { userId } });
+  },
+
   async deleteExpired() {
     await prisma.session.deleteMany({
       where: {

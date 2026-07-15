@@ -14,11 +14,13 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const podId = searchParams.get("podId") || undefined;
+    const userId = searchParams.get("userId") || undefined;
     const startDate = searchParams.get("startDate") || undefined;
     const endDate = searchParams.get("endDate") || undefined;
 
     const logs = await kpiLogService.list({
       podId,
+      userId,
       startDate,
       endDate,
     });
@@ -102,6 +104,9 @@ export async function DELETE(request: Request) {
 
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (error instanceof NotFoundError) {
       return NextResponse.json({ error: "Log not found" }, { status: 404 });

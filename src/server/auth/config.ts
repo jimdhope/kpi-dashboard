@@ -7,6 +7,9 @@ export function getSessionCookieSecret(): string {
   if (!secret) {
     throw new Error("SESSION_COOKIE_SECRET is required.");
   }
+  if (process.env.NODE_ENV === "production" && secret.length < 32) {
+    throw new Error("SESSION_COOKIE_SECRET must be at least 32 characters in production.");
+  }
 
   return secret;
 }

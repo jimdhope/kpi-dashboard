@@ -18,6 +18,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    if (file.size > 25 * 1024 * 1024) {
+      return NextResponse.json({ error: "Import exceeds the 25 MB upload limit" }, { status: 413 });
+    }
+
     if (!file.name.endsWith('.json')) {
       return NextResponse.json({ error: 'Only JSON files are accepted' }, { status: 400 });
     }
@@ -33,7 +37,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error uploading export file:', error);
     return NextResponse.json(
-      { error: `Upload failed: ${error}` },
+      { error: 'Upload failed. Check the server logs for details.' },
       { status: 500 }
     );
   }

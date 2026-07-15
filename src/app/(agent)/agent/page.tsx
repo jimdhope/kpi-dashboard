@@ -75,7 +75,7 @@ interface Achievement {
 interface GameLeaderboardEntry {
   userId: string;
   name: string;
-  score: number;
+  score: number | string;
   rank: number;
 }
 
@@ -89,8 +89,13 @@ interface GameLeaderboard {
 const COMPETITION_DASHBOARD_KEY = 'competitionDashboard_selectedCompetitionId';
 const COMPETITION_DASHBOARD_POD_KEY = 'competitionDashboard_selectedPodId';
 
-export function AgentDashboard() {
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+const formatGameTime = (milliseconds: number) => {
+  const seconds = Math.floor(milliseconds / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+};
+
+export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser | null }) {
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(initialUser);
   const [isLoading, setIsLoading] = useState(true);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [pods, setPods] = useState<Pod[]>([]);
@@ -99,6 +104,7 @@ export function AgentDashboard() {
   const [kpis, setKpis] = useState<KpiDefinition[]>([]);
   const [kpiLogs, setKpiLogs] = useState<KpiLog[]>([]);
   const [rpsLeaderboard, setRpsLeaderboard] = useState<GameLeaderboardEntry[]>([]);
+  const [dailyGameLeaderboards, setDailyGameLeaderboards] = useState<GameLeaderboard[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
 
@@ -113,17 +119,18 @@ export function AgentDashboard() {
   useEffect(() => {
     async function init() {
       try {
-        const [sessionRes, compsRes, podsRes, usersRes, kpisRes, gamesRes, achievementsRes] = await Promise.all([
-          fetch('/api/auth/session'),
+        const [sessionRes, compsRes, podsRes, usersRes, kpisRes, gamesRes, achievementsRes, dailyGamesRes] = await Promise.all([
+          initialUser ? Promise.resolve(null) : fetch('/api/auth/session'),
           fetch('/api/competitions'),
           fetch('/api/pods'),
           fetch('/api/users'),
           fetch('/api/kpis'),
           fetch('/api/rps-games?limit=100'),
           fetch('/api/achievements'),
+          fetch('/api/mini-games/daily'),
         ]);
 
-        if (sessionRes.ok) {
+        if (sessionRes?.ok) {
           const sessionData = await sessionRes.json();
           if (sessionData.authenticated && sessionData.user) {
             setCurrentUser(sessionData.user);
@@ -166,6 +173,28 @@ export function AgentDashboard() {
         if (gamesRes.ok) {
           const gamesData = await gamesRes.json();
           setRpsLeaderboard(gamesData.leaderboard || []);
+        }
+
+        if (dailyGamesRes.ok) {
+          const dailyData = await dailyGamesRes.json();
+          const names: Record<string, string> = {
+            'higher-lower:default': 'Higher or Lower',
+            'daily-word:default': 'Daily Word',
+            'sudoku:easy': 'Sudoku · Easy',
+            'sudoku:medium': 'Sudoku · Medium',
+            'sudoku:hard': 'Sudoku · Hard',
+          };
+          setDailyGameLeaderboards((dailyData.games || []).map((game: any) => ({
+            id: `${game.gameKey}:${game.variant}`,
+            name: names[`${game.gameKey}:${game.variant}`] || game.gameKey,
+            scoreLabel: game.gameKey === 'higher-lower' ? 'Streak' : game.gameKey === 'daily-word' ? 'Guesses' : 'Time',
+            entries: (game.leaderboard || []).map((entry: any) => ({
+              ...entry,
+              score: game.gameKey === 'daily-word'
+                ? entry.guesses
+                : game.gameKey === 'sudoku' ? formatGameTime(entry.score) : entry.score,
+            })),
+          })));
         }
 
         if (achievementsRes.ok) {
@@ -351,9 +380,10 @@ export function AgentDashboard() {
   useEffect(() => {
     const uid = currentUser?.id;
     if (!uid) { setKpiLogs([]); return; }
+    const userId = uid;
     async function fetchKpiLogs() {
       try {
-        const res = await fetch('/api/performance/kpi-logs');
+        const res = await fetch(`/api/performance/kpi-logs?userId=${encodeURIComponent(userId)}`);
         if (res.ok) {
           const data = await res.json();
           setKpiLogs((data.logs || []).filter((log: KpiLog) => log.userId === uid));
@@ -370,7 +400,7 @@ export function AgentDashboard() {
     name: 'Rock Paper Scissors',
     scoreLabel: 'Wins',
     entries: rpsLeaderboard,
-  }], [rpsLeaderboard]);
+  }, ...dailyGameLeaderboards], [rpsLeaderboard, dailyGameLeaderboards]);
 
   const agentPerformanceData = useMemo(() => {
     const weekStartsOn = 4 as const;
@@ -730,7 +760,7 @@ export function AgentDashboard() {
         </Link>
 
         {/* Mini Games Card */}
-        <Link href="/agent/mini-games">
+        <Link href="/mini-games">
           <Card variant="glass" className="glass-card-hover cursor-pointer overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
@@ -747,7 +777,7 @@ export function AgentDashboard() {
               {gameLeaderboards.every((game) => game.entries.length === 0) ? (
                 <div className="text-center py-4">
                   <Swords className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-xs text-muted-foreground">Play RPS to see the leaderboard</p>
+                  <p className="text-xs text-muted-foreground">Play a mini game to see the leaderboards</p>
                 </div>
               ) : (
                 <div className="space-y-4">

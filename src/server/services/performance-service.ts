@@ -9,6 +9,10 @@ import { prisma } from "@/server/db/client";
 import { permissionService } from "@/server/services/permission-service";
 
 export const performanceService = {
+  async canManageTarget(currentUser: Awaited<ReturnType<typeof authService.requireCurrentUser>>, targetUserId: string) {
+    if (currentUser.id === targetUserId) return true;
+    return permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+  },
   async listLogs() {
     const currentUser = await authService.requireCurrentUser();
     const podIds = currentUser.podIds ?? [];
@@ -19,17 +23,29 @@ export const performanceService = {
   },
 
   async listLogsByPodIds(podIds: string[]) {
-    await authService.requireCurrentUser();
+    const currentUser = await authService.requireCurrentUser();
+    const canManage = await permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+    if (!canManage && podIds.some((podId) => !(currentUser.podIds ?? []).includes(podId))) {
+      throw new Error("Forbidden");
+    }
     return performanceRepository.listLogsByPodIds(podIds);
   },
 
   async deleteLog(id: string) {
-    await authService.requireCurrentUser();
+    const currentUser = await authService.requireCurrentUser();
+    const log = await prisma.trackerLog.findUnique({ where: { id }, select: { userId: true } });
+    if (!log) throw new Error("Performance log not found");
+    if (!log.userId || !(await performanceService.canManageTarget(currentUser, log.userId))) {
+      throw new Error("Forbidden");
+    }
     return performanceRepository.deleteLog(id);
   },
 
   async createLog(input: { trackerKpiId: string; userId: string; value: number; loggedAt?: string | null }) {
     const currentUser = await authService.requireCurrentUser();
+    if (!(await performanceService.canManageTarget(currentUser, input.userId))) {
+      throw new Error("Forbidden");
+    }
     
     // Get the target user's name for activity logging
     const targetUser = await prisma.user.findUnique({
@@ -119,6 +135,10 @@ export const performanceService = {
 
   async createKpiLog(input: { kpiId: string; userId?: string; value: number; date: Date; loggedAt?: string | null }) {
     const currentUser = await authService.requireCurrentUser();
+    const targetUserId = input.userId || currentUser.id;
+    if (!(await performanceService.canManageTarget(currentUser, targetUserId))) {
+      throw new Error("Forbidden");
+    }
     
     // Get the target user and KPI names for activity logging
     const [targetUser, kpi] = await Promise.all([
@@ -126,7 +146,6 @@ export const performanceService = {
       prisma.kpi.findUnique({ where: { id: input.kpiId }, select: { name: true } }),
     ]);
     
-    const targetUserId = input.userId || currentUser.id;
     const targetUserName = targetUser?.name || currentUser.name;
     
     const createdLog = await performanceRepository.createKpiLog({

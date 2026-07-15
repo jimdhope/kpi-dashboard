@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import { pipeline } from "stream/promises";
 import { createWriteStream, createReadStream, unlinkSync } from "fs";
 import { createGzip, createGunzip } from "zlib";
+import { Transform } from "stream";
 import { prisma } from "@/server/db/client";
 
 interface DbConfig {
@@ -27,6 +28,16 @@ function parseDatabaseUrl(): DbConfig {
 
 function connFlags(c: DbConfig): string[] {
   return ["--host", c.host, "--port", String(c.port), "--username", c.user, "--dbname", c.dbname];
+}
+
+function byteLimit(maxBytes: number): Transform {
+  let total = 0;
+  return new Transform({
+    transform(chunk, _encoding, callback) {
+      total += chunk.length;
+      callback(total > maxBytes ? new Error("Expanded backup exceeds the 1 GB limit") : null, chunk);
+    },
+  });
 }
 
 export const backupService = {
@@ -95,9 +106,9 @@ export const backupService = {
   async restoreFromGzip(gzipPath: string): Promise<void> {
     const sqlPath = gzipPath.replace(/\.gz$/, "");
     const gunzip = createGunzip();
-    const readStream = createReadStream(gzipPath);
+    const readStream = createReadStream(/* turbopackIgnore: true */ gzipPath);
     const writeStream = createWriteStream(sqlPath);
-    await pipeline(readStream, gunzip, writeStream);
+    await pipeline(readStream, gunzip, byteLimit(1024 * 1024 * 1024), writeStream);
     try {
       await this.restoreFromFile(sqlPath);
     } finally {

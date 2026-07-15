@@ -17,6 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    if (file.size > 1024 * 1024) {
+      return NextResponse.json({ error: 'Service account file exceeds the 1 MB limit' }, { status: 413 });
+    }
+
     if (!file.name.endsWith('.json')) {
       return NextResponse.json({ error: 'Only JSON files are accepted' }, { status: 400 });
     }

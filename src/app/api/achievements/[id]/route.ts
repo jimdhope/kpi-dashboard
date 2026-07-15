@@ -1,6 +1,7 @@
 import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
+import { requireCompetitionEditor } from "@/server/services/authorization";
 
 export async function DELETE(
   request: Request,
@@ -8,12 +9,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await authService.requireCurrentUser();
+    await requireCompetitionEditor();
     await prisma.dailyAchievement.delete({
       where: { id },
     });
     return ok({ success: true });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") return errorResponse(403, "Forbidden");
     console.error('DELETE /api/achievements/[id] error:', error);
     return errorResponse(500, "Failed to delete achievement.");
   }

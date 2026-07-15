@@ -1,6 +1,7 @@
 import { errorResponse, ok } from "@/server/http";
 import { teamsAutomationService } from "@/server/services/teams-automation-service";
 import { scoreTargetService } from "@/server/services/score-target-service";
+import { consumeRateLimit, privateRateLimitKey, requestClientKey } from "@/server/security/rate-limit";
 
 function pickHeaders(headers: Headers) {
   return Object.fromEntries(
@@ -11,7 +12,16 @@ function pickHeaders(headers: Headers) {
 export async function POST(request: Request, { params }: { params: Promise<{ endpointId: string }> }) {
   try {
     const { endpointId } = await params;
-    const payload = await request.json().catch(() => null);
+    const rate = consumeRateLimit(
+      `teams-incoming:${requestClientKey(request)}:${privateRateLimitKey(endpointId)}`,
+      { limit: 120, windowMs: 60 * 1000 },
+    );
+    if (!rate.allowed) return errorResponse(429, "Too many requests.");
+    const declaredSize = Number(request.headers.get("content-length") || 0);
+    if (declaredSize > 1024 * 1024) return errorResponse(413, "Payload too large.");
+    const rawBody = await request.text();
+    if (Buffer.byteLength(rawBody) > 1024 * 1024) return errorResponse(413, "Payload too large.");
+    const payload = (() => { try { return JSON.parse(rawBody); } catch { return null; } })();
     if (payload === null) {
       return errorResponse(400, "Invalid JSON payload.");
     }

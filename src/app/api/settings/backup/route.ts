@@ -12,7 +12,7 @@ export async function GET() {
 
     await backupService.exportToGzip(outputPath);
 
-    const buffer = await readFile(outputPath);
+    const buffer = await readFile(/* turbopackIgnore: true */ outputPath);
     await unlink(outputPath).catch(() => {});
 
     return new NextResponse(buffer, {

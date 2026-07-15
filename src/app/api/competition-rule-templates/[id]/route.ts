@@ -2,6 +2,7 @@ import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
+import { requireCompetitionEditor } from "@/server/services/authorization";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -22,7 +23,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await authService.requireCurrentUser();
+    await requireCompetitionEditor();
     const { id } = await params;
     
     const template = await prisma.competitionRuleTemplate.findUnique({
@@ -45,7 +46,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await authService.requireCurrentUser();
+    await requireCompetitionEditor();
     const { id } = await params;
     const body = await request.json();
     const payload = updateSchema.parse(body);
@@ -64,6 +65,7 @@ export async function PUT(
     if (error instanceof z.ZodError) {
       return errorResponse(400, "Invalid template payload.");
     }
+    if (error instanceof Error && error.message === "Forbidden") return errorResponse(403, "Forbidden");
     console.error("PUT /api/competition-rule-templates/[id] error:", error);
     return errorResponse(500, "Failed to update template.");
   }
@@ -74,7 +76,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await authService.requireCurrentUser();
+    await requireCompetitionEditor();
     const { id } = await params;
     
     await prisma.competitionRuleTemplate.delete({
@@ -83,6 +85,7 @@ export async function DELETE(
     
     return ok({ success: true });
   } catch (error) {
+    if (error instanceof Error && error.message === "Forbidden") return errorResponse(403, "Forbidden");
     console.error("DELETE /api/competition-rule-templates/[id] error:", error);
     return errorResponse(500, "Failed to delete template.");
   }

@@ -188,10 +188,43 @@ export const kpiLogRepository = {
     }));
   },
 
+  async listByUserId(userId: string, filters?: { startDate?: string; endDate?: string }): Promise<KpiLogRecord[]> {
+    const where: Prisma.KpiLogWhereInput = { userId };
+    if (filters?.startDate) where.date = { gte: new Date(filters.startDate) };
+    if (filters?.endDate) where.date = { ...(where.date as object), lte: new Date(filters.endDate) };
+    const logs = await prisma.kpiLog.findMany({
+      where,
+      include: {
+        kpi: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true } },
+      },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    });
+    return logs.map((log) => ({
+      id: log.id,
+      kpiId: log.kpiId,
+      kpiName: log.kpi.name,
+      userId: log.userId,
+      userName: log.user?.name ?? null,
+      value: toNumber(log.value),
+      date: log.date.toISOString(),
+      loggedAt: log.loggedAt.toISOString(),
+      createdAt: log.createdAt.toISOString(),
+    }));
+  },
+
   async delete(id: string): Promise<void> {
     await prisma.kpiLog.delete({
       where: { id },
     });
+  },
+
+  async findOwnerId(id: string): Promise<string | null | undefined> {
+    const log = await prisma.kpiLog.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    return log?.userId;
   },
 
   async deleteByUserAndKpiAndDate(
