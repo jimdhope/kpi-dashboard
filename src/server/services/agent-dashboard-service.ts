@@ -10,7 +10,7 @@ import { permissionService } from "@/server/services/permission-service";
 import { rpsService } from "@/server/services/rps-service";
 
 export const agentDashboardService = {
-  async getData() {
+  async getData(requestedCompetitionId?: string | null) {
     const user = await authService.requireCurrentUser();
     const permissions = await permissionService.getPermissionsForRoles(user.roles);
     const hasAdminDataAccess = permissions["nav.settings"] === "MANAGE";
@@ -24,10 +24,16 @@ export const agentDashboardService = {
       dailyGameService.summaries(user.id),
     ]);
 
-    // Do not scan achievements belonging to drafts or competitions that the
-    // dashboard cannot display.
+    const now = new Date();
+    const selectedCompetition = competitions.find((competition) => competition.id === requestedCompetitionId)
+      ?? competitions.find((competition) => {
+        const startsAt = competition.startsAt ? new Date(competition.startsAt) : null;
+        const endsAt = competition.endsAt ? new Date(competition.endsAt) : null;
+        return startsAt && endsAt && startsAt <= now && endsAt >= now;
+      })
+      ?? competitions[0];
     const achievements = await prisma.dailyAchievement.findMany({
-      where: { competitionId: { in: competitions.map((competition) => competition.id) } },
+      where: { competitionId: selectedCompetition?.id ?? "__none__" },
       orderBy: { loggedAt: "desc" },
     });
 
@@ -47,6 +53,7 @@ export const agentDashboardService = {
       kpiLogs,
       rpsLeaderboard,
       dailyGames,
+      achievementCompetitionId: selectedCompetition?.id ?? null,
       achievements: achievements.map((achievement) => ({
         ...achievement,
         agentName: agentNames.get(achievement.agentId) || "Unknown",

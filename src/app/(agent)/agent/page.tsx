@@ -108,18 +108,19 @@ export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser |
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
 
-  // Load selections from localStorage on mount
+  // Load the pod selection on mount. Competition selection is loaded as part
+  // of the initial dashboard request so only its achievements are transferred.
   useEffect(() => {
-    const savedCompId = localStorage.getItem(COMPETITION_DASHBOARD_KEY);
     const savedPodId = localStorage.getItem(COMPETITION_DASHBOARD_POD_KEY);
-    if (savedCompId) setSelectedCompetitionId(savedCompId);
     if (savedPodId) setSelectedPodId(savedPodId);
   }, []);
 
   useEffect(() => {
     async function init() {
       try {
-        const response = await fetch('/api/dashboard/agent');
+        const savedCompId = localStorage.getItem(COMPETITION_DASHBOARD_KEY);
+        const query = savedCompId ? `?competitionId=${encodeURIComponent(savedCompId)}` : '';
+        const response = await fetch(`/api/dashboard/agent${query}`);
         if (!response.ok) throw new Error('Failed to load dashboard data');
         const data = await response.json();
 
@@ -133,16 +134,9 @@ export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser |
         setRpsLeaderboard(data.rpsLeaderboard || []);
         setAchievements(data.achievements || []);
           
-        if (!selectedCompetitionId) {
-          const now = new Date();
-          const active = comps.find((c: Competition) => {
-            const start = c.startsAt ? new Date(c.startsAt) : null;
-            const end = c.endsAt ? new Date(c.endsAt) : null;
-            return start && end && now >= start && now <= end;
-          });
-          const selected = active || comps[0];
-          if (selected) setSelectedCompetitionId(selected.id);
-        }
+        const selected = comps.find((c: Competition) => c.id === data.achievementCompetitionId)
+          ?? comps[0];
+        if (selected) setSelectedCompetitionId(selected.id);
 
         const names: Record<string, string> = {
           'higher-lower:default': 'Higher or Lower',
@@ -328,10 +322,19 @@ export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser |
     return Object.values(agentScores).sort((a, b) => b.score - a.score);
   }, [competitionAchievements, users, filteredPodIds]);
 
-  const handleCompetitionChange = (value: string) => {
+  const handleCompetitionChange = async (value: string) => {
     setSelectedCompetitionId(value);
+    setAchievements([]);
     // Reset pod filter when competition changes
     setSelectedPodId('all');
+    try {
+      const response = await fetch(`/api/achievements?competitionId=${encodeURIComponent(value)}&limit=1000`);
+      if (!response.ok) throw new Error('Failed to load competition standings');
+      const data = await response.json();
+      setAchievements(data.achievements || []);
+    } catch (error) {
+      console.error('Error loading competition achievements:', error);
+    }
   };
 
   const handlePodChange = (value: string) => {

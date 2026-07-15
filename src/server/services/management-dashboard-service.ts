@@ -17,8 +17,23 @@ export const managementDashboardService = {
       hasAdminDataAccess ? podRepository.list() : podRepository.listForUser(user.id),
       hasAdminDataAccess ? userRepository.list() : userRepository.listByPodIds(user.podIds ?? []),
     ]);
+    const now = new Date();
+    const latestCompetition = competitions.find((competition) => {
+      const startsAt = competition.startsAt ? new Date(competition.startsAt) : null;
+      const endsAt = competition.endsAt ? new Date(competition.endsAt) : null;
+      return startsAt && endsAt && startsAt <= now && endsAt >= now;
+    }) ?? competitions[0];
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
     const achievements = await prisma.dailyAchievement.findMany({
-      where: { competitionId: { in: competitions.map((competition) => competition.id) } },
+      where: {
+        OR: [
+          { competitionId: latestCompetition?.id ?? "__none__" },
+          { date: { gte: todayStart, lte: todayEnd } },
+        ],
+      },
       orderBy: { loggedAt: "desc" },
     });
     const agentIds = [...new Set(achievements.map((achievement) => achievement.agentId))];
