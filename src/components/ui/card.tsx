@@ -12,7 +12,7 @@ const Card = React.forwardRef<
     className={cn(
       variant === "glass" 
         ? "glass-card"
-        : "rounded-lg border border-border/50 bg-card text-card-foreground shadow-lg",
+        : "rounded-xl border border-white/10 bg-card/90 text-card-foreground shadow-xl shadow-black/20",
       className
     )}
     {...props}
@@ -26,7 +26,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-4", className)} // Reduced padding for a tighter look
+    className={cn("flex flex-col space-y-1.5 p-5", className)}
     {...props}
   />
 ))
@@ -39,7 +39,7 @@ const CardTitle = React.forwardRef<
   // Changed back to div
   <div
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)} // Adjusted size to lg
+    className={cn("text-lg font-semibold leading-tight tracking-tight", className)}
     {...props}
   />
 ))
@@ -62,7 +62,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-4 pt-0", className)} {...props} /> // Reduced padding for a tighter look
+  <div ref={ref} className={cn("p-5 pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -72,7 +72,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-4 pt-0", className)} // Reduced padding
+    className={cn("flex items-center p-5 pt-0", className)}
     {...props}
   />
 ))

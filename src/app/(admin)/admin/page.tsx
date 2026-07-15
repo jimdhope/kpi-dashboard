@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { AppUser, CompetitionRecord, AppPod } from '@/lib/contracts';
 
-export function ManagementDashboard() {
+export function ManagementDashboard({ headerActions }: { headerActions?: React.ReactNode } = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [competitions, setCompetitions] = useState<CompetitionRecord[]>([]);
   const [pods, setPods] = useState<AppPod[]>([]);
@@ -118,9 +118,12 @@ export function ManagementDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Real-time overview of KPI Quest</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Real-time overview of KPI Quest</p>
+        </div>
+        {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
       </div>
 
       <div className="flex flex-wrap items-start justify-center gap-5">

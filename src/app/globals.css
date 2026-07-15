@@ -47,6 +47,11 @@
   --radius-md: 0.5rem;
   --radius-sm: 0.25rem;
 
+  /* Shared application layout rhythm */
+  --page-max-width: 96rem;
+  --page-gutter: clamp(1rem, 2.2vw, 2rem);
+  --page-section-gap: clamp(1.25rem, 2vw, 1.75rem);
+
   /* Enhanced Glassmorphism */
   --color-glass: rgba(30, 41, 59, 0.5);
   --color-glass-border: rgba(255, 255, 255, 0.12);
@@ -79,6 +84,106 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .app-main {
+    width: 100%;
+    padding: clamp(1rem, 2vw, 1.5rem) var(--page-gutter) var(--page-gutter);
+  }
+
+  .app-content {
+    width: min(100%, var(--page-max-width));
+    margin-inline: auto;
+  }
+
+  .page-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--page-section-gap);
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 4.25rem;
+  }
+
+  .page-title,
+  .app-content h1:not(.tiptap-editor h1) {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    line-height: 1.12;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  .page-description {
+    max-width: 48rem;
+    margin-top: 0.4rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.925rem;
+    line-height: 1.5;
+  }
+
+  .page-eyebrow {
+    margin-bottom: 0.4rem;
+    color: var(--color-teal-400);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .page-actions,
+  .section-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .page-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.125rem;
+    line-height: 1.35;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+  }
+
+  .section-description {
+    margin-top: 0.25rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 40rem) {
+    .page-header,
+    .section-header {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .page-actions,
+    .section-actions {
+      justify-content: flex-start;
+    }
   }
 }
 
@@ -158,18 +263,28 @@
     inset 0 -1px 0 rgba(0, 0, 0, 0.45);
 }
 
-/* Frosted Glass - Stronger */
+/* Legacy surface alias. Older pages still use `frosted-glass`; keep it
+   visually identical to the design-system card while those pages migrate. */
 .frosted-glass {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  position: relative;
+  background:
+    radial-gradient(ellipse 70% 55% at 8% 0%, rgba(255, 255, 255, 0.1), transparent 60%),
+    linear-gradient(115deg, transparent 30%, rgba(45, 212, 191, 0.035) 52%, transparent 72%),
+    linear-gradient(145deg, rgba(40, 57, 76, 0.62) 0%, rgba(20, 35, 51, 0.5) 48%, rgba(15, 29, 44, 0.58) 100%);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 22px 45px -24px rgba(0, 0, 0, 0.85),
+    0 8px 20px -14px rgba(7, 20, 32, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(1, 8, 15, 0.55);
 }
 
 .dark .frosted-glass {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 /* Tiptap Editor Styles */

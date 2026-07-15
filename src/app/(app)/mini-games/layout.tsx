@@ -1,3 +1,5 @@
+'use client';
+
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Home, Gamepad2, ArrowUpDown, Grid3X3, WholeWord } from 'lucide-react';
 import { OfflineIndicator } from '@/components/offline-indicator';
@@ -23,7 +25,7 @@ export default function MiniGamesLayout({ children }: MiniGamesLayoutProps) {
         sectionItems={miniGamesMenuItems}
         className="sticky top-[65px] z-40 bg-background/95 backdrop-blur-sm border-b md:hidden"
       />
-      <main className="flex-1 px-4 md:px-6 pb-6">
+      <main className="flex-1">
         {children}
       </main>
     </div>

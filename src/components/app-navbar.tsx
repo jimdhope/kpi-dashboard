@@ -12,7 +12,7 @@ import {
   Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone,
   CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen,
-  BookMarked, Contact, Building2, Briefcase
+  BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -35,6 +35,8 @@ export interface NavItemConfig {
   icon: React.ElementType;
   items: NavDropdownItem[];
 }
+
+export type NavVariant = 'default' | 'agent';
 
 // V2 Menu Structure + V3 Integrations
 const navItems: NavItemConfig[] = [
@@ -121,6 +123,47 @@ const navItems: NavItemConfig[] = [
   },
 ];
 
+const agentNavItems: NavItemConfig[] = [
+  {
+    key: 'knowledgeBase',
+    label: 'Knowledge Base',
+    href: '/knowledge-base',
+    icon: BookMarked,
+    items: [
+      { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen },
+      { label: 'Directory', href: '/directory', icon: Contact, permissionKey: 'directory' },
+    ],
+  },
+  {
+    key: 'miniGames',
+    label: 'Mini Games',
+    href: '/mini-games',
+    icon: Gamepad2,
+    items: [
+      { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
+      { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: ArrowUpDown },
+      { label: 'Daily Word', href: '/mini-games/daily-word', icon: WholeWord },
+      { label: 'Daily Sudoku', href: '/mini-games/sudoku', icon: Grid3X3 },
+    ],
+  },
+  {
+    key: 'usefulTools',
+    label: 'Tools',
+    href: '/tools',
+    icon: Wrench,
+    items: [
+      { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true },
+      { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen },
+      { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays },
+      { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap },
+      { label: 'Burns Test', href: '/tools/burns-test', icon: Flame },
+      { label: 'Dual Fuel', href: '/tools/dual-fuel', icon: Infinity },
+      { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig },
+      { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2 },
+    ],
+  },
+];
+
 const roleDashboardHrefs: Record<string, string> = {
   admin: '/dashboard',
   campaignManager: '/dashboard',
@@ -150,9 +193,9 @@ const roleIcons: Record<string, React.ElementType> = {
 
 const rolePriority = ['admin', 'campaignManager', 'podManager', 'teamLeader', 'competitionRunner', 'agent'];
 
-export function AppNavBar({ user, items, className, initialPermissions }: {
+export function AppNavBar({ user, navVariant = 'default', className, initialPermissions }: {
   user: AppUser | null;
-  items?: NavItemConfig[];
+  navVariant?: NavVariant;
   className?: string;
   initialPermissions?: PermissionMap;
 }) {
@@ -200,7 +243,7 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
     return item.href;
   };
 
-  const sourceItems = items ?? navItems;
+  const sourceItems = navVariant === 'agent' ? agentNavItems : navItems;
   const visibleNavItems = sourceItems
     .filter(item => getNavHref(item) !== null)
     .map(item => ({

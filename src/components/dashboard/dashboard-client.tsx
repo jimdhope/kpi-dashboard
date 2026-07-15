@@ -25,31 +25,32 @@ export function DashboardClient({
     router.replace(nextView === "agent" ? "/dashboard?view=agent" : "/dashboard");
   }
 
+  const viewToggle = canSwitchViews ? (
+    <div className="inline-flex rounded-lg border border-white/12 bg-slate-950/30 p-1" aria-label="Dashboard view">
+      <Button
+        type="button"
+        size="sm"
+        variant={view === "management" ? "secondary" : "ghost"}
+        onClick={() => changeView("management")}
+      >
+        Admin view
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={view === "agent" ? "secondary" : "ghost"}
+        onClick={() => changeView("agent")}
+      >
+        Agent view
+      </Button>
+    </div>
+  ) : null;
+
   return (
-    <div className="space-y-4">
-      {canSwitchViews && (
-        <div className="flex justify-end">
-          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1" aria-label="Dashboard view">
-            <Button
-              type="button"
-              size="sm"
-              variant={view === "management" ? "secondary" : "ghost"}
-              onClick={() => changeView("management")}
-            >
-              Admin view
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={view === "agent" ? "secondary" : "ghost"}
-              onClick={() => changeView("agent")}
-            >
-              Agent view
-            </Button>
-          </div>
-        </div>
-      )}
-      {view === "management" ? <ManagementDashboard /> : <AgentDashboard initialUser={user} />}
+    <div>
+      {view === "management"
+        ? <ManagementDashboard headerActions={viewToggle} />
+        : <AgentDashboard initialUser={user} headerActions={viewToggle} />}
     </div>
   );
 }

@@ -94,7 +94,13 @@ const formatGameTime = (milliseconds: number) => {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 };
 
-export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser | null }) {
+export function AgentDashboard({
+  initialUser = null,
+  headerActions,
+}: {
+  initialUser?: AppUser | null;
+  headerActions?: React.ReactNode;
+}) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(initialUser);
   const [isLoading, setIsLoading] = useState(true);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -422,8 +428,9 @@ export function AgentDashboard({ initialUser = null }: { initialUser?: AppUser |
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <h1 className="text-3xl font-bold">Welcome back, {currentUser.name?.split(' ')[0] || 'Agent'}!</h1>
+        {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-3">
