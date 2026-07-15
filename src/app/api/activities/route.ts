@@ -21,8 +21,10 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const requestedLimit = Number.parseInt(searchParams.get('limit') || '50', 10);
+    const requestedOffset = Number.parseInt(searchParams.get('offset') || '0', 10);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 50;
+    const offset = Number.isFinite(requestedOffset) ? Math.max(0, requestedOffset) : 0;
 
     // Build where clause
     const where: Record<string, unknown> = {};

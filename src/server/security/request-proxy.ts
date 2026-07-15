@@ -52,10 +52,14 @@ const API_GUARDS: Array<{
   { prefix: "/api/competition-rule-templates", resource: "competitions", readLevel: "VIEW", writeLevel: "MANAGE" },
   { prefix: "/api/competitions", resource: "competitions", readLevel: "VIEW", writeLevel: "MANAGE" },
   { prefix: "/api/achievements", resource: "competitions", readLevel: "VIEW", writeLevel: "MANAGE" },
+  { prefix: "/api/bonus-logs", resource: "competitions", readLevel: "VIEW", writeLevel: "MANAGE" },
+  { prefix: "/api/task-logs", resource: "competitions", readLevel: "MANAGE", writeLevel: "MANAGE" },
   { prefix: "/api/kpis", resource: "performance", readLevel: "VIEW", writeLevel: "MANAGE" },
   // Performance services enforce ownership for self-service mutations.
   { prefix: "/api/performance", resource: "performance", readLevel: "VIEW", writeLevel: "VIEW" },
   { prefix: "/api/directory", resource: "directory", readLevel: "VIEW", writeLevel: "MANAGE" },
+  { prefix: "/api/activities", resource: "activity", readLevel: "VIEW", writeLevel: "MANAGE" },
+  { prefix: "/api/pod-memberships", resource: "settings", readLevel: "MANAGE", writeLevel: "MANAGE" },
   // Authenticated readers may comment and manage their own comments; route
   // handlers enforce comment ownership.
   { prefix: "", pattern: /^\/api\/kb\/articles\/[^/]+\/comments(?:\/|$)/, resource: "knowledgeBase", readLevel: "VIEW", writeLevel: "VIEW" },

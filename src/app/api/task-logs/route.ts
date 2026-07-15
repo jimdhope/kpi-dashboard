@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
-import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
 import { requireCompetitionEditor } from "@/server/services/authorization";
 
@@ -46,7 +45,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await authService.requireCurrentUser();
+    await requireCompetitionEditor();
     const payload = createSchema.parse(await request.json());
 
     const taskLog = await prisma.dailyTaskLog.create({
