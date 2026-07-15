@@ -246,6 +246,7 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
             <div className="px-4 pb-4 border-b">
               <Link 
                 href={dashboardHref} 
+                prefetch={false}
                 className="flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -257,7 +258,7 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
             </div>
             <div className="flex flex-col gap-1 p-2">
               <SheetClose asChild>
-                <Link href={dashboardHref}>
+                <Link href={dashboardHref} prefetch={false}>
                   <Button
                     variant={isActive(dashboardHref) ? "secondary" : "ghost"}
                     className="w-full justify-start gap-2 h-11"
@@ -350,7 +351,7 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
         </Sheet>
 
         {/* Desktop Logo */}
-        <Link href={dashboardHref} className="hidden lg:flex items-center gap-2 mr-4">
+        <Link href={dashboardHref} prefetch={false} className="hidden lg:flex items-center gap-2 mr-4">
           <Image 
             src="/logo.svg" 
             alt="KPI Quest Logo" 
@@ -363,7 +364,7 @@ export function AppNavBar({ user, items, className, initialPermissions }: {
         </Link>
 
         <div className="hidden lg:flex items-center gap-1">
-          <Link href={dashboardHref}>
+          <Link href={dashboardHref} prefetch={false}>
             <Button
               variant="ghost"
               className={cn(

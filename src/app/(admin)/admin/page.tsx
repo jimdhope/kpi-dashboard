@@ -24,31 +24,13 @@ export function ManagementDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [compsRes, podsRes, usersRes, achievementsRes] = await Promise.all([
-          fetch('/api/competitions'),
-          fetch('/api/pods'),
-          fetch('/api/users'),
-          fetch('/api/achievements'),
-        ]);
-        if (compsRes.ok) {
-          const compsData = await compsRes.json();
-          setCompetitions(compsData.competitions || []);
-        }
-
-        if (podsRes.ok) {
-          const podsData = await podsRes.json();
-          setPods(podsData.pods || []);
-        }
-
-        if (usersRes.ok) {
-          const usersData = await usersRes.json();
-          setUsers(usersData.users || []);
-        }
-
-        if (achievementsRes.ok) {
-          const achievementsData = await achievementsRes.json();
-          setAchievementLogs(achievementsData.achievements || []);
-        }
+        const response = await fetch('/api/dashboard/management');
+        if (!response.ok) throw new Error('Failed to load management dashboard');
+        const data = await response.json();
+        setCompetitions(data.competitions || []);
+        setPods(data.pods || []);
+        setUsers(data.users || []);
+        setAchievementLogs(data.achievements || []);
 
         setIsLoading(false);
       } catch (err) {
