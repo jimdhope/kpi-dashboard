@@ -102,11 +102,6 @@ export const competitionStandingsRepository = {
       where: { id: competitionId },
       include: {
         teams: true,
-        entries: {
-          include: {
-            user: true,
-          },
-        },
       },
     });
 
@@ -152,22 +147,20 @@ export const competitionStandingsRepository = {
   },
 
   async getAgentStandings(competitionId: string, currentUserId?: string, limit = 20) {
-    const competition = await prisma.competition.findUnique({
-      where: { id: competitionId },
-      include: {
-        entries: {
-          where: { userId: { not: null } },
-          include: {
-            user: true,
-          },
-        },
+    const entries = await prisma.competitionEntry.findMany({
+      where: { competitionId, userId: { not: null } },
+      orderBy: [{ score: "desc" }, { createdAt: "asc" }],
+      take: Math.min(100, Math.max(1, limit)),
+      select: {
+        id: true,
+        userId: true,
+        score: true,
+        user: { select: { name: true } },
       },
     });
 
-    if (!competition) return [];
-
-    const standings = competition.entries
-      .filter(e => e.user)
+    return entries
+      .filter((entry) => entry.user && entry.userId)
       .map(entry => ({
         entryId: entry.id,
         userId: entry.userId!,
@@ -175,52 +168,39 @@ export const competitionStandingsRepository = {
         score: entry.score,
         isCurrentUser: entry.userId === currentUserId,
       }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
       .map((s, i) => ({ ...s, rank: i + 1 }));
-
-    return standings;
   },
 
   async getAchievementSummary(competitionId: string) {
-    const competition = await prisma.competition.findUnique({
-      where: { id: competitionId },
-      include: {
-        rules: true,
-        entries: {
-          include: {
-            scoreLogs: true,
-          },
-        },
-      },
-    });
-
-    if (!competition) return [];
-
-    const summaries: AchievementSummary[] = [];
-
-    for (const rule of competition.rules) {
-      const ruleLogs = competition.entries.flatMap(e => 
-        e.scoreLogs.filter(log => log.ruleId === rule.id)
-      );
-
-      summaries.push({
+    const [rules, aggregates] = await Promise.all([
+      prisma.competitionRule.findMany({
+        where: { competitionId },
+        select: { id: true, title: true },
+      }),
+      prisma.competitionScoreLog.groupBy({
+        by: ["ruleId"],
+        where: { entry: { competitionId }, ruleId: { not: null } },
+        _sum: { value: true },
+        _count: { id: true },
+      }),
+    ]);
+    const byRule = new Map(aggregates.map((item) => [item.ruleId, item]));
+    return rules.map((rule): AchievementSummary => {
+      const aggregate = byRule.get(rule.id);
+      return {
         ruleId: rule.id,
         ruleTitle: rule.title,
-        totalPoints: ruleLogs.reduce((sum, log) => sum + log.value, 0),
-        completionCount: ruleLogs.length,
-      });
-    }
-
-    return summaries;
+        totalPoints: aggregate?._sum.value ?? 0,
+        completionCount: aggregate?._count.id ?? 0,
+      };
+    });
   },
 
   async getTotalScores(competitionId: string) {
-    const entries = await prisma.competitionEntry.findMany({
+    const result = await prisma.competitionEntry.aggregate({
       where: { competitionId },
-      select: { score: true },
+      _sum: { score: true },
     });
-
-    return entries.reduce((sum, e) => sum + e.score, 0);
+    return result._sum.score ?? 0;
   },
 };

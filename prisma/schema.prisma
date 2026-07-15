@@ -415,6 +415,7 @@ model CompetitionEntry {
   @@index([competitionId])
   @@index([userId])
   @@index([competitionId, userId])
+  @@index([competitionId, score])
 }
 
 model CompetitionScoreLog {
@@ -429,6 +430,7 @@ model CompetitionScoreLog {
   entry         CompetitionEntry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
 
   @@index([entryId, loggedAt])
+  @@index([ruleId, entryId])
 }
 
 model CompetitionRuleTemplate {
