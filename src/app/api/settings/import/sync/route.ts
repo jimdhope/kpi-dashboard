@@ -22,23 +22,8 @@ export async function POST(request: NextRequest) {
     const body = JSON.parse(rawBody);
     const source = body.source || 'existing';
 
-    // Handle Firebase source - import directly from Firestore
-    if (source === 'firebase') {
-      if (!body.serviceAccountJson) {
-        return NextResponse.json({ error: 'Service account JSON required for Firebase import' }, { status: 400 });
-      }
-
-      const result = await dataImportService.syncFromFirebase(body.serviceAccountJson);
-
-      if (result.success) {
-        return NextResponse.json({
-          ...result,
-        });
-      } else {
-        return NextResponse.json({
-          error: result.error || 'Firebase import failed'
-        }, { status: 500 });
-      }
+    if (!['existing', 'upload'].includes(source)) {
+      return NextResponse.json({ error: 'Invalid import source' }, { status: 400 });
     }
 
     // Handle existing file or upload source
