@@ -13,6 +13,9 @@ interface DbConfig {
   password: string;
 }
 
+const MAX_TOOL_STDERR_BYTES = 1024 * 1024;
+const DATABASE_TOOL_TIMEOUT_MS = 30 * 60 * 1000;
+
 function parseDatabaseUrl(): DbConfig {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL not set");
@@ -54,11 +57,15 @@ export const backupService = {
     const gzip = createGzip();
     const writeStream = createWriteStream(outputPath);
     let stderr = "";
-    pgDump.stderr.on("data", (d) => { stderr += d.toString(); });
+    pgDump.stderr.on("data", (d) => {
+      if (stderr.length < MAX_TOOL_STDERR_BYTES) stderr += d.toString().slice(0, MAX_TOOL_STDERR_BYTES - stderr.length);
+    });
+    const timeout = setTimeout(() => pgDump.kill("SIGTERM"), DATABASE_TOOL_TIMEOUT_MS);
 
     const pipelineDone = pipeline(pgDump.stdout, gzip, writeStream);
     const exitDone = new Promise<void>((resolve, reject) => {
       pgDump.on("close", (code) => {
+        clearTimeout(timeout);
         if (code === 0) resolve();
         else reject(new Error(stderr.trim() || `pg_dump exited with code ${code}`));
       });
@@ -86,16 +93,20 @@ export const backupService = {
     return new Promise((resolve, reject) => {
       const psql = spawn("psql", [
         ...connFlags(config),
-        "--quiet", "-f", filePath,
+        "--quiet", "--single-transaction", "--set", "ON_ERROR_STOP=on", "-f", filePath,
       ], {
         env: { ...process.env, PGPASSWORD: config.password },
         stdio: ["ignore", "pipe", "pipe"],
       });
 
       let stderr = "";
-      psql.stderr.on("data", (d) => { stderr += d.toString(); });
+      psql.stderr.on("data", (d) => {
+        if (stderr.length < MAX_TOOL_STDERR_BYTES) stderr += d.toString().slice(0, MAX_TOOL_STDERR_BYTES - stderr.length);
+      });
+      const timeout = setTimeout(() => psql.kill("SIGTERM"), DATABASE_TOOL_TIMEOUT_MS);
 
       psql.on("close", (code) => {
+        clearTimeout(timeout);
         if (code === 0) resolve();
         else reject(new Error(stderr.trim() || `psql exited with code ${code}`));
       });

@@ -25,7 +25,7 @@ export async function GET() {
   } catch (error) {
     console.error("Backup export error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to export backup" },
+      { error: "Failed to export backup. Check the server logs for details." },
       { status: 500 }
     );
   }

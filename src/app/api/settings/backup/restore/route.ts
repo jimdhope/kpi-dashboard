@@ -10,6 +10,11 @@ export async function POST(request: Request) {
   try {
     await requireAdminUser();
 
+    const declaredSize = Number(request.headers.get("content-length") || 0);
+    if (declaredSize > 101 * 1024 * 1024) {
+      return NextResponse.json({ error: "Backup exceeds the 100 MB upload limit" }, { status: 413 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 
@@ -44,20 +49,18 @@ export async function POST(request: Request) {
     }
 
     try {
-      let autoBackupPath: string | null = null;
-
       if (isGzip) {
-        autoBackupPath = await backupService.createAutoBackup();
+        await backupService.createAutoBackup();
         await backupService.restoreFromGzip(uploadPath);
       } else {
-        autoBackupPath = await backupService.createAutoBackup();
+        await backupService.createAutoBackup();
         await backupService.restoreFromFile(uploadPath);
       }
 
       return NextResponse.json({
         success: true,
         message: "Backup restored successfully",
-        autoBackupPath,
+        recoveryBackupCreated: true,
       });
     } finally {
       try {

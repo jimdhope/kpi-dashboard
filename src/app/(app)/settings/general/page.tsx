@@ -13,7 +13,7 @@ export default function GeneralSettings() {
   const [isClearing, setIsClearing] = useState(false);
   const [restorePhase, setRestorePhase] = useState<'idle' | 'confirm' | 'backup' | 'restore' | 'done'>('idle');
   const [restoreError, setRestoreError] = useState<string | null>(null);
-  const [autoBackupPath, setAutoBackupPath] = useState<string | null>(null);
+  const [recoveryBackupCreated, setRecoveryBackupCreated] = useState(false);
   const [pendingFileName, setPendingFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -51,7 +51,7 @@ export default function GeneralSettings() {
     if (!file) return;
     setPendingFileName(file.name);
     setRestoreError(null);
-    setAutoBackupPath(null);
+    setRecoveryBackupCreated(false);
     setRestorePhase('confirm');
   };
 
@@ -61,7 +61,7 @@ export default function GeneralSettings() {
     setIsRestoring(true);
     setRestorePhase('backup');
     setRestoreError(null);
-    setAutoBackupPath(null);
+    setRecoveryBackupCreated(false);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -72,7 +72,7 @@ export default function GeneralSettings() {
       setRestorePhase('restore');
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Restore failed');
-      setAutoBackupPath(result.autoBackupPath || null);
+      setRecoveryBackupCreated(Boolean(result.recoveryBackupCreated));
       setRestorePhase('done');
       toast({ title: 'Backup restored', description: 'Data has been restored successfully' });
     } catch (error) {
@@ -223,15 +223,14 @@ export default function GeneralSettings() {
                 ) : (
                   <>
                     <p className="text-sm text-muted-foreground">Database has been restored from the backup file.</p>
-                    {autoBackupPath && (
+                    {recoveryBackupCreated && (
                       <div className="rounded-lg bg-muted/50 p-3 text-sm">
-                        <p className="font-medium mb-1">Auto-backup saved at:</p>
-                        <code className="text-xs break-all">{autoBackupPath}</code>
+                        <p className="font-medium">A recovery backup was created before the restore.</p>
                       </div>
                     )}
                   </>
                 )}
-                <Button onClick={() => { setRestorePhase('idle'); setRestoreError(null); setAutoBackupPath(null); setPendingFileName(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} variant="outline" size="sm">
+                <Button onClick={() => { setRestorePhase('idle'); setRestoreError(null); setRecoveryBackupCreated(false); setPendingFileName(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} variant="outline" size="sm">
                   Dismiss
                 </Button>
               </div>
