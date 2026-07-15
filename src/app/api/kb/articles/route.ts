@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { authService } from '@/server/services/auth-service';
 import { activityService } from '@/server/services/activity-service';
+import { pageParams, pagedResult } from '@/server/http-pagination';
 
 function generateSlug(title: string): string {
   return title
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get('categoryId');
     const status = searchParams.get('status') || 'published';
     const tagId = searchParams.get('tagId');
+    const { limit, offset, take } = pageParams(searchParams, { defaultLimit: 200, maxLimit: 500 });
 
     const where: any = {};
 
@@ -53,10 +55,13 @@ export async function GET(request: NextRequest) {
           select: { comments: true, versions: true }
         }
       },
-      orderBy: { title: 'asc' }
+      orderBy: { title: 'asc' },
+      skip: offset,
+      take,
     });
 
-    return NextResponse.json({ articles });
+    const page = pagedResult(articles, limit, offset);
+    return NextResponse.json({ articles: page.items, pagination: page.pagination });
   } catch (error) {
     console.error('Error fetching KB articles:', error);
     return NextResponse.json(

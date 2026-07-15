@@ -4,6 +4,7 @@ import { authService } from "@/server/services/auth-service";
 import { activityService } from "@/server/services/activity-service";
 import { prisma } from "@/server/db/client";
 import { requireCompetitionEditor } from "@/server/services/authorization";
+import { pageParams, pagedResult } from "@/server/http-pagination";
 
 const createSchema = z.object({
   competitionId: z.string().min(1),
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     const competitionId = url.searchParams.get('competitionId');
     const date = url.searchParams.get('date');
     const podId = url.searchParams.get('podId');
+    const { limit, offset, take } = pageParams(url.searchParams, { defaultLimit: 500, maxLimit: 1000 });
 
     const where: any = {};
     if (competitionId) where.competitionId = competitionId;
@@ -40,9 +42,13 @@ export async function GET(request: Request) {
     const achievements = await prisma.dailyAchievement.findMany({
       where,
       orderBy: { loggedAt: 'desc' },
+      skip: offset,
+      take,
     });
 
-    const agentIds = [...new Set(achievements.map((achievement) => achievement.agentId))];
+    const page = pagedResult(achievements, limit, offset);
+
+    const agentIds = [...new Set(page.items.map((achievement) => achievement.agentId))];
     const agents = await prisma.user.findMany({
       where: { id: { in: agentIds } },
       select: { id: true, name: true },
@@ -50,10 +56,11 @@ export async function GET(request: Request) {
     const agentNames = new Map(agents.map((agent) => [agent.id, agent.name]));
 
     return ok({
-      achievements: achievements.map((achievement) => ({
+      achievements: page.items.map((achievement) => ({
         ...achievement,
         agentName: agentNames.get(achievement.agentId) || 'Unknown',
       })),
+      pagination: page.pagination,
     });
   } catch (error) {
     console.error('GET /api/achievements error:', error);

@@ -3,6 +3,7 @@ import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
 import { requireCompetitionEditor } from "@/server/services/authorization";
+import { pageParams, pagedResult } from "@/server/http-pagination";
 
 const createSchema = z.object({
   competitionId: z.string().min(1),
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const competitionId = url.searchParams.get('competitionId');
     const date = url.searchParams.get('date');
+    const { limit, offset, take } = pageParams(url.searchParams, { defaultLimit: 500, maxLimit: 1000 });
 
     const where: any = {};
     if (competitionId) where.competitionId = competitionId;
@@ -34,9 +36,12 @@ export async function GET(request: Request) {
     const bonusLogs = await prisma.teamBonusLog.findMany({
       where,
       orderBy: { date: 'desc' },
+      skip: offset,
+      take,
     });
 
-    return ok({ bonusLogs });
+    const page = pagedResult(bonusLogs, limit, offset);
+    return ok({ bonusLogs: page.items, pagination: page.pagination });
   } catch (error) {
     console.error('GET /api/bonus-logs error:', error);
     return errorResponse(401, "Unauthorized");

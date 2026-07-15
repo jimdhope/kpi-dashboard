@@ -2,6 +2,7 @@ import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { prisma } from "@/server/db/client";
 import { requireCompetitionEditor } from "@/server/services/authorization";
+import { pageParams, pagedResult } from "@/server/http-pagination";
 
 const createSchema = z.object({
   competitionId: z.string().min(1),
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
     const competitionId = url.searchParams.get('competitionId');
     const date = url.searchParams.get('date');
     const podId = url.searchParams.get('podId');
+    const { limit, offset, take } = pageParams(url.searchParams, { defaultLimit: 500, maxLimit: 1000 });
 
     const where: any = {};
     if (competitionId) where.competitionId = competitionId;
@@ -34,9 +36,12 @@ export async function GET(request: Request) {
     const taskLogs = await prisma.dailyTaskLog.findMany({
       where,
       orderBy: { date: 'desc' },
+      skip: offset,
+      take,
     });
 
-    return ok({ taskLogs });
+    const page = pagedResult(taskLogs, limit, offset);
+    return ok({ taskLogs: page.items, pagination: page.pagination });
   } catch (error) {
     console.error('GET /api/task-logs error:', error);
     return errorResponse(401, "Unauthorized");

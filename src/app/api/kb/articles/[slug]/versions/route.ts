@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { authService } from '@/server/services/auth-service';
+import { pageParams, pagedResult } from '@/server/http-pagination';
 
 export async function GET(
   request: NextRequest,
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const { limit, offset, take } = pageParams(request.nextUrl.searchParams, { defaultLimit: 100, maxLimit: 200 });
 
     const article = await prisma.kBArticle.findUnique({ where: { slug } });
     if (!article) {
@@ -17,6 +19,8 @@ export async function GET(
     const versions = await prisma.kBVersion.findMany({
       where: { articleId: article.id },
       orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take,
       include: {
         createdBy: {
           select: { id: true, name: true }
@@ -24,7 +28,8 @@ export async function GET(
       }
     });
 
-    return NextResponse.json({ versions });
+    const page = pagedResult(versions, limit, offset);
+    return NextResponse.json({ versions: page.items, pagination: page.pagination });
   } catch (error) {
     console.error('Error fetching versions:', error);
     return NextResponse.json(
