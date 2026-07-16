@@ -1,5 +1,6 @@
 import { UserRole } from "@/lib/contracts";
-import { hashPassword } from "@/server/auth/password";
+import { hashPassword } from "better-auth/crypto";
+import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
 import { activityService } from "@/server/services/activity-service";
 import { userRepository } from "@/server/repositories/user-repository";
@@ -79,6 +80,34 @@ export const userService = {
       throw new Error("You cannot delete the active admin session user.");
     }
     await userRepository.delete(id);
+  },
+
+  async resetPassword(id: string, password: string) {
+    const currentUser = await requireAdminUser();
+    if (currentUser.id === id) {
+      throw new Error("Use your Profile page to change your own password.");
+    }
+    const targetUser = await userRepository.findById(id);
+    if (!targetUser) throw new Error("User not found.");
+
+    const passwordHash = await hashPassword(password);
+    await prisma.$transaction([
+      prisma.account.updateMany({
+        where: { userId: id, providerId: "credential" },
+        data: { password: passwordHash },
+      }),
+      prisma.user.update({ where: { id }, data: { mustChangePassword: true } }),
+      prisma.session.deleteMany({ where: { userId: id } }),
+      prisma.verification.deleteMany({ where: { identifier: { contains: targetUser.email.toLowerCase() } } }),
+    ]);
+    await activityService.logRecorderAction({
+      agentId: id,
+      agentName: targetUser.name,
+      type: "profile_updated",
+      title: "Password Reset",
+      description: "Password was reset by a manager. Existing sessions were ended.",
+      metadata: { fieldsUpdated: ["password"] },
+    });
   },
 
   async updateCurrentProfile(input: { name: string }) {

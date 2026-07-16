@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Trophy, Target, BarChart3, Gamepad2, Settings, Shield, Home, Command, ArrowRight, CheckSquare, Award, LineChart, Megaphone, Users, BookOpen, UserCircle, Activity, FileText, Building2, BookMarked, Contact } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SETTINGS_NAVIGATION_ITEMS } from '@/components/settings/settings-navigation';
 
 // Search result type
 interface SearchResult {
@@ -216,39 +217,15 @@ const navigationRoutes: SearchResult[] = [
     category: 'navigation',
   },
   
-  // Settings sub-items
-  {
-    id: 'settings-general',
-    label: 'Settings > General',
-    description: 'General settings',
-    icon: Settings,
-    href: '/settings/general',
-    category: 'navigation',
-  },
-  {
-    id: 'settings-campaigns',
-    label: 'Settings > Campaigns',
-    description: 'Manage campaigns',
-    icon: Megaphone,
-    href: '/settings/campaigns',
-    category: 'navigation',
-  },
-  {
-    id: 'settings-pods',
-    label: 'Settings > Pods',
-    description: 'Manage pods',
-    icon: Shield,
-    href: '/settings/pods',
-    category: 'navigation',
-  },
-  {
-    id: 'settings-users',
-    label: 'Settings > Users',
-    description: 'Manage users',
-    icon: Users,
-    href: '/settings/users',
-    category: 'navigation',
-  },
+  // Settings sub-items share the same canonical routes as every settings menu.
+  ...SETTINGS_NAVIGATION_ITEMS.map((item) => ({
+    id: `settings-${item.id}`,
+    label: `Settings > ${item.label}`,
+    description: item.description,
+    icon: item.icon,
+    href: item.href,
+    category: 'navigation' as const,
+  })),
   
   // Mini Games sub-items
   {

@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Download, Upload, Trash2, AlertTriangle, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
+import DataImportPage from '@/app/(app)/settings/data-import/page';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function GeneralSettings() {
   // Backup/Restore
@@ -109,16 +111,16 @@ export default function GeneralSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">General Settings</h1>
-        <p className="text-muted-foreground">Configure app-wide settings</p>
+        <h1 className="text-3xl font-bold">Backup & Restore</h1>
+        <p className="text-muted-foreground">Back up, restore, or import KPI Quest data</p>
       </div>
 
       {/* Backup & Restore (Admin only) */}
-      <Card variant="glass" className="max-w-2xl">
+      <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
-              Backup & Restore
+              Database Backup & Restore
             </CardTitle>
             <CardDescription>
               Export a full database SQL dump or restore from a previous backup
@@ -249,6 +251,26 @@ export default function GeneralSettings() {
               </Button>
             </div>
           </CardContent>
+      </Card>
+
+      <Card variant="glass">
+        <CardContent className="pt-2">
+          <Accordion type="single" collapsible>
+            <AccordionItem value="firebase-import" className="border-b-0">
+              <AccordionTrigger className="py-5 text-left hover:no-underline">
+                <div>
+                  <p className="font-semibold">Firebase Data Import</p>
+                  <p className="mt-1 text-sm font-normal text-muted-foreground">
+                    Open the legacy migration tools for importing a KPI Quest Firebase JSON export.
+                  </p>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2">
+                <DataImportPage embedded />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
       </Card>
 
     </div>

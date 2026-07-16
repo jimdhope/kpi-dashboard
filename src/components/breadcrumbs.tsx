@@ -39,7 +39,6 @@ const routeLabels: Record<string, string> = {
   pods: 'Pods',
   users: 'Users',
   campaigns: 'Campaigns',
-  notifications: 'Notifications',
   admin: 'Admin',
   agent: 'Agent',
   campaignManager: 'Campaign Manager',

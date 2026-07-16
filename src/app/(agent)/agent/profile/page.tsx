@@ -8,19 +8,17 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { generateInitials } from "@/lib/utils";
-import { PasswordInput } from "@/components/ui/password-input";
-import { KeyRound, Bell, Save, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import type { AppUser } from '@/lib/contracts';
+import { PwaInstallCard } from '@/components/pwa/pwa-install-card';
+import { PasswordChangeCard } from '@/components/profile/password-change-card';
+import { SecurityCard } from '@/components/profile/security-card';
 
 export default function AgentProfilePage() {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,8 +45,8 @@ export default function AgentProfilePage() {
     
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/users/${currentUser.id}`, {
-        method: 'PUT',
+      const res = await fetch('/api/users/me', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       });
@@ -75,71 +73,6 @@ export default function AgentProfilePage() {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handlePasswordChange = async () => {
-    if (!currentUser) return;
-
-    if (!currentPassword) {
-      toast({
-        title: "Current Password Required",
-        description: "Please enter your current password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: "Password Too Short",
-        description: "New password must be at least 6 characters.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Passwords Don't Match",
-        description: "New password and confirmation must match.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsPasswordLoading(true);
-    try {
-      const res = await fetch('/api/auth/password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
-      
-      if (res.ok) {
-        toast({
-          title: "Password Updated",
-          description: "Your password has been changed successfully.",
-        });
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to update password');
-      }
-    } catch (error: any) {
-      console.error("Error updating password:", error);
-      toast({
-        title: "Password Update Failed",
-        description: error.message || "Could not update your password.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPasswordLoading(false);
     }
   };
 
@@ -226,80 +159,12 @@ export default function AgentProfilePage() {
           </CardContent>
         </Card>
 
-        <Card variant="glass">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              Change Password
-            </CardTitle>
-            <CardDescription>
-              Leave blank to keep your current password
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <PasswordInput
-                id="currentPassword"
-                value={currentPassword}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
-                placeholder="Enter your current password"
-                disabled={isPasswordLoading}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <PasswordInput
-                id="newPassword"
-                value={newPassword}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
-                placeholder="Min. 6 characters"
-                disabled={isPasswordLoading}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <PasswordInput
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                disabled={isPasswordLoading}
-              />
-            </div>
-            <Button onClick={handlePasswordChange} disabled={isPasswordLoading} className="w-full">
-              {isPasswordLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  Update Password
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        <PasswordChangeCard />
+        <SecurityCard />
       </div>
 
-      <Card variant="glass" className="max-w-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notification Settings
-          </CardTitle>
-          <CardDescription>
-            Coming Soon
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center py-4">
-            Email and push notification preferences will be available here.
-          </p>
-        </CardContent>
-      </Card>
+      <PwaInstallCard />
+
     </div>
   );
 }

@@ -16,19 +16,6 @@ enum RoleKey {
   agent
 }
 
-enum NotificationType {
-  competition_reminder
-  score_achievement
-  team_update
-  system_alert
-}
-
-enum NotificationPriority {
-  low
-  medium
-  high
-}
-
 enum AwardScope {
   COMPETITION
   MONTHLY
@@ -142,7 +129,7 @@ model User {
   id                    String                     @id @default(cuid())
   email                 String                     @unique
   name                  String
-  passwordHash          String
+  emailVerified         Boolean                    @default(true)
   avatarUrl             String?
   avatarInitials        String?
   avatarBgColor         String?
@@ -153,7 +140,8 @@ model User {
   updatedAt             DateTime                   @updatedAt
   userRoles             UserRole[]
   sessions              Session[]
-  passwordResetTokens   PasswordResetToken[]
+  accounts              Account[]
+  passkeys              Passkey[]
   auditLogs             AuditLog[]
   podMemberships        PodMembership[]
   trackerLogs           TrackerLog[]
@@ -161,8 +149,6 @@ model User {
   competitionEntries    CompetitionEntry[]
   createdCompetitions   Competition[]
   activities            Activity[]
-  notifications         Notification[]
-  notificationSettings  UserNotificationSettings?
   pod                   Pod?                       @relation(fields: [podId], references: [id])
   ledPods               Pod[]                      @relation("PodTeamLeader")
   managedPods           Pod[]                      @relation("PodManager")
@@ -220,29 +206,74 @@ model UserRole {
 }
 
 model Session {
-  id               String   @id @default(cuid())
-  userId           String
-  sessionTokenHash String   @unique
-  expiresAt        DateTime
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
 }
 
-model PasswordResetToken {
-  id         String   @id @default(cuid())
-  userId     String
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  consumedAt DateTime?
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Account {
+  id                     String    @id @default(cuid())
+  accountId              String
+  providerId             String
+  userId                 String
+  accessToken            String?
+  refreshToken           String?
+  idToken                String?
+  accessTokenExpiresAt   DateTime?
+  refreshTokenExpiresAt  DateTime?
+  scope                  String?
+  password               String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
   @@index([expiresAt])
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  name         String?
+  publicKey    String
+  userId       String
+  credentialID String   @unique
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime @default(now())
+  aaguid       String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
 }
 
 model AuditLog {
@@ -460,65 +491,6 @@ model Activity {
   richMessage  String?
 
   @@index([userId, createdAt])
-}
-
-model Notification {
-  id           String               @id @default(cuid())
-  userId       String
-  type         NotificationType
-  title        String
-  message      String
-  priority     NotificationPriority @default(medium)
-  actionUrl    String?
-  metadataJson Json?
-  readAt       DateTime?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-}
-
-// =============================================================================
-// Notification & Push Settings
-// =============================================================================
-
-model UserNotificationSettings {
-  id                    String   @id @default(cuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Channels
-  emailEnabled          Boolean  @default(true)
-  pushEnabled           Boolean  @default(true)
-  inAppEnabled         Boolean  @default(true)
-
-  // Categories
-  notifyCompetitions   Boolean  @default(true)
-  notifyTrackers      Boolean  @default(true)
-  notifyAchievements  Boolean  @default(true)
-  notifySystem        Boolean  @default(true)
-
-  // Quiet hours
-  quietHoursEnabled    Boolean  @default(false)
-  quietHoursStart     String?  @default("22:00")  // HH:MM format
-  quietHoursEnd       String?  @default("08:00")
-  quietHoursTimezone  String   @default("UTC")
-
-  // Push subscription (stored as encrypted JSON)
-  pushSubscription    String?  // Encrypted subscription JSON
-  pushEndpoint        String?  @unique
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-}
-
-model AppPushSettings {
-  id              String   @id @default("push")
-  vapidPublicKey String?
-  vapidPrivateKey String? // Encrypted
-  enabled         Boolean  @default(false)
-  updatedAt       DateTime @updatedAt
 }
 
 model TeamsWebhookEndpoint {

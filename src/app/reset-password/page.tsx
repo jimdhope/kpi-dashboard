@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Key, LogIn, CheckCircle2 } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -43,18 +44,12 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
-
-      if (response.ok) {
+      const result = await authClient.resetPassword({ token, newPassword: password });
+      if (!result.error) {
         setSuccess(true);
         setTimeout(() => router.push('/login'), 3000);
       } else {
-        const payload = await response.json();
-        setError(payload.error || 'Failed to reset password.');
+        setError(result.error.message || 'Failed to reset password.');
       }
     } catch {
       setError('An error occurred. Please try again.');

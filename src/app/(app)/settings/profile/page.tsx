@@ -21,6 +21,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
+import { PwaInstallCard } from "@/components/pwa/pwa-install-card";
+import { PasswordChangeCard } from "@/components/profile/password-change-card";
+import { SecurityCard } from "@/components/profile/security-card";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { error: 'Name must be at least 2 characters.' }).max(50, { error: 'Name must be 50 characters or less.' }),
@@ -71,10 +74,10 @@ export default function ProfileSettings() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`/api/users/${currentUser.id}`, {
+      const res = await fetch('/api/users/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: data.name, roles: [] }),
+        body: JSON.stringify({ name: data.name }),
       });
 
       if (!res.ok) {
@@ -190,6 +193,9 @@ export default function ProfileSettings() {
           </Form>
         </CardContent>
       </Card>
+      <PasswordChangeCard className="max-w-2xl" />
+      <div className="max-w-2xl"><SecurityCard /></div>
+      <PwaInstallCard />
     </div>
   );
 }

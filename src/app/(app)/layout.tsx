@@ -9,6 +9,7 @@ export default async function AppLayout({
 }) {
   const session = await authService.getCurrentSession();
   if (!session.user) redirect("/login");
+  if (session.user.mustChangePassword) redirect("/change-password");
 
   return <AuthenticatedShell user={session.user}>{children}</AuthenticatedShell>;
 }

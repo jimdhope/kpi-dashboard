@@ -28,6 +28,7 @@ const PAGE_GUARDS: Array<PermissionRequirement & { prefix: string }> = [
   { prefix: "/admin", resource: "settings", minLevel: "MANAGE" },
   { prefix: "/settings", resource: "settings", minLevel: "MANAGE" },
   { prefix: "/reports", resource: "reports", minLevel: "VIEW" },
+  { prefix: "/agent/activity", resource: "activity", minLevel: "VIEW" },
   { prefix: "/competitions", resource: "competitions", minLevel: "VIEW" },
   { prefix: "/performance", resource: "performance", minLevel: "VIEW" },
   { prefix: "/knowledge-base", resource: "knowledgeBase", minLevel: "VIEW" },

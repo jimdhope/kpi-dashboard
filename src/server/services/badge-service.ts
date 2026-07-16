@@ -1,6 +1,5 @@
 import { prisma } from "@/server/db/client";
 import type { Prisma } from "@prisma/client";
-import { notificationService } from "@/server/services/notification-service";
 import { evaluateCriteria, type RuleContext } from "./rule-evaluator";
 
 interface CompetitionResultInfo {
@@ -154,14 +153,6 @@ export const badgeService = {
       });
       awarded.push(badge.key);
 
-      await notificationService.create({
-        userId: result.userId,
-        type: "score_achievement",
-        title: `Badge Earned: ${badge.name}`,
-        message: `You earned the "${badge.name}" badge${result.competitionName ? ` in "${result.competitionName}"` : ""}!`,
-        priority: "high",
-        actionUrl: "/agent/gamification",
-      });
     }
 
     return awarded;

@@ -1,6 +1,6 @@
 {
   "name": "kpi-quest",
-  "version": "3.5.2",
+  "version": "3.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,9 +19,11 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "node --import tsx/esm prisma/seed.ts",
+    "auth:cutover": "node --import tsx/esm scripts/auth-cutover.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@better-auth/passkey": "1.6.23",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
@@ -69,7 +71,7 @@
     "@tiptap/react": "^3.22.3",
     "@tiptap/starter-kit": "^3.22.3",
     "an-array-of-english-words": "^2.0.0",
-    "bcryptjs": "^3.0.3",
+    "better-auth": "1.6.23",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

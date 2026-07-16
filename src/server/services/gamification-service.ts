@@ -2,7 +2,6 @@ import { prisma } from "@/server/db/client";
 import type { Prisma } from "@prisma/client";
 import { badgeService } from "@/server/services/badge-service";
 import { activityService } from "@/server/services/activity-service";
-import { notificationService } from "@/server/services/notification-service";
 import { evaluateCriteria, type RuleContext } from "./rule-evaluator";
 
 const LEVEL_THRESHOLDS = [
@@ -178,14 +177,6 @@ export const gamificationService = {
           userName: agent.agentName,
         });
 
-        await notificationService.create({
-          userId: agent.userId,
-          type: "score_achievement",
-          title: `Level Up! You're now ${newTitle}`,
-          message: `You reached Level ${newLevel} — ${newTitle} with ${newTotalPoints.toLocaleString()} total points!`,
-          priority: "high",
-          actionUrl: "/agent/gamification",
-        });
       }
 
       const awarded = await badgeService.checkAndAwardBadges({
@@ -469,14 +460,6 @@ export const gamificationService = {
         });
 
         if (entry.userId === champion.userId) {
-          await notificationService.create({
-            userId: champion.userId,
-            type: "score_achievement",
-            title: `👑 ${monthName} Champion!`,
-            message: `You're the ${monthName} ${year} Monthly Champion!`,
-            priority: "high",
-            actionUrl: "/agent/gamification",
-          });
         }
       }
     }
@@ -600,14 +583,6 @@ export const gamificationService = {
         });
 
         if (entry.userId === champion.userId) {
-          await notificationService.create({
-            userId: champion.userId,
-            type: "score_achievement",
-            title: `🏆 ${year} Champion!`,
-            message: `You're the ${year} Yearly Champion!`,
-            priority: "high",
-            actionUrl: "/agent/gamification",
-          });
         }
       }
     }

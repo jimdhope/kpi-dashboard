@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useRef, useEffect, useCallb
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export interface NavDropdownItem {
   label: string;
@@ -15,6 +15,7 @@ export interface NavDropdownItem {
   permissionKey?: string;
   /** Minimum permission needed to display this destination. */
   requiredLevel?: 'VIEW' | 'MANAGE';
+  children?: NavDropdownItem[];
 }
 
 interface NavDropdownProps {
@@ -207,9 +208,43 @@ export function NavDropdown({ items, trigger, href, align = 'left', className, o
           {items.map((item, index) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const childActive = item.children?.some((child) => isActive(child.href)) ?? false;
             const linkProps = item.openInNewTab 
               ? { target: "_blank", rel: "noopener noreferrer" } 
               : {};
+
+            if (item.children?.length) {
+              return (
+                <div key={item.href}>
+                  <details className="group/settings" open={childActive || undefined}>
+                    <summary className={cn(
+                      "flex min-h-[44px] cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-150 marker:content-none",
+                      childActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-glass/60",
+                    )}>
+                      {Icon && <Icon className={cn("h-4 w-4 shrink-0", childActive ? "text-primary" : "text-muted-foreground")} />}
+                      <span className="flex-1">{item.label}</span>
+                      <ChevronRight className="h-4 w-4 transition-transform group-open/settings:rotate-90" />
+                    </summary>
+                    <div className="ml-4 mt-1 space-y-1 border-l border-glass-border/40 pl-2">
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon;
+                        const childIsActive = isActive(child.href);
+                        return (
+                          <Link key={child.href} href={child.href} onClick={() => closeDropdown()} className={cn(
+                            "flex min-h-[40px] items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                            childIsActive ? "bg-primary/15 font-medium text-primary" : "text-foreground hover:bg-glass/60",
+                          )}>
+                            {ChildIcon && <ChildIcon className={cn("h-4 w-4 shrink-0", childIsActive ? "text-primary" : "text-muted-foreground")} />}
+                            <span>{child.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </details>
+                  {index < items.length - 1 && <div className="mx-2 my-1 h-px bg-glass-border/30" />}
+                </div>
+              );
+            }
 
             return (
               <div key={item.href}>

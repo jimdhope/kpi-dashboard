@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, LogIn } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -20,17 +21,11 @@ export default function ForgotPasswordPage() {
     setSubmitted(false);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      if (response.ok) {
+      const result = await authClient.requestPasswordReset({ email, redirectTo: '/reset-password' });
+      if (!result.error) {
         setSubmitted(true);
       } else {
-        const payload = await response.json();
-        setError(payload.error || 'Failed to send password reset email.');
+        setError('Failed to send password reset email.');
       }
     } catch {
       setError('An error occurred. Please try again.');

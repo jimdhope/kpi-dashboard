@@ -35,6 +35,7 @@ function mapUser(record: UserRecord): AppUser {
     avatarUrl: record.avatarUrl,
     avatarInitials: record.avatarInitials,
     avatarBgColor: record.avatarBgColor,
+    mustChangePassword: record.mustChangePassword,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
@@ -53,17 +54,6 @@ export const userRepository = {
       where: { id },
       include: userInclude,
     });
-  },
-
-  async findPasswordHashById(id: string) {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        passwordHash: true,
-      },
-    });
-
-    return user?.passwordHash ?? null;
   },
 
   async list() {
@@ -159,7 +149,14 @@ export const userRepository = {
       data: {
         name: input.name,
         email: input.email.toLowerCase(),
-        passwordHash: input.passwordHash,
+        mustChangePassword: true,
+        accounts: {
+          create: {
+            accountId: input.email.toLowerCase(),
+            providerId: "credential",
+            password: input.passwordHash,
+          },
+        },
         userRoles: {
           create: input.roles.map((role) => ({
             role: {
@@ -208,15 +205,6 @@ export const userRepository = {
     });
 
     return mapUser(user);
-  },
-
-  async updatePassword(id: string, passwordHash: string) {
-    await prisma.user.update({
-      where: { id },
-      data: {
-        passwordHash,
-      },
-    });
   },
 
   async delete(id: string) {

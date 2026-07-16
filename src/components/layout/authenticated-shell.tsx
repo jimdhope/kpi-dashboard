@@ -4,6 +4,7 @@ import { AppNavBar, type NavVariant } from "@/components/app-navbar";
 import { CommandPalette } from "@/components/command-palette";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { permissionService } from "@/server/services/permission-service";
+import { PwaInstallHint } from "@/components/pwa/pwa-install-hint";
 
 interface AuthenticatedShellProps {
   children: ReactNode;
@@ -23,6 +24,7 @@ export async function AuthenticatedShell({
   return (
     <div className="min-h-screen">
       <AppNavBar user={user} navVariant={navVariant} initialPermissions={permissions} />
+      <PwaInstallHint />
       <OfflineIndicator />
       {showCommandPalette ? <CommandPalette /> : null}
       <main className="app-main">

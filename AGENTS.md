@@ -14,7 +14,7 @@ Next.js version and are the source of truth; do not replace them separately.
 
 ## Project Overview
 - **Name:** KPI Quest
-- **Version:** 3.5.2
+- **Version:** 3.6.0
 - **Stack:** Next.js 16, React, TypeScript, Tailwind CSS, Prisma, PostgreSQL
 - **Local workspace:** `/Users/jim/Projects/KPI Quest`
 - **Production location:** `/var/www/kpi-dashboard`
@@ -55,16 +55,16 @@ migrations are required for application schema changes.
 - Prisma schema: `prisma/schema.prisma`
 
 ### Session
-- Cookie name: `kpiq_v3_session`
-- Local secret in `.env.local`
-- Production `SESSION_COOKIE_SECRET` must be explicitly set and contain at
+- Better Auth cookie prefix: `kpiq`
+- Local secrets and passkey origin in `.env.local`
+- Production `BETTER_AUTH_SECRET` must be explicitly set and contain at
   least 32 characters
 
 ### Deploy
 - **Portainer stack:** `migration-bundle` at `/home/ubuntu/migration-bundle/docker-compose.yml`
 - **Docker Hub image:** `jimdhope/kpi-dashboard:latest`
 - **Required production variables:** `POSTGRES_PASSWORD`,
-  `SESSION_COOKIE_SECRET`
+  `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PASSKEY_RP_ID`
 - Database migrations fail closed during container startup. Never add a
   fallback to `prisma db push`, `--accept-data-loss`, or automatic reset.
 - Production seeding is disabled by default. Set `RUN_SEED_ON_STARTUP=true`

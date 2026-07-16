@@ -9,6 +9,7 @@ export default async function AdminLayout({
 }) {
   const session = await authService.getCurrentSession();
   if (!session.user) redirect("/login");
+  if (session.user.mustChangePassword) redirect("/change-password");
   if (!session.user.roles.includes("admin")) redirect("/agent");
 
   return (

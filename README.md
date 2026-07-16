@@ -1,228 +1,163 @@
-# KPI Quest V3.5.2
+# KPI Quest 3.6.0
 
-A competition tracking and performance management application built with Next.js, Prisma, and PostgreSQL.
+KPI Quest is a role-aware performance and engagement platform for teams. It combines KPI tracking, competitions, pods, achievements, daily mini-games, shared knowledge and practical workplace tools in one responsive workspace.
 
----
+## Highlights
 
-## What's New in V3.5.2
+- **Role-aware dashboards** for agents, managers and administrators at one dashboard URL
+- **KPI performance** with daily results, targets, trends, breakdowns and leaderboards
+- **Competitions** with configurable rules, live standings, pods and winner certificates
+- **Engagement** through achievements, levels and daily mini-games
+- **Team resources** including a knowledge base, directory, call flows and calculators
+- **Microsoft Teams workflows** for competition messages, scoring and scheduled updates
+- **Installable PWA** with a branded offline fallback and no offline storage of private data
+- **Safe operations** with role-based permissions, audit activity, backups and fail-closed migrations
 
-### Bug Fixes
-- Fixed Teams daily scores card: emojis now display correctly (hybrid rule lookup)
-- Fixed Teams standings to show cumulative competition totals
-- Fixed agent score to display today's score (not cumulative) in the table
-- Fixed emoji key legend showing competition rules (not mixed achievement data)
-- Fixed daily targets showing effective target (daily × active days × agents)
+## What’s new in 3.6.0
 
-### Bug Fixes (V3.5.1)
-- Fixed competition creation not saving rules to database
-- Fixed competition dashboard not showing stats for new competitions
-- Fixed Reports page showing single day target instead of cumulative target
-- Fixed competition draft saving with invalid campaign ID
+- Unified the admin and agent dashboard experience, including authorised view switching for multi-role users.
+- Added Daily Word, Higher or Lower and three Daily Sudoku difficulties alongside Rock Paper Scissors.
+- Added an installable, online-first PWA and installation guidance for supported browsers and devices.
+- Introduced a consistent dark glass design system across dashboards and application pages.
+- Improved dashboard query behaviour, navigation permissions, security headers and production container safety.
+- Removed the unused in-app notification system while preserving Microsoft Teams integrations and gamification awards.
+- Strengthened deployment safeguards with committed Prisma migrations, fail-closed startup and explicit production seeding.
 
-### Features (V3.5)
-- **Backup & Restore** - Export all data (competitions, trackers, KB, directory) as JSON, restore from backup, clear all data
-- **MS Teams Webhook Hashtag Scoring** - Agents can post configured hashtags in Teams to log scores to active competitions
-- **Role-Based Dashboards** - Automatic redirect to appropriate dashboard based on role (admin, teamLeader, competitionRunner, agent)
+## Roles
 
----
+| Role | Primary experience |
+| --- | --- |
+| Agent | Personal KPI performance, competition standings, pod highlights, achievements and games |
+| Manager roles | Team performance and operational workflows permitted by assigned permissions |
+| Administrator | Organisation-wide dashboards, configuration, users, reports, integrations and backups |
 
-## Prerequisites
+Navigation and server-side access checks are permission-aware. Multi-role users can switch between dashboard views they are authorised to use.
 
-- **Node.js** 20.x or higher
-- **PostgreSQL** 14.x or higher
-- **Linux server** (tested on Ubuntu) with systemd
+## Technology
 
----
+- Next.js 16 and React 19
+- TypeScript and Tailwind CSS
+- Prisma 7 with PostgreSQL 16
+- Better Auth database sessions, password recovery and optional passkeys
+- `pg-boss` background worker
+- Docker/Portainer-compatible production image
 
-## Server Setup (Native Installation)
+## Architecture
 
-This guide covers installing KPI Quest without Docker.
+The Next.js application serves the user interface and authenticated request handlers. Prisma connects the app to PostgreSQL, while a separate worker process handles queued and scheduled work. The PWA service worker is deliberately limited to the offline shell, branding and immutable framework assets; authenticated HTML, APIs, sessions and mutations are never cached.
 
-### 1. Install PostgreSQL
+## Local development
 
-```bash
-# Install PostgreSQL
-sudo apt update
-sudo apt install -y postgresql postgresql-contrib
+### Requirements
 
-# Start and enable PostgreSQL
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
+- Node.js 22.15 or newer
+- PostgreSQL 16
+- npm
 
-### 2. Create Database and User
-
-```bash
-# Create database
-sudo -u postgres psql -c "CREATE DATABASE kpi_quest_v3;"
-
-# Create user and grant privileges
-sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'postgres';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE kpi_quest_v3 TO postgres;"
-sudo -u postgres psql -d kpi_quest_v3 -c "GRANT ALL ON SCHEMA public TO postgres;"
-```
-
-### 3. Clone the Repository
-
-```bash
-sudo mkdir -p /var/www
-cd /var/www
-sudo git clone https://github.com/jimdhope/kpi-dashboard.git kpi-dashboard
-cd kpi-dashboard
-```
-
-### 4. Install Dependencies
-
-```bash
-npm install
-```
-
-### 5. Configure Environment
-
-Copy `.env.example` to `.env.local` and update:
+Copy the environment template and provide local values:
 
 ```bash
 cp .env.example .env.local
-```
-
-Edit `.env.local` with your settings:
-
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kpi_quest_v3
-SESSION_COOKIE_SECRET=your-secret-key-change-in-production
-APP_URL=http://localhost:9103
-SEED_ADMIN_EMAIL=admin@kpiquest.local
-SEED_ADMIN_PASSWORD=admin123!
-ENCRYPTION_KEY=your-32-character-encryption-key
-```
-
-### 6. Setup Database
-
-```bash
-# Generate Prisma client
+npm ci
 npm run db:generate
-
-# Push schema to database
-npm run db:push
-```
-
-### 7. Create systemd Service
-
-Create `/etc/systemd/system/kpi-dashboard.service`:
-
-```ini
-[Unit]
-Description=KPI Quest Dashboard
-After=network.target postgresql.service
-
-[Service]
-Type=simple
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/kpi-dashboard
-Environment="NODE_ENV=production"
-Environment="PORT=9103"
-ExecStart=/usr/bin/npm run start
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 8. Set Permissions and Start
-
-```bash
-# Set ownership
-sudo chown -R www-data:www-data /var/www/kpi-dashboard
-sudo chmod -R 755 /var/www/kpi-dashboard
-
-# Enable and start service
-sudo systemctl daemon-reload
-sudo systemctl enable kpi-dashboard
-sudo systemctl start kpi-dashboard
-```
-
-### 9. Verify Installation
-
-```bash
-# Check service status
-sudo systemctl status kpi-dashboard
-
-# Test the application
-curl http://localhost:9103
-```
-
----
-
-## First Login
-
-For an intentional initial seed, supply `SEED_ADMIN_EMAIL` and a strong
-`SEED_ADMIN_PASSWORD` in the environment before running `npm run db:seed`.
-Production does not rely on a documented default password.
-
----
-
-## Data Transfer
-
-Use **Settings → General** to create and restore KPI Quest backups. Restores
-replace local application data and should be performed only against a verified
-backup by an authorized administrator. Use **Settings → Users** for supported
-password resets; password changes invalidate the user's existing sessions.
-
----
-
-## Useful Commands
-
-```bash
-# Restart the service
-sudo systemctl restart kpi-dashboard
-
-# View logs
-sudo journalctl -u kpi-dashboard -f
-
-# Stop the service
-sudo systemctl stop kpi-dashboard
-```
-
----
-
-## Features
-
-- **Directory** - Contact management with search, filters by type/company/department. Add contacts via modal with typed company, department, and comma-separated tags
-- **Knowledge Base** - Article management with rich text editor (Tiptap), typed categories and tags, single-column browse view
-- **Competitions** - Create weekly competitions with custom KPI rules and leaderboards
-- **Performance Tracking** - Campaign-wide KPI tracking with real-time dashboards
-- **KPI Performance** - Log daily KPI results and track trends over time
-- **Useful Tools** - Calculator tools for instalment plans, energy usage, meter readings, and more
-- **Mini-Games** - Rock Paper Scissors, Higher or Lower, Daily Word, and Daily Sudoku
-- **Pod Management** - Organize agents into teams with role-based access
-- **Activity Logging** - Full audit trail of all system actions
-
----
-
-## Tech Stack
-
-- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Backend:** Next.js API Routes, Prisma ORM
-- **Database:** PostgreSQL
-- **Authentication:** Custom session-based auth
-
----
-
-## Development (Local)
-
-If running locally for development:
-
-```bash
-# Install dependencies
-npm install
-
-# Run development server
+npx prisma migrate deploy
+npm run db:seed
 npm run dev
+```
 
-# (Optional) Run background worker
+KPI Quest runs at `http://localhost:9103`. Seeding is intentional: set a strong `SEED_ADMIN_PASSWORD` before running it. Start the background worker separately when testing scheduled or queued workflows:
+
+```bash
 npm run jobs:work
 ```
 
-The app will be available at `http://localhost:9103`
+`npm run db:push` is reserved for disposable local prototypes. Application schema changes require a reviewed, committed Prisma migration.
+
+## Environment variables
+
+| Variable | Purpose | Production requirement |
+| --- | --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string | Required |
+| `BETTER_AUTH_SECRET` | Protects Better Auth sessions and challenges | Required; at least 32 characters |
+| `BETTER_AUTH_URL` | Canonical authentication origin | Required HTTPS production origin |
+| `PASSKEY_RP_ID` | WebAuthn relying-party domain | Required; hostname only |
+| `POSTGRES_PASSWORD` | Password used by the Docker PostgreSQL service | Required for Docker deployment |
+| `PUBLIC_URL` | Public application origin and email-link base | Set to the deployed HTTPS origin |
+| `ENCRYPTION_KEY` | Protects encrypted integration values | Required when encrypted integrations are used |
+| `SEED_ADMIN_EMAIL` | Initial administrator email | Used only during intentional seeding |
+| `SEED_ADMIN_PASSWORD` | Initial administrator password | Required for intentional seeding; never use a default |
+| `RUN_SEED_ON_STARTUP` | Enables container startup seeding | Leave unset or `false` for normal upgrades |
+| `RUN_AUTH_CUTOVER` | Runs the one-time Better Auth account cutover after migrations | Set to `true` for the cutover deployment only |
+| `CUTOVER_ADMIN_EMAIL` | Administrator receiving temporary cutover access | Supply only for the cutover deployment |
+| `CUTOVER_ADMIN_TEMP_PASSWORD` | One-use administrator password | Unique, 8–128 characters; remove immediately after cutover |
+| `CUTOVER_RESUME` | Fills only missing credential accounts after an inspected interrupted run | Leave `false`; use only for a verified recovery |
+
+Keep secrets outside source control. Production must use unique, randomly generated values.
+
+## Recommended Docker deployment
+
+The standard deployment contains three services:
+
+- PostgreSQL for durable application data
+- The KPI Quest web application
+- A worker using the same application image
+
+Create a deployment `.env` containing `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and `PASSKEY_RP_ID`, then use the supplied Compose definition:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+For the Better Auth cutover, stop the old application and worker, take and verify a full backup, then make one deployment with `RUN_AUTH_CUTOVER=true`, `CUTOVER_ADMIN_EMAIL` and `CUTOVER_ADMIN_TEMP_PASSWORD` in Portainer. The web container applies the committed migrations and performs the cutover before accepting traffic. The worker does not run the cutover. Wait for the web log to confirm completion, sign in with the temporary password, and choose a new password. Then remove all three cutover variables (rather than leaving blank values) and redeploy immediately.
+
+The cutover refuses to overwrite credential accounts. If the flag is accidentally left enabled, a later container restart fails closed until the variables are removed. `CUTOVER_RESUME=true` is reserved for a manually inspected interrupted cutover; it fills only missing credential accounts and does not overwrite existing ones.
+
+The application container waits for PostgreSQL and runs `prisma migrate deploy` before starting. The worker waits for the upgraded application to accept connections, keeping jobs out of the migration and cutover window. Migration failures stop startup; there is no fallback to schema pushing, data-loss acceptance or database reset. Production seeding is disabled unless `RUN_SEED_ON_STARTUP=true` is deliberately supplied for an initial installation.
+
+## Safe upgrades
+
+1. Create a full backup in **Settings → General** and confirm it appears in the backup list.
+2. Record the current application image digest and Prisma migration status.
+3. Retain the previous image and backup throughout the verification period.
+4. For the Better Auth release only, stop the old web and worker containers, configure the three one-time cutover variables, then pull and start the new stack. For later releases, start normally.
+5. Confirm the cutover completion message, sign in as the nominated administrator, and replace the temporary password.
+6. Remove the cutover variables from Portainer and redeploy immediately.
+7. Smoke-test login, each dashboard role, competitions, performance, games, reports, Teams workflows and backup availability.
+8. If migration or smoke checks fail, stop the new containers, restore the saved backup and restart the previous image.
+
+Never use `prisma db push --accept-data-loss`, migration reset or automatic database reset in production.
+
+## Backup and restore
+
+Authorised administrators can create and restore full application backups through **Settings → General**. Restores replace application data and should only use a verified backup. Keep external copies of release backups until the associated update has passed its verification period.
+
+## Validation
+
+Run checks proportional to the change. Framework, authentication, database, dependency and deployment changes require at least:
+
+```bash
+npm run typecheck
+npm run test:unit
+npm run build
+npm audit --omit=dev
+npx prisma validate
+npx prisma migrate status
+```
+
+Docker-related changes should also receive a standard image build and production-like smoke test before release.
+
+## Useful commands
+
+```bash
+npm run dev          # Development server on port 9103
+npm run typecheck    # TypeScript validation
+npm run test:unit    # Unit tests
+npm run build        # Production build
+npm run jobs:work    # Background worker
+npm run db:generate  # Generate Prisma Client
+npm run db:migrate   # Create/apply a local development migration
+npm run db:seed      # Intentional database seed
+```
+
+Additional operator and developer documentation is available in [`docs/`](docs/).

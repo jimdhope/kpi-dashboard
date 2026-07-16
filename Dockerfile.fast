@@ -13,6 +13,7 @@ COPY node_modules ./node_modules
 COPY node_modules/.prisma ./node_modules/.prisma
 COPY node_modules/.bin ./node_modules/.bin
 COPY src ./src
+COPY scripts ./scripts
 COPY tsconfig.json ./
 
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
@@ -20,6 +21,11 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
     echo 'echo "Database ready! Running migrations..."' >> /entrypoint.sh && \
     echo 'npx prisma migrate deploy' >> /entrypoint.sh && \
+    echo 'if [ "${RUN_AUTH_CUTOVER:-false}" = "true" ]; then' >> /entrypoint.sh && \
+    echo '  echo "Running explicitly enabled Better Auth cutover..."' >> /entrypoint.sh && \
+    echo '  npx tsx scripts/auth-cutover.ts' >> /entrypoint.sh && \
+    echo '  echo "Authentication cutover complete. Remove RUN_AUTH_CUTOVER and the CUTOVER_ADMIN_* variables from Portainer, then redeploy the stack."' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
     echo 'if [ "${RUN_SEED_ON_STARTUP:-false}" = "true" ]; then npx tsx prisma/seed.ts; fi' >> /entrypoint.sh && \
     echo 'echo "Starting application..."' >> /entrypoint.sh && \
     echo 'exec node server.js' >> /entrypoint.sh && \
@@ -28,7 +34,9 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
 RUN echo '#!/bin/bash' > /worker-entrypoint.sh && \
     echo 'echo "Waiting for database..."' >> /worker-entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /worker-entrypoint.sh && \
-    echo 'echo "Database ready! Starting worker..."' >> /worker-entrypoint.sh && \
+    echo 'echo "Worker waiting for the migrated application..."' >> /worker-entrypoint.sh && \
+    echo 'until nc -zv ${APP_HOST:-app} 9103 2>/dev/null; do echo "Waiting for application..."; sleep 2; done' >> /worker-entrypoint.sh && \
+    echo 'echo "Starting worker..."' >> /worker-entrypoint.sh && \
     echo 'exec npx tsx src/server/jobs/worker.ts' >> /worker-entrypoint.sh && \
     chmod +x /worker-entrypoint.sh
 

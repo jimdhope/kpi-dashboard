@@ -168,6 +168,10 @@ export default function AdminUsersPage() {
       toast({ variant: "destructive", title: "Error", description: "Password must be at least 8 characters." });
       return;
     }
+    if (dialogMode === 'edit' && formPassword && formPassword.length < 8) {
+      toast({ variant: "destructive", title: "Error", description: "A reset password must be at least 8 characters." });
+      return;
+    }
     if (formRoles.length === 0) {
       toast({ variant: "destructive", title: "Error", description: "At least one role is required." });
       return;
@@ -198,7 +202,18 @@ export default function AdminUsersPage() {
           }),
         });
         if (!res.ok) throw new Error('Failed to update user');
-        toast({ title: "User Updated", description: `User "${formName}" has been updated.` });
+        if (formPassword) {
+          const resetRes = await fetch(`/api/users/${selectedUser.id}/password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: formPassword }),
+          });
+          const resetResult = await resetRes.json().catch(() => ({}));
+          if (!resetRes.ok) throw new Error(resetResult.error || 'Failed to reset password');
+          toast({ title: "User and Password Updated", description: `${formName}'s password was reset and their existing sessions were ended.` });
+        } else {
+          toast({ title: "User Updated", description: `User "${formName}" has been updated.` });
+        }
       }
 
       setIsFormOpen(false);
@@ -310,17 +325,22 @@ export default function AdminUsersPage() {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="password">
-                        {dialogMode === 'add' ? 'Password' : 'Reset Password (Optional)'}
+                        {dialogMode === 'add' ? 'Password' : 'New Temporary Password (Optional)'}
                       </Label>
                       <Input
                         id="password"
                         type="password"
                         value={formPassword}
                         onChange={(e) => setFormPassword(e.target.value)}
-                        placeholder={dialogMode === 'add' ? "Min. 8 characters" : "Leave blank to keep current"}
+                        placeholder={dialogMode === 'add' ? "Min. 8 characters" : "Leave blank to keep current password"}
+                        disabled={isSaving || (dialogMode === 'edit' && selectedUser?.id === currentUserId)}
                       />
                       {dialogMode === 'edit' && (
-                        <p className="text-xs text-muted-foreground">Leave blank to keep the current password unchanged.</p>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedUser?.id === currentUserId
+                            ? 'Change your own password from Profile.'
+                            : 'Setting a temporary password immediately ends all of this user’s existing sessions.'}
+                        </p>
                       )}
                     </div>
                   </div>

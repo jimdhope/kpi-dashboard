@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { NavDropdown, NavigationProvider, type NavDropdownItem } from './nav-dropdown';
+import { SETTINGS_NAVIGATION_GROUPS } from '@/components/settings/settings-navigation';
+import { authClient } from '@/lib/auth-client';
 
 export interface NavItemConfig {
   key: string;
@@ -49,6 +51,13 @@ const navItems: NavItemConfig[] = [
       { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen },
       { label: 'Directory', href: '/directory', icon: Contact, permissionKey: 'directory' },
     ]
+  },
+  {
+    key: 'activity',
+    label: 'Activity',
+    href: '/agent/activity',
+    icon: Activity,
+    items: [],
   },
   { 
     key: 'competitions',
@@ -111,15 +120,7 @@ const navItems: NavItemConfig[] = [
     label: 'Settings', 
     href: '/settings/general', 
     icon: SettingsIcon,
-    items: [
-      { label: 'General', href: '/settings/general', icon: SettingsIcon, requiredLevel: 'MANAGE' },
-      { label: 'Campaigns', href: '/settings/campaigns', icon: Megaphone, requiredLevel: 'MANAGE' },
-      { label: 'Pods', href: '/settings/pods', icon: Shield, requiredLevel: 'MANAGE' },
-      { label: 'Users', href: '/settings/users', icon: Users, requiredLevel: 'MANAGE' },
-      { label: 'Activity', href: '/agent/activity', icon: Activity, permissionKey: 'activity' },
-      { label: 'Teams Webhooks', href: '/settings/teams-webhooks', icon: SettingsIcon, requiredLevel: 'MANAGE' },
-      { label: 'Teams Workflows', href: '/settings/teams/workflows', icon: SettingsIcon, requiredLevel: 'MANAGE' },
-    ]
+    items: SETTINGS_NAVIGATION_GROUPS,
   },
 ];
 
@@ -145,6 +146,13 @@ const agentNavItems: NavItemConfig[] = [
       { label: 'Daily Word', href: '/mini-games/daily-word', icon: WholeWord },
       { label: 'Daily Sudoku', href: '/mini-games/sudoku', icon: Grid3X3 },
     ],
+  },
+  {
+    key: 'activity',
+    label: 'My Activity',
+    href: '/agent/activity',
+    icon: Activity,
+    items: [],
   },
   {
     key: 'usefulTools',
@@ -267,7 +275,7 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
     )) ?? [];
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await authClient.signOut();
     window.location.href = '/login';
   };
 
@@ -350,6 +358,32 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                   </p>
                   {visibleSettingsItems.map((subItem) => {
                     const SubIcon = subItem.icon;
+                    if (subItem.children?.length) {
+                      return (
+                        <div key={subItem.href} className="ml-2">
+                          <div className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-foreground">
+                            {SubIcon && <SubIcon className="h-4 w-4 text-muted-foreground" />}
+                            <span>{subItem.label}</span>
+                          </div>
+                          {subItem.children.map((child) => {
+                            const ChildIcon = child.icon;
+                            return (
+                              <SheetClose asChild key={child.href}>
+                                <Link href={child.href}>
+                                  <Button
+                                    variant={isActive(child.href) ? "secondary" : "ghost"}
+                                    className="ml-4 h-10 w-[calc(100%-1rem)] justify-start gap-2"
+                                  >
+                                    {ChildIcon && <ChildIcon className="h-4 w-4" />}
+                                    <span>{child.label}</span>
+                                  </Button>
+                                </Link>
+                              </SheetClose>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
                     return (
                       <SheetClose asChild key={subItem.href}>
                         <Link href={subItem.href}>

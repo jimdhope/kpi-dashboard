@@ -1,6 +1,6 @@
 # Introduction to KPI Quest
 
-**KPI Quest (v3.5.2)** is an enterprise-grade performance management, competition tracking, and engagement application tailored for sales, support, and operation-focused teams. Built with a modern, high-performance tech stack (Next.js, Prisma, PostgreSQL, Tailwind CSS), it transforms traditional key performance indicators (KPIs) into engaging, real-time gamified experiences.
+**KPI Quest (v3.6.0)** is a performance management, competition tracking, and engagement application tailored for sales, support, and operation-focused teams. Built with a modern, high-performance tech stack (Next.js, Prisma, PostgreSQL, Tailwind CSS), it transforms traditional key performance indicators (KPIs) into engaging, real-time gamified experiences.
 
 ---
 

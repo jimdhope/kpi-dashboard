@@ -30,7 +30,7 @@ interface ConsoleLine {
   timestamp: Date;
 }
 
-export default function DataImportPage() {
+export default function DataImportPage({ embedded = false }: { embedded?: boolean }) {
   const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState<ImportStatus[]>([]);
   const [logs, setLogs] = useState<ImportLog[]>([]);
@@ -210,7 +210,7 @@ export default function DataImportPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      {!embedded && <div>
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Database className="h-8 w-8 text-primary" />
           Data Import
@@ -218,7 +218,7 @@ export default function DataImportPage() {
         <p className="text-muted-foreground mt-1">
           Import a KPI Quest JSON export into PostgreSQL
         </p>
-      </div>
+      </div>}
 
       {/* Upload Section */}
       <Card variant="glass">

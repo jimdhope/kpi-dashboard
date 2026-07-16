@@ -32,25 +32,22 @@ export default function AgentActivityPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
+  const [activityScope, setActivityScope] = useState<'own' | 'all'>('own');
 
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch session
         const sessionRes = await fetch('/api/auth/session');
         if (sessionRes.ok) {
           const sessionData = await sessionRes.json();
           if (sessionData.authenticated && sessionData.user) {
             setCurrentUser(sessionData.user);
-          }
-        }
-
-        // Fetch activities - get enough for all categories
-        if (currentUser?.id) {
-          const activitiesRes = await fetch('/api/activities?limit=100');
-          if (activitiesRes.ok) {
-            const data = await activitiesRes.json();
-            setActivities(data.activities || []);
+            const activitiesRes = await fetch('/api/activities?limit=100');
+            if (activitiesRes.ok) {
+              const data = await activitiesRes.json();
+              setActivities(data.activities || []);
+              setActivityScope(data.scope === 'all' ? 'all' : 'own');
+            }
           }
         }
       } catch (err) {
@@ -59,7 +56,7 @@ export default function AgentActivityPage() {
       setIsLoading(false);
     }
     fetchData();
-  }, [currentUser?.id]);
+  }, []);
 
   // Get latest activity for each category
   const getCategoryLatest = (category: CategoryInfo) => {
@@ -118,8 +115,8 @@ export default function AgentActivityPage() {
           <Skeleton className="h-10 w-64 mb-2" />
           <Skeleton className="h-4 w-48" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
         </div>
         <Skeleton className="h-[600px] w-full" />
       </div>
@@ -132,16 +129,18 @@ export default function AgentActivityPage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Activity className="h-8 w-8 text-primary" />
-            Activity History
+            {activityScope === 'all' ? 'Activity History' : 'My Activity'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Track your journey and achievements over time
+            {activityScope === 'all'
+              ? 'Review activity and achievements across the organisation'
+              : 'Track your journey and achievements over time'}
           </p>
         </div>
       </div>
 
       {/* Category Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {CATEGORIES.map((category) => {
           const latest = getCategoryLatest(category);
           const isSelected = selectedCategory === category.id;
@@ -206,6 +205,16 @@ export default function AgentActivityPage() {
                     {activity.description && (
                       <p className="text-sm text-muted-foreground">{activity.description}</p>
                     )}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Changed by:{' '}
+                      <span className="font-medium text-foreground/80">
+                        {activity.recorderName
+                          || (activity.recorderId && activity.recorderId === activity.userId
+                            ? activity.agentName || activity.userName
+                            : null)
+                          || 'Not recorded'}
+                      </span>
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {activity.createdAt ? format(new Date(activity.createdAt), 'PPp') : ''}
                     </p>

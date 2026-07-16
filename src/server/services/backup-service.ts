@@ -142,9 +142,6 @@ export const backupService = {
     await prisma.teamsAutomation.deleteMany();
     await prisma.teamsMessageTemplate.deleteMany();
     await prisma.teamsWebhookEndpoint.deleteMany();
-    await prisma.appPushSettings.deleteMany();
-    await prisma.userNotificationSettings.deleteMany();
-    await prisma.notification.deleteMany();
     await prisma.activity.deleteMany();
     await prisma.podTarget.deleteMany();
     await prisma.teamBonusLog.deleteMany();
@@ -167,9 +164,12 @@ export const backupService = {
     await prisma.campaign.deleteMany();
     await prisma.kpiLog.deleteMany();
     await prisma.kpi.deleteMany();
+    await prisma.passkey.deleteMany();
     await prisma.session.deleteMany();
+    await prisma.account.deleteMany();
+    await prisma.verification.deleteMany();
+    await prisma.rateLimit.deleteMany();
     await prisma.userRole.deleteMany();
-    await prisma.passwordResetToken.deleteMany();
     await prisma.user.deleteMany();
     await prisma.importLog.deleteMany();
   },

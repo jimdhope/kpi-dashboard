@@ -1,6 +1,6 @@
 # Developer & Technical Reference
 
-Welcome to the **KPI Quest Developer and Technical Reference**. This document provides a comprehensive technical breakdown of KPI Quest (v3.5.2) to assist engineers in maintaining, debugging, extending, and deploying the platform.
+Welcome to the **KPI Quest Developer and Technical Reference**. This document provides a comprehensive technical breakdown of KPI Quest (v3.6.0) to assist engineers in maintaining, debugging, extending, and deploying the platform.
 
 ---
 
@@ -63,7 +63,7 @@ kpi-dashboard/
     ├── hooks/                  # Custom shared React hooks (toast notifications)
     ├── lib/                    # Shared TypeScript contracts, helpers, and utilities
     └── server/                 # Dedicated Server Layer
-        ├── auth/               # Session encryption, cookie creation, passwords
+        ├── auth/               # Better Auth configuration and passkeys
         ├── jobs/               # Background task workers (pg-boss scheduling)
         ├── repositories/       # Data Access Object pattern wrapping Prisma queries
         └── services/           # Business domain managers (stateless service layer)
@@ -77,7 +77,7 @@ KPI Quest implements a custom, secure cookie-based session verification engine r
 
 ### 1. Verification Flow
 1. The client sends a login request to `/api/auth/login`.
-2. The server verifies password hashes (`bcryptjs`) against the database record, generates an unguessable high-entropy `sessionToken`, and saves its SHA-256 hash in the `Session` table.
+2. Better Auth verifies the credential account, creates a database-backed session, and issues an HTTP-only session cookie. Optional WebAuthn passkeys use the same application session and unchanged KPI Quest user ID.
 3. The server sets a secure, HTTP-only cookie containing the token: `kpiq_v3_session`.
 4. On subsequent requests, Server Components and API Routes extract the cookie and query `authService.getCurrentSession()` to verify validity, checking `expiresAt` directly inside the database.
 
@@ -127,7 +127,7 @@ Our Prisma model schema (`prisma/schema.prisma`) represents a multi-tenant layou
 To prevent API and page files from bloating, KPI Quest isolates database operations and formatting into a **stateless services layer** (`src/server/services/`).
 
 ### Core Service Modules:
-- **`authService`:** Cookie management, token hashing, logging in/out, changing passwords, and generating secure links.
+- **`authService`:** Compatibility façade over Better Auth that maps authenticated identities back to KPI Quest roles, permissions and pod memberships.
 - **`competitionService`:** Manages starting competitions, verifying dates, capturing entries, adding rule templates, and generating PDF/Web certificates.
 - **`teamsAutomationService`:** Message parsing, filling out card templates with variables, handling batch window queueing, and pushing payloads to Teams.
 - **`gamificationService`:** Evaluates accomplishments, calculates XP thresholds, awards levels, and grants agent profile badges.

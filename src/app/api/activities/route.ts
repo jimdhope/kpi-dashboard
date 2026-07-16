@@ -15,6 +15,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const hasActivityAccess = await permissionService.hasNavAccess(user.roles, 'activity', 'VIEW');
+    if (!hasActivityAccess) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
     const type = searchParams.get('type');
@@ -29,15 +34,15 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: Record<string, unknown> = {};
 
-    // User filter: if not admin, only show own activities
-    const isAdmin = await permissionService.hasEffectiveAdminAccess(user.roles);
+    // Agents see only their own history. Any authorised management role can
+    // review organisation-wide activity, including multi-role users.
+    const canViewAll = user.roles.some((role) => role !== 'agent');
     if (userId) {
-      // Admin can view any user's activities
-      if (!isAdmin && userId !== user.id) {
+      if (!canViewAll && userId !== user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       where.userId = userId;
-    } else if (!isAdmin) {
+    } else if (!canViewAll) {
       where.userId = user.id;
     }
 
@@ -96,6 +101,7 @@ export async function GET(request: NextRequest) {
       activities: transformedActivities,
       total,
       hasMore: offset + activities.length < total,
+      scope: canViewAll ? 'all' : 'own',
     });
   } catch (error) {
     console.error('Error fetching activities:', error);
@@ -117,6 +123,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const canManageActivity = await permissionService.hasNavAccess(user.roles, 'activity', 'MANAGE');
+    if (!canManageActivity) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
     const {
       type,
@@ -125,8 +136,6 @@ export async function POST(request: NextRequest) {
       metadata,
       userId,
       userName,
-      recorderId,
-      recorderName,
       richMessage,
     } = body;
 
@@ -146,8 +155,8 @@ export async function POST(request: NextRequest) {
       metadata: metadata || null,
       userId: userId || user.id,
       agentName: userName || user.name,
-      recorderId: recorderId || null,
-      recorderName: recorderName || null,
+      recorderId: user.id,
+      recorderName: user.name,
       richMessage: richMessage || null,
     });
 

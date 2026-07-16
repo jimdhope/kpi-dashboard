@@ -1,15 +1,8 @@
-import { NotificationType, ReportsOverview } from "@/lib/contracts";
+import { ReportsOverview } from "@/lib/contracts";
 import { prisma } from "@/server/db/client";
 import { competitionService } from "@/server/services/competition-service";
 import { performanceService } from "@/server/services/performance-service";
 import { requireAdminUser } from "@/server/services/authorization";
-
-const notificationTypes: NotificationType[] = [
-  "competition_reminder",
-  "score_achievement",
-  "team_update",
-  "system_alert",
-];
 
 export const reportingService = {
   async getOverview(): Promise<ReportsOverview> {
@@ -24,8 +17,6 @@ export const reportingService = {
       performanceLogs,
       competitions,
       competitionEntries,
-      notifications,
-      unreadNotifications,
       performanceOverview,
       competitionSummaries,
       campaignRows,
@@ -38,12 +29,6 @@ export const reportingService = {
       prisma.trackerLog.count(),
       prisma.competition.count(),
       prisma.competitionEntry.count(),
-      prisma.notification.count(),
-      prisma.notification.count({
-        where: {
-          readAt: null,
-        },
-      }),
       performanceService.getOverview(),
       competitionService.getSummaries(),
       prisma.campaign.findMany({
@@ -64,24 +49,6 @@ export const reportingService = {
       }),
     ]);
 
-    const notificationBreakdown = await Promise.all(
-      notificationTypes.map(async (type) => {
-        const [total, unread] = await Promise.all([
-          prisma.notification.count({
-            where: { type },
-          }),
-          prisma.notification.count({
-            where: {
-              type,
-              readAt: null,
-            },
-          }),
-        ]);
-
-        return { type, total, unread };
-      }),
-    );
-
     return {
       generatedAt: new Date().toISOString(),
       metrics: {
@@ -94,8 +61,6 @@ export const reportingService = {
         performanceLogs,
         competitions,
         competitionEntries,
-        notifications,
-        unreadNotifications,
       },
       topTrackers: performanceOverview.trackerSummaries.slice(0, 5),
       topPerformers: performanceOverview.userSummaries.slice(0, 5),
@@ -106,7 +71,6 @@ export const reportingService = {
         podCount: campaign._count.pods,
         trackerCount: campaign._count.trackerKpis,
       })),
-      notificationBreakdown,
     };
   },
 };

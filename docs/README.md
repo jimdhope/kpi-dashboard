@@ -1,6 +1,6 @@
 # KPI Quest Documentation
 
-Welcome to the documentation for **KPI Quest (v3.5.2)**, a comprehensive performance management, competition tracking, and engagement platform built with Next.js, Prisma, and PostgreSQL.
+Welcome to the documentation for **KPI Quest (v3.6.0)**, a comprehensive performance management, competition tracking, and engagement platform built with Next.js, Prisma, and PostgreSQL.
 
 This documentation is divided into multiple parts, tailored to different audiences:
 

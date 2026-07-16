@@ -47,6 +47,7 @@ export interface AppUser {
   avatarUrl?: string | null;
   avatarInitials?: string | null;
   avatarBgColor?: string | null;
+  mustChangePassword?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -56,19 +57,6 @@ export interface SessionPayload {
   user: AppUser | null;
   expiresAt: string | null;
 }
-
-export const NOTIFICATION_TYPES = [
-  "competition_reminder",
-  "score_achievement",
-  "team_update",
-  "system_alert",
-] as const;
-
-export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
-
-export const NOTIFICATION_PRIORITIES = ["low", "medium", "high"] as const;
-
-export type NotificationPriority = (typeof NOTIFICATION_PRIORITIES)[number];
 
 export const TEAMS_WEBHOOK_DIRECTIONS = ["incoming", "outgoing"] as const;
 
@@ -210,18 +198,6 @@ export interface TeamStandingsData {
     score: number;
     rank: number;
   }>;
-}
-
-export interface AppNotification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  priority: NotificationPriority;
-  actionUrl: string | null;
-  metadata: Record<string, unknown> | null;
-  readAt: string | null;
-  createdAt: string;
 }
 
 export interface AppCampaign {
@@ -408,8 +384,6 @@ export interface ReportsOverview {
     performanceLogs: number;
     competitions: number;
     competitionEntries: number;
-    notifications: number;
-    unreadNotifications: number;
   };
   topTrackers: PerformanceTrackerSummary[];
   topPerformers: PerformanceUserSummary[];
@@ -419,11 +393,6 @@ export interface ReportsOverview {
     campaignName: string;
     podCount: number;
     trackerCount: number;
-  }>;
-  notificationBreakdown: Array<{
-    type: NotificationType;
-    total: number;
-    unread: number;
   }>;
 }
 

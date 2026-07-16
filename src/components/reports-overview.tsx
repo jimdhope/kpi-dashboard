@@ -50,11 +50,6 @@ export function ReportsOverview({ report }: ReportsOverviewProps) {
                 label: "Competition entries",
                 value: report.metrics.competitionEntries,
               },
-              { label: "Notifications", value: report.metrics.notifications },
-              {
-                label: "Unread notifications",
-                value: report.metrics.unreadNotifications,
-              },
             ].map((metric) => (
               <div
                 key={metric.label}
@@ -175,35 +170,6 @@ export function ReportsOverview({ report }: ReportsOverviewProps) {
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Notification breakdown</CardTitle>
-          <CardDescription>Unread vs total by notification type.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            {report.notificationBreakdown.map((row) => (
-              <div
-                key={row.type}
-                className="flex items-center justify-between p-3 rounded-md border border-border bg-card/50"
-              >
-                <div className="flex flex-col">
-                  <span className="font-medium text-sm capitalize">
-                    {row.type}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {row.total} total
-                  </span>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-                  {row.unread} unread
-                </span>
-              </div>
-            ))}
-          </div>
         </CardContent>
       </Card>
 

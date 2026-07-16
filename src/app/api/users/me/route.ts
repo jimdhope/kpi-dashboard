@@ -5,8 +5,6 @@ import { userService } from "@/server/services/user-service";
 
 const schema = z.object({
   name: z.string().min(2).max(80),
-  currentPassword: z.string().optional(),
-  newPassword: z.string().min(8).optional(),
 });
 
 export async function GET() {
@@ -20,19 +18,11 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const payload = schema.parse(await request.json());
-    const currentUser = await authService.requireCurrentUser();
+    await authService.requireCurrentUser();
 
     const updatedUser = await userService.updateCurrentProfile({
       name: payload.name,
     });
-
-    if (payload.newPassword) {
-      if (!payload.currentPassword) {
-        return errorResponse(400, "Current password is required to set a new password.");
-      }
-
-      await authService.changePassword(currentUser.id, payload.currentPassword, payload.newPassword);
-    }
 
     return ok(updatedUser);
   } catch (error) {

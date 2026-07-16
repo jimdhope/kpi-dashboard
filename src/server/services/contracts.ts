@@ -1,4 +1,4 @@
-import { AppCampaign, AppNotification, AppPod, AppUser, CompetitionRecord, CompetitionSummary, DashboardSummary, NotificationPriority, NotificationType, PerformanceLogRecord, PerformanceOverview, ReportsOverview, SessionPayload, TeamsWebhookDirection, TeamsWebhookRecord, TrackerKpiRecord, UserRole } from "@/lib/contracts";
+import { AppCampaign, AppPod, AppUser, CompetitionRecord, CompetitionSummary, DashboardSummary, PerformanceLogRecord, PerformanceOverview, ReportsOverview, SessionPayload, TeamsWebhookDirection, TeamsWebhookRecord, TrackerKpiRecord, UserRole } from "@/lib/contracts";
 
 export interface AuthServiceContract {
   login(email: string, password: string): Promise<{ sessionToken: string; expiresAt: Date; user: AppUser }>;
@@ -104,17 +104,4 @@ export interface ReportingService {
 }
 export interface DashboardService {
   getDashboard(): Promise<DashboardSummary>;
-}
-
-export interface NotificationServiceContract {
-  listCurrentUserNotifications(): Promise<AppNotification[]>;
-  createNotification(input: {
-    userId: string;
-    type: NotificationType;
-    title: string;
-    message: string;
-    priority: NotificationPriority;
-    actionUrl?: string | null;
-    metadata?: Record<string, unknown> | null;
-  }): Promise<AppNotification>;
 }

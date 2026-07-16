@@ -24,6 +24,8 @@ export const activityService = {
     return activityRepository.create({
       userId: finalUserId,
       agentName: finalUserName,
+      recorderId: user.id,
+      recorderName: user.name,
       type: input.type,
       title: input.title,
       description: input.description,
