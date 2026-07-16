@@ -1,17 +1,7 @@
-import englishWords from 'an-array-of-english-words';
+import answers from '../data/daily-word-answers.json';
+import allowedGuesses from '../data/daily-word-allowed.json';
 
-export const DAILY_WORD_ANSWERS = [
-  'apple', 'beach', 'brain', 'bread', 'brick', 'chair', 'charm', 'cloud', 'crane', 'dance',
-  'dream', 'earth', 'flame', 'fresh', 'grape', 'green', 'heart', 'house', 'light', 'magic',
-  'melon', 'music', 'ocean', 'plant', 'pride', 'queen', 'quick', 'river', 'smile', 'solar',
-  'sound', 'space', 'spark', 'stone', 'storm', 'sweet', 'table', 'tiger', 'train', 'water',
-  'world',
-] as const;
-
-// Answers stay deliberately friendly and curated, while guesses may use the
-// full English list. Filtering once at module load keeps per-guess lookup fast.
-export const DAILY_WORD_ALLOWED = new Set<string>(
-  (englishWords as string[])
-    .map(word => word.toLowerCase())
-    .filter(word => /^[a-z]{5}$/.test(word)),
-);
+// These lists are bundled so gameplay never depends on a third-party network
+// request. See src/server/data/DAILY_WORD_SOURCE.md for provenance.
+export const DAILY_WORD_ANSWERS = answers as readonly string[];
+export const DAILY_WORD_ALLOWED = new Set<string>(allowedGuesses);
