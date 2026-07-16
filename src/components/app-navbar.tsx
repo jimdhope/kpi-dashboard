@@ -327,8 +327,11 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[280px] p-0 pt-4">
-            <div className="px-4 pb-4 border-b">
+          <SheetContent
+            side="left"
+            className="flex h-dvh max-h-dvh w-[280px] flex-col overflow-hidden p-0 pt-4"
+          >
+            <div className="shrink-0 border-b px-4 pb-4">
               <Link 
                 href={dashboardHref} 
                 prefetch={false}
@@ -341,7 +344,7 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                 <span className="text-xl font-bold">KPI Quest</span>
               </Link>
             </div>
-            <div className="flex flex-col gap-1 p-2">
+            <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               <SheetClose asChild>
                 <Link href={dashboardHref} prefetch={false}>
                   <Button
