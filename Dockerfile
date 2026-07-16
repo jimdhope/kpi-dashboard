@@ -29,8 +29,8 @@ RUN ./node_modules/.bin/esbuild src/server/jobs/worker.ts --bundle --platform=no
 # Bundle the one-time authentication cutover utility for an explicitly enabled
 # production migration. Better Auth's password hashing code is included in the
 # bundle; Prisma and PostgreSQL use the runtime packages already in the image.
-RUN ./node_modules/.bin/esbuild scripts/auth-cutover.ts --bundle --platform=node --format=esm \
-    --external:@prisma/client --external:pg '--external:*.node' --outfile=/app/auth-cutover.mjs
+RUN ./node_modules/.bin/esbuild scripts/auth-cutover.ts --bundle --platform=node --format=cjs \
+    --external:@prisma/client --external:pg '--external:*.node' --outfile=/app/auth-cutover.cjs
 
 # Keep migration tooling separate from the application's dependency tree.
 FROM node:22.15.0-alpine AS migration-tools
@@ -53,13 +53,14 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/worker.mjs ./worker.mjs
-COPY --from=builder /app/auth-cutover.mjs ./auth-cutover.mjs
+COPY --from=builder /app/auth-cutover.cjs ./auth-cutover.cjs
 
 # Prisma's migration command is deliberately isolated from the web dependency tree.
 COPY --from=migration-tools /opt/prisma/node_modules /opt/prisma/node_modules
 
 # Create database initialization script
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
+    echo 'set -Eeuo pipefail' >> /entrypoint.sh && \
     echo 'echo "Waiting for database..."' >> /entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /entrypoint.sh && \
     echo 'if [ "${SKIP_MIGRATIONS:-false}" != "true" ]; then' >> /entrypoint.sh && \
@@ -68,7 +69,7 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'if [ "${RUN_AUTH_CUTOVER:-false}" = "true" ]; then' >> /entrypoint.sh && \
     echo '  echo "Running explicitly enabled Better Auth cutover..."' >> /entrypoint.sh && \
-    echo '  node auth-cutover.mjs' >> /entrypoint.sh && \
+    echo '  node auth-cutover.cjs' >> /entrypoint.sh && \
     echo '  echo "Authentication cutover complete. Remove RUN_AUTH_CUTOVER and the CUTOVER_ADMIN_* variables from Portainer, then redeploy the stack."' >> /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'if [ "${RUN_SEED_ON_STARTUP:-false}" = "true" ]; then' >> /entrypoint.sh && \
@@ -81,6 +82,7 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
 
 # Worker entrypoint — waits for DB, applies migrations, skips seed to avoid race
 RUN echo '#!/bin/bash' > /worker-entrypoint.sh && \
+    echo 'set -Eeuo pipefail' >> /worker-entrypoint.sh && \
     echo 'echo "Worker waiting for database..."' >> /worker-entrypoint.sh && \
     echo 'until nc -zv $DB_HOST 5432 2>/dev/null; do echo "Waiting..."; sleep 2; done' >> /worker-entrypoint.sh && \
     echo 'echo "Worker waiting for the migrated application..."' >> /worker-entrypoint.sh && \

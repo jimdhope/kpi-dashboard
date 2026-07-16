@@ -113,7 +113,7 @@ For the Better Auth cutover, stop the old application and worker, take and verif
 
 The cutover refuses to overwrite credential accounts. If the flag is accidentally left enabled, a later container restart fails closed until the variables are removed. `CUTOVER_RESUME=true` is reserved for a manually inspected interrupted cutover; it fills only missing credential accounts and does not overwrite existing ones.
 
-The application container waits for PostgreSQL and runs `prisma migrate deploy` before starting. The worker waits for the upgraded application to accept connections, keeping jobs out of the migration and cutover window. Migration failures stop startup; there is no fallback to schema pushing, data-loss acceptance or database reset. Production seeding is disabled unless `RUN_SEED_ON_STARTUP=true` is deliberately supplied for an initial installation.
+The application container waits for PostgreSQL and runs `prisma migrate deploy` before starting. The worker waits for the upgraded application to accept connections, keeping jobs out of the migration and cutover window. The startup scripts use strict error handling: migration, cutover and seed failures stop the container immediately and cannot print a false success message. There is no fallback to schema pushing, data-loss acceptance or database reset. Production seeding is disabled unless `RUN_SEED_ON_STARTUP=true` is deliberately supplied for an initial installation.
 
 ## Safe upgrades
 
