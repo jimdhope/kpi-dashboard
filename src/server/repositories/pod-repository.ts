@@ -4,6 +4,8 @@ import { prisma } from "@/server/db/client";
 function mapPod(pod: {
   id: string;
   campaignId: string | null;
+  teamLeaderId: string | null;
+  podManagerId: string | null;
   incomingWebhookId: string | null;
   outgoingWebhookId: string | null;
   name: string;
@@ -31,6 +33,8 @@ function mapPod(pod: {
     id: pod.id,
     campaignId: pod.campaignId,
     campaignName: pod.campaign?.name ?? null,
+    teamLeaderId: pod.teamLeaderId,
+    podManagerId: pod.podManagerId,
     incomingWebhookId: pod.incomingWebhookId,
     outgoingWebhookId: pod.outgoingWebhookId,
     incomingWebhookName: pod.incomingWebhook?.name ?? null,
@@ -64,11 +68,11 @@ export const podRepository = {
   async listForUser(userId: string): Promise<AppPod[]> {
     const pods = await prisma.pod.findMany({
       where: {
-        memberships: {
-          some: {
-            userId,
-          },
-        },
+        OR: [
+          { memberships: { some: { userId } } },
+          { podManagerId: userId },
+          { teamLeaderId: userId },
+        ],
       },
       include: {
         campaign: {
@@ -185,6 +189,8 @@ export const podRepository = {
     campaignId?: string | null;
     incomingWebhookId?: string | null;
     outgoingWebhookId?: string | null;
+    teamLeaderId?: string | null;
+    podManagerId?: string | null;
     name: string;
     description?: string | null;
   }) {
@@ -193,6 +199,8 @@ export const podRepository = {
         campaignId: input.campaignId ?? null,
         incomingWebhookId: input.incomingWebhookId ?? null,
         outgoingWebhookId: input.outgoingWebhookId ?? null,
+        teamLeaderId: input.teamLeaderId ?? null,
+        podManagerId: input.podManagerId ?? null,
         name: input.name,
         description: input.description ?? null,
       },
@@ -243,6 +251,8 @@ export const podRepository = {
     campaignId?: string | null;
     incomingWebhookId?: string | null;
     outgoingWebhookId?: string | null;
+    teamLeaderId?: string | null;
+    podManagerId?: string | null;
     name: string;
     description?: string | null;
   }) {
@@ -252,6 +262,8 @@ export const podRepository = {
         campaignId: input.campaignId ?? null,
         incomingWebhookId: input.incomingWebhookId ?? null,
         outgoingWebhookId: input.outgoingWebhookId ?? null,
+        teamLeaderId: input.teamLeaderId ?? null,
+        podManagerId: input.podManagerId ?? null,
         name: input.name,
         description: input.description ?? null,
       },

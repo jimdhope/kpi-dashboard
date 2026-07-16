@@ -1,13 +1,19 @@
 import { podRepository } from "@/server/repositories/pod-repository";
-import { requireAdminUser } from "@/server/services/authorization";
 import { authService } from "@/server/services/auth-service";
 import { permissionService } from "@/server/services/permission-service";
+import { prisma } from "@/server/db/client";
+
+async function requirePodPermission(level: "VIEW" | "MANAGE") {
+  const user = await authService.requireCurrentUser();
+  if (!(await permissionService.hasResourceAccess(user.roles, "nav.settings.pods", level))) throw new Error("Forbidden");
+  return user;
+}
 
 export const podService = {
   async listPods() {
     const currentUser = await authService.requireCurrentUser();
-    const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
-    if (isAdmin) {
+    const canManagePods = await permissionService.hasResourceAccess(currentUser.roles, "nav.settings.pods", "MANAGE");
+    if (currentUser.roles.includes("admin") || canManagePods) {
       return podRepository.list();
     }
     return podRepository.listForUser(currentUser.id);
@@ -17,10 +23,12 @@ export const podService = {
     campaignId?: string | null;
     incomingWebhookId?: string | null;
     outgoingWebhookId?: string | null;
+    teamLeaderId?: string | null;
+    podManagerId?: string | null;
     name: string;
     description?: string | null;
   }) {
-    await requireAdminUser();
+    await requirePodPermission("MANAGE");
     return podRepository.create(input);
   },
 
@@ -28,20 +36,29 @@ export const podService = {
     campaignId?: string | null;
     incomingWebhookId?: string | null;
     outgoingWebhookId?: string | null;
+    teamLeaderId?: string | null;
+    podManagerId?: string | null;
     name: string;
     description?: string | null;
   }) {
-    await requireAdminUser();
+    await requirePodPermission("MANAGE");
     return podRepository.update(id, input);
   },
 
   async updateMemberships(id: string, userIds: string[]) {
-    await requireAdminUser();
+    const currentUser = await authService.requireCurrentUser();
+    const canManageAllPods = await permissionService.hasResourceAccess(currentUser.roles, "nav.settings.pods", "MANAGE");
+    if (!canManageAllPods) {
+      const canManageUsers = await permissionService.hasResourceAccess(currentUser.roles, "nav.settings.users", "MANAGE");
+      const assigned = await prisma.pod.count({ where: { id, podManagerId: currentUser.id } });
+      if (!canManageUsers || !assigned) throw new Error("Forbidden");
+    }
     return podRepository.replaceMemberships(id, userIds);
   },
 
   async deletePod(id: string) {
-    await requireAdminUser();
+    const user = await authService.requireCurrentUser();
+    if (!user.roles.includes("admin")) throw new Error("Forbidden");
     return podRepository.delete(id);
   },
 };

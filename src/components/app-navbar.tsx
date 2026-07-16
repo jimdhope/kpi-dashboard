@@ -48,7 +48,7 @@ const navItems: NavItemConfig[] = [
     href: '/knowledge-base', 
     icon: BookMarked,
     items: [
-      { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen },
+      { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen, permissionKey: 'knowledgeBase.articles' },
       { label: 'Directory', href: '/directory', icon: Contact, permissionKey: 'directory' },
     ]
   },
@@ -65,10 +65,10 @@ const navItems: NavItemConfig[] = [
     href: '/competitions', 
     icon: Trophy,
     items: [
-      { label: 'Dashboard', href: '/competitions', icon: Home },
-      { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, requiredLevel: 'MANAGE' },
-      { label: 'Manage', href: '/competitions/manage', icon: Trophy, requiredLevel: 'MANAGE' },
-      { label: 'Certificates', href: '/competitions/certificates', icon: Award, requiredLevel: 'MANAGE' },
+      { label: 'Dashboard', href: '/competitions', icon: Home, permissionKey: 'competitions.dashboard' },
+      { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, permissionKey: 'competitions.log', requiredLevel: 'MANAGE' },
+      { label: 'Manage', href: '/competitions/manage', icon: Trophy, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
+      { label: 'Certificates', href: '/competitions/certificates', icon: Award, permissionKey: 'competitions.certificates' },
       { label: 'Reports', href: '/reports', icon: FileText, permissionKey: 'reports' },
       { label: 'Gamification', href: '/admin/gamification', icon: Crown, permissionKey: 'settings', requiredLevel: 'MANAGE' },
     ]
@@ -79,11 +79,11 @@ const navItems: NavItemConfig[] = [
     href: '/performance', 
     icon: BarChart3,
     items: [
-      { label: 'Dashboard', href: '/performance', icon: Home },
-      { label: 'Setup KPIs', href: '/performance/kpis', icon: Settings, requiredLevel: 'MANAGE' },
-      { label: 'Log Scores', href: '/performance/log', icon: CheckSquare, requiredLevel: 'MANAGE' },
-      { label: 'KPI Breakdown', href: '/performance/breakdown', icon: BarChart3 },
-      { label: 'Performance Charts', href: '/performance/charts', icon: LineChart },
+      { label: 'Dashboard', href: '/performance', icon: Home, permissionKey: 'performance.dashboard' },
+      { label: 'Setup KPIs', href: '/performance/kpis', icon: Settings, permissionKey: 'performance.kpis', requiredLevel: 'MANAGE' },
+      { label: 'Log Scores', href: '/performance/log', icon: CheckSquare, permissionKey: 'performance.log', requiredLevel: 'MANAGE' },
+      { label: 'KPI Breakdown', href: '/performance/breakdown', icon: BarChart3, permissionKey: 'performance.breakdown' },
+      { label: 'Performance Charts', href: '/performance/charts', icon: LineChart, permissionKey: 'performance.charts' },
     ]
   },
   { 
@@ -92,7 +92,7 @@ const navItems: NavItemConfig[] = [
     href: '/mini-games', 
     icon: Gamepad2,
     items: [
-      { label: 'Dashboard', href: '/mini-games', icon: Home },
+      { label: 'Dashboard', href: '/mini-games', icon: Home, permissionKey: 'miniGames.play' },
       { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
       { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: Gamepad2 },
       { label: 'Daily Word', href: '/mini-games/daily-word', icon: Gamepad2 },
@@ -105,14 +105,14 @@ const navItems: NavItemConfig[] = [
     href: '/tools', 
     icon: Wrench,
     items: [
-      { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true },
-      { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen },
-      { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays },
-      { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap },
-      { label: 'Burns Test', href: '/tools/burns-test', icon: Flame },
-      { label: 'Dual Fuel', href: '/tools/dual-fuel', icon: Infinity },
-      { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig },
-      { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2 },
+      { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true, permissionKey: 'usefulTools.callFlow' },
+      { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen, permissionKey: 'usefulTools.meterReading' },
+      { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays, permissionKey: 'usefulTools.calculators' },
+      { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap, permissionKey: 'usefulTools.calculators' },
+      { label: 'Burns Test', href: '/tools/burns-test', icon: Flame, permissionKey: 'usefulTools.calculators' },
+      { label: 'Dual Fuel', href: '/tools/dual-fuel', icon: Infinity, permissionKey: 'usefulTools.calculators' },
+      { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig, permissionKey: 'usefulTools.calculators' },
+      { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2, permissionKey: 'usefulTools.agreedReads' },
     ]
   },
   { 
@@ -125,6 +125,27 @@ const navItems: NavItemConfig[] = [
 ];
 
 const agentNavItems: NavItemConfig[] = [
+  {
+    key: 'competitions',
+    label: 'Competitions',
+    href: '/agent/competitions',
+    icon: Trophy,
+    items: [
+      { label: 'My Standings', href: '/agent/competitions', icon: Home, permissionKey: 'competitions.dashboard' },
+      { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, permissionKey: 'competitions.log', requiredLevel: 'MANAGE' },
+      { label: 'Manage', href: '/competitions/manage', icon: Trophy, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
+      { label: 'Certificates', href: '/competitions/certificates', icon: Award, permissionKey: 'competitions.certificates' },
+    ],
+  },
+  {
+    key: 'performance',
+    label: 'Performance',
+    href: '/agent/performance',
+    icon: BarChart3,
+    items: [
+      { label: 'My Performance', href: '/agent/performance', icon: BarChart3 },
+    ],
+  },
   {
     key: 'knowledgeBase',
     label: 'Knowledge Base',
@@ -153,6 +174,13 @@ const agentNavItems: NavItemConfig[] = [
     href: '/agent/activity',
     icon: Activity,
     items: [],
+  },
+  {
+    key: 'settings',
+    label: 'Settings',
+    href: '/settings/users',
+    icon: SettingsIcon,
+    items: SETTINGS_NAVIGATION_GROUPS,
   },
   {
     key: 'usefulTools',
@@ -251,28 +279,34 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
     return item.href;
   };
 
+  const filterPermittedItems = (items: NavDropdownItem[], fallbackKey: string): NavDropdownItem[] =>
+    items
+      .filter((item) => hasRequiredAccess(item.permissionKey ?? fallbackKey, item.requiredLevel))
+      .map((item) => ({
+        ...item,
+        children: item.children ? filterPermittedItems(item.children, item.permissionKey ?? fallbackKey) : undefined,
+      }))
+      .filter((item) => !item.children || item.children.length > 0);
+
   const sourceItems = navVariant === 'agent' ? agentNavItems : navItems;
   const visibleNavItems = sourceItems
     .filter(item => getNavHref(item) !== null)
     .map(item => ({
       ...item,
-      items: item.items.filter(subItem => hasRequiredAccess(
-        subItem.permissionKey ?? item.key,
-        subItem.requiredLevel,
-      )),
+      items: filterPermittedItems(item.items, item.key),
     }));
 
   const dashboardHref = roleDashboardHrefs[primaryRole] || '/dashboard';
-  const dashboardLabel = roleDashboardLabels[primaryRole] || 'Dashboard';
-  const RoleIcon = roleIcons[primaryRole] || User;
+  const usesAgentNavigation = navVariant === 'agent';
+  const dashboardLabel = usesAgentNavigation ? 'My Dashboard' : roleDashboardLabels[primaryRole] || 'Dashboard';
+  const RoleIcon = usesAgentNavigation ? User : roleIcons[primaryRole] || User;
+  const profileHref = usesAgentNavigation ? '/agent/profile' : '/settings/profile';
 
   const hasSettingsAccess = getHighestAccess('settings') !== 'none';
   const visibleSettingsItems = navItems
     .find(item => item.key === 'settings')
-    ?.items.filter(subItem => hasRequiredAccess(
-      subItem.permissionKey ?? 'settings',
-      subItem.requiredLevel,
-    )) ?? [];
+    ? filterPermittedItems(navItems.find(item => item.key === 'settings')?.items ?? [], 'settings')
+    : [];
 
   const handleLogout = async () => {
     await authClient.signOut();
@@ -428,7 +462,7 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                 </Link>
               </SheetClose>
               <SheetClose asChild>
-                <Link href={primaryRole === 'agent' ? '/agent/profile' : '/settings/profile'}>
+                <Link href={profileHref}>
                   <Button
                     variant={isActive('/settings/profile') ? "secondary" : "ghost"}
                     className="w-full justify-start gap-2 h-11"
@@ -553,7 +587,7 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href={primaryRole === 'agent' ? '/agent/profile' : '/settings/profile'} className="cursor-pointer">
+                <Link href={profileHref} className="cursor-pointer">
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </Link>

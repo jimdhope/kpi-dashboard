@@ -7,7 +7,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   const session = await authService.getCurrentSession();
   if (!session.user) redirect("/login");
 
-  const hasAccess = await permissionService.hasNavAccess(session.user.roles, "settings", "MANAGE");
+  const hasAccess = await permissionService.hasNavAccess(session.user.roles, "settings", "VIEW");
   if (!hasAccess) redirect("/dashboard");
 
   return (

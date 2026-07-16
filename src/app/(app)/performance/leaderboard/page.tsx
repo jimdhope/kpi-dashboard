@@ -347,7 +347,7 @@ export default function AdditionalLeaderboardPage() {
                     {entry.rank <= 3 ? getMedalEmoji(entry.rank) : entry.rank}
                   </div>
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback style={{ backgroundColor: entry.avatarBgColor || 'hsl(var(--primary))' }}>
+                    <AvatarFallback style={{ backgroundColor: entry.avatarBgColor || 'var(--color-primary)' }}>
                       {entry.avatarInitials || generateInitials(entry.name)}
                     </AvatarFallback>
                   </Avatar>

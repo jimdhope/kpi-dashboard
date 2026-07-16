@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Edit, Trash2, PlusCircle, Loader2, Search, ShieldAlert, UserCog, Briefcase, ShieldCheck, UserRound } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Loader2, Search, ShieldAlert, UserCog, Briefcase, ShieldCheck, UserRound, Eye } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -69,6 +69,7 @@ const formatRole = (role: string): string => {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -83,6 +84,7 @@ export default function AdminUsersPage() {
   const [formPassword, setFormPassword] = useState('');
   const [formRoles, setFormRoles] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewingUserId, setPreviewingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -100,6 +102,7 @@ export default function AdminUsersPage() {
         if (meRes.ok) {
           const meData = await meRes.json();
           setCurrentUserId(meData.user?.id || null);
+          setCurrentUserRoles(meData.user?.roles || []);
         }
       } catch (err) {
         console.error("Error fetching users:", err);
@@ -156,11 +159,12 @@ export default function AdminUsersPage() {
   };
 
   const handleFormSubmit = async () => {
-    if (!formName.trim()) {
+    const isAdministrator = currentUserRoles.includes('admin');
+    if (isAdministrator && !formName.trim()) {
       toast({ variant: "destructive", title: "Error", description: "Name is required." });
       return;
     }
-    if (!formEmail.trim() || !formEmail.includes('@')) {
+    if (isAdministrator && (!formEmail.trim() || !formEmail.includes('@'))) {
       toast({ variant: "destructive", title: "Error", description: "Valid email is required." });
       return;
     }
@@ -172,7 +176,7 @@ export default function AdminUsersPage() {
       toast({ variant: "destructive", title: "Error", description: "A reset password must be at least 8 characters." });
       return;
     }
-    if (formRoles.length === 0) {
+    if (isAdministrator && formRoles.length === 0) {
       toast({ variant: "destructive", title: "Error", description: "At least one role is required." });
       return;
     }
@@ -193,15 +197,14 @@ export default function AdminUsersPage() {
         if (!res.ok) throw new Error('Failed to create user');
         toast({ title: "User Created", description: `User "${formName}" has been created.` });
       } else if (selectedUser) {
-        const res = await fetch(`/api/users/${selectedUser.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formName.trim(),
-            roles: formRoles,
-          }),
-        });
-        if (!res.ok) throw new Error('Failed to update user');
+        if (isAdministrator) {
+          const res = await fetch(`/api/users/${selectedUser.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: formName.trim(), roles: formRoles }),
+          });
+          if (!res.ok) throw new Error('Failed to update user');
+        }
         if (formPassword) {
           const resetRes = await fetch(`/api/users/${selectedUser.id}/password`, {
             method: 'POST',
@@ -210,8 +213,8 @@ export default function AdminUsersPage() {
           });
           const resetResult = await resetRes.json().catch(() => ({}));
           if (!resetRes.ok) throw new Error(resetResult.error || 'Failed to reset password');
-          toast({ title: "User and Password Updated", description: `${formName}'s password was reset and their existing sessions were ended.` });
-        } else {
+          toast({ title: "Password Reset", description: `${formName}'s password was reset and their existing sessions were ended.` });
+        } else if (isAdministrator) {
           toast({ title: "User Updated", description: `User "${formName}" has been updated.` });
         }
       }
@@ -247,6 +250,44 @@ export default function AdminUsersPage() {
 
   const isDeletingSelf = (userId: string) => currentUserId === userId;
 
+  const previewAsUser = async (user: User) => {
+    const previewWindow = window.open('', '_blank');
+    if (!previewWindow) {
+      toast({
+        variant: 'destructive',
+        title: 'Pop-up blocked',
+        description: 'Allow pop-ups for KPI Quest, then try previewing the user again.',
+      });
+      return;
+    }
+    previewWindow.opener = null;
+    previewWindow.document.title = `Previewing ${user.name}`;
+    previewWindow.document.body.textContent = `Preparing read-only preview for ${user.name}…`;
+    setPreviewingUserId(user.id);
+    try {
+      const response = await fetch('/api/admin-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Unable to start user preview');
+      previewWindow.location.replace('/dashboard');
+      toast({
+        title: 'Read-only preview opened',
+        description: 'Preview mode applies to all KPI Quest windows in this browser. Exit the preview before making admin changes.',
+      });
+    } catch (err) {
+      previewWindow.close();
+      toast({
+        variant: 'destructive',
+        title: 'Preview unavailable',
+        description: err instanceof Error ? err.message : 'Unable to start user preview.',
+      });
+      setPreviewingUserId(null);
+    }
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -270,7 +311,7 @@ export default function AdminUsersPage() {
               </div>
               <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={openAddDialog} disabled={isLoadingUsers}>
+                  <Button onClick={openAddDialog} disabled={isLoadingUsers || !currentUserRoles.includes('admin')}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add User
                   </Button>
                 </DialogTrigger>
@@ -289,6 +330,7 @@ export default function AdminUsersPage() {
                         value={formName}
                         onChange={(e) => setFormName(e.target.value)}
                         placeholder="e.g., Jane Doe"
+                        disabled={!currentUserRoles.includes('admin')}
                       />
                     </div>
                     <div className="grid gap-2">
@@ -314,7 +356,7 @@ export default function AdminUsersPage() {
                               id={`role-${role}`}
                               checked={formRoles.includes(role)}
                               onCheckedChange={() => toggleRole(role)}
-                              disabled={isSaving}
+                              disabled={isSaving || !currentUserRoles.includes('admin')}
                             />
                             <Label htmlFor={`role-${role}`} className="font-normal cursor-pointer">
                               {formatRole(role)}
@@ -346,7 +388,7 @@ export default function AdminUsersPage() {
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSaving}>Cancel</Button>
-                    <Button onClick={handleFormSubmit} disabled={isSaving}>
+                    <Button onClick={handleFormSubmit} disabled={isSaving || (!currentUserRoles.includes('admin') && !formPassword)}>
                       {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       {isSaving ? 'Saving...' : (dialogMode === 'add' ? 'Create User' : 'Update User')}
                     </Button>
@@ -419,6 +461,24 @@ export default function AdminUsersPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => previewAsUser(user)}
+                                  aria-label={`Preview the app as ${user.name}`}
+                                  disabled={!currentUserRoles.includes('admin') || isLoadingUsers || isDeletingSelf(user.id) || previewingUserId !== null}
+                                >
+                                  {previewingUserId === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{isDeletingSelf(user.id) ? 'You are already viewing as yourself.' : `Preview the app as ${user.name}`}</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -437,7 +497,7 @@ export default function AdminUsersPage() {
                                   className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                                   onClick={() => openDeleteAlert(user)}
                                   aria-label={`Delete ${user.name}`}
-                                  disabled={isLoadingUsers || isDeletingSelf(user.id)}
+                                  disabled={!currentUserRoles.includes('admin') || isLoadingUsers || isDeletingSelf(user.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

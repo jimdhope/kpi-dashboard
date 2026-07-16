@@ -276,7 +276,7 @@ export function AgentDashboard({
       const memberNames = (team.agentIds || [])
         .map((agentId: string) => {
           const user = users.find((u: any) => u.id === agentId);
-          return user ? user.name.split(' ')[0] : null;
+          return user ? user.name : null;
         })
         .filter(Boolean)
         .join(', ');
@@ -556,13 +556,15 @@ export function AgentDashboard({
                                     index + 1
                                   )}
                                 </TableCell>
-                                <TableCell className={`font-medium ${isCurrentUserTeam ? 'text-primary font-semibold' : ''}`}>
-                                  {team.name}
+                                <TableCell className={isCurrentUserTeam ? 'text-primary' : ''}>
+                                  <div className="min-w-0">
+                                    <div className="font-medium">{team.name}</div>
                                   {team.memberNames && (
-                                    <span className="text-muted-foreground text-xs ml-2" title={team.memberNames}>
-                                      ({team.memberNames.length > 25 ? team.memberNames.substring(0, 25) + '...' : team.memberNames})
-                                    </span>
+                                      <div className="mt-0.5 whitespace-normal break-words text-xs leading-4 text-muted-foreground">
+                                        {team.memberNames}
+                                      </div>
                                   )}
+                                  </div>
                                 </TableCell>
                                 <TableCell className={`text-right font-bold ${isCurrentUserTeam ? 'text-primary' : ''}`}>{team.score.toLocaleString()}</TableCell>
                               </TableRow>

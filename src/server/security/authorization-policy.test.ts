@@ -20,7 +20,7 @@ test("view pages and their management pages require the expected levels", () => 
     minLevel: "VIEW",
   });
   assert.deepEqual(getPagePermissionRequirement("/performance/log"), {
-    resource: "performance",
+    resource: "performance.log",
     minLevel: "MANAGE",
   });
   assert.deepEqual(getPagePermissionRequirement("/knowledge-base/example/edit"), {
@@ -32,7 +32,7 @@ test("view pages and their management pages require the expected levels", () => 
     minLevel: "MANAGE",
   });
   assert.deepEqual(getPagePermissionRequirement("/settings/general"), {
-    resource: "settings",
+    resource: "settings.backup",
     minLevel: "MANAGE",
   });
   assert.equal(getPagePermissionRequirement("/dashboard"), null);

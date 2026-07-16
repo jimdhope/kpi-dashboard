@@ -42,8 +42,10 @@ FROM node:22.15.0-alpine AS runner
 WORKDIR /app
 ENV NODE_PATH="/opt/prisma/node_modules"
 
-# Install netcat for health check + fonts for SVG rendering
-RUN apk add --no-cache netcat-openbsd bash fontconfig ttf-dejavu font-noto-emoji postgresql-client
+# Keep the backup and restore tools on the same PostgreSQL major version as the
+# database server. An unversioned package can move to a newer major release and
+# produce SQL that PostgreSQL 16 cannot restore.
+RUN apk add --no-cache netcat-openbsd bash fontconfig ttf-dejavu font-noto-emoji postgresql16-client
 
 # Copy standalone build output from builder
 COPY --from=builder /app/.next/standalone ./

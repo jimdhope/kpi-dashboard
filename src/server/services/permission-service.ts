@@ -1,5 +1,6 @@
 import { PermissionLevel, NavResource } from "@/lib/contracts";
 import { prisma } from "@/server/db/client";
+import { PERMISSION_SECTIONS } from "@/lib/permission-catalog";
 
 type PermissionMap = Record<string, PermissionLevel>;
 
@@ -17,12 +18,18 @@ export const permissionService = {
         map[permission.resource] = level;
       }
     }
+    for (const section of PERMISSION_SECTIONS) {
+      const parentLevel = map[section.key] ?? "NONE";
+      for (const child of section.children) {
+        const childLevel = map[child.key] ?? parentLevel;
+        map[child.key] = levelOrder[Math.min(levelOrder.indexOf(parentLevel), levelOrder.indexOf(childLevel))];
+      }
+    }
     return map;
   },
 
   async hasEffectiveAdminAccess(roleKeys: string[]): Promise<boolean> {
-    const permissions = await permissionService.getPermissionsForRoles(roleKeys);
-    return permissions["nav.settings"] === "MANAGE";
+    return roleKeys.includes("admin");
   },
 
   async hasNavAccess(roleKeys: string[], resource: NavResource, minLevel: PermissionLevel = "VIEW"): Promise<boolean> {
@@ -35,6 +42,12 @@ export const permissionService = {
   async getNavLevel(roleKeys: string[], resource: NavResource): Promise<PermissionLevel> {
     const perms = await permissionService.getPermissionsForRoles(roleKeys);
     return perms[`nav.${resource}`] ?? "NONE";
+  },
+
+  async hasResourceAccess(roleKeys: string[], resource: string, minLevel: PermissionLevel = "VIEW") {
+    const permissions = await permissionService.getPermissionsForRoles(roleKeys);
+    const levelOrder: PermissionLevel[] = ["NONE", "VIEW", "MANAGE"];
+    return levelOrder.indexOf(permissions[resource] ?? "NONE") >= levelOrder.indexOf(minLevel);
   },
 
   async getAllPermissions() {
@@ -137,6 +150,12 @@ export const permissionService = {
         "nav.integrations": "NONE",
       },
     };
+    const settingsChildDefaults: Record<string, Record<string, PermissionLevel>> = {
+      campaignManager: { campaigns: "MANAGE", pods: "MANAGE", users: "VIEW", permissions: "NONE", backup: "NONE" },
+      podManager: { campaigns: "NONE", pods: "VIEW", users: "MANAGE", permissions: "NONE", backup: "NONE" },
+      teamLeader: { campaigns: "NONE", pods: "NONE", users: "MANAGE", permissions: "NONE", backup: "NONE" },
+      competitionRunner: { campaigns: "NONE", pods: "NONE", users: "NONE", permissions: "NONE", backup: "NONE" },
+    };
 
     for (const [roleKey, resources] of Object.entries(defaults)) {
       const roleId = roleMap[roleKey];
@@ -147,6 +166,27 @@ export const permissionService = {
           create: { roleId, resource, level },
           // Defaults fill gaps without overwriting permissions configured in the UI.
           update: {},
+        });
+      }
+      for (const section of PERMISSION_SECTIONS) {
+        const level = resources[section.key] ?? "NONE";
+        for (const child of section.children) {
+          const settingsKey = child.key.replace("nav.settings.", "");
+          const childLevel = section.key === "nav.settings"
+            ? settingsChildDefaults[roleKey]?.[settingsKey] ?? level
+            : level;
+          await prisma.rolePermission.upsert({
+            where: { roleId_resource: { roleId, resource: child.key } },
+            create: { roleId, resource: child.key, level: childLevel },
+            update: {},
+          });
+        }
+      }
+      if (roleKey === "agent") {
+        await prisma.rolePermission.upsert({
+          where: { roleId_resource: { roleId, resource: "nav.activity.all" } },
+          create: { roleId, resource: "nav.activity.all", level: "NONE" },
+          update: { level: "NONE" },
         });
       }
     }

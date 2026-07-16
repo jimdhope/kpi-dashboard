@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { SAFE_METHODS } from "@/server/security/authorization-policy";
+import { ADMIN_PREVIEW_COOKIE } from "@/server/auth/admin-preview-token";
 
 const PUBLIC_ROUTES = new Set(["/", "/login", "/forgot-password", "/reset-password"]);
 const PUBLIC_API_PREFIXES = new Set([
@@ -24,6 +25,12 @@ export async function proxy(request: NextRequest) {
 
   // Reject browser cross-site mutations before any application handler runs.
   if (!SAFE_METHODS.has(request.method)) {
+    if (request.cookies.has(ADMIN_PREVIEW_COOKIE) && pathname !== "/api/admin-preview") {
+      return NextResponse.json(
+        { error: "Preview mode is read-only. Exit preview mode to make changes." },
+        { status: 403 },
+      );
+    }
     const fetchSite = request.headers.get("sec-fetch-site");
     const origin = request.headers.get("origin");
     const host = request.headers.get("host");

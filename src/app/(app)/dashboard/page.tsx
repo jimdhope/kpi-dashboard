@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { authService } from "@/server/services/auth-service";
+import { permissionService } from "@/server/services/permission-service";
 
 export default async function DashboardPage({
   searchParams,
@@ -12,10 +13,10 @@ export default async function DashboardPage({
 
   const query = await searchParams;
   const hasAgentRole = session.user.roles.includes("agent");
-  const hasManagementRole = session.user.roles.some((role) => role !== "agent");
+  const canUseManagementView = await permissionService.hasEffectiveAdminAccess(session.user.roles);
   const initialView = query.view === "agent" && hasAgentRole
     ? "agent"
-    : hasManagementRole ? "management" : "agent";
+    : canUseManagementView ? "management" : "agent";
 
-  return <DashboardClient user={session.user} initialView={initialView} />;
+  return <DashboardClient user={session.user} initialView={initialView} canUseManagementView={canUseManagementView} />;
 }

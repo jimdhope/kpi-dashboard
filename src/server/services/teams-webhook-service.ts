@@ -1,6 +1,6 @@
 import { TeamsChannelCategory, TeamsWebhookDirection } from "@/lib/contracts";
 import { teamsWebhookRepository } from "@/server/repositories/teams-webhook-repository";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 function isValidCuid(id: string): boolean {
   return /^c[a-z0-9]{24}$/.test(id);
@@ -12,7 +12,7 @@ function isUrlCorrupted(id: string, url: string): boolean {
 
 export const teamsWebhookService = {
   async listWebhooks() {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.channels");
     const webhooks = await teamsWebhookRepository.list();
     
     for (const webhook of webhooks) {
@@ -33,7 +33,7 @@ export const teamsWebhookService = {
     category?: TeamsChannelCategory | null;
     isActive: boolean;
   }) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.channels");
     
     if (input.url.length > 2000) {
       throw new Error("Webhook URL is too long");
@@ -54,7 +54,7 @@ export const teamsWebhookService = {
       isActive: boolean;
     },
   ) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.channels");
     
     if (!isValidCuid(id)) {
       console.error(`[TeamsWebhookService] Invalid webhook ID format: ${id}`);
@@ -69,7 +69,7 @@ export const teamsWebhookService = {
   },
 
   async testConnection(id: string) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.channels");
     
     if (!isValidCuid(id)) {
       console.error(`[TeamsWebhookService] Invalid webhook ID format for test: ${id}`);
@@ -120,7 +120,7 @@ export const teamsWebhookService = {
   },
 
   async deleteWebhook(id: string) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.channels");
     
     if (!isValidCuid(id)) {
       console.error(`[TeamsWebhookService] Invalid webhook ID format for delete: ${id}`);

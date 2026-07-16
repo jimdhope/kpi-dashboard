@@ -59,6 +59,8 @@ interface Pod {
   outgoingWebhookId: string | null;
   incomingWebhookName: string | null;
   outgoingWebhookName: string | null;
+  teamLeaderId: string | null;
+  podManagerId: string | null;
 }
 
 interface User {
@@ -97,6 +99,8 @@ export default function AdminPodsPage() {
   const [formCampaignId, setFormCampaignId] = useState('');
   const [formIncomingWebhookId, setFormIncomingWebhookId] = useState('');
   const [formOutgoingWebhookId, setFormOutgoingWebhookId] = useState('');
+  const [formTeamLeaderId, setFormTeamLeaderId] = useState('');
+  const [formPodManagerId, setFormPodManagerId] = useState('');
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -165,6 +169,8 @@ export default function AdminPodsPage() {
     setFormCampaignId('');
     setFormIncomingWebhookId('');
     setFormOutgoingWebhookId('');
+    setFormTeamLeaderId('');
+    setFormPodManagerId('');
     setIsFormOpen(true);
   };
 
@@ -176,6 +182,8 @@ export default function AdminPodsPage() {
     setFormCampaignId(pod.campaignId || '');
     setFormIncomingWebhookId(pod.incomingWebhookId || '');
     setFormOutgoingWebhookId(pod.outgoingWebhookId || '');
+    setFormTeamLeaderId(pod.teamLeaderId || '');
+    setFormPodManagerId(pod.podManagerId || '');
     setIsFormOpen(true);
   };
 
@@ -205,6 +213,8 @@ export default function AdminPodsPage() {
         campaignId: formCampaignId || null,
         incomingWebhookId: formIncomingWebhookId || null,
         outgoingWebhookId: formOutgoingWebhookId || null,
+        teamLeaderId: formTeamLeaderId || null,
+        podManagerId: formPodManagerId || null,
       };
 
       if (dialogMode === 'add') {
@@ -367,6 +377,20 @@ export default function AdminPodsPage() {
                       {webhooks.filter(w => w.direction === 'incoming').map(w => (
                         <option key={w.id} value={w.id}>{w.name}</option>
                       ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="podManager">Pod Manager</Label>
+                    <select id="podManager" value={formPodManagerId} onChange={(event) => setFormPodManagerId(event.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">None</option>
+                      {users.filter((user) => user.roles.includes('podManager')).map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="teamLeader">Team Leader</Label>
+                    <select id="teamLeader" value={formTeamLeaderId} onChange={(event) => setFormTeamLeaderId(event.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">None</option>
+                      {users.filter((user) => user.roles.includes('teamLeader')).map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
                     </select>
                   </div>
                   <div className="grid gap-2">

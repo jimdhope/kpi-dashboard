@@ -1,7 +1,7 @@
 import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
-import { requireCompetitionEditor } from "@/server/services/authorization";
+import { requireCompetitionScoreLogger } from "@/server/services/authorization";
 
 export async function DELETE(
   request: Request,
@@ -9,7 +9,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await requireCompetitionEditor();
+    await requireCompetitionScoreLogger();
     await prisma.dailyAchievement.delete({
       where: { id },
     });

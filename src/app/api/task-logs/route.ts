@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { prisma } from "@/server/db/client";
-import { requireCompetitionEditor } from "@/server/services/authorization";
+import { requireCompetitionScoreLogger } from "@/server/services/authorization";
 import { pageParams, pagedResult } from "@/server/http-pagination";
 
 const createSchema = z.object({
@@ -16,7 +16,7 @@ const createSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireCompetitionEditor();
+    await requireCompetitionScoreLogger();
     const url = new URL(request.url);
     const competitionId = url.searchParams.get('competitionId');
     const date = url.searchParams.get('date');
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireCompetitionEditor();
+    await requireCompetitionScoreLogger();
     const payload = createSchema.parse(await request.json());
 
     const taskLog = await prisma.dailyTaskLog.create({

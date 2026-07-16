@@ -43,12 +43,36 @@ function byteLimit(maxBytes: number): Transform {
   });
 }
 
+function postgres16Compatibility(): Transform {
+  let remainder = "";
+  const ignoredStatements = new Set([
+    // Emitted by PostgreSQL 17 clients but unsupported by PostgreSQL 16.
+    "SET transaction_timeout = 0;",
+    // job_common is attached to pgboss.job. PostgreSQL 16 requires its
+    // inherited primary key to be removed through the parent constraint.
+    'ALTER TABLE IF EXISTS ONLY pgboss.job_common DROP CONSTRAINT IF EXISTS job_common_pkey;',
+  ]);
+  const filterLine = (line: string) => ignoredStatements.has(line.trim()) ? "" : `${line}\n`;
+
+  return new Transform({
+    transform(chunk, _encoding, callback) {
+      const input = remainder + chunk.toString("utf8");
+      const lines = input.split("\n");
+      remainder = lines.pop() ?? "";
+      callback(null, lines.map(filterLine).join(""));
+    },
+    flush(callback) {
+      callback(null, ignoredStatements.has(remainder.trim()) ? "" : remainder);
+    },
+  });
+}
+
 export const backupService = {
   async exportToGzip(outputPath: string): Promise<void> {
     const config = parseDatabaseUrl();
     const pgDump = spawn("pg_dump", [
       ...connFlags(config),
-      "--clean", "--if-exists", "--no-owner", "--no-comments",
+      "--clean", "--if-exists", "--no-owner", "--no-comments", "--exclude-schema=pgboss",
     ], {
       env: { ...process.env, PGPASSWORD: config.password },
       stdio: ["ignore", "pipe", "pipe"],
@@ -90,21 +114,21 @@ export const backupService = {
   async restoreFromFile(filePath: string): Promise<void> {
     const config = parseDatabaseUrl();
 
-    return new Promise((resolve, reject) => {
-      const psql = spawn("psql", [
-        ...connFlags(config),
-        "--quiet", "--single-transaction", "--set", "ON_ERROR_STOP=on", "-f", filePath,
-      ], {
-        env: { ...process.env, PGPASSWORD: config.password },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+    const psql = spawn("psql", [
+      ...connFlags(config),
+      "--quiet", "--single-transaction", "--set", "ON_ERROR_STOP=on",
+    ], {
+      env: { ...process.env, PGPASSWORD: config.password },
+      stdio: ["pipe", "ignore", "pipe"],
+    });
 
-      let stderr = "";
-      psql.stderr.on("data", (d) => {
-        if (stderr.length < MAX_TOOL_STDERR_BYTES) stderr += d.toString().slice(0, MAX_TOOL_STDERR_BYTES - stderr.length);
-      });
-      const timeout = setTimeout(() => psql.kill("SIGTERM"), DATABASE_TOOL_TIMEOUT_MS);
-
+    let stderr = "";
+    psql.stderr.on("data", (d) => {
+      if (stderr.length < MAX_TOOL_STDERR_BYTES) stderr += d.toString().slice(0, MAX_TOOL_STDERR_BYTES - stderr.length);
+    });
+    const timeout = setTimeout(() => psql.kill("SIGTERM"), DATABASE_TOOL_TIMEOUT_MS);
+    const inputDone = pipeline(createReadStream(/* turbopackIgnore: true */ filePath), postgres16Compatibility(), psql.stdin);
+    const exitDone = new Promise<void>((resolve, reject) => {
       psql.on("close", (code) => {
         clearTimeout(timeout);
         if (code === 0) resolve();
@@ -112,6 +136,13 @@ export const backupService = {
       });
       psql.on("error", (err) => reject(new Error(`psql failed: ${err.message}`)));
     });
+
+    try {
+      await Promise.all([inputDone, exitDone]);
+    } catch (error) {
+      psql.kill("SIGTERM");
+      throw error;
+    }
   },
 
   async restoreFromGzip(gzipPath: string): Promise<void> {

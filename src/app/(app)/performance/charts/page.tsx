@@ -55,7 +55,7 @@ const CHARTS_AGENT_KEY = 'performanceCharts_selectedAgentId';
 const CHARTS_TIMEFRAME_KEY = 'performanceCharts_timeframe';
 
 const LINE_COLORS = [
-  "hsl(var(--primary))",
+  "var(--color-teal-400)",
   "#82ca9d",
   "#ffc658",
   "#ff7300",
@@ -389,13 +389,21 @@ export default function PerformanceChartsPage() {
           ) : chartData.length === 0 ? (
               <div className="h-[350px] flex items-center justify-center text-muted-foreground"><AlertCircle className="mr-2"/>No data available for the selected filters.</div>
           ) : (
-            <ResponsiveContainer width="100%" height={350}>
+            <ResponsiveContainer width="100%" height={350} minWidth={0}>
               <RechartsLineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={12} />
                 <YAxis yAxisId="left" stroke={LINE_COLORS[1]} fontSize={12} domain={[0, 100]} tickFormatter={(value) => `${value}%`} hide={percentageKpis.length === 0} />
                 <YAxis yAxisId="right" orientation="right" stroke={LINE_COLORS[0]} fontSize={12} hide={numberKpis.length === 0} domain={[0, rightAxisMax]} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--color-card)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--color-card-foreground)',
+                  }}
+                  labelStyle={{ color: 'var(--color-card-foreground)' }}
+                />
                 <Legend />
                 {percentageKpis.map((kpi, index) => (
                    <Line 

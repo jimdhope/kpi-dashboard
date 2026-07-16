@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const hasActivityAccess = await permissionService.hasNavAccess(user.roles, 'activity', 'VIEW');
+    const hasActivityAccess = await permissionService.hasResourceAccess(user.roles, 'nav.activity.own', 'VIEW');
     if (!hasActivityAccess) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     // Agents see only their own history. Any authorised management role can
     // review organisation-wide activity, including multi-role users.
-    const canViewAll = user.roles.some((role) => role !== 'agent');
+    const canViewAll = await permissionService.hasResourceAccess(user.roles, 'nav.activity.all', 'VIEW');
     if (userId) {
       if (!canViewAll && userId !== user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

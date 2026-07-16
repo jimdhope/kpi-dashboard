@@ -1,15 +1,15 @@
 import { TeamsAutomationFactTemplate, TeamsAutomationDeliveryFormat, TeamsChannelCategory } from "@/lib/contracts";
 import { teamsMessageTemplateRepository } from "@/server/repositories/teams-message-template-repository";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export const teamsMessageTemplateService = {
   async listTemplates() {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.workflows");
     return teamsMessageTemplateRepository.list();
   },
 
   async listTemplatesByCategory(category?: TeamsChannelCategory) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.workflows");
     return teamsMessageTemplateRepository.listByCategory(category);
   },
 
@@ -30,7 +30,7 @@ export const teamsMessageTemplateService = {
     isDefault?: boolean;
     isActive: boolean;
   }) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.workflows");
     
     // If this template is set as default, unset other defaults for this category
     if (input.isDefault && input.category) {
@@ -60,7 +60,7 @@ export const teamsMessageTemplateService = {
       isActive: boolean;
     },
   ) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.workflows");
     
     // If this template is set as default, unset other defaults for this category
     if (input.isDefault && input.category) {
@@ -71,12 +71,12 @@ export const teamsMessageTemplateService = {
   },
 
   async deleteTemplate(id: string) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.workflows");
     return teamsMessageTemplateRepository.delete(id);
   },
 
   async setDefault(id: string) {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.workflows");
     const template = await teamsMessageTemplateRepository.findById(id);
     if (!template) {
       throw new Error("Template not found");

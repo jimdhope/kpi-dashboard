@@ -12,7 +12,7 @@ export default async function AgentLayout({
   if (session.user.mustChangePassword) redirect("/change-password");
 
   return (
-    <AuthenticatedShell user={session.user} navVariant="agent" showCommandPalette={false}>
+    <AuthenticatedShell user={session.user} preview={session.preview} navVariant="agent" showCommandPalette={false}>
       {children}
     </AuthenticatedShell>
   );

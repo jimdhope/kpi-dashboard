@@ -8,10 +8,9 @@ import { permissionService } from "@/server/services/permission-service";
 export const managementDashboardService = {
   async getData() {
     const user = await authService.requireCurrentUser();
-    if (!user.roles.some((role) => role !== "agent")) throw new Error("Forbidden");
-
     const permissions = await permissionService.getPermissionsForRoles(user.roles);
     const hasAdminDataAccess = permissions["nav.settings"] === "MANAGE";
+    if (!hasAdminDataAccess) throw new Error("Forbidden");
     const [competitions, pods, users] = await Promise.all([
       competitionService.listCompetitions(),
       hasAdminDataAccess ? podRepository.list() : podRepository.listForUser(user.id),

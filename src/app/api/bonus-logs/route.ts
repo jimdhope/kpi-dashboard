@@ -2,7 +2,7 @@ import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
-import { requireCompetitionEditor } from "@/server/services/authorization";
+import { requireCompetitionScoreLogger } from "@/server/services/authorization";
 import { pageParams, pagedResult } from "@/server/http-pagination";
 
 const createSchema = z.object({
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireCompetitionEditor();
+    const user = await requireCompetitionScoreLogger();
     const payload = createSchema.parse(await request.json());
 
     const targetDate = new Date(payload.date);

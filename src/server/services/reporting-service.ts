@@ -2,11 +2,11 @@ import { ReportsOverview } from "@/lib/contracts";
 import { prisma } from "@/server/db/client";
 import { competitionService } from "@/server/services/competition-service";
 import { performanceService } from "@/server/services/performance-service";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export const reportingService = {
   async getOverview(): Promise<ReportsOverview> {
-    await requireAdminUser();
+    await requireResourceAccess("nav.reports.overview", "VIEW");
 
     const [
       campaigns,

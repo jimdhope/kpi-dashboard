@@ -1,7 +1,7 @@
 import { competitionRepository } from "@/server/repositories/competition-repository";
 import { competitionEntryRepository } from "@/server/repositories/competition-entry-repository";
 import { authService } from "@/server/services/auth-service";
-import { requireCompetitionEditor } from "@/server/services/authorization";
+import { requireCompetitionEditor, requireCompetitionScoreLogger } from "@/server/services/authorization";
 import { activityService } from "@/server/services/activity-service";
 import { prisma } from "@/server/db/client";
 import { competitionSseService } from "@/server/services/competition-sse-service";
@@ -322,7 +322,7 @@ export const competitionService = {
   },
 
   async logScore(input: { competitionId: string; userId?: string | null; score: number }) {
-    const user = await requireCompetitionEditor();
+    const user = await requireCompetitionScoreLogger();
     const targetUserId = input.userId || user.id;
 
     const entry = await prisma.competitionEntry.findFirst({

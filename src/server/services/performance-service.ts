@@ -11,7 +11,7 @@ import { permissionService } from "@/server/services/permission-service";
 export const performanceService = {
   async canManageTarget(currentUser: Awaited<ReturnType<typeof authService.requireCurrentUser>>, targetUserId: string) {
     if (currentUser.id === targetUserId) return true;
-    return permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+    return permissionService.hasResourceAccess(currentUser.roles, "nav.performance.log", "MANAGE");
   },
   async listLogs() {
     const currentUser = await authService.requireCurrentUser();
@@ -24,7 +24,7 @@ export const performanceService = {
 
   async listLogsByPodIds(podIds: string[]) {
     const currentUser = await authService.requireCurrentUser();
-    const canManage = await permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+    const canManage = await permissionService.hasResourceAccess(currentUser.roles, "nav.performance.log", "MANAGE");
     if (!canManage && podIds.some((podId) => !(currentUser.podIds ?? []).includes(podId))) {
       throw new Error("Forbidden");
     }

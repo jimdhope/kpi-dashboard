@@ -7,6 +7,8 @@ const schema = z.object({
   campaignId: z.string().optional().nullable(),
   incomingWebhookId: z.string().optional().nullable(),
   outgoingWebhookId: z.string().optional().nullable(),
+  teamLeaderId: z.string().optional().nullable(),
+  podManagerId: z.string().optional().nullable(),
   name: z.string().min(2).max(120),
   description: z.string().max(1000).optional().nullable(),
 });

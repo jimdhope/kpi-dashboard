@@ -9,7 +9,7 @@ import {
 } from "@/lib/contracts";
 import { teamsAutomationRepository } from "@/server/repositories/teams-automation-repository";
 import { teamsWebhookRepository } from "@/server/repositories/teams-webhook-repository";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireAnyResourceAccess } from "@/server/services/authorization";
 import { teamsEventService } from "@/server/services/teams-event-service";
 
 function renderTemplate(template: string, context: Record<string, string>) {
@@ -27,12 +27,12 @@ function renderFacts(facts: TeamsAutomationFactTemplate[], context: Record<strin
 
 export const teamsAutomationService = {
   async listAutomations() {
-    await requireAdminUser();
+    await requireAnyResourceAccess(["nav.integrations.workflows", "nav.integrations.scheduled"]);
     return teamsAutomationRepository.list();
   },
 
   async listRecentIncomingEvents() {
-    await requireAdminUser();
+    await requireAnyResourceAccess(["nav.integrations.workflows", "nav.integrations.scheduled"]);
     return teamsAutomationRepository.listRecentIncomingEvents();
   },
 
@@ -75,7 +75,7 @@ export const teamsAutomationService = {
     conditionActivityWithinMinutes?: number | null;
     isActive: boolean;
   }) {
-    await requireAdminUser();
+    await requireAnyResourceAccess(["nav.integrations.workflows", "nav.integrations.scheduled"]);
     validateAutomationInput(input);
     return teamsAutomationRepository.create(input);
   },
@@ -122,7 +122,7 @@ export const teamsAutomationService = {
       isActive: boolean;
     },
   ) {
-    await requireAdminUser();
+    await requireAnyResourceAccess(["nav.integrations.workflows", "nav.integrations.scheduled"]);
     validateAutomationInput(input);
     return teamsAutomationRepository.update(id, input);
   },

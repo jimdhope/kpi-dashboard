@@ -17,7 +17,7 @@ const batchSchema = z.object({
 export async function POST(request: Request) {
   try {
     const currentUser = await authService.requireCurrentUser();
-    const canManage = await permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+    const canManage = await permissionService.hasResourceAccess(currentUser.roles, "nav.performance.log", "MANAGE");
     if (!canManage) return errorResponse(403, "Forbidden");
     const { logs } = batchSchema.parse(await request.json());
 

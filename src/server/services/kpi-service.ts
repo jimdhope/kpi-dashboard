@@ -1,6 +1,7 @@
 import { kpiRepository } from "@/server/repositories/kpi-repository";
 import { authService } from "@/server/services/auth-service";
 import { activityService } from "@/server/services/activity-service";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export const kpiService = {
   async list() {
@@ -23,7 +24,7 @@ export const kpiService = {
     passFailOperator?: string | null;
     passFailValue?: number | null;
   }) {
-    await authService.requireAdmin();
+    await requireResourceAccess("nav.performance.kpis");
     const currentUser = await authService.requireCurrentUser();
 
     const kpi = await kpiRepository.create(payload);
@@ -49,12 +50,12 @@ export const kpiService = {
     passFailOperator: string | null;
     passFailValue: number | null;
   }>) {
-    await authService.requireAdmin();
+    await requireResourceAccess("nav.performance.kpis");
     return kpiRepository.update(id, payload);
   },
 
   async delete(id: string) {
-    await authService.requireAdmin();
+    await requireResourceAccess("nav.performance.kpis");
     return kpiRepository.delete(id);
   },
 };

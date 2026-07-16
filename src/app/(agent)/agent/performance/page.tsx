@@ -316,21 +316,39 @@ export default function AgentPerformancePage() {
             ) : chartData.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No data for selected KPI</p>
             ) : (
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[300px] min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <RechartsLineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                    <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <XAxis dataKey="week" stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <YAxis stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--color-card)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--color-card-foreground)',
+                      }}
+                      labelStyle={{ color: 'var(--color-card-foreground)' }}
+                      itemStyle={{ color: 'var(--color-teal-400)' }}
+                    />
                     {(() => {
                       const selectedKpiData = kpis.find(k => k.id === selectedKpiId);
                       if (!selectedKpiData?.passFailCriteriaEnabled || selectedKpiData.passFailValue === undefined) return null;
                       return (
-                        <ReferenceLine y={selectedKpiData.passFailValue} stroke="hsl(var(--primary))" strokeDasharray="5 5" />
+                        <ReferenceLine y={selectedKpiData.passFailValue} stroke="var(--color-teal-400)" strokeDasharray="5 5" />
                       );
                     })()}
-                    <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} name="Value" />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="var(--color-teal-400)"
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: 'var(--color-teal-400)', stroke: 'var(--color-bg-primary)', strokeWidth: 2 }}
+                      activeDot={{ r: 6, fill: 'var(--color-teal-400)', stroke: 'var(--color-foreground)' }}
+                      connectNulls
+                      name="Value"
+                    />
                   </RechartsLineChart>
                 </ResponsiveContainer>
               </div>

@@ -1,7 +1,5 @@
-import type { NavResource } from "@/lib/contracts";
-
 export type PermissionRequirement = {
-  resource: NavResource;
+  resource: string;
   minLevel: "VIEW" | "MANAGE";
 };
 
@@ -16,17 +14,22 @@ export function permissionLevelSatisfies(
 }
 
 const PAGE_GUARDS: Array<PermissionRequirement & { prefix: string }> = [
-  { prefix: "/knowledge-base/new", resource: "knowledgeBase", minLevel: "MANAGE" },
-  { prefix: "/knowledge-base/categories", resource: "knowledgeBase", minLevel: "MANAGE" },
-  { prefix: "/knowledge-base/tags", resource: "knowledgeBase", minLevel: "MANAGE" },
+  { prefix: "/knowledge-base/new", resource: "knowledgeBase.articles", minLevel: "MANAGE" },
+  { prefix: "/knowledge-base/categories", resource: "knowledgeBase.categories", minLevel: "MANAGE" },
+  { prefix: "/knowledge-base/tags", resource: "knowledgeBase.tags", minLevel: "MANAGE" },
   { prefix: "/directory/contacts/new", resource: "directory", minLevel: "MANAGE" },
-  { prefix: "/competitions/manage", resource: "competitions", minLevel: "MANAGE" },
-  { prefix: "/competitions/log", resource: "competitions", minLevel: "MANAGE" },
-  { prefix: "/competitions/certificates", resource: "competitions", minLevel: "MANAGE" },
-  { prefix: "/performance/kpis", resource: "performance", minLevel: "MANAGE" },
-  { prefix: "/performance/log", resource: "performance", minLevel: "MANAGE" },
+  { prefix: "/competitions/manage", resource: "competitions.manage", minLevel: "MANAGE" },
+  { prefix: "/competitions/log", resource: "competitions.log", minLevel: "MANAGE" },
+  { prefix: "/competitions/certificates", resource: "competitions.certificates", minLevel: "VIEW" },
+  { prefix: "/performance/kpis", resource: "performance.kpis", minLevel: "MANAGE" },
+  { prefix: "/performance/log", resource: "performance.log", minLevel: "MANAGE" },
   { prefix: "/admin", resource: "settings", minLevel: "MANAGE" },
-  { prefix: "/settings", resource: "settings", minLevel: "MANAGE" },
+  { prefix: "/settings/permissions", resource: "settings.permissions", minLevel: "MANAGE" },
+  { prefix: "/settings/campaigns", resource: "settings.campaigns", minLevel: "VIEW" },
+  { prefix: "/settings/pods", resource: "settings.pods", minLevel: "VIEW" },
+  { prefix: "/settings/users", resource: "settings.users", minLevel: "VIEW" },
+  { prefix: "/settings/general", resource: "settings.backup", minLevel: "MANAGE" },
+  { prefix: "/settings", resource: "settings", minLevel: "VIEW" },
   { prefix: "/reports", resource: "reports", minLevel: "VIEW" },
   { prefix: "/agent/activity", resource: "activity", minLevel: "VIEW" },
   { prefix: "/competitions", resource: "competitions", minLevel: "VIEW" },
@@ -42,7 +45,7 @@ const PAGE_GUARDS: Array<PermissionRequirement & { prefix: string }> = [
 const API_GUARDS: Array<{
   prefix: string;
   pattern?: RegExp;
-  resource: NavResource;
+  resource: string;
   readLevel: "VIEW" | "MANAGE";
   writeLevel: "VIEW" | "MANAGE";
 }> = [

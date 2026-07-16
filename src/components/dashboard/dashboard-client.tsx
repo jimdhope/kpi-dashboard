@@ -10,15 +10,16 @@ import type { AppUser } from "@/lib/contracts";
 export function DashboardClient({
   user,
   initialView,
+  canUseManagementView,
 }: {
   user: AppUser;
   initialView: "management" | "agent";
+  canUseManagementView: boolean;
 }) {
   const router = useRouter();
   const [view, setView] = useState(initialView);
   const hasAgentRole = user.roles.includes("agent");
-  const hasManagementRole = user.roles.some((role) => role !== "agent");
-  const canSwitchViews = hasAgentRole && hasManagementRole;
+  const canSwitchViews = hasAgentRole && canUseManagementView;
 
   function changeView(nextView: "management" | "agent") {
     setView(nextView);

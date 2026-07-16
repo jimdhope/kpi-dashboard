@@ -42,7 +42,7 @@ export class InternalError extends Error {
 export const kpiLogService = {
   async canManageTarget(currentUser: Awaited<ReturnType<typeof authService.requireCurrentUser>>, targetUserId: string) {
     if (targetUserId === currentUser.id) return true;
-    return permissionService.hasNavAccess(currentUser.roles, "performance", "MANAGE");
+    return permissionService.hasResourceAccess(currentUser.roles, "nav.performance.log", "MANAGE");
   },
   async list(filters?: {
     podId?: string;

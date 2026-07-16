@@ -13,7 +13,7 @@ export default async function AdminLayout({
   if (!session.user.roles.includes("admin")) redirect("/agent");
 
   return (
-    <AuthenticatedShell user={session.user} showCommandPalette={false}>
+    <AuthenticatedShell user={session.user} preview={session.preview} showCommandPalette={false}>
       {children}
     </AuthenticatedShell>
   );

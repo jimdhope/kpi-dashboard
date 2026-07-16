@@ -14,11 +14,15 @@ export const userService = {
 
   async listUsers() {
     const currentUser = await authService.requireCurrentUser();
-    const isAdmin = await permissionService.hasEffectiveAdminAccess(currentUser.roles);
-    if (isAdmin) {
+    const canManagePods = await permissionService.hasResourceAccess(currentUser.roles, "nav.settings.pods", "MANAGE");
+    if (currentUser.roles.includes("admin") || canManagePods) {
       return userRepository.list();
     }
-    const podIds = currentUser.podIds ?? [];
+    const assignedPods = await prisma.pod.findMany({
+      where: { OR: [{ podManagerId: currentUser.id }, { teamLeaderId: currentUser.id }] },
+      select: { id: true },
+    });
+    const podIds = [...new Set([...(currentUser.podIds ?? []), ...assignedPods.map((pod) => pod.id)])];
     return userRepository.listByPodIds(podIds);
   },
 
@@ -33,7 +37,8 @@ export const userService = {
     password: string;
     roles: UserRole[];
   }) {
-    await requireAdminUser();
+    const actor = await authService.requireCurrentUser();
+    if (!actor.roles.includes("admin")) throw new Error("Forbidden");
     return userRepository.create({
       name: input.name,
       email: input.email,
@@ -43,7 +48,8 @@ export const userService = {
   },
 
   async updateUser(id: string, input: { name: string; roles: UserRole[] }) {
-    await requireAdminUser();
+    const actor = await authService.requireCurrentUser();
+    if (!actor.roles.includes("admin")) throw new Error("Forbidden");
     const currentUser = await authService.requireCurrentUser();
 
     // Get target user for activity logging
@@ -75,7 +81,8 @@ export const userService = {
   },
 
   async deleteUser(id: string) {
-    const currentUser = await requireAdminUser();
+    const currentUser = await authService.requireCurrentUser();
+    if (!currentUser.roles.includes("admin")) throw new Error("Forbidden");
     if (currentUser.id === id) {
       throw new Error("You cannot delete the active admin session user.");
     }
@@ -83,12 +90,23 @@ export const userService = {
   },
 
   async resetPassword(id: string, password: string) {
-    const currentUser = await requireAdminUser();
+    const currentUser = await authService.requireCurrentUser();
+    const canManageUsers = await permissionService.hasResourceAccess(currentUser.roles, "nav.settings.users", "MANAGE");
+    if (!canManageUsers) throw new Error("Forbidden");
     if (currentUser.id === id) {
       throw new Error("Use your Profile page to change your own password.");
     }
     const targetUser = await userRepository.findById(id);
     if (!targetUser) throw new Error("User not found.");
+    if (!currentUser.roles.includes("admin")) {
+      const sharedAssignedPod = await prisma.pod.count({
+        where: {
+          OR: [{ podManagerId: currentUser.id }, { teamLeaderId: currentUser.id }],
+          memberships: { some: { userId: id } },
+        },
+      });
+      if (!sharedAssignedPod) throw new Error("Forbidden");
+    }
 
     const passwordHash = await hashPassword(password);
     await prisma.$transaction([

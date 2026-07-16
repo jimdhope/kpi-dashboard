@@ -56,6 +56,14 @@ export interface SessionPayload {
   authenticated: boolean;
   user: AppUser | null;
   expiresAt: string | null;
+  preview: AdminPreviewContext | null;
+}
+
+export interface AdminPreviewContext {
+  active: true;
+  actor: Pick<AppUser, "id" | "name" | "email">;
+  target: Pick<AppUser, "id" | "name" | "email">;
+  expiresAt: string;
 }
 
 export const TEAMS_WEBHOOK_DIRECTIONS = ["incoming", "outgoing"] as const;
@@ -217,6 +225,8 @@ export interface AppPod {
   id: string;
   campaignId: string | null;
   campaignName: string | null;
+  teamLeaderId: string | null;
+  podManagerId: string | null;
   incomingWebhookId: string | null;
   outgoingWebhookId: string | null;
   incomingWebhookName: string | null;

@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Shield, Save, RotateCcw } from 'lucide-react';
-import { NAV_RESOURCES, PERMISSION_LEVELS } from '@/lib/contracts';
+import { PERMISSION_LEVELS } from '@/lib/contracts';
+import { PERMISSION_SECTIONS } from '@/lib/permission-catalog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface Role {
   id: string;
@@ -26,19 +28,6 @@ interface PendingUpdate {
   resource: string;
   level: string;
 }
-
-const resourceLabels: Record<string, string> = {
-  "nav.knowledgeBase": "Knowledge Base",
-  "nav.directory": "Directory",
-  "nav.competitions": "Competitions",
-  "nav.performance": "Performance",
-  "nav.reports": "Reports",
-  "nav.miniGames": "Mini Games",
-  "nav.usefulTools": "Tools",
-  "nav.activity": "Activity",
-  "nav.settings": "Settings",
-  "nav.integrations": "Integrations",
-};
 
 const levelLabels: Record<string, string> = {
   NONE: "No Access",
@@ -62,8 +51,6 @@ export default function PermissionsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const { toast } = useToast();
-
-  const resources = NAV_RESOURCES.map((r) => `nav.${r}`);
 
   const fetchPermissions = useCallback(async () => {
     try {
@@ -122,13 +109,19 @@ export default function PermissionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ updates: pendingUpdates }),
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const result = await res.json().catch(() => ({}));
+        throw new Error(result.error || 'Failed to save permissions');
+      }
       await fetchPermissions();
       setPendingUpdates([]);
       toast({ title: 'Saved', description: 'Permissions updated successfully' });
     } catch (error) {
-      console.error('Failed to save permissions:', error);
-      toast({ title: 'Error', description: 'Failed to save permissions', variant: 'destructive' });
+      toast({
+        title: 'Unable to save',
+        description: error instanceof Error ? error.message : 'Failed to save permissions',
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -192,54 +185,46 @@ export default function PermissionsPage() {
             </span>
           </CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="text-left p-3 font-medium text-sm border-b sticky left-0 bg-card z-10 min-w-[150px]">Resource</th>
-                {roles.map((role) => (
-                  <th key={role.id} className="p-3 font-medium text-sm border-b text-center min-w-[130px]">
-                    <div className="text-xs text-muted-foreground">{role.key}</div>
-                    <div>{role.name}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {resources.map((resource) => (
-                <tr key={resource} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="p-3 text-sm font-medium sticky left-0 bg-card hover:bg-muted/30 z-[1]">
-                    {resourceLabels[resource] || resource}
-                  </td>
-                  {roles.map((role) => {
-                    const level = getEffectiveLevel(role.id, resource);
-                    const isPending = hasPending(role.id, resource);
-                    return (
-                      <td key={role.id} className="p-2 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <Select
-                            value={level}
-                            onValueChange={(v) => handleChange(role.id, resource, v)}
-                          >
-                            <SelectTrigger className={`w-[110px] h-8 text-xs ${getLevelColor(level)} ${isPending ? 'ring-2 ring-yellow-400' : ''}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {PERMISSION_LEVELS.map((lvl) => (
-                                <SelectItem key={lvl} value={lvl}>
-                                  {levelLabels[lvl] || lvl}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <CardContent>
+          <Accordion type="multiple" className="space-y-3">
+            {PERMISSION_SECTIONS.map((section) => (
+              <AccordionItem key={section.key} value={section.key} className="rounded-lg border bg-card/40 px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="text-left">
+                    <span className="block font-semibold">{section.label}</span>
+                    <span className="block text-xs font-normal text-muted-foreground">{section.description}</span>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full border-collapse">
+                      <thead><tr>
+                        <th className="min-w-[210px] border-b p-3 text-left text-sm font-medium">Permission</th>
+                        {roles.map((role) => <th key={role.id} className="min-w-[130px] border-b p-3 text-center text-sm font-medium"><div className="text-xs text-muted-foreground">{role.key}</div><div>{role.name}</div></th>)}
+                      </tr></thead>
+                      <tbody>
+                        {[{ key: section.key, label: `${section.label} access`, description: "Maximum access for this section" }, ...section.children].map((resource) => (
+                          <tr key={resource.key} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-3"><div className="text-sm font-medium">{resource.label}</div><div className="text-xs text-muted-foreground">{resource.description}</div></td>
+                            {roles.map((role) => {
+                              const level = getEffectiveLevel(role.id, resource.key);
+                              const isPending = hasPending(role.id, resource.key);
+                              return <td key={role.id} className="p-2 text-center">
+                                <Select value={level} onValueChange={(value) => handleChange(role.id, resource.key, value)}>
+                                  <SelectTrigger className={`mx-auto h-8 w-[110px] text-xs ${getLevelColor(level)} ${isPending ? 'ring-2 ring-yellow-400' : ''}`}><SelectValue /></SelectTrigger>
+                                  <SelectContent>{PERMISSION_LEVELS.map((permissionLevel) => <SelectItem key={permissionLevel} value={permissionLevel}>{levelLabels[permissionLevel]}</SelectItem>)}</SelectContent>
+                                </Select>
+                              </td>;
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </CardContent>
       </Card>
     </div>
