@@ -323,6 +323,21 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                 const Icon = item.icon;
                 const href = getNavHref(item);
                 if (!href) return null;
+                if (item.items.length === 0) {
+                  return (
+                    <SheetClose asChild key={item.key}>
+                      <Link href={href}>
+                        <Button
+                          variant={isActive(href) ? "secondary" : "ghost"}
+                          className="w-full justify-start gap-2 h-11"
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </Button>
+                      </Link>
+                    </SheetClose>
+                  );
+                }
                 return (
                   <div key={item.key}>
                     <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -462,18 +477,37 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
               const href = getNavHref(item);
               if (!href) return null;
 
+              const trigger = (
+                <span className="flex items-center gap-2">
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </span>
+              );
+
+              if (item.items.length === 0) {
+                return (
+                  <Link
+                    key={item.key}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-4 py-2 transition-all duration-200",
+                      isActive(href)
+                        ? "border border-primary/30 bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:bg-glass/50 hover:text-foreground",
+                    )}
+                  >
+                    {trigger}
+                  </Link>
+                );
+              }
+
               return (
                 <NavDropdown
                   key={item.key}
                   dropdownKey={item.key}
                   items={item.items}
                   href={href}
-                  trigger={
-                    <span className="flex items-center gap-2">
-                      <Icon className="w-4 h-4" />
-                      <span className="text-sm font-medium">{item.label}</span>
-                    </span>
-                  }
+                  trigger={trigger}
                 />
               );
             })}
