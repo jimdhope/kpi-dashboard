@@ -18,8 +18,10 @@ dist
 .env.local
 .env.*.local
 
-# Scripts (not needed for app runtime)
-scripts/
+# Local scripts are ignored except for the production authentication cutover
+# utility, which is bundled into the release image.
+scripts/*
+!scripts/auth-cutover.ts
 perf/
 check_*.ts
 debug_*.ts
