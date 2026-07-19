@@ -189,6 +189,7 @@ enum PermissionLevel {
 
 enum NotificationType {
   FEEDBACK_SUBMITTED
+  FEEDBACK_REPLIED
   SCORE_CORRECTED
   RESULT_CONFIRMED
   ANNOUNCEMENT
@@ -535,6 +536,9 @@ model Feedback {
   subject     String
   message     String
   status      String   @default("NEW")
+  staffReply  String?
+  repliedAt   DateTime?
+  repliedById String?
   attachments Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

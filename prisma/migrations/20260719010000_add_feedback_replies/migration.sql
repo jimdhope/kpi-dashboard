@@ -1,0 +1,6 @@
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'FEEDBACK_REPLIED';
+
+ALTER TABLE "Feedback"
+  ADD COLUMN "staffReply" TEXT,
+  ADD COLUMN "repliedAt" TIMESTAMP(3),
+  ADD COLUMN "repliedById" TEXT;

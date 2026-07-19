@@ -12,7 +12,7 @@ import {
   Crown, Activity, Bell, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare,
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone, MessageSquare,
   CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen,
-  BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord
+  BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord, CheckCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -242,6 +242,8 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
+  const [notifications, setNotifications] = React.useState<Array<{ id: string; title: string; message: string; href?: string | null; createdAt: string }>>([]);
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false);
 
   const userRoles = user?.roles as string[] || [];
   const { getNavLevel, isLoading: permsLoading } = usePermissions(userRoles, initialPermissions);
@@ -318,16 +320,36 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
     window.location.href = '/login';
   };
 
+  const loadNotifications = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      const response = await fetch('/api/notifications', { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      setNotifications(data.notifications ?? []);
+      setUnreadNotificationCount(data.unreadCount ?? 0);
+    } catch { /* The navigation should remain usable if notifications cannot load. */ }
+  }, [user?.id]);
+
   React.useEffect(() => {
     if (!user) return;
-    let active = true;
-    const loadUnreadCount = () => fetch('/api/notifications').then((response) => response.ok ? response.json() : null).then((data) => {
-      if (active && data) setUnreadNotificationCount(data.unreadCount ?? 0);
-    }).catch(() => undefined);
-    loadUnreadCount();
-    const interval = window.setInterval(loadUnreadCount, 60_000);
-    return () => { active = false; window.clearInterval(interval); };
-  }, [user?.id]);
+    void loadNotifications();
+    const interval = window.setInterval(() => void loadNotifications(), 60_000);
+    return () => window.clearInterval(interval);
+  }, [user?.id, loadNotifications]);
+
+  const markNotificationsRead = async (ids?: string[]) => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: ids ? { 'Content-Type': 'application/json' } : undefined,
+        body: ids ? JSON.stringify({ ids }) : undefined,
+      });
+      if (!response.ok) return;
+      setNotifications((current) => ids ? current.filter((item) => !ids.includes(item.id)) : []);
+      setUnreadNotificationCount((current) => ids ? Math.max(0, current - ids.length) : 0);
+    } catch { /* Keep the visible notifications when the request fails. */ }
+  };
 
   const isActive = (href: string) => {
     return pathname?.startsWith(href);
@@ -586,12 +608,25 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
         </Button>
         
         {user && (
-          <Button asChild variant="ghost" size="icon" className="relative rounded-lg" aria-label="Open notifications">
-            <Link href="/notifications">
-              <Bell className="h-4 w-4" />
-              {unreadNotificationCount > 0 && <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-destructive px-1 text-center text-[10px] leading-4 text-destructive-foreground">{unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>}
-            </Link>
-          </Button>
+          <DropdownMenu open={notificationsOpen} onOpenChange={(open) => { setNotificationsOpen(open); if (open) void loadNotifications(); }}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative rounded-lg" aria-label="Open notifications">
+                <Bell className="h-4 w-4" />
+                {unreadNotificationCount > 0 && <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-destructive px-1 text-center text-[10px] leading-4 text-destructive-foreground">{unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 p-0 sm:w-96">
+              <div className="flex items-center justify-between gap-3 px-3 py-2">
+                <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
+                {notifications.length > 0 && <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => void markNotificationsRead()}><CheckCheck className="mr-1.5 h-3.5 w-3.5" />Mark all read</Button>}
+              </div>
+              <DropdownMenuSeparator />
+              {notifications.length === 0 ? <p className="px-3 py-8 text-center text-sm text-muted-foreground">No unread notifications.</p> : <div className="max-h-96 overflow-y-auto p-1">{notifications.map((notification) => {
+                const content = <><p className="font-medium">{notification.title}</p><p className="mt-1 whitespace-normal text-sm text-muted-foreground">{notification.message}</p><p className="mt-2 text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleString()}</p></>;
+                return notification.href ? <DropdownMenuItem key={notification.id} asChild className="h-auto cursor-pointer items-start rounded-md p-3"><Link href={notification.href} onClick={() => void markNotificationsRead([notification.id])} className="block whitespace-normal">{content}</Link></DropdownMenuItem> : <DropdownMenuItem key={notification.id} className="h-auto cursor-pointer items-start rounded-md p-3 whitespace-normal" onSelect={() => void markNotificationsRead([notification.id])}>{content}</DropdownMenuItem>;
+              })}</div>}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {/* User Menu */}
@@ -618,12 +653,6 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                 <Link href={profileHref} className="cursor-pointer">
                   <User className="w-4 h-4 mr-2" />
                   Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/notifications" className="cursor-pointer">
-                  <Bell className="w-4 h-4 mr-2" />
-                  Notifications
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
