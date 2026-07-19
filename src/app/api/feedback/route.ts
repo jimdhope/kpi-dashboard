@@ -18,14 +18,14 @@ export async function GET(request: Request) {
   try {
     if (new URL(request.url).searchParams.get("all") === "true") {
       await requireResourceAccess("nav.settings.feedback", "MANAGE");
-      const feedback = await prisma.feedback.findMany({ orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 100 });
+      const feedback = await prisma.feedback.findMany({ orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 100, include: { messages: { orderBy: { createdAt: "asc" } } } });
       const users = await prisma.user.findMany({ select: { id: true, name: true, email: true } });
       const userMap = new Map(users.map((user) => [user.id, user]));
       return ok({ feedback: feedback.map((item) => ({ ...item, user: userMap.get(item.userId) ?? null })) });
     }
     const user = await authService.requireCurrentUser();
-    const feedback = await prisma.feedback.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 30 });
-    return ok({ feedback });
+    const feedback = await prisma.feedback.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 30, include: { messages: { orderBy: { createdAt: "asc" } } } });
+    return ok({ feedback: feedback.map((item) => ({ ...item, messages: item.messages.map((message) => ({ ...message, isOwn: message.authorId === user.id })) })) });
   } catch { return errorResponse(401, "Unauthorized"); }
 }
 

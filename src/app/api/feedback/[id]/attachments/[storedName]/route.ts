@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { errorResponse } from "@/server/http";
 import { prisma } from "@/server/db/client";
 import { requireResourceAccess } from "@/server/services/authorization";
+import { authService } from "@/server/services/auth-service";
 
 type Attachment = { originalName: string; storedName: string; contentType: string; size: number };
 
@@ -15,11 +16,12 @@ function isAttachment(value: unknown): value is Attachment {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string; storedName: string }> }) {
   try {
-    await requireResourceAccess("nav.settings.feedback", "MANAGE");
+    const user = await authService.requireCurrentUser();
     const { id, storedName } = await params;
     if (path.basename(storedName) !== storedName) return errorResponse(400, "Invalid attachment name.");
-    const feedback = await prisma.feedback.findUnique({ where: { id }, select: { attachments: true } });
+    const feedback = await prisma.feedback.findUnique({ where: { id }, select: { userId: true, attachments: true } });
     if (!feedback) return errorResponse(404, "Feedback not found.");
+    if (feedback.userId !== user.id) await requireResourceAccess("nav.settings.feedback", "MANAGE");
     const attachments = Array.isArray(feedback.attachments) ? feedback.attachments.filter(isAttachment) : [];
     const attachment = attachments.find((item) => item.storedName === storedName);
     if (!attachment) return errorResponse(404, "Attachment not found.");
@@ -32,7 +34,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return new Response(bytes, { headers: {
       "Content-Type": attachment.contentType,
       "Content-Length": String(bytes.length),
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(attachment.originalName)}`,
+      "Content-Disposition": `${attachment.contentType.startsWith("image/") ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(attachment.originalName)}`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     } });

@@ -540,11 +540,24 @@ model Feedback {
   repliedAt   DateTime?
   repliedById String?
   attachments Json?
+  messages    FeedbackMessage[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+}
+
+model FeedbackMessage {
+  id         String   @id @default(cuid())
+  feedbackId String
+  authorId   String
+  message    String
+  createdAt  DateTime @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId, createdAt])
 }
 
 model Absence {
