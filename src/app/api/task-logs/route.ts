@@ -16,11 +16,12 @@ const createSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireCompetitionScoreLogger();
     const url = new URL(request.url);
     const competitionId = url.searchParams.get('competitionId');
     const date = url.searchParams.get('date');
     const podId = url.searchParams.get('podId');
+    if (!competitionId || !podId) return errorResponse(400, "competitionId and podId are required.");
+    await requireCompetitionScoreLogger({ competitionId, podId });
     const { limit, offset, take } = pageParams(url.searchParams, { defaultLimit: 500, maxLimit: 1000 });
 
     const where: any = {};
@@ -50,8 +51,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireCompetitionScoreLogger();
     const payload = createSchema.parse(await request.json());
+    if (!payload.podId) return errorResponse(400, "podId is required.");
+    await requireCompetitionScoreLogger({ competitionId: payload.competitionId, podId: payload.podId });
 
     const taskLog = await prisma.dailyTaskLog.create({
       data: {

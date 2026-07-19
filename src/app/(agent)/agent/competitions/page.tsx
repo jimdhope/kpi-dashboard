@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { AppUser, CompetitionRecord } from '@/lib/contracts';
+import { useCompetitionScoreRefresh } from '@/hooks/use-competition-score-refresh';
 
 interface Pod {
   id: string;
@@ -46,6 +47,7 @@ export default function AgentCompetitionsPage() {
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
   const [achievementLogs, setAchievementLogs] = useState<Achievement[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [scoreRefreshKey, setScoreRefreshKey] = useState(0);
 
   useEffect(() => {
     async function fetchSession() {
@@ -129,7 +131,7 @@ export default function AgentCompetitionsPage() {
       }
       setIsLoadingData(true);
       try {
-        const res = await fetch(`/api/competitions/${selectedCompetitionId}/achievements`);
+        const res = await fetch(`/api/achievements?competitionId=${encodeURIComponent(selectedCompetitionId)}&limit=1000`);
         if (res.ok) {
           const data = await res.json();
           setAchievementLogs(data.achievements || []);
@@ -140,7 +142,9 @@ export default function AgentCompetitionsPage() {
       setIsLoadingData(false);
     }
     fetchAchievements();
-  }, [selectedCompetitionId]);
+  }, [selectedCompetitionId, scoreRefreshKey]);
+
+  useCompetitionScoreRefresh(selectedCompetitionId, () => setScoreRefreshKey((current) => current + 1));
 
   const selectedCompetition = competitions.find(c => c.id === selectedCompetitionId);
 

@@ -11,6 +11,7 @@ import { Trophy, Users, Target, Medal, PlusCircle, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { CompetitionRecord } from "@/lib/contracts";
+import { useCompetitionScoreRefresh } from "@/hooks/use-competition-score-refresh";
 
 interface StandingEntry {
   id: string;
@@ -128,6 +129,8 @@ export function CompetitionsDashboard({
   useEffect(() => {
     fetchStandings(selectedCompetitionId);
   }, [selectedCompetitionId, fetchStandings]);
+
+  useCompetitionScoreRefresh(selectedCompetitionId, () => fetchStandings(selectedCompetitionId));
 
   const competition = competitions.find((c) => c.id === selectedCompetitionId) ?? null;
 

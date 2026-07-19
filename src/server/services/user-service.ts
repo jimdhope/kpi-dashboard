@@ -4,8 +4,9 @@ import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
 import { activityService } from "@/server/services/activity-service";
 import { userRepository } from "@/server/repositories/user-repository";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 import { permissionService } from "@/server/services/permission-service";
+import { getManagedPodIds, requireManagedUser } from "@/server/services/organization-scope-service";
 
 export const userService = {
   async getCurrentUser() {
@@ -14,20 +15,13 @@ export const userService = {
 
   async listUsers() {
     const currentUser = await authService.requireCurrentUser();
-    const canManagePods = await permissionService.hasResourceAccess(currentUser.roles, "nav.settings.pods", "MANAGE");
-    if (currentUser.roles.includes("admin") || canManagePods) {
-      return userRepository.list();
-    }
-    const assignedPods = await prisma.pod.findMany({
-      where: { OR: [{ podManagerId: currentUser.id }, { teamLeaderId: currentUser.id }] },
-      select: { id: true },
-    });
-    const podIds = [...new Set([...(currentUser.podIds ?? []), ...assignedPods.map((pod) => pod.id)])];
-    return userRepository.listByPodIds(podIds);
+    const managedPodIds = await getManagedPodIds(currentUser, "people");
+    const visiblePodIds = managedPodIds?.length === 0 ? currentUser.podIds ?? [] : managedPodIds;
+    return visiblePodIds === null ? userRepository.list() : userRepository.listByPodIds(visiblePodIds);
   },
 
   async listUsersForMemberships() {
-    await requireAdminUser();
+    await requireResourceAccess("nav.settings.pods", "MANAGE");
     return userRepository.listForMemberships();
   },
 
@@ -37,8 +31,9 @@ export const userService = {
     password: string;
     roles: UserRole[];
   }) {
-    const actor = await authService.requireCurrentUser();
-    if (!actor.roles.includes("admin")) throw new Error("Forbidden");
+    const actor = await requireResourceAccess("nav.settings.userAccounts", "MANAGE");
+    await requireResourceAccess("nav.settings.userRoles", "MANAGE");
+    if (await getManagedPodIds(actor, "people") !== null) throw new Error("Forbidden");
     return userRepository.create({
       name: input.name,
       email: input.email,
@@ -49,11 +44,20 @@ export const userService = {
 
   async updateUser(id: string, input: { name: string; roles: UserRole[] }) {
     const actor = await authService.requireCurrentUser();
-    if (!actor.roles.includes("admin")) throw new Error("Forbidden");
-    const currentUser = await authService.requireCurrentUser();
+    const actorPermissions = await permissionService.getPermissionsForRoles(actor.roles);
+    if (actorPermissions["nav.settings.userAccounts"] !== "MANAGE" && actorPermissions["nav.settings.userRoles"] !== "MANAGE") {
+      throw new Error("Forbidden");
+    }
 
     // Get target user for activity logging
     const targetUser = await userRepository.findById(id);
+    if (!targetUser) throw new Error("User not found.");
+    const targetRoles = targetUser.userRoles.map((ur) => ur.role.key as UserRole);
+    await requireManagedUser(actor, id);
+    if (input.name !== targetUser.name) await requireResourceAccess("nav.settings.userAccounts", "MANAGE");
+    if (JSON.stringify([...input.roles].sort()) !== JSON.stringify([...targetRoles].sort())) {
+      await requireResourceAccess("nav.settings.userRoles", "MANAGE");
+    }
     
     const updated = await userRepository.update(id, input);
 
@@ -63,7 +67,6 @@ export const userService = {
       fieldsUpdated.push('name');
     }
     // targetUser has userRoles relation, not roles array directly
-    const targetRoles = targetUser?.userRoles?.map((ur) => ur.role.key as UserRole) || [];
     if (input.roles && JSON.stringify(input.roles) !== JSON.stringify(targetRoles)) {
       fieldsUpdated.push('roles');
     }
@@ -81,11 +84,11 @@ export const userService = {
   },
 
   async deleteUser(id: string) {
-    const currentUser = await authService.requireCurrentUser();
-    if (!currentUser.roles.includes("admin")) throw new Error("Forbidden");
+    const currentUser = await requireResourceAccess("nav.settings.userAccounts", "MANAGE");
     if (currentUser.id === id) {
       throw new Error("You cannot delete the active admin session user.");
     }
+    await requireManagedUser(currentUser, id);
     await userRepository.delete(id);
   },
 
@@ -98,7 +101,8 @@ export const userService = {
     }
     const targetUser = await userRepository.findById(id);
     if (!targetUser) throw new Error("User not found.");
-    if (!currentUser.roles.includes("admin")) {
+    const hasGlobalPeopleScope = (await permissionService.getDataScopesForRoles(currentUser.roles))["people"] === "ALL_PODS";
+    if (!hasGlobalPeopleScope) {
       const sharedAssignedPod = await prisma.pod.count({
         where: {
           OR: [{ podManagerId: currentUser.id }, { teamLeaderId: currentUser.id }],

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { errorResponse, ok } from "@/server/http";
 import { teamsWebhookRepository } from "@/server/repositories/teams-webhook-repository";
 import { teamsMessageTemplateRepository } from "@/server/repositories/teams-message-template-repository";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 const schema = z.object({
   webhookId: z.string().min(1),
@@ -14,7 +14,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations", "MANAGE");
     const rawBody = await request.text();
     const payloadSize = Buffer.byteLength(rawBody, "utf8");
 

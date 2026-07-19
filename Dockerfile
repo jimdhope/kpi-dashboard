@@ -23,8 +23,8 @@ RUN BETTER_AUTH_SECRET=build-only-secret-not-used-at-runtime-000000000000 \
     npm run build
 
 # Bundle the background worker so the runtime does not need the TypeScript toolchain.
-RUN ./node_modules/.bin/esbuild src/server/jobs/worker.ts --bundle --platform=node --format=esm \
-    --external:@prisma/client --external:pg '--external:*.node' --outfile=/app/worker.mjs
+RUN ./node_modules/.bin/esbuild src/server/jobs/worker.ts --bundle --platform=node --format=cjs --conditions=react-server \
+    --external:@prisma/client --external:pg '--external:*.node' --outfile=/app/worker.cjs
 
 # Bundle the one-time authentication cutover utility for an explicitly enabled
 # production migration. Better Auth's password hashing code is included in the
@@ -41,6 +41,7 @@ FROM node:22.15.0-alpine AS runner
 
 WORKDIR /app
 ENV NODE_PATH="/opt/prisma/node_modules"
+ENV FEEDBACK_UPLOAD_DIR="/app/uploads"
 
 # Keep the backup and restore tools on the same PostgreSQL major version as the
 # database server. An unversioned package can move to a newer major release and
@@ -54,7 +55,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/worker.mjs ./worker.mjs
+COPY --from=builder /app/worker.cjs ./worker.cjs
 COPY --from=builder /app/auth-cutover.cjs ./auth-cutover.cjs
 
 # Prisma's migration command is deliberately isolated from the web dependency tree.
@@ -78,6 +79,8 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo '  echo "Running explicitly enabled database seed..."' >> /entrypoint.sh && \
     echo '  /opt/prisma/node_modules/.bin/tsx prisma/seed.ts' >> /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
+    echo 'mkdir -p "$FEEDBACK_UPLOAD_DIR"' >> /entrypoint.sh && \
+    echo 'if [ ! -w "$FEEDBACK_UPLOAD_DIR" ]; then echo "Feedback upload directory is not writable: $FEEDBACK_UPLOAD_DIR (host directory should be owned by UID 1001)" >&2; exit 1; fi' >> /entrypoint.sh && \
     echo 'echo "Starting application..."' >> /entrypoint.sh && \
     echo 'exec node server.js' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
@@ -90,7 +93,7 @@ RUN echo '#!/bin/bash' > /worker-entrypoint.sh && \
     echo 'echo "Worker waiting for the migrated application..."' >> /worker-entrypoint.sh && \
     echo 'until nc -zv ${APP_HOST:-app} 9103 2>/dev/null; do echo "Waiting for application..."; sleep 2; done' >> /worker-entrypoint.sh && \
     echo 'echo "Starting worker..."' >> /worker-entrypoint.sh && \
-    echo 'exec node worker.mjs' >> /worker-entrypoint.sh && \
+    echo 'exec node worker.cjs' >> /worker-entrypoint.sh && \
     chmod +x /worker-entrypoint.sh
 
 # Install su-exec for running commands as different user

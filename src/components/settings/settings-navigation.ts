@@ -37,9 +37,10 @@ const setting = (
 ): SettingsNavigationItem => ({ id, label, description, href, icon, permissionKey, requiredLevel });
 
 const userSettings = [
+  setting("people-overview", "People overview", "People, structure and absences", "/settings/people", Users, "settings.users"),
   setting("campaigns", "Campaigns", "Manage campaigns", "/settings/campaigns", Megaphone, "settings.campaigns"),
   setting("pods", "Pods", "Manage pods and memberships", "/settings/pods", ShieldCheck, "settings.pods"),
-  setting("users", "Users", "Manage users and roles", "/settings/users", Users, "settings.users"),
+  setting("absences", "Absences", "Record and review date-range absences", "/settings/users/absences", Calendar, "settings.users", "MANAGE"),
   setting("permissions", "Permissions", "Configure role permissions", "/settings/permissions", Shield, "settings.permissions", "MANAGE"),
 ];
 
@@ -50,10 +51,15 @@ const teamsSettings = [
   setting("teams-scheduled", "Scheduled", "Manage recurring Teams messages", "/settings/teams/scheduled", Calendar, "integrations.scheduled"),
 ];
 
+const generalSettings = [
+  setting("motd", "MOTD", "Publish Message of the Day", "/settings/general/motd", Megaphone, "settings.announcements", "MANAGE"),
+  setting("feedback", "Feedback", "Review feedback submissions", "/settings/general/feedback", MessageSquare, "settings.feedback", "MANAGE"),
+];
+
 export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroup[] = [
   setting("profile", "Profile", "Manage your account and install KPI Quest", "/settings/profile", UserCircle),
-  setting("backup-restore", "Backup & Restore", "Back up, restore, or import application data", "/settings/general", Database, "settings.backup", "MANAGE"),
-  { ...setting("users-group", "Users", "Manage organisation structure and access", "/settings/users", Users), children: userSettings },
+  { ...setting("general", "General", "Announcements, backups, restore, and import", "/settings/general", Database, "settings.backup", "MANAGE"), children: generalSettings },
+  { ...setting("users-group", "People", "Manage people, structure and access", "/settings/people", Users), children: userSettings },
   { ...setting("teams-group", "Teams", "Manage Microsoft Teams integrations", "/settings/teams/channels", MessageSquare), children: teamsSettings },
 ];
 

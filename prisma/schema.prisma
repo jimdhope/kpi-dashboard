@@ -167,6 +167,7 @@ model User {
   badges                AgentBadge[]
   competitionResults    CompetitionResult[]
   dailyGameAttempts     DailyGameAttempt[]
+  notifications         Notification[]
 }
 
 model Role {
@@ -177,6 +178,7 @@ model Role {
   updatedAt   DateTime         @updatedAt
   userRoles   UserRole[]
   permissions RolePermission[]
+  dataScopes  RoleDataScope[]
 }
 
 enum PermissionLevel {
@@ -185,12 +187,35 @@ enum PermissionLevel {
   MANAGE
 }
 
+enum NotificationType {
+  FEEDBACK_SUBMITTED
+  SCORE_CORRECTED
+  RESULT_CONFIRMED
+  ANNOUNCEMENT
+}
+
 model RolePermission {
   id       String          @id @default(cuid())
   roleId   String
   role     Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
   resource String
   level    PermissionLevel @default(NONE)
+
+  @@unique([roleId, resource])
+}
+
+enum DataScopeLevel {
+  NONE
+  ASSIGNED_PODS
+  ALL_PODS
+}
+
+model RoleDataScope {
+  id       String         @id @default(cuid())
+  roleId   String
+  role     Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  resource String
+  level    DataScopeLevel @default(NONE)
 
   @@unique([roleId, resource])
 }
@@ -368,6 +393,9 @@ model Competition {
   campaignId    String?
   podIds        String[]
   isDraft       Boolean            @default(false)
+  autoTeamsUpdates Boolean          @default(false)
+  lastAutoTeamsScoreAt DateTime?
+  lastAutoTeamsSentAt DateTime?
   draftData     Json?
   createdById   String?
   createdAt     DateTime           @default(now())
@@ -378,6 +406,7 @@ model Competition {
   createdBy     User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
   campaign      Campaign?          @relation(fields: [campaignId], references: [id])
   results       CompetitionResult[]
+  resultConfirmation CompetitionResultConfirmation?
   agentBadges   AgentBadge[]
 
   @@index([startsAt, endsAt])
@@ -402,12 +431,25 @@ model CompetitionResult {
   @@index([competitionId])
 }
 
+model CompetitionResultConfirmation {
+  id            String      @id @default(cuid())
+  competitionId String      @unique
+  confirmedById String
+  note          String?
+  confirmedAt   DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([confirmedAt])
+}
+
 model CompetitionRule {
   id            String      @id @default(cuid())
   competitionId  String
   title         String
   points        Int         @default(0)
   isCheckbox    Boolean     @default(false)
+  agentCanLog   Boolean     @default(false)
   emoji         String?
   dailyTarget   Int?
   createdAt     DateTime    @default(now())
@@ -474,6 +516,57 @@ model CompetitionRuleTemplate {
   updatedAt   DateTime @updatedAt
 }
 
+model MessageOfDay {
+  id          String   @id @default(cuid())
+  title       String
+  message     String
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, expiresAt])
+}
+
+model Feedback {
+  id          String   @id @default(cuid())
+  userId      String
+  subject     String
+  message     String
+  status      String   @default("NEW")
+  attachments Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Absence {
+  id          String   @id @default(cuid())
+  userId      String
+  startsOn    DateTime
+  endsOn      DateTime?
+  reason      String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, startsOn, endsOn])
+}
+
+model AbsencePresenceOverride {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
 model Activity {
   id           String   @id @default(cuid())
   userId       String?
@@ -491,6 +584,20 @@ model Activity {
   richMessage  String?
 
   @@index([userId, createdAt])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  recipientId String
+  type        NotificationType
+  title       String
+  message     String
+  href        String?
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  recipient   User             @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt, createdAt])
 }
 
 model TeamsWebhookEndpoint {
@@ -706,6 +813,38 @@ model DailyTaskLog {
   @@index([competitionId])
   @@index([agentId])
   @@index([date])
+}
+
+// Canonical, append-only record of a competition scoring action. This model is
+// additive while legacy score stores are reconciled and remains intentionally
+// decoupled from cascading relations so historic audit evidence is preserved.
+model ScoreEvent {
+  id                 String   @id @default(cuid())
+  competitionId      String
+  ruleId             String
+  ruleName           String?
+  subjectAgentId     String
+  podId              String
+  quantity           Int
+  points             Int
+  scoredForDate      DateTime
+  source             String
+  recordedAt         DateTime?
+  recordedById       String?
+  idempotencyKey     String?  @unique
+  externalReference  String?
+  correctionOfId     String?
+  voidedAt           DateTime?
+  voidedById         String?
+  voidReason         String?
+  createdAt          DateTime @default(now())
+
+  @@index([competitionId, scoredForDate])
+  @@index([competitionId, subjectAgentId])
+  @@index([subjectAgentId, scoredForDate])
+  @@index([ruleId, scoredForDate])
+  @@index([correctionOfId])
+  @@index([externalReference])
 }
 
 model TeamBonusLog {

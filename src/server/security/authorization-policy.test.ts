@@ -5,6 +5,7 @@ import {
   getPagePermissionRequirement,
   permissionLevelSatisfies,
 } from "./authorization-policy";
+import { resolveOrganizationScope } from "./organization-scope-policy";
 
 test("permission levels enforce none, view, and manage boundaries", () => {
   assert.equal(permissionLevelSatisfies("NONE", "VIEW"), false);
@@ -100,4 +101,18 @@ test("privileged API families reject view-only mutations at the policy boundary"
     assert.equal(permissionLevelSatisfies("VIEW", requirement.minLevel), false);
     assert.equal(permissionLevelSatisfies("MANAGE", requirement.minLevel), true);
   }
+});
+
+test("organisation scope is derived from the database permission level", () => {
+  assert.equal(resolveOrganizationScope("NONE"), "none");
+  assert.equal(resolveOrganizationScope("ASSIGNED_PODS"), "assigned");
+  assert.equal(resolveOrganizationScope("ALL_PODS"), "global");
+  assert.equal(resolveOrganizationScope(undefined), "none");
+});
+
+test("People requires the database-backed Users permission", () => {
+  assert.deepEqual(getPagePermissionRequirement("/settings/people"), {
+    resource: "settings.users",
+    minLevel: "VIEW",
+  });
 });

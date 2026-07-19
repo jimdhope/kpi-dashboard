@@ -53,12 +53,12 @@ export const gamificationService = {
       throw new Error("Competition has not ended yet");
     }
 
-    const dailyScores = await prisma.dailyAchievement.groupBy({
-      by: ["agentId"],
-      where: { competitionId },
+    const scoreEvents = await prisma.scoreEvent.groupBy({
+      by: ["subjectAgentId"],
+      where: { competitionId, voidedAt: null },
       _sum: { points: true },
     });
-    const scoreMap = new Map(dailyScores.map((d) => [d.agentId, d._sum.points ?? 0]));
+    const scoreMap = new Map(scoreEvents.map((event) => [event.subjectAgentId, event._sum.points ?? 0]));
 
     const agentScores = new Map<string, {
       userId: string;
@@ -357,11 +357,12 @@ export const gamificationService = {
     // Pre-compute per-KPI rankings for kpiTopN rules
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
-    const dailyByRule = await prisma.dailyAchievement.groupBy({
-      by: ["ruleName", "agentId"],
+    const dailyByRule = await prisma.scoreEvent.groupBy({
+      by: ["ruleName", "subjectAgentId"],
       where: {
-        date: { gte: monthStart, lte: monthEnd },
+        scoredForDate: { gte: monthStart, lte: monthEnd },
         ruleName: { not: null },
+        voidedAt: null,
       },
       _sum: { points: true },
     });
@@ -374,7 +375,7 @@ export const gamificationService = {
         agents = new Map();
         ruleGroups.set(d.ruleName, agents);
       }
-      agents.set(d.agentId, d._sum.points ?? 0);
+      agents.set(d.subjectAgentId, d._sum.points ?? 0);
     }
     for (const [ruleName, agentPoints] of ruleGroups) {
       const sorted = Array.from(agentPoints.entries())
@@ -485,11 +486,12 @@ export const gamificationService = {
     // Pre-compute per-KPI rankings for kpiTopN rules
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
-    const dailyByRule = await prisma.dailyAchievement.groupBy({
-      by: ["ruleName", "agentId"],
+    const dailyByRule = await prisma.scoreEvent.groupBy({
+      by: ["ruleName", "subjectAgentId"],
       where: {
-        date: { gte: yearStart, lte: yearEnd },
+        scoredForDate: { gte: yearStart, lte: yearEnd },
         ruleName: { not: null },
+        voidedAt: null,
       },
       _sum: { points: true },
     });
@@ -502,7 +504,7 @@ export const gamificationService = {
         agents = new Map();
         ruleGroups.set(d.ruleName, agents);
       }
-      agents.set(d.agentId, d._sum.points ?? 0);
+      agents.set(d.subjectAgentId, d._sum.points ?? 0);
     }
     for (const [ruleName, agentPoints] of ruleGroups) {
       const sorted = Array.from(agentPoints.entries())

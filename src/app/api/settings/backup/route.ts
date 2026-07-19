@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { readFile, unlink } from "fs/promises";
 import { backupService } from "@/server/services/backup-service";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export async function GET() {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.settings.backup", "MANAGE");
 
     const timestamp = new Date().toISOString().split("T")[0];
     const outputPath = `/tmp/kpi-quest-backup-${Date.now()}.sql.gz`;

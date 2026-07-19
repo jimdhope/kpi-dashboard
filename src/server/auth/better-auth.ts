@@ -23,6 +23,15 @@ function authSecret(): string {
   return secret;
 }
 
+function trustedOrigins(origin: string): string[] {
+  const configured = (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => new URL(value).origin);
+  return [...new Set([origin, ...configured])];
+}
+
 const origin = publicOrigin();
 const rpID = process.env.PASSKEY_RP_ID ?? new URL(origin).hostname;
 
@@ -31,7 +40,7 @@ export const auth = betterAuth({
   baseURL: origin,
   secret: authSecret(),
   database: prismaAdapter(prisma, { provider: "postgresql" }),
-  trustedOrigins: [origin],
+  trustedOrigins: trustedOrigins(origin),
   user: {
     fields: { image: "avatarUrl" },
     additionalFields: {

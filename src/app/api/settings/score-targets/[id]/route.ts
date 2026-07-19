@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { scoreTargetService } from "@/server/services/score-target-service";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.hashtags", "MANAGE");
     const { id } = await params;
     const targets = await scoreTargetService.listTargets();
     const target = targets.find((t) => t.id === id);
@@ -30,7 +30,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.hashtags", "MANAGE");
     const { id } = await params;
     const body = await request.json();
     
@@ -67,7 +67,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.hashtags", "MANAGE");
     const { id } = await params;
     
     await scoreTargetService.deleteTarget(id);

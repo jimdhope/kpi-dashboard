@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Loader2, Send, Filter, Minus, Plus } from 'lucide-react';
+import { CalendarIcon, Loader2, Send, Filter, Minus, Plus, History, Ban } from 'lucide-react';
 import { format, startOfDay, getDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,10 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { SendDailyScoresDialog } from '@/components/send-daily-scores-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useCompetitionScoreRefresh } from '@/hooks/use-competition-score-refresh';
 
 interface Pod {
   id: string;
@@ -69,6 +73,20 @@ interface TeamBonusLog {
   date: string;
 }
 
+interface ScoreAuditEvent {
+  id: string;
+  agentName: string;
+  ruleName?: string | null;
+  quantity: number;
+  points: number;
+  source: string;
+  recordedAt?: string | null;
+  recordedByName: string;
+  voidedAt?: string | null;
+  voidReason?: string | null;
+  voidedByName?: string | null;
+}
+
 interface AchievementInputState extends Record<string, any> {}
 
 interface TaskInputState {
@@ -104,11 +122,17 @@ export default function LogScoresPage() {
   const [agents, setAgents] = useState<User[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [achievementInputs, setAchievementInputs] = useState<AchievementInputState>({});
+  const [recordedAbsenceAgentIds, setRecordedAbsenceAgentIds] = useState<Set<string>>(new Set());
+  const [presenceOverrideIds, setPresenceOverrideIds] = useState<Record<string, string>>({});
   const [taskInputs, setTaskInputs] = useState<TaskInputState>({});
   const [bonusInputs, setBonusInputs] = useState<TeamBonusInputState>({});
 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [bonusLogs, setBonusLogs] = useState<TeamBonusLog[]>([]);
+  const [scoreAuditEvents, setScoreAuditEvents] = useState<ScoreAuditEvent[]>([]);
+  const [correctionEvent, setCorrectionEvent] = useState<ScoreAuditEvent | null>(null);
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [isCorrecting, setIsCorrecting] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
@@ -120,6 +144,7 @@ export default function LogScoresPage() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
   const [isSendingToTeams, setIsSendingToTeams] = useState(false);
+  const [scoreRefreshKey, setScoreRefreshKey] = useState(0);
 
   // Allowed roles for Send to Teams feature
   const ALLOWED_SEND_ROLES = ['admin', 'teamLeader', 'podManager', 'competitionRunner'];
@@ -278,6 +303,9 @@ export default function LogScoresPage() {
     if (!activeCompetitionId || !selectedPodId) {
       setAchievements([]);
       setBonusLogs([]);
+      setScoreAuditEvents([]);
+      setRecordedAbsenceAgentIds(new Set());
+      setPresenceOverrideIds({});
       setAchievementInputs({});
       setTaskInputs({});
       setBonusInputs({});
@@ -287,9 +315,14 @@ export default function LogScoresPage() {
     async function fetchDailyData() {
       try {
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
-        const [achievementsRes, bonusRes] = await Promise.all([
+        const dayStart = `${dateStr}T00:00:00.000Z`;
+        const dayEnd = `${dateStr}T23:59:59.999Z`;
+        const [achievementsRes, bonusRes, absencesRes, overridesRes, auditRes] = await Promise.all([
           fetch(`/api/achievements?competitionId=${activeCompetitionId}&podId=${selectedPodId}&date=${dateStr}`),
           fetch(`/api/bonus-logs?competitionId=${activeCompetitionId}&date=${dateStr}`),
+          fetch(`/api/absences?start=${encodeURIComponent(dayStart)}&end=${encodeURIComponent(dayEnd)}`),
+          fetch(`/api/absence-overrides?date=${encodeURIComponent(dayStart)}`),
+          fetch(`/api/competitions/${activeCompetitionId}/score-events?podId=${selectedPodId}&date=${dateStr}`),
         ]);
 
         if (achievementsRes.ok) {
@@ -300,13 +333,55 @@ export default function LogScoresPage() {
           const data = await bonusRes.json();
           setBonusLogs(data.bonusLogs || []);
         }
+        if (absencesRes.ok) {
+          const data = await absencesRes.json();
+          setRecordedAbsenceAgentIds(new Set((data.absences || []).map((absence: { userId: string }) => absence.userId)));
+        } else {
+          setRecordedAbsenceAgentIds(new Set());
+        }
+        if (overridesRes.ok) {
+          const data = await overridesRes.json();
+          setPresenceOverrideIds(Object.fromEntries((data.overrides || []).map((override: { id: string; userId: string }) => [override.userId, override.id])));
+        } else {
+          setPresenceOverrideIds({});
+        }
+        if (auditRes.ok) {
+          const data = await auditRes.json();
+          setScoreAuditEvents(data.events || []);
+        } else {
+          setScoreAuditEvents([]);
+        }
       } catch (err) {
         console.error('Error fetching daily data:', err);
       }
     }
 
     fetchDailyData();
-  }, [activeCompetitionId, selectedPodId, selectedDate]);
+  }, [activeCompetitionId, selectedPodId, selectedDate, scoreRefreshKey]);
+
+  useCompetitionScoreRefresh(activeCompetitionId, () => setScoreRefreshKey((current) => current + 1));
+
+  const submitCorrection = async () => {
+    if (!activeCompetitionId || !correctionEvent || correctionReason.trim().length < 3) return;
+    setIsCorrecting(true);
+    try {
+      const response = await fetch(`/api/competitions/${activeCompetitionId}/score-events`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: correctionEvent.id, reason: correctionReason.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Correction failed');
+      toast({ title: 'Score corrected', description: 'The original event remains visible in the audit trail.' });
+      setCorrectionEvent(null);
+      setCorrectionReason('');
+      setSelectedDate((current) => new Date(current));
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Correction not saved', description: error instanceof Error ? error.message : 'Correction failed' });
+    } finally {
+      setIsCorrecting(false);
+    }
+  };
 
   useEffect(() => {
     const podAgents = agents.filter(a => a.podIds?.includes(selectedPodId));
@@ -330,7 +405,7 @@ export default function LogScoresPage() {
       initialInputs[agent.id] = {};
       const agentLogs = todayAchievements.filter(log => log.agentId === agent.id);
       const naLog = agentLogs.find(log => log.ruleId === 'na');
-      initialInputs[agent.id].isPresent = !naLog;
+      initialInputs[agent.id].isPresent = !naLog && (!recordedAbsenceAgentIds.has(agent.id) || Boolean(presenceOverrideIds[agent.id]));
       initialInputs[agent.id].naLogId = naLog?.id;
       competitionRules.forEach(rule => {
         if (!rule.id || rule.isCheckbox) return;
@@ -371,7 +446,7 @@ export default function LogScoresPage() {
       initialBonusInputs[team.id] = { points: existingLog ? existingLog.points : 0, existingLogId: existingLog?.id };
     });
     setBonusInputs(initialBonusInputs);
-  }, [achievements, bonusLogs, agents, selectedPodId, selectedDate, competitionRules, teams]);
+  }, [achievements, bonusLogs, recordedAbsenceAgentIds, presenceOverrideIds, agents, selectedPodId, selectedDate, competitionRules, teams]);
 
   const handleSaveAchievement = useCallback(async (agentId: string, ruleId: string, value: string) => {
     if (!selectedPodId || !currentUserId || !activeCompetitionId) return;
@@ -477,6 +552,36 @@ export default function LogScoresPage() {
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const naLogId = achievementInputs[agentId]?.naLogId;
+      const presenceOverrideId = presenceOverrideIds[agentId];
+
+      if (recordedAbsenceAgentIds.has(agentId)) {
+        if (isPresent) {
+          const response = await fetch('/api/absence-overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: agentId, date: `${dateStr}T00:00:00.000Z` }),
+          });
+          if (!response.ok) throw new Error('Could not save presence override');
+          const data = await response.json();
+          setPresenceOverrideIds(prev => ({ ...prev, [agentId]: data.override.id }));
+          setAchievementInputs(prev => ({
+            ...prev,
+            [agentId]: { ...(prev[agentId] || {}), isPresent: true },
+          }));
+        } else if (presenceOverrideId) {
+          const response = await fetch(`/api/absence-overrides/${presenceOverrideId}`, { method: 'DELETE' });
+          if (!response.ok) throw new Error('Could not remove presence override');
+          setPresenceOverrideIds(prev => {
+            const { [agentId]: _removed, ...remaining } = prev;
+            return remaining;
+          });
+          setAchievementInputs(prev => ({
+            ...prev,
+            [agentId]: { ...(prev[agentId] || {}), isPresent: false },
+          }));
+        }
+        return;
+      }
 
       if (!isPresent) {
         if (naLogId) {
@@ -747,7 +852,7 @@ export default function LogScoresPage() {
                 </p>
               </div>
             ) : (
-              <div className="border rounded-lg overflow-auto max-h-[calc(100vh-380px)]">
+              <div className="overflow-x-auto rounded-lg border">
                 {/* Header Row - Sticky */}
                 <div 
                   className="sticky top-0 z-50 flex bg-muted/95 backdrop-blur-sm border-b-2 border-muted"
@@ -804,6 +909,11 @@ export default function LogScoresPage() {
                           <span className={cn("truncate max-w-[140px]", !isPresent && "line-through text-muted-foreground")}>
                             {agent.name}
                           </span>
+                          {recordedAbsenceAgentIds.has(agent.id!) && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {presenceOverrideIds[agent.id!] ? 'Present override' : 'Recorded absence'}
+                            </span>
+                          )}
                           {isSaving[`${agent.id}-na`] && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-auto shrink-0" />}
                         </div>
                       </div>
@@ -917,7 +1027,51 @@ export default function LogScoresPage() {
             </CardContent>
           </Card>
         )}
+
+        {activeCompetitionId && selectedPodId && (
+          <Card className="frosted-glass">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" />Score audit trail</CardTitle>
+              <CardDescription>Every score event for this pod and date, including corrected entries and who recorded them.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {scoreAuditEvents.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No score events recorded for this date.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-md border">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Agent</TableHead><TableHead>Rule</TableHead><TableHead>Score</TableHead><TableHead>Recorded by</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {scoreAuditEvents.map((event) => (
+                        <TableRow key={event.id} className={event.voidedAt ? 'text-muted-foreground' : undefined}>
+                          <TableCell className="font-medium">{event.agentName}</TableCell>
+                          <TableCell>{event.ruleName || 'Score'}</TableCell>
+                          <TableCell>{event.quantity} ({event.points} pts)</TableCell>
+                          <TableCell><div>{event.recordedByName}</div><div className="text-xs text-muted-foreground">{event.recordedAt ? format(new Date(event.recordedAt), 'PPp') : 'Time unavailable'} · {event.source.replaceAll('_', ' ')}</div></TableCell>
+                          <TableCell>{event.voidedAt ? <div><Badge variant="secondary">Corrected</Badge><div className="mt-1 max-w-64 text-xs">{event.voidReason}</div></div> : <Badge variant="outline">Active</Badge>}</TableCell>
+                          <TableCell className="text-right">{!event.voidedAt && <Button variant="outline" size="sm" onClick={() => setCorrectionEvent(event)}><Ban className="mr-1 h-4 w-4" />Correct</Button>}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      <Dialog open={Boolean(correctionEvent)} onOpenChange={(open) => { if (!open && !isCorrecting) { setCorrectionEvent(null); setCorrectionReason(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Correct score event</DialogTitle>
+            <DialogDescription>This removes the event from totals without deleting its audit history. Enter the business reason for the correction.</DialogDescription>
+          </DialogHeader>
+          {correctionEvent && <p className="text-sm"><span className="font-medium">{correctionEvent.agentName}</span> · {correctionEvent.ruleName || 'Score'} · {correctionEvent.points} points</p>}
+          <div className="space-y-2"><Label htmlFor="correction-reason">Correction reason</Label><Textarea id="correction-reason" value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} maxLength={500} placeholder="For example: client correction or data-entry error" disabled={isCorrecting} /></div>
+          <DialogFooter><Button variant="outline" onClick={() => { setCorrectionEvent(null); setCorrectionReason(''); }} disabled={isCorrecting}>Cancel</Button><Button variant="destructive" onClick={submitCorrection} disabled={isCorrecting || correctionReason.trim().length < 3}>{isCorrecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm correction</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <SendDailyScoresDialog
         open={sendDialogOpen}

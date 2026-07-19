@@ -14,6 +14,7 @@ const schema = z.object({
       title: z.string().min(1).max(120),
       points: z.number().int(),
       isCheckbox: z.boolean().optional(),
+      agentCanLog: z.boolean().optional(),
       emoji: z.string().optional().nullable(),
       dailyTarget: z.number().int().optional().nullable(),
     }),
@@ -52,7 +53,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return ok(await competitionService.updateCompetition(id, payload));
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(400, "Invalid competition payload.");
+      const issue = error.issues[0];
+      return errorResponse(400, issue ? `${issue.path.join(".")}: ${issue.message}` : "Invalid competition payload.");
     }
     if (error instanceof Error && error.message === "Forbidden") {
       return errorResponse(403, "Forbidden");

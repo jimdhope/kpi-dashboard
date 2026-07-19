@@ -5,6 +5,7 @@ import { activityService } from "@/server/services/activity-service";
 import { prisma } from "@/server/db/client";
 import { requireCompetitionScoreLogger } from "@/server/services/authorization";
 import { pageParams, pagedResult } from "@/server/http-pagination";
+import { scoreEventMigrationService } from "@/server/services/score-event-migration-service";
 
 const createSchema = z.object({
   competitionId: z.string().min(1),
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
     const podId = url.searchParams.get('podId');
     const { limit, offset, take } = pageParams(url.searchParams, { defaultLimit: 500, maxLimit: 1000 });
 
-    const where: any = {};
+    const where: any = { voidedAt: null };
     if (competitionId) where.competitionId = competitionId;
     if (podId) where.podId = podId;
     if (date) {
@@ -36,19 +37,19 @@ export async function GET(request: Request) {
       const dayEnd = new Date(date);
       dayEnd.setUTCHours(23, 59, 59, 999);
       
-      where.date = { gte: dayStart, lte: dayEnd };
+      where.scoredForDate = { gte: dayStart, lte: dayEnd };
     }
 
-    const achievements = await prisma.dailyAchievement.findMany({
+    const scoreEvents = await prisma.scoreEvent.findMany({
       where,
-      orderBy: { loggedAt: 'desc' },
+      orderBy: [{ recordedAt: 'desc' }, { createdAt: 'desc' }],
       skip: offset,
       take,
     });
 
-    const page = pagedResult(achievements, limit, offset);
+    const page = pagedResult(scoreEvents, limit, offset);
 
-    const agentIds = [...new Set(page.items.map((achievement) => achievement.agentId))];
+    const agentIds = [...new Set(page.items.map((event) => event.subjectAgentId))];
     const agents = await prisma.user.findMany({
       where: { id: { in: agentIds } },
       select: { id: true, name: true },
@@ -56,9 +57,20 @@ export async function GET(request: Request) {
     const agentNames = new Map(agents.map((agent) => [agent.id, agent.name]));
 
     return ok({
-      achievements: page.items.map((achievement) => ({
-        ...achievement,
-        agentName: agentNames.get(achievement.agentId) || 'Unknown',
+      achievements: page.items.map((event) => ({
+        id: event.id,
+        competitionId: event.competitionId,
+        agentId: event.subjectAgentId,
+        podId: event.podId,
+        ruleId: event.ruleId,
+        ruleName: event.ruleName,
+        value: event.quantity,
+        points: event.points,
+        date: event.scoredForDate,
+        loggedBy: event.recordedById,
+        loggedAt: event.recordedAt,
+        createdAt: event.createdAt,
+        agentName: agentNames.get(event.subjectAgentId) || 'Unknown',
       })),
       pagination: page.pagination,
     });
@@ -70,8 +82,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireCompetitionScoreLogger();
      const payload = createSchema.parse(await request.json());
+     const user = await requireCompetitionScoreLogger({ competitionId: payload.competitionId, podId: payload.podId });
  
      const targetDate = new Date(payload.date);
      targetDate.setUTCHours(0, 0, 0, 0);
@@ -145,6 +157,7 @@ export async function POST(request: Request) {
        }
      }
  
+     await scoreEventMigrationService.syncDailyAchievementById(achievement.id);
      return ok({ achievement }, { status: existing ? 200 : 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

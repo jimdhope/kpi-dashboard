@@ -71,9 +71,9 @@ export const badgeService = {
     const attendanceTotal = attendanceRecent.length;
 
     // Pre-compute per-KPI rankings for kpiTopN rules
-    const dailyByRule = await prisma.dailyAchievement.groupBy({
-      by: ["ruleName", "agentId"],
-      where: { competitionId: result.competitionId },
+    const dailyByRule = await prisma.scoreEvent.groupBy({
+      by: ["ruleName", "subjectAgentId"],
+      where: { competitionId: result.competitionId, voidedAt: null },
       _sum: { points: true },
     });
     const kpiRankings = new Map<string, Map<string, number>>();
@@ -85,7 +85,7 @@ export const badgeService = {
         agents = new Map();
         ruleGroups.set(d.ruleName, agents);
       }
-      agents.set(d.agentId, d._sum.points ?? 0);
+      agents.set(d.subjectAgentId, d._sum.points ?? 0);
     }
     for (const [ruleName, agentPoints] of ruleGroups) {
       const sorted = Array.from(agentPoints.entries())

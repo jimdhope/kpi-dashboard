@@ -1,6 +1,7 @@
 FROM node:22.15.0-alpine AS runner
 
 WORKDIR /app
+ENV FEEDBACK_UPLOAD_DIR="/app/uploads"
 
 # Match the production PostgreSQL 16 server for backup/restore compatibility.
 RUN apk add --no-cache netcat-openbsd bash postgresql16-client
@@ -29,6 +30,8 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo '  echo "Authentication cutover complete. Remove RUN_AUTH_CUTOVER and the CUTOVER_ADMIN_* variables from Portainer, then redeploy the stack."' >> /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'if [ "${RUN_SEED_ON_STARTUP:-false}" = "true" ]; then npx tsx prisma/seed.ts; fi' >> /entrypoint.sh && \
+    echo 'mkdir -p "$FEEDBACK_UPLOAD_DIR"' >> /entrypoint.sh && \
+    echo 'if [ ! -w "$FEEDBACK_UPLOAD_DIR" ]; then echo "Feedback upload directory is not writable: $FEEDBACK_UPLOAD_DIR (host directory should be owned by UID 1001)" >&2; exit 1; fi' >> /entrypoint.sh && \
     echo 'echo "Starting application..."' >> /entrypoint.sh && \
     echo 'exec node server.js' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh

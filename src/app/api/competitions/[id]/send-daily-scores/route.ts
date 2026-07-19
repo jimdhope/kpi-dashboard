@@ -4,6 +4,7 @@ import { authService } from "@/server/services/auth-service";
 import { permissionService } from "@/server/services/permission-service";
 import { ok, errorResponse } from "@/server/http";
 import { buildDailyScoresAdaptiveCard, DailyScoresCardData, PodStandingsForTeams, CompetitionTeamStanding, RuleTargetProgress } from "@/server/services/competition-teams-card-service";
+import { requireManagedPod } from "@/server/services/organization-scope-service";
 
 interface PodWithWebhook {
   id: string;
@@ -24,16 +25,21 @@ interface AgentScoreLog {
   isBonus: boolean;
 }
 
-export async function POST(
+async function sendDailyScores(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
+  skipAuthorization = false,
 ) {
   try {
-    const session = await authService.getCurrentSession();
-    const userRoles = session.user?.roles || [];
-    const isAuthorized = await permissionService.hasNavAccess(userRoles, 'competitions', 'MANAGE');
-    if (!session.user || !isAuthorized) {
-      return errorResponse(403, "Forbidden");
+    let authorizedUser: { id: string; roles: string[] } | null = null;
+    if (!skipAuthorization) {
+      const session = await authService.getCurrentSession();
+      const userRoles = session.user?.roles || [];
+      const isAuthorized = await permissionService.hasNavAccess(userRoles, 'competitions', 'MANAGE');
+      if (!session.user || !isAuthorized) {
+        return errorResponse(403, "Forbidden");
+      }
+      authorizedUser = session.user;
     }
 
     const { id: competitionId } = await params;
@@ -42,6 +48,9 @@ export async function POST(
 
     if (!date || !podIds || !Array.isArray(podIds)) {
       return errorResponse(400, "Invalid request: date and podIds are required");
+    }
+    if (authorizedUser) {
+      for (const podId of podIds) await requireManagedPod(authorizedUser, podId, "competitions");
     }
 
     // Default to 'separate'
@@ -73,21 +82,22 @@ export async function POST(
       return errorResponse(404, "Competition not found");
     }
 
-    // Get daily achievements (the actual data from the log page)
+    // Read the auditable score ledger, shaped for the existing card builder.
     const dayStart = new Date(date);
     dayStart.setUTCHours(0, 0, 0, 0);
     const dayEnd = new Date(date);
     dayEnd.setUTCHours(23, 59, 59, 999);
 
-    const achievements = await prisma.dailyAchievement.findMany({
+    const achievements = (await prisma.scoreEvent.findMany({
       where: {
         competitionId: competitionId,
-        date: {
+        scoredForDate: {
           gte: dayStart,
           lte: dayEnd,
         },
+        voidedAt: null,
       },
-    });
+    })).map((event) => ({ ...event, agentId: event.subjectAgentId, value: event.quantity, date: event.scoredForDate }));
 
     // Get all agent user IDs from pod memberships (ALL agents in the pod, not just entries/achievements)
     const podMemberships = await prisma.podMembership.findMany({
@@ -145,12 +155,18 @@ export async function POST(
       podAgentMap.get(podId)!.push(membership.userId);
     }
 
-    // Find absent agents (those with N/A achievement for the day)
+    // Find absent agents from either the score log's N/A marker or a recorded
+    // date-range absence. Both reduce that day's target only.
+    const recordedAbsences = await prisma.absence.findMany({
+      where: { startsOn: { lte: dayEnd }, OR: [{ endsOn: null }, { endsOn: { gte: dayStart } }] },
+      select: { userId: true },
+    });
     const absentAgentIds = new Set(
       achievements
         .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
         .map(a => a.agentId)
     );
+    recordedAbsences.forEach((absence) => absentAgentIds.add(absence.userId));
 
     // Build rule targets for each pod
     const podRuleTargetsMap = new Map<string, RuleTargetProgress[]>();
@@ -178,11 +194,10 @@ export async function POST(
       podRuleTargetsMap.set(podId, ruleTargets);
     }
 
-    // Build competition standings by team (using CUMULATIVE scores from ALL achievements)
-    // Get ALL achievements for this competition (not just for the selected date)
-    const allCompetitionAchievements = await prisma.dailyAchievement.findMany({
-      where: { competitionId: competitionId },
-    });
+    // Build competition standings by team from all active ledger events.
+    const allCompetitionAchievements = (await prisma.scoreEvent.findMany({
+      where: { competitionId: competitionId, voidedAt: null },
+    })).map((event) => ({ ...event, agentId: event.subjectAgentId, value: event.quantity }));
     
     const teamStandings: CompetitionTeamStanding[] = competition.teams.map(team => {
       // Sum ALL achievements for team members
@@ -416,6 +431,15 @@ export async function POST(
   }
 }
 
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return sendDailyScores(request, context);
+}
+
+/** In-process entry point for the trusted background worker. */
+export async function sendDailyScoresFromWorker(request: NextRequest, competitionId: string) {
+  return sendDailyScores(request, { params: Promise.resolve({ id: competitionId }) }, true);
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -462,21 +486,22 @@ export async function GET(
       return errorResponse(404, "Competition not found");
     }
 
-    // Get daily achievements (the actual data from the log page)
+    // Read the auditable score ledger, shaped for the existing card builder.
     const dayStart = new Date(date);
     dayStart.setUTCHours(0, 0, 0, 0);
     const dayEnd = new Date(date);
     dayEnd.setUTCHours(23, 59, 59, 999);
 
-    const achievements = await prisma.dailyAchievement.findMany({
+    const achievements = (await prisma.scoreEvent.findMany({
       where: {
         competitionId: competitionId,
-        date: {
+        scoredForDate: {
           gte: dayStart,
           lte: dayEnd,
         },
+        voidedAt: null,
       },
-    });
+    })).map((event) => ({ ...event, agentId: event.subjectAgentId, value: event.quantity, date: event.scoredForDate }));
 
     // Get all agent user IDs from pod memberships (ALL agents in the pod, not just entries/achievements)
     const podMemberships = await prisma.podMembership.findMany({
@@ -524,11 +549,16 @@ export async function GET(
       podAgentMapGet.get(podId)!.push(membership.userId);
     }
 
+    const recordedAbsencesGet = await prisma.absence.findMany({
+      where: { startsOn: { lte: dayEnd }, OR: [{ endsOn: null }, { endsOn: { gte: dayStart } }] },
+      select: { userId: true },
+    });
     const absentAgentIdsGet = new Set(
       achievements
         .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
         .map(a => a.agentId)
     );
+    recordedAbsencesGet.forEach((absence) => absentAgentIdsGet.add(absence.userId));
 
     const podRuleTargetsMapGet = new Map<string, RuleTargetProgress[]>();
     for (const podId of competition.podIds) {
@@ -557,10 +587,10 @@ export async function GET(
     // Get all entries with users for the competition
     const allEntries = competition.entries.filter((entry: any) => entry.user);
 
-    // Get cumulative scores from ALL achievements for this competition
-    const allCompetitionAchievementsGet = await prisma.dailyAchievement.findMany({
-      where: { competitionId: competitionId },
-    });
+    // Get cumulative scores from all active ledger events for this competition.
+    const allCompetitionAchievementsGet = (await prisma.scoreEvent.findMany({
+      where: { competitionId: competitionId, voidedAt: null },
+    })).map((event) => ({ ...event, agentId: event.subjectAgentId, value: event.quantity }));
     const allAchievementsMapGet = new Map<string, number>();
     for (const a of allCompetitionAchievementsGet) {
       const current = allAchievementsMapGet.get(a.agentId) || 0;

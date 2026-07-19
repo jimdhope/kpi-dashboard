@@ -34,11 +34,14 @@ services:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
       - PASSKEY_RP_ID=${PASSKEY_RP_ID:?PASSKEY_RP_ID is required}
+      - FEEDBACK_UPLOAD_DIR=/app/uploads
       - RUN_SEED_ON_STARTUP=${RUN_SEED_ON_STARTUP:-false}
       - RUN_AUTH_CUTOVER=${RUN_AUTH_CUTOVER:-false}
       - CUTOVER_ADMIN_EMAIL=${CUTOVER_ADMIN_EMAIL:-}
       - CUTOVER_ADMIN_TEMP_PASSWORD=${CUTOVER_ADMIN_TEMP_PASSWORD:-}
       - CUTOVER_RESUME=${CUTOVER_RESUME:-false}
+    volumes:
+      - ${FEEDBACK_UPLOAD_HOST_DIR:-/home/ubuntu/.docker/KPI-Quest/uploads}:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy

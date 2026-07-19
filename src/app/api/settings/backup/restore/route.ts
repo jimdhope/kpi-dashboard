@@ -4,11 +4,11 @@ import { existsSync } from "fs";
 import { basename } from "path";
 import { randomUUID } from "crypto";
 import { backupService } from "@/server/services/backup-service";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export async function POST(request: Request) {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.settings.backup", "MANAGE");
 
     const declaredSize = Number(request.headers.get("content-length") || 0);
     if (declaredSize > 101 * 1024 * 1024) {

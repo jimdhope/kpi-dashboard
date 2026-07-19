@@ -345,6 +345,7 @@ export interface CompetitionRuleRecord {
   id: string;
   title: string;
   points: number;
+  agentCanLog?: boolean;
 }
 
 export interface CompetitionTeamRecord {

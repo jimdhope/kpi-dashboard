@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Trophy, PlusCircle, Loader2, Edit, Trash2, Eye, ExternalLink, FileText, Clock, Trash, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -35,6 +39,7 @@ interface Competition {
     points: number;
   }>;
   isDraft?: boolean;
+  autoTeamsUpdates?: boolean;
 }
 
 interface Pod {
@@ -68,6 +73,9 @@ export default function ManageCompetitionsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [drafts, setDrafts] = useState<CompetitionDraft[]>([]);
   const [showDrafts, setShowDrafts] = useState(false);
+  const [confirmationCompetition, setConfirmationCompetition] = useState<Competition | null>(null);
+  const [confirmationNote, setConfirmationNote] = useState('');
+  const [isConfirmingResult, setIsConfirmingResult] = useState(false);
 
   const { toast } = useToast();
 
@@ -138,6 +146,32 @@ export default function ManageCompetitionsPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete competition.' });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const confirmResult = async () => {
+    if (!confirmationCompetition) return;
+    setIsConfirmingResult(true);
+    try {
+      const response = await fetch(`/api/competitions/${confirmationCompetition.id}/result-confirmation`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: confirmationNote.trim() || null }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Unable to confirm results.');
+      toast({ title: 'Results confirmed', description: `Official confirmation recorded for ${confirmationCompetition.name}.` });
+      setConfirmationCompetition(null); setConfirmationNote('');
+    } catch (error) { toast({ variant: 'destructive', title: 'Confirmation failed', description: error instanceof Error ? error.message : 'Please try again.' }); }
+    finally { setIsConfirmingResult(false); }
+  };
+
+  const setAutoTeamsUpdates = async (competition: Competition, enabled: boolean) => {
+    setCompetitions((current) => current.map((item) => item.id === competition.id ? { ...item, autoTeamsUpdates: enabled } : item));
+    try {
+      const response = await fetch(`/api/competitions/${competition.id}/auto-teams-updates`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Unable to update automatic Teams setting.');
+      toast({ title: enabled ? 'Automatic Teams updates enabled' : 'Automatic Teams updates disabled', description: enabled ? 'Changed scores will be sent at the next 15-minute check.' : undefined });
+    } catch (error) {
+      setCompetitions((current) => current.map((item) => item.id === competition.id ? { ...item, autoTeamsUpdates: !enabled } : item));
+      toast({ variant: 'destructive', title: 'Setting not saved', description: error instanceof Error ? error.message : 'Please try again.' });
     }
   };
 
@@ -297,6 +331,10 @@ export default function ManageCompetitionsPage() {
                     <span className="text-muted-foreground">Rules</span>
                     <span className="font-medium">{comp.rules?.length || 0}</span>
                   </div>
+                  <div className="flex items-center justify-between gap-3 rounded-md border p-2">
+                    <Label htmlFor={`auto-teams-${comp.id}`} className="text-xs leading-tight">Auto Teams<br /><span className="font-normal text-muted-foreground">Every 15 min if changed</span></Label>
+                    <Switch id={`auto-teams-${comp.id}`} checked={Boolean(comp.autoTeamsUpdates)} onCheckedChange={(enabled) => setAutoTeamsUpdates(comp, enabled)} />
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                   <Link href={`/competitions?comp=${comp.id}`} className="flex-1">
@@ -311,6 +349,7 @@ export default function ManageCompetitionsPage() {
                       Edit
                     </Button>
                   </Link>
+                  {comp.endsAt && new Date(comp.endsAt) <= new Date() && <Button variant="secondary" size="sm" onClick={() => { setConfirmationCompetition(comp); setConfirmationNote(''); }}>Confirm</Button>}
                   <Button
                     variant="outline"
                     size="sm"
@@ -345,6 +384,13 @@ export default function ManageCompetitionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={Boolean(confirmationCompetition)} onOpenChange={(open) => { if (!open) setConfirmationCompetition(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Confirm official result</DialogTitle><DialogDescription>This records that the provisional leaderboard for {confirmationCompetition?.name} has been checked against the client result. A notification will be sent to agents with a recorded result.</DialogDescription></DialogHeader>
+          <Textarea value={confirmationNote} onChange={(event) => setConfirmationNote(event.target.value)} maxLength={1000} placeholder="Client spreadsheet/reference or confirmation note (optional)" disabled={isConfirmingResult} />
+          <DialogFooter><Button variant="outline" onClick={() => setConfirmationCompetition(null)} disabled={isConfirmingResult}>Cancel</Button><Button onClick={confirmResult} disabled={isConfirmingResult}>{isConfirmingResult && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm result</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

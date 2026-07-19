@@ -294,7 +294,7 @@ export default function AdminUsersPage() {
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div>
-              <CardTitle>Manage Users</CardTitle>
+              <CardTitle>Users</CardTitle>
               <CardDescription>View, add, edit, or delete user accounts and roles.</CardDescription>
             </div>
             <div className="flex gap-2 items-start flex-wrap">

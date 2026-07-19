@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus } from "lucide-react";
 
 interface CompetitionsAdminProps {
@@ -23,6 +24,7 @@ interface CompetitionsAdminProps {
 interface RuleForm {
   title: string;
   points: string;
+  agentCanLog: boolean;
 }
 
 interface TeamForm {
@@ -43,7 +45,7 @@ const emptyForm: CompetitionFormState = {
   description: "",
   startsAt: "",
   endsAt: "",
-  rules: [{ title: "Win", points: "10" }],
+  rules: [{ title: "Win", points: "10", agentCanLog: false }],
   teams: [{ name: "Team A" }, { name: "Team B" }],
 };
 
@@ -61,7 +63,7 @@ export function CompetitionsAdmin({ initialCompetitions }: CompetitionsAdminProp
       description: competition.description ?? "",
       startsAt: competition.startsAt ? competition.startsAt.slice(0, 16) : "",
       endsAt: competition.endsAt ? competition.endsAt.slice(0, 16) : "",
-      rules: competition.rules.map((rule) => ({ title: rule.title, points: String(rule.points) })),
+      rules: competition.rules.map((rule) => ({ title: rule.title, points: String(rule.points), agentCanLog: rule.agentCanLog ?? false })),
       teams: competition.teams.map((team) => ({ name: team.name })),
     });
     setError(null);
@@ -86,7 +88,7 @@ export function CompetitionsAdmin({ initialCompetitions }: CompetitionsAdminProp
         description: form.description || null,
         startsAt: form.startsAt || null,
         endsAt: form.endsAt || null,
-        rules: form.rules.filter((rule) => rule.title.trim()).map((rule) => ({ title: rule.title, points: Number(rule.points) || 0 })),
+        rules: form.rules.filter((rule) => rule.title.trim()).map((rule) => ({ title: rule.title, points: Number(rule.points) || 0, agentCanLog: rule.agentCanLog })),
         teams: form.teams.filter((team) => team.name.trim()).map((team) => ({ name: team.name })),
       }),
     });
@@ -263,6 +265,19 @@ export function CompetitionsAdmin({ initialCompetitions }: CompetitionsAdminProp
                       }
                       className="w-20"
                     />
+                    <div className="flex items-center gap-2 whitespace-nowrap">
+                      <Switch
+                        checked={rule.agentCanLog}
+                        onCheckedChange={(agentCanLog) =>
+                          setForm((current) => ({
+                            ...current,
+                            rules: current.rules.map((r, i) => i === index ? { ...r, agentCanLog } : r),
+                          }))
+                        }
+                        aria-label={`Allow agents to log ${rule.title || 'this rule'}`}
+                      />
+                      <span className="text-xs text-muted-foreground">Agents log</span>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -286,7 +301,7 @@ export function CompetitionsAdmin({ initialCompetitions }: CompetitionsAdminProp
                   onClick={() =>
                     setForm((current) => ({
                       ...current,
-                      rules: [...current.rules, { title: "", points: "0" }],
+                      rules: [...current.rules, { title: "", points: "0", agentCanLog: false }],
                     }))
                   }
                   className="mt-1"

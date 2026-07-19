@@ -1,13 +1,7 @@
 import { authService } from "@/server/services/auth-service";
 import { permissionService } from "@/server/services/permission-service";
-
-export async function requireAdminUser() {
-  const currentUser = await authService.requireCurrentUser();
-  if (!currentUser.roles.includes("admin")) {
-    throw new Error("Forbidden");
-  }
-  return currentUser;
-}
+import { prisma } from "@/server/db/client";
+import { requireManagedPod } from "@/server/services/organization-scope-service";
 
 export async function requireCompetitionEditor() {
   const currentUser = await authService.requireCurrentUser();
@@ -18,8 +12,14 @@ export async function requireCompetitionEditor() {
   return currentUser;
 }
 
-export async function requireCompetitionScoreLogger() {
-  return requireResourceAccess("nav.competitions.log", "MANAGE");
+export async function requireCompetitionScoreLogger(scope?: { competitionId: string; podId: string }) {
+  const user = await requireResourceAccess("nav.competitions.log", "MANAGE");
+  if (scope) {
+    const competition = await prisma.competition.findUnique({ where: { id: scope.competitionId }, select: { podIds: true } });
+    if (!competition || !competition.podIds.includes(scope.podId)) throw new Error("Forbidden");
+    await requireManagedPod(user, scope.podId, "competitions");
+  }
+  return user;
 }
 
 export async function requireResourceAccess(resource: string, level: "VIEW" | "MANAGE" = "MANAGE") {

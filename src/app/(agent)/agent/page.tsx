@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Trophy, BarChart3, Gamepad2, Swords, Medal, User as UserIcon, Loader2 } from "lucide-react";
@@ -12,6 +14,7 @@ import { endOfWeek, format, startOfWeek, subDays } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AppUser } from '@/lib/contracts';
+import { useCompetitionScoreRefresh } from '@/hooks/use-competition-score-refresh';
 
 interface KpiDefinition {
   id: string;
@@ -42,7 +45,7 @@ interface Competition {
   startsAt?: string | null;
   endsAt?: string | null;
   podIds?: string[];
-  rules?: Array<{ id: string; title: string; points: number }>;
+  rules?: Array<{ id: string; title: string; points: number; emoji?: string | null; agentCanLog?: boolean }>;
   teams?: Array<{ id: string; name: string; agentIds?: string[]; emoji?: string }>;
 }
 
@@ -71,6 +74,15 @@ interface Achievement {
   date: string;
   agentName?: string;
 }
+
+interface SelfScoreEvent {
+  id: string;
+  ruleName: string | null;
+  quantity: number;
+  points: number;
+}
+
+interface Announcement { id: string; title: string; message: string }
 
 interface GameLeaderboardEntry {
   userId: string;
@@ -113,6 +125,10 @@ export function AgentDashboard({
   const [dailyGameLeaderboards, setDailyGameLeaderboards] = useState<GameLeaderboard[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
+  const [scoreQuantities, setScoreQuantities] = useState<Record<string, string>>({});
+  const [submittingRuleId, setSubmittingRuleId] = useState<string | null>(null);
+  const [selfScoreEvents, setSelfScoreEvents] = useState<SelfScoreEvent[]>([]);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
 
   // Load the pod selection on mount. Competition selection is loaded as part
   // of the initial dashboard request so only its achievements are transferred.
@@ -122,11 +138,18 @@ export function AgentDashboard({
   }, []);
 
   useEffect(() => {
+    fetch('/api/announcements')
+      .then((response) => response.ok ? response.json() : { announcement: null })
+      .then((data) => setAnnouncement(data.announcement || null))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     async function init() {
       try {
-        const savedCompId = localStorage.getItem(COMPETITION_DASHBOARD_KEY);
-        const query = savedCompId ? `?competitionId=${encodeURIComponent(savedCompId)}` : '';
-        const response = await fetch(`/api/dashboard/agent${query}`);
+        // Always start on the active competition. A previously saved selection
+        // must not hide a newly started competition's agent-log rules.
+        const response = await fetch('/api/dashboard/agent');
         if (!response.ok) throw new Error('Failed to load dashboard data');
         const data = await response.json();
 
@@ -187,6 +210,81 @@ export function AgentDashboard({
   }, [selectedPodId]);
 
   const selectedCompetition = competitions.find((c) => c.id === selectedCompetitionId);
+  const selfScoringPodId = useMemo(
+    () => selectedCompetition?.podIds?.find((podId) => currentUser?.podIds?.includes(podId)) ?? null,
+    [selectedCompetition, currentUser],
+  );
+
+  const handleSelfScore = async (rule: { id: string; title: string; points: number }) => {
+    if (!selectedCompetition || !selfScoringPodId) return;
+    const quantity = Number(scoreQuantities[rule.id] || 1);
+    if (!Number.isInteger(quantity) || quantity < 1) return;
+    setSubmittingRuleId(rule.id);
+    try {
+      const response = await fetch('/api/agent/score-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          competitionId: selectedCompetition.id,
+          ruleId: rule.id,
+          podId: selfScoringPodId,
+          quantity,
+          idempotencyKey: crypto.randomUUID(),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Could not record score.');
+      const event = payload.event;
+      setSelfScoreEvents((current) => [event, ...current.filter((item) => item.id !== event.id)].slice(0, 10));
+      setAchievements((current) => [{
+        id: event.id,
+        agentId: event.subjectAgentId,
+        podId: event.podId,
+        competitionId: event.competitionId,
+        ruleId: event.ruleId,
+        ruleName: event.ruleName || undefined,
+        value: event.quantity,
+        points: event.points,
+        date: event.scoredForDate,
+        agentName: currentUser?.name,
+      }, ...current.filter((achievement) => achievement.id !== event.id)]);
+      setScoreQuantities((current) => ({ ...current, [rule.id]: '1' }));
+    } catch (error) {
+      console.error('Self-score error:', error);
+    } finally {
+      setSubmittingRuleId(null);
+    }
+  };
+
+  const undoSelfScore = async (eventId: string) => {
+    const response = await fetch(`/api/agent/score-events/${eventId}`, { method: 'DELETE' });
+    if (!response.ok) return;
+    setSelfScoreEvents((current) => current.filter((event) => event.id !== eventId));
+    setAchievements((current) => current.filter((achievement) => achievement.id !== eventId));
+  };
+
+  useEffect(() => {
+    if (!selectedCompetitionId) return;
+    fetch(`/api/agent/score-events?competitionId=${encodeURIComponent(selectedCompetitionId)}`)
+      .then((response) => response.ok ? response.json() : { events: [] })
+      .then((data) => setSelfScoreEvents(data.events || []))
+      .catch(() => setSelfScoreEvents([]));
+  }, [selectedCompetitionId]);
+
+  useCompetitionScoreRefresh(selectedCompetitionId, async () => {
+    const [achievementResponse, ownEventsResponse] = await Promise.all([
+      fetch(`/api/achievements?competitionId=${encodeURIComponent(selectedCompetitionId)}&limit=1000`),
+      fetch(`/api/agent/score-events?competitionId=${encodeURIComponent(selectedCompetitionId)}`),
+    ]);
+    if (achievementResponse.ok) {
+      const data = await achievementResponse.json();
+      setAchievements(data.achievements || []);
+    }
+    if (ownEventsResponse.ok) {
+      const data = await ownEventsResponse.json();
+      setSelfScoreEvents(data.events || []);
+    }
+  });
 
   // Use database rules first, fallback to draftData rules (for legacy competitions)
   const competitionRules = useMemo(() => {
@@ -195,6 +293,11 @@ export function AgentDashboard({
     const draftDataRules = (selectedCompetition as any).draftData?.rules || [];
     return dbRules.length > 0 ? dbRules : draftDataRules;
   }, [selectedCompetition]);
+
+  const agentLogRules = useMemo(
+    () => competitionRules.filter((rule: any) => rule.agentCanLog),
+    [competitionRules],
+  );
 
   // Use database teams first, fallback to draftData teams
   const competitionTeams = useMemo(() => {
@@ -433,7 +536,65 @@ export function AgentDashboard({
         {headerActions ? <div className="shrink-0">{headerActions}</div> : null}
       </div>
 
+      {announcement && (
+        <Card variant="glass" className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2"><CardTitle className="text-base">📣 {announcement.title}</CardTitle></CardHeader>
+          <CardContent><p className="whitespace-pre-wrap text-sm text-muted-foreground">{announcement.message}</p></CardContent>
+        </Card>
+      )}
+
       <div className="grid items-start gap-6 lg:grid-cols-3">
+
+        {selectedCompetition && agentLogRules.length > 0 && (
+          <Card variant="glass" className="glass-card border-2 lg:col-span-3">
+            <CardHeader className="mb-4 flex-row items-center justify-between gap-4 border-b pb-4">
+              <div>
+                <CardTitle className="text-base">🏆 My daily score tracker</CardTitle>
+                <CardDescription>Self-report your successes. Entries are provisional and can be undone.</CardDescription>
+              </div>
+              <div className="shrink-0 rounded-lg border bg-muted/50 px-3 py-2 text-right">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Recent score</p>
+                <p className="text-lg font-extrabold">{selfScoreEvents.reduce((total, event) => total + event.points, 0)} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+              {agentLogRules.map((rule: { id: string; title: string; points: number; emoji?: string | null }) => (
+                <div key={rule.id} className="flex min-w-0 flex-col justify-between gap-3 rounded-lg border bg-background/50 p-3 transition-colors hover:bg-muted/30">
+                  <div className="flex min-w-0 items-center justify-between gap-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="shrink-0 text-base">{rule.emoji || '🏆'}</span>
+                      <span className="break-words text-[11px] font-bold uppercase leading-4 tracking-wider">{rule.title}</span>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">{rule.points} pts</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <Input type="text" inputMode="numeric" pattern="[0-9]*" value={scoreQuantities[rule.id] ?? '1'} onChange={(event) => setScoreQuantities((current) => ({ ...current, [rule.id]: event.target.value }))} className="h-8 w-12 bg-background px-1 text-center text-sm" aria-label={`Quantity for ${rule.title}`} />
+                    <div className="flex flex-col">
+                      <Button variant="ghost" size="icon" className="h-4 w-6 text-xs" onClick={() => setScoreQuantities((current) => ({ ...current, [rule.id]: String(Math.max(1, Number(current[rule.id] || 1) + 1)) }))} aria-label={`Increase ${rule.title}`}>+</Button>
+                      <Button variant="ghost" size="icon" className="h-4 w-6 text-xs" onClick={() => setScoreQuantities((current) => ({ ...current, [rule.id]: String(Math.max(1, Number(current[rule.id] || 1) - 1)) }))} aria-label={`Decrease ${rule.title}`}>−</Button>
+                    </div>
+                    <Button size="sm" className="h-8 px-2 text-xs" onClick={() => handleSelfScore(rule)} disabled={!selfScoringPodId || submittingRuleId === rule.id}>
+                      {submittingRuleId === rule.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Log'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {selfScoreEvents.length > 0 && (
+                <div className="col-span-full border-t pt-3">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Your recent entries</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selfScoreEvents.map((event) => (
+                      <div key={event.id} className="flex items-center gap-2 rounded-md bg-muted px-2 py-1 text-xs">
+                        <span>{event.quantity} × {event.ruleName || 'Score'} ({event.points} pts)</span>
+                        <Button variant="ghost" size="sm" className="h-6 px-1 text-xs" onClick={() => undoSelfScore(event.id)}>Undo</Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Competition Card */}
         <Link href="/agent/competitions">

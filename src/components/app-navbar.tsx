@@ -9,8 +9,8 @@ import type { PermissionMap } from '@/hooks/use-permissions';
 import { cn, generateInitials } from '@/lib/utils';
 import { 
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
-  Crown, Activity, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare, 
-  Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone,
+  Crown, Activity, Bell, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare,
+  Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone, MessageSquare,
   CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen,
   BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord
 } from 'lucide-react';
@@ -132,6 +132,7 @@ const agentNavItems: NavItemConfig[] = [
     icon: Trophy,
     items: [
       { label: 'My Standings', href: '/agent/competitions', icon: Home, permissionKey: 'competitions.dashboard' },
+      { label: 'Quick Score', href: '/quick-score', icon: Zap },
       { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, permissionKey: 'competitions.log', requiredLevel: 'MANAGE' },
       { label: 'Manage', href: '/competitions/manage', icon: Trophy, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
       { label: 'Certificates', href: '/competitions/certificates', icon: Award, permissionKey: 'competitions.certificates' },
@@ -173,12 +174,15 @@ const agentNavItems: NavItemConfig[] = [
     label: 'My Activity',
     href: '/agent/activity',
     icon: Activity,
-    items: [],
+    items: [
+      { label: 'My Activity', href: '/agent/activity', icon: Activity },
+      { label: 'Feedback', href: '/feedback', icon: MessageSquare },
+    ],
   },
   {
     key: 'settings',
     label: 'Settings',
-    href: '/settings/users',
+    href: '/settings/general',
     icon: SettingsIcon,
     items: SETTINGS_NAVIGATION_GROUPS,
   },
@@ -237,6 +241,7 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
 }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
 
   const userRoles = user?.roles as string[] || [];
   const { getNavLevel, isLoading: permsLoading } = usePermissions(userRoles, initialPermissions);
@@ -312,6 +317,17 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
     await authClient.signOut();
     window.location.href = '/login';
   };
+
+  React.useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const loadUnreadCount = () => fetch('/api/notifications').then((response) => response.ok ? response.json() : null).then((data) => {
+      if (active && data) setUnreadNotificationCount(data.unreadCount ?? 0);
+    }).catch(() => undefined);
+    loadUnreadCount();
+    const interval = window.setInterval(loadUnreadCount, 60_000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, [user?.id]);
 
   const isActive = (href: string) => {
     return pathname?.startsWith(href);
@@ -569,6 +585,15 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
           </kbd>
         </Button>
         
+        {user && (
+          <Button asChild variant="ghost" size="icon" className="relative rounded-lg" aria-label="Open notifications">
+            <Link href="/notifications">
+              <Bell className="h-4 w-4" />
+              {unreadNotificationCount > 0 && <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-destructive px-1 text-center text-[10px] leading-4 text-destructive-foreground">{unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>}
+            </Link>
+          </Button>
+        )}
+
         {/* User Menu */}
         {user && (
           <DropdownMenu>
@@ -593,6 +618,12 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                 <Link href={profileHref} className="cursor-pointer">
                   <User className="w-4 h-4 mr-2" />
                   Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/notifications" className="cursor-pointer">
+                  <Bell className="w-4 h-4 mr-2" />
+                  Notifications
                 </Link>
               </DropdownMenuItem>
               {hasSettingsAccess && (

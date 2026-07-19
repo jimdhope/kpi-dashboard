@@ -109,6 +109,20 @@ docker compose pull
 docker compose up -d
 ```
 
+Feedback attachments use a persistent host bind mount. Before the first
+deployment, create the directory configured by `FEEDBACK_UPLOAD_HOST_DIR`
+(default `/home/ubuntu/.docker/KPI-Quest/uploads`) and assign it to the
+container user:
+
+```bash
+sudo mkdir -p /home/ubuntu/.docker/KPI-Quest/uploads
+sudo chown 1001:1001 /home/ubuntu/.docker/KPI-Quest/uploads
+sudo chmod 750 /home/ubuntu/.docker/KPI-Quest/uploads
+```
+
+The application fails closed at startup when this directory is not writable,
+preventing feedback from appearing to save while evidence is lost.
+
 For the Better Auth cutover, stop the old application and worker, take and verify a full backup, then make one deployment with `RUN_AUTH_CUTOVER=true`, `CUTOVER_ADMIN_EMAIL` and `CUTOVER_ADMIN_TEMP_PASSWORD` in Portainer. The web container applies the committed migrations and performs the cutover before accepting traffic. The worker does not run the cutover. Wait for the web log to confirm completion, sign in with the temporary password, and choose a new password. Then remove all three cutover variables (rather than leaving blank values) and redeploy immediately.
 
 The cutover refuses to overwrite credential accounts. If the flag is accidentally left enabled, a later container restart fails closed until the variables are removed. `CUTOVER_RESUME=true` is reserved for a manually inspected interrupted cutover; it fills only missing credential accounts and does not overwrite existing ones.

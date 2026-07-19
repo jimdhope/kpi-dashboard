@@ -3,6 +3,7 @@ import { prisma } from "@/server/db/client";
 import { PERMISSION_SECTIONS } from "@/lib/permission-catalog";
 
 type PermissionMap = Record<string, PermissionLevel>;
+export type DataScopeLevel = "NONE" | "ASSIGNED_PODS" | "ALL_PODS";
 
 export const permissionService = {
   async getPermissionsForRoles(roleKeys: string[]) {
@@ -19,10 +20,18 @@ export const permissionService = {
       }
     }
     for (const section of PERMISSION_SECTIONS) {
-      const parentLevel = map[section.key] ?? "NONE";
+      // A restored/custom permission set can grant a Settings child while the
+      // broad Settings entry is NONE. Treat the parent as the highest explicit
+      // child level so the navigation shell remains reachable, without
+      // promoting unrelated children.
+      const configuredParentLevel = map[section.key] ?? "NONE";
+      const highestChildLevel = section.children.reduce<PermissionLevel>((highest, child) => {
+        const childLevel = map[child.key] ?? "NONE";
+        return levelOrder.indexOf(childLevel) > levelOrder.indexOf(highest) ? childLevel : highest;
+      }, configuredParentLevel);
+      map[section.key] = highestChildLevel;
       for (const child of section.children) {
-        const childLevel = map[child.key] ?? parentLevel;
-        map[child.key] = levelOrder[Math.min(levelOrder.indexOf(parentLevel), levelOrder.indexOf(childLevel))];
+        map[child.key] = map[child.key] ?? configuredParentLevel;
       }
     }
     return map;
@@ -50,12 +59,26 @@ export const permissionService = {
     return levelOrder.indexOf(permissions[resource] ?? "NONE") >= levelOrder.indexOf(minLevel);
   },
 
+  async getDataScopesForRoles(roleKeys: string[]) {
+    const scopes = await prisma.roleDataScope.findMany({
+      where: { role: { key: { in: roleKeys as any } } },
+      select: { resource: true, level: true },
+    });
+    const order: DataScopeLevel[] = ["NONE", "ASSIGNED_PODS", "ALL_PODS"];
+    const result: Record<string, DataScopeLevel> = {};
+    for (const scope of scopes) {
+      const level = scope.level as DataScopeLevel;
+      if (!result[scope.resource] || order.indexOf(level) > order.indexOf(result[scope.resource])) result[scope.resource] = level;
+    }
+    return result;
+  },
+
   async getAllPermissions() {
     const roles = await prisma.role.findMany({
       orderBy: [{ key: "asc" }],
     });
-    const perms = await prisma.rolePermission.findMany();
-    return { roles, permissions: perms };
+    const [perms, dataScopes] = await Promise.all([prisma.rolePermission.findMany(), prisma.roleDataScope.findMany()]);
+    return { roles, permissions: perms, dataScopes };
   },
 
   async setPermission(roleId: string, resource: string, level: PermissionLevel) {
@@ -72,7 +95,17 @@ export const permissionService = {
     }
   },
 
-  async seedDefaults() {
+  async setDataScopesBulk(updates: Array<{ roleId: string; resource: string; level: DataScopeLevel }>) {
+    for (const update of updates) {
+      await prisma.roleDataScope.upsert({
+        where: { roleId_resource: { roleId: update.roleId, resource: update.resource } },
+        create: update,
+        update: { level: update.level },
+      });
+    }
+  },
+
+  async seedDefaults(overwrite = false) {
     const roles = await prisma.role.findMany();
     const roleMap = Object.fromEntries(roles.map((r) => [r.key, r.id]));
 
@@ -151,10 +184,18 @@ export const permissionService = {
       },
     };
     const settingsChildDefaults: Record<string, Record<string, PermissionLevel>> = {
-      campaignManager: { campaigns: "MANAGE", pods: "MANAGE", users: "VIEW", permissions: "NONE", backup: "NONE" },
-      podManager: { campaigns: "NONE", pods: "VIEW", users: "MANAGE", permissions: "NONE", backup: "NONE" },
-      teamLeader: { campaigns: "NONE", pods: "NONE", users: "MANAGE", permissions: "NONE", backup: "NONE" },
-      competitionRunner: { campaigns: "NONE", pods: "NONE", users: "NONE", permissions: "NONE", backup: "NONE" },
+      campaignManager: { campaigns: "MANAGE", pods: "MANAGE", users: "VIEW", userAccounts: "NONE", userRoles: "NONE", podDeletion: "NONE", announcements: "NONE", feedback: "NONE", permissions: "NONE", backup: "NONE" },
+      podManager: { campaigns: "NONE", pods: "VIEW", users: "MANAGE", userAccounts: "NONE", userRoles: "NONE", podDeletion: "NONE", announcements: "NONE", feedback: "NONE", permissions: "NONE", backup: "NONE" },
+      teamLeader: { campaigns: "NONE", pods: "NONE", users: "MANAGE", userAccounts: "NONE", userRoles: "NONE", podDeletion: "NONE", announcements: "NONE", feedback: "NONE", permissions: "NONE", backup: "NONE" },
+      competitionRunner: { campaigns: "NONE", pods: "NONE", users: "NONE", userAccounts: "NONE", userRoles: "NONE", podDeletion: "NONE", announcements: "NONE", feedback: "NONE", permissions: "NONE", backup: "NONE" },
+    };
+    const dataScopeDefaults: Record<string, DataScopeLevel> = {
+      admin: "ALL_PODS",
+      campaignManager: "ALL_PODS",
+      podManager: "ASSIGNED_PODS",
+      teamLeader: "ASSIGNED_PODS",
+      competitionRunner: "ALL_PODS",
+      agent: "ASSIGNED_PODS",
     };
 
     for (const [roleKey, resources] of Object.entries(defaults)) {
@@ -165,7 +206,7 @@ export const permissionService = {
           where: { roleId_resource: { roleId, resource } },
           create: { roleId, resource, level },
           // Defaults fill gaps without overwriting permissions configured in the UI.
-          update: {},
+          update: overwrite ? { level } : {},
         });
       }
       for (const section of PERMISSION_SECTIONS) {
@@ -178,7 +219,7 @@ export const permissionService = {
           await prisma.rolePermission.upsert({
             where: { roleId_resource: { roleId, resource: child.key } },
             create: { roleId, resource: child.key, level: childLevel },
-            update: {},
+            update: overwrite ? { level: childLevel } : {},
           });
         }
       }
@@ -187,6 +228,14 @@ export const permissionService = {
           where: { roleId_resource: { roleId, resource: "nav.activity.all" } },
           create: { roleId, resource: "nav.activity.all", level: "NONE" },
           update: { level: "NONE" },
+        });
+      }
+      for (const resource of ["people", "competitions"]) {
+        const level = dataScopeDefaults[roleKey] ?? "NONE";
+        await prisma.roleDataScope.upsert({
+          where: { roleId_resource: { roleId, resource } },
+          create: { roleId, resource, level },
+          update: overwrite ? { level } : {},
         });
       }
     }

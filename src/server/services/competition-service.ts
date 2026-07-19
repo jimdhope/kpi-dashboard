@@ -143,6 +143,7 @@ export const competitionService = {
           title: r.title,
           points: r.points,
           isCheckbox: r.isCheckbox ?? false,
+          agentCanLog: r.agentCanLog ?? false,
           emoji: r.emoji ?? null,
           dailyTarget: r.dailyTarget ?? null,
         })),
@@ -212,43 +213,43 @@ export const competitionService = {
     // Extract nested arrays for separate handling
     const { rules, teams, ...rest } = payload;
     
-    // Update basic competition data
-    await prisma.competition.update({
-      where: { id },
-      data: rest,
+    // Updating a competition replaces its child collections. Keep every step
+    // in one transaction so a validation/database failure cannot leave a
+    // competition with its rules or teams deleted.
+    await prisma.$transaction(async (tx) => {
+      await tx.competition.update({ where: { id }, data: rest });
+
+      if (rules !== undefined) {
+        await tx.competitionRule.deleteMany({ where: { competitionId: id } });
+        if (rules.length > 0) {
+          await tx.competitionRule.createMany({
+            data: rules.map((r: any) => ({
+              competitionId: id,
+              title: r.title,
+              points: r.points,
+              isCheckbox: r.isCheckbox ?? false,
+              agentCanLog: r.agentCanLog ?? false,
+              emoji: r.emoji ?? null,
+              dailyTarget: r.dailyTarget ?? null,
+            })),
+          });
+        }
+      }
+
+      if (teams !== undefined) {
+        await tx.competitionTeam.deleteMany({ where: { competitionId: id } });
+        if (teams.length > 0) {
+          await tx.competitionTeam.createMany({
+            data: teams.map((t: any) => ({
+              competitionId: id,
+              name: t.name,
+              agentIds: t.agentIds ?? [],
+              emoji: t.emoji ?? null,
+            })),
+          });
+        }
+      }
     });
-    
-    // Handle rules update - delete and recreate
-    if (rules !== undefined) {
-      await prisma.competitionRule.deleteMany({ where: { competitionId: id } });
-      if (rules.length > 0) {
-        await prisma.competitionRule.createMany({
-          data: rules.map((r: any) => ({
-            competitionId: id,
-            title: r.title,
-            points: r.points,
-            isCheckbox: r.isCheckbox ?? false,
-            emoji: r.emoji ?? null,
-            dailyTarget: r.dailyTarget ?? null,
-          })),
-        });
-      }
-    }
-    
-    // Handle teams update - delete and recreate
-    if (teams !== undefined) {
-      await prisma.competitionTeam.deleteMany({ where: { competitionId: id } });
-      if (teams.length > 0) {
-        await prisma.competitionTeam.createMany({
-          data: teams.map((t: any) => ({
-            competitionId: id,
-            name: t.name,
-            agentIds: t.agentIds ?? [],
-            emoji: t.emoji ?? null,
-          })),
-        });
-      }
-    }
     
     // Fetch and return updated competition
     const competition = await prisma.competition.findUnique({

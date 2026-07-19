@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { scoreTargetService } from "@/server/services/score-target-service";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export async function GET() {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.hashtags", "MANAGE");
     const targets = await scoreTargetService.listTargets();
     return NextResponse.json({ targets });
   } catch (error) {
@@ -17,7 +17,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.integrations.hashtags", "MANAGE");
     const body = await request.json();
     
     const { hashtag, name, targetType, competitionId, trackerKpiId, defaultPoints } = body;

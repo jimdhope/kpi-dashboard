@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Popover,
@@ -96,6 +97,7 @@ interface Rule {
   emoji?: string;
   points: number;
   type: 'numeric' | 'checkbox';
+  agentCanLog: boolean;
 }
 
 interface Team {
@@ -126,6 +128,7 @@ interface CompetitionRuleTemplate {
     title: string;
     points: number;
     isCheckbox?: boolean;
+    agentCanLog?: boolean;
     emoji?: string;
     dailyTarget?: number;
   }>;
@@ -266,6 +269,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                   emoji: r.emoji || '',
                   points: r.points || 0,
                   type: r.isCheckbox ? 'checkbox' : 'numeric',
+                  agentCanLog: r.agentCanLog ?? false,
                 })),
               });
               if (draftData.teams && draftData.teams.length > 0) {
@@ -314,6 +318,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                   emoji: r.emoji || '',
                   points: r.points || 0,
                   type: r.isCheckbox ? 'checkbox' : 'numeric',
+                  agentCanLog: r.agentCanLog ?? false,
                 })),
               });
               if (comp.teams && comp.teams.length > 0) {
@@ -367,6 +372,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
         emoji: r.emoji,
         points: r.points,
         isCheckbox: r.type === 'checkbox',
+        agentCanLog: r.agentCanLog,
         dailyTarget: dailyTargets[r.id],
       }));
 
@@ -455,6 +461,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
       emoji: rule.emoji || '',
       points: rule.points,
       type: rule.isCheckbox ? 'checkbox' as const : 'numeric' as const,
+      agentCanLog: rule.agentCanLog ?? false,
     }));
     setFormData((prev) => ({ ...prev, rules: newRules }));
     setIsTemplateDialogOpen(false);
@@ -478,6 +485,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
             title: r.name,
             points: r.points,
             isCheckbox: r.type === 'checkbox',
+            agentCanLog: r.agentCanLog,
             emoji: r.emoji,
             dailyTarget: dailyTargets[r.id],
           })),
@@ -543,6 +551,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
       emoji: '',
       points: 0,
       type: 'numeric',
+      agentCanLog: false,
     };
     setFormData((prev) => ({ ...prev, rules: [...prev.rules, newRule] }));
   };
@@ -711,6 +720,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
           title: r.name,
           points: r.points,
           isCheckbox: r.type === 'checkbox',
+          agentCanLog: r.agentCanLog,
           emoji: r.emoji || null,
           dailyTarget: dailyTargets[r.id] || null,
         })),
@@ -733,7 +743,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
           router.push('/competitions/manage');
         } else {
           const error = await res.json().catch(() => ({ message: 'Failed to save competition' }));
-          toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to save competition' });
+          toast({ variant: 'destructive', title: 'Error', description: error.error || error.message || 'Failed to save competition' });
         }
       } else {
         // Publish from draft
@@ -1013,19 +1023,20 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="hidden md:grid md:grid-cols-12 gap-2 px-3 text-xs font-medium text-muted-foreground">
+                  <div className="hidden md:grid md:grid-cols-14 gap-2 px-3 text-xs font-medium text-muted-foreground">
                     <div className="col-span-1">Emoji</div>
                     <div className="col-span-4">Name</div>
                     <div className="col-span-2">Type</div>
                     <div className="col-span-2">Points</div>
                     <div className="col-span-2">Daily Target</div>
+                    <div className="col-span-2">Agent log</div>
                     <div className="col-span-1"></div>
                   </div>
 
                   {formData.rules.map((rule, index) => (
                     <div
                       key={rule.id}
-                      className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start border p-3 rounded-md"
+                      className="grid grid-cols-1 md:grid-cols-14 gap-2 items-start border p-3 rounded-md"
                     >
                       <div className="col-span-1">
                         <Input
@@ -1085,6 +1096,14 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                             className="h-9"
                           />
                         )}
+                      </div>
+                      <div className="col-span-2 flex h-9 items-center gap-2">
+                        <Switch
+                          checked={rule.agentCanLog}
+                          onCheckedChange={(agentCanLog) => handleUpdateRule(index, { agentCanLog })}
+                          aria-label={`Allow agents to log ${rule.name || 'this rule'}`}
+                        />
+                        <span className="text-xs text-muted-foreground md:hidden">Agents can log</span>
                       </div>
                       <div className="col-span-1">
                         <Button

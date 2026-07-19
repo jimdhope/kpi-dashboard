@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { backupService } from "@/server/services/backup-service";
-import { requireAdminUser } from "@/server/services/authorization";
+import { requireResourceAccess } from "@/server/services/authorization";
 
 export async function DELETE() {
   try {
-    await requireAdminUser();
+    await requireResourceAccess("nav.settings.backup", "MANAGE");
 
     await backupService.clearAllData();
 

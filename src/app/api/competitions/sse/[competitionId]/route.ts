@@ -13,7 +13,7 @@ export async function GET(
     if (!session.user) {
       return new Response("Unauthorized", { status: 401 });
     }
-    const clientId = session.user.id;
+    const clientId = `${session.user.id}:${crypto.randomUUID()}`;
 
     // Create a readable stream for SSE
     const stream = new ReadableStream({

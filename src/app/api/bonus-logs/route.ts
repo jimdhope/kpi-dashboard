@@ -50,8 +50,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireCompetitionScoreLogger();
     const payload = createSchema.parse(await request.json());
+    if (!payload.podId) return errorResponse(400, "podId is required.");
+    const user = await requireCompetitionScoreLogger({ competitionId: payload.competitionId, podId: payload.podId });
 
     const targetDate = new Date(payload.date);
     targetDate.setUTCHours(0, 0, 0, 0);

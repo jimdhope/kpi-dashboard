@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Shield, Save, RotateCcw } from 'lucide-react';
 import { PERMISSION_LEVELS } from '@/lib/contracts';
-import { PERMISSION_SECTIONS } from '@/lib/permission-catalog';
+import { DATA_SCOPE_DEFINITIONS, PERMISSION_SECTIONS } from '@/lib/permission-catalog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface Role {
@@ -28,12 +28,16 @@ interface PendingUpdate {
   resource: string;
   level: string;
 }
+type DataScopeLevel = 'NONE' | 'ASSIGNED_PODS' | 'ALL_PODS';
+interface DataScopeRecord { roleId: string; resource: string; level: DataScopeLevel }
+interface PendingScopeUpdate extends DataScopeRecord {}
 
 const levelLabels: Record<string, string> = {
   NONE: "No Access",
-  VIEW: "View",
-  MANAGE: "Manage",
+  VIEW: "View only",
+  MANAGE: "View and change",
 };
+const scopeLabels: Record<DataScopeLevel, string> = { NONE: 'No data access', ASSIGNED_PODS: 'Assigned pods only', ALL_PODS: 'All pods' };
 
 function getLevelColor(level: string): string {
   switch (level) {
@@ -47,6 +51,8 @@ export default function PermissionsPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Record<string, Record<string, string>>>({});
   const [pendingUpdates, setPendingUpdates] = useState<PendingUpdate[]>([]);
+  const [dataScopes, setDataScopes] = useState<Record<string, Record<string, DataScopeLevel>>>({});
+  const [pendingScopeUpdates, setPendingScopeUpdates] = useState<PendingScopeUpdate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -65,6 +71,12 @@ export default function PermissionsPage() {
         permMap[perm.roleId][perm.resource] = perm.level;
       }
       setPermissions(permMap);
+      const scopeMap: Record<string, Record<string, DataScopeLevel>> = {};
+      for (const scope of data.dataScopes || []) {
+        if (!scopeMap[scope.roleId]) scopeMap[scope.roleId] = {};
+        scopeMap[scope.roleId][scope.resource] = scope.level;
+      }
+      setDataScopes(scopeMap);
     } catch (error) {
       console.error('Failed to load permissions:', error);
       toast({ title: 'Error', description: 'Failed to load permissions', variant: 'destructive' });
@@ -99,15 +111,23 @@ export default function PermissionsPage() {
     const pending = pendingUpdates.find((u) => u.roleId === roleId && u.resource === resource);
     return pending?.level || getLevel(roleId, resource);
   }
+  function getScopeLevel(roleId: string, resource: string): DataScopeLevel { return dataScopes[roleId]?.[resource] || 'NONE'; }
+  function getEffectiveScopeLevel(roleId: string, resource: string): DataScopeLevel { return pendingScopeUpdates.find((update) => update.roleId === roleId && update.resource === resource)?.level || getScopeLevel(roleId, resource); }
+  function handleScopeChange(roleId: string, resource: string, level: DataScopeLevel) {
+    setPendingScopeUpdates((current) => {
+      const filtered = current.filter((update) => !(update.roleId === roleId && update.resource === resource));
+      return level === getScopeLevel(roleId, resource) ? filtered : [...filtered, { roleId, resource, level }];
+    });
+  }
 
   async function handleSave() {
-    if (pendingUpdates.length === 0) return;
+    if (pendingUpdates.length === 0 && pendingScopeUpdates.length === 0) return;
     setIsSaving(true);
     try {
       const res = await fetch('/api/settings/permissions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates: pendingUpdates }),
+        body: JSON.stringify({ updates: pendingUpdates, dataScopeUpdates: pendingScopeUpdates }),
       });
       if (!res.ok) {
         const result = await res.json().catch(() => ({}));
@@ -115,6 +135,7 @@ export default function PermissionsPage() {
       }
       await fetchPermissions();
       setPendingUpdates([]);
+      setPendingScopeUpdates([]);
       toast({ title: 'Saved', description: 'Permissions updated successfully' });
     } catch (error) {
       toast({
@@ -135,6 +156,7 @@ export default function PermissionsPage() {
       if (!res.ok) throw new Error('Failed to reset');
       await fetchPermissions();
       setPendingUpdates([]);
+      setPendingScopeUpdates([]);
       toast({ title: 'Reset', description: 'Permissions reset to defaults' });
     } catch (error) {
       console.error('Failed to reset permissions:', error);
@@ -164,9 +186,9 @@ export default function PermissionsPage() {
             <RotateCcw className="h-4 w-4 mr-2" />
             {isResetting ? 'Resetting...' : 'Reset Defaults'}
           </Button>
-          <Button onClick={handleSave} disabled={pendingUpdates.length === 0 || isSaving}>
+          <Button onClick={handleSave} disabled={(pendingUpdates.length === 0 && pendingScopeUpdates.length === 0) || isSaving}>
             <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : `Save (${pendingUpdates.length})`}
+            {isSaving ? 'Saving...' : `Save (${pendingUpdates.length + pendingScopeUpdates.length})`}
           </Button>
         </div>
       </div>
@@ -179,8 +201,8 @@ export default function PermissionsPage() {
           </CardTitle>
           <CardDescription>
             <span className="inline-flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-500">Manage</span> = Full access
-              <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-500">View</span> = Read-only, scoped
+              <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-500">View and change</span> = May update data
+              <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-500">View only</span> = Cannot update
               <span className="px-2 py-0.5 rounded text-xs bg-gray-500/10 text-muted-foreground">No Access</span> = Hidden
             </span>
           </CardDescription>
@@ -226,6 +248,10 @@ export default function PermissionsPage() {
             ))}
           </Accordion>
         </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Data Scope</CardTitle><CardDescription>Choose which pods each role can access. Scope does not grant an action by itself; the corresponding permission above is also required.</CardDescription></CardHeader>
+        <CardContent><div className="overflow-x-auto rounded-md border"><table className="w-full border-collapse"><thead><tr><th className="min-w-[240px] border-b p-3 text-left text-sm font-medium">Scope</th>{roles.map((role) => <th key={role.id} className="min-w-[170px] border-b p-3 text-center text-sm font-medium"><div className="text-xs text-muted-foreground">{role.key}</div><div>{role.name}</div></th>)}</tr></thead><tbody>{DATA_SCOPE_DEFINITIONS.map((scope) => <tr key={scope.key} className="border-b last:border-0"><td className="p-3"><div className="text-sm font-medium">{scope.label}</div><div className="text-xs text-muted-foreground">{scope.description}</div></td>{roles.map((role) => { const level=getEffectiveScopeLevel(role.id,scope.key); const pending=pendingScopeUpdates.some((update)=>update.roleId===role.id&&update.resource===scope.key); return <td key={role.id} className="p-2"><Select value={level} onValueChange={(value)=>handleScopeChange(role.id,scope.key,value as DataScopeLevel)}><SelectTrigger className={`mx-auto h-8 w-[155px] text-xs ${pending?'ring-2 ring-yellow-400':''}`}><SelectValue /></SelectTrigger><SelectContent>{(['NONE','ASSIGNED_PODS','ALL_PODS'] as DataScopeLevel[]).map((option)=><SelectItem key={option} value={option}>{scopeLabels[option]}</SelectItem>)}</SelectContent></Select></td>; })}</tr>)}</tbody></table></div></CardContent>
       </Card>
     </div>
   );

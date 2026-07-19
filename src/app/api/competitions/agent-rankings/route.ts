@@ -1,6 +1,7 @@
 import { errorResponse, ok } from "@/server/http";
 import { authService } from "@/server/services/auth-service";
 import { prisma } from "@/server/db/client";
+import { scoreEventProjectionService } from "@/server/services/score-event-projection-service";
 
 export async function GET(request: Request) {
   try {
@@ -22,34 +23,19 @@ export async function GET(request: Request) {
         endsAt: { lt: new Date() }, // Completed
       },
       orderBy: { startsAt: 'desc' },
-      include: { 
-        rules: true,
-        teams: true,
-      },
     });
     
     if (!latestCompetition) {
       return ok({ rankings: [], competitionName: null });
     }
     
-    // Get achievements for this competition from the specified pods
-    const achievements = await prisma.dailyAchievement.findMany({
-      where: {
-        competitionId: latestCompetition.id,
-        podId: { in: podIds },
-      },
+    // The ledger snapshots historical pod membership, so transfers do not
+    // rewrite who was represented in an already completed competition.
+    const standings = await scoreEventProjectionService.getCompetitionStandings({
+      competitionId: latestCompetition.id,
+      podIds,
     });
-    
-    // Aggregate scores by agent
-    const agentScores: Record<string, number> = {};
-    achievements.forEach(a => {
-      agentScores[a.agentId] = (agentScores[a.agentId] || 0) + (a.points || 0);
-    });
-    
-    // Sort by score descending
-    const rankings = Object.entries(agentScores)
-      .map(([agentId, score]) => ({ agentId, score }))
-      .sort((a, b) => b.score - a.score);
+    const rankings = standings.map(({ agentId, points }) => ({ agentId, score: points }));
     
     return ok({ 
       rankings, 

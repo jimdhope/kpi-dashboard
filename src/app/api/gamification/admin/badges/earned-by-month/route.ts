@@ -51,11 +51,11 @@ export async function GET(request: NextRequest) {
       .map((entry, idx) => ({ ...entry, rank: idx + 1 }));
     const totalParticipants = leaderboard.length;
 
-    // 2. Per-KPI rankings + raw values from DailyAchievement
-    const dailyByRule = await prisma.dailyAchievement.groupBy({
-      by: ["ruleName", "agentId"],
-      where: { date: { gte: start, lte: end }, ruleName: { not: null } },
-      _sum: { points: true, value: true },
+    // 2. Per-KPI rankings + raw values from the auditable score ledger.
+    const dailyByRule = await prisma.scoreEvent.groupBy({
+      by: ["ruleName", "subjectAgentId"],
+      where: { scoredForDate: { gte: start, lte: end }, ruleName: { not: null }, voidedAt: null },
+      _sum: { points: true, quantity: true },
     });
 
     const ruleGroups = new Map<string, Map<string, number>>();
@@ -64,10 +64,10 @@ export async function GET(request: NextRequest) {
       if (!d.ruleName) continue;
       let agents = ruleGroups.get(d.ruleName);
       if (!agents) { agents = new Map(); ruleGroups.set(d.ruleName, agents); }
-      agents.set(d.agentId, d._sum.points ?? 0);
+      agents.set(d.subjectAgentId, d._sum.points ?? 0);
       let valAgents = kpiValues.get(d.ruleName);
       if (!valAgents) { valAgents = new Map(); kpiValues.set(d.ruleName, valAgents); }
-      valAgents.set(d.agentId, d._sum.value ?? 0);
+      valAgents.set(d.subjectAgentId, d._sum.quantity ?? 0);
     }
     const kpiRankings = new Map<string, Map<string, number>>();
     for (const [ruleName, agentPoints] of ruleGroups) {

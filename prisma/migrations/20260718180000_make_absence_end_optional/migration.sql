@@ -1,0 +1,1 @@
+ALTER TABLE "Absence" ALTER COLUMN "endsOn" DROP NOT NULL;

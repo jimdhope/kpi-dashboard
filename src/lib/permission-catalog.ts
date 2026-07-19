@@ -57,6 +57,11 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
     { key: "nav.settings.campaigns", label: "Campaigns", description: "Manage campaigns" },
     { key: "nav.settings.pods", label: "Pods", description: "Manage pods and memberships" },
     { key: "nav.settings.users", label: "Users", description: "Manage scoped users and passwords" },
+    { key: "nav.settings.userAccounts", label: "User accounts", description: "Create, rename and delete user accounts" },
+    { key: "nav.settings.userRoles", label: "User roles", description: "Assign and remove user roles" },
+    { key: "nav.settings.podDeletion", label: "Delete pods", description: "Permanently delete pods" },
+    { key: "nav.settings.announcements", label: "Announcements", description: "Create and manage Message of the Day" },
+    { key: "nav.settings.feedback", label: "Feedback triage", description: "Review and update submitted feedback" },
     { key: "nav.settings.permissions", label: "Permissions", description: "Configure role permissions" },
     { key: "nav.settings.backup", label: "Backup & Restore", description: "Back up and restore application data" },
   ]},
@@ -67,6 +72,11 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
     { key: "nav.integrations.scheduled", label: "Scheduled", description: "Scheduled Teams messages" },
   ]},
 ];
+
+export const DATA_SCOPE_DEFINITIONS = [
+  { key: "people", label: "People data", description: "Controls which people, absences and pod memberships are available" },
+  { key: "competitions", label: "Competition data", description: "Controls which pods can be scored, corrected or sent to Teams" },
+] as const;
 
 export const PERMISSION_RESOURCE_KEYS = PERMISSION_SECTIONS.flatMap((section) => [
   section.key,

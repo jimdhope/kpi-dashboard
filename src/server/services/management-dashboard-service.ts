@@ -26,16 +26,17 @@ export const managementDashboardService = {
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(now);
     todayEnd.setHours(23, 59, 59, 999);
-    const achievements = await prisma.dailyAchievement.findMany({
+    const scoreEvents = await prisma.scoreEvent.findMany({
       where: {
+        voidedAt: null,
         OR: [
           { competitionId: latestCompetition?.id ?? "__none__" },
-          { date: { gte: todayStart, lte: todayEnd } },
+          { scoredForDate: { gte: todayStart, lte: todayEnd } },
         ],
       },
-      orderBy: { loggedAt: "desc" },
+      orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
     });
-    const agentIds = [...new Set(achievements.map((achievement) => achievement.agentId))];
+    const agentIds = [...new Set(scoreEvents.map((event) => event.subjectAgentId))];
     const agents = await prisma.user.findMany({
       where: { id: { in: agentIds } },
       select: { id: true, name: true },
@@ -46,9 +47,11 @@ export const managementDashboardService = {
       competitions,
       pods,
       users,
-      achievements: achievements.map((achievement) => ({
-        ...achievement,
-        agentName: names.get(achievement.agentId) || "Unknown",
+      achievements: scoreEvents.map((event) => ({
+        id: event.id, competitionId: event.competitionId, agentId: event.subjectAgentId, podId: event.podId,
+        ruleId: event.ruleId, ruleName: event.ruleName, value: event.quantity, points: event.points,
+        date: event.scoredForDate, loggedBy: event.recordedById, loggedAt: event.recordedAt, createdAt: event.createdAt,
+        agentName: names.get(event.subjectAgentId) || "Unknown",
       })),
     };
   },
