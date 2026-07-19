@@ -626,6 +626,12 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                   Notifications
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/feedback" className="cursor-pointer">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Feedback
+                </Link>
+              </DropdownMenuItem>
               {hasSettingsAccess && (
                 <>
                   <DropdownMenuSeparator />
