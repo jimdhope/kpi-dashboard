@@ -4,7 +4,7 @@ import { prisma } from "@/server/db/client";
 import { getManagedPodIds, requireManagedUser } from "@/server/services/organization-scope-service";
 import { requireResourceAccess } from "@/server/services/authorization";
 
-const schema = z.object({ userId: z.string().min(1), startsOn: z.string().datetime(), endsOn: z.string().datetime().optional().nullable(), reason: z.string().trim().max(500).optional().nullable() });
+const schema = z.object({ userId: z.string().min(1), startsOn: z.string().datetime(), endsOn: z.string().datetime().optional().nullable(), reason: z.string().trim().max(500).optional().nullable(), emoji: z.string().trim().max(16).optional().nullable() });
 
 async function requireAbsenceManager() {
   return requireResourceAccess("nav.settings.users", "MANAGE");

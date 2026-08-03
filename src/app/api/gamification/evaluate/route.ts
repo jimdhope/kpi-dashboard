@@ -18,9 +18,18 @@ export async function POST(request: Request) {
       summaries = await gamificationService.retroactivelyEvaluateAll();
     } else if (body.competitionIds) {
       summaries = [];
+      const evaluatedMonths = new Set<string>();
       for (const id of body.competitionIds) {
         const summary = await gamificationService.evaluateCompetitionEnd(id);
         summaries.push(summary);
+        const competition = await gamificationService.getCompetitionPeriod(id);
+        if (competition?.endsAt) {
+          evaluatedMonths.add(`${competition.endsAt.getFullYear()}-${competition.endsAt.getMonth() + 1}`);
+        }
+      }
+      for (const monthKey of evaluatedMonths) {
+        const [year, month] = monthKey.split("-").map(Number);
+        await gamificationService.crownMonthlyChampion(year, month);
       }
     } else {
       return errorResponse(400, "Provide competitionIds or allPending.");

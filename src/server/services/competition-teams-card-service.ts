@@ -16,6 +16,7 @@ export interface PodAgentStanding {
   dailyScore?: number;
   scoreLogs?: AgentScoreLog[];
   hasActivity?: boolean;
+  absenceEmoji?: string | null;
 }
 
 export interface RuleTargetProgress {
@@ -180,7 +181,7 @@ function buildStandingsSection(teamStandings: CompetitionTeamStanding[]): any[] 
  */
 function buildAgentRow(agent: PodAgentStanding): any {
   const medal = agent.rank === 1 ? '🥇' : agent.rank === 2 ? '🥈' : agent.rank === 3 ? '🥉' : '';
-  const emojis = scoreLogsToEmojis(agent.scoreLogs || []);
+  const emojis = agent.absenceEmoji || scoreLogsToEmojis(agent.scoreLogs || []);
   
   return {
     type: "Container",

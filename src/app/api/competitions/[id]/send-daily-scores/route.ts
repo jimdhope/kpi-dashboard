@@ -159,8 +159,9 @@ async function sendDailyScores(
     // date-range absence. Both reduce that day's target only.
     const recordedAbsences = await prisma.absence.findMany({
       where: { startsOn: { lte: dayEnd }, OR: [{ endsOn: null }, { endsOn: { gte: dayStart } }] },
-      select: { userId: true },
+      select: { userId: true, emoji: true },
     });
+    const absenceEmojiMap = new Map(recordedAbsences.map((absence) => [absence.userId, absence.emoji]));
     const absentAgentIds = new Set(
       achievements
         .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
@@ -281,6 +282,7 @@ async function sendDailyScores(
           return {
             agentId: agentId,
             agentName: agentName,
+            absenceEmoji: absenceEmojiMap.get(agentId),
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
             score: cumulativeScore,
@@ -551,8 +553,9 @@ export async function GET(
 
     const recordedAbsencesGet = await prisma.absence.findMany({
       where: { startsOn: { lte: dayEnd }, OR: [{ endsOn: null }, { endsOn: { gte: dayStart } }] },
-      select: { userId: true },
+      select: { userId: true, emoji: true },
     });
+    const absenceEmojiMapGet = new Map(recordedAbsencesGet.map((absence) => [absence.userId, absence.emoji]));
     const absentAgentIdsGet = new Set(
       achievements
         .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
@@ -644,6 +647,7 @@ export async function GET(
           return {
             agentId: agentId,
             agentName: agentName,
+            absenceEmoji: absenceEmojiMapGet.get(agentId),
             teamEmoji: agentTeam?.emoji || '',
             teamName: agentTeam?.name || '',
             score: cumulativeScore,

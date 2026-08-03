@@ -62,6 +62,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import Link from 'next/link';
+import { EmojiPickerField } from '@/components/ui/emoji-picker-field';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   loading: () => <Skeleton className="h-[350px] w-[300px]" />,
@@ -1039,12 +1040,10 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                       className="grid grid-cols-1 md:grid-cols-14 gap-2 items-start border p-3 rounded-md"
                     >
                       <div className="col-span-1">
-                        <Input
-                          placeholder="❓"
+                        <EmojiPickerField
                           value={rule.emoji || ''}
-                          onChange={(e) => handleUpdateRule(index, { emoji: e.target.value })}
-                          maxLength={4}
-                          className="h-9 text-center"
+                          onChange={(emoji) => handleUpdateRule(index, { emoji })}
+                          placeholder="Choose emoji"
                         />
                       </div>
                       <div className="col-span-4">

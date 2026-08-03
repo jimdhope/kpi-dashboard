@@ -58,7 +58,7 @@ const generalSettings = [
 
 export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroup[] = [
   setting("profile", "Profile", "Manage your account and install KPI Quest", "/settings/profile", UserCircle),
-  { ...setting("general", "General", "Announcements, backups, restore, and import", "/settings/general", Database, "settings.backup", "MANAGE"), children: generalSettings },
+  { ...setting("general", "General", "Announcements, backups, restore, and import", "/settings/general", Database, "settings", "VIEW"), children: generalSettings },
   { ...setting("users-group", "People", "Manage people, structure and access", "/settings/people", Users), children: userSettings },
   { ...setting("teams-group", "Teams", "Manage Microsoft Teams integrations", "/settings/teams/channels", MessageSquare), children: teamsSettings },
 ];

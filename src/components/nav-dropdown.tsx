@@ -222,7 +222,7 @@ export function NavDropdown({ items, trigger, href, align = 'left', className, o
                       childActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-glass/60",
                     )}>
                       {Icon && <Icon className={cn("h-4 w-4 shrink-0", childActive ? "text-primary" : "text-muted-foreground")} />}
-                      <span className="flex-1">{item.label}</span>
+                      <Link href={item.href} onClick={() => closeDropdown()} className="flex-1 hover:underline">{item.label}</Link>
                       <ChevronRight className="h-4 w-4 transition-transform group-open/settings:rotate-90" />
                     </summary>
                     <div className="ml-4 mt-1 space-y-1 border-l border-glass-border/40 pl-2">

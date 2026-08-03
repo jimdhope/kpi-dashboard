@@ -72,6 +72,7 @@ export default function AdminGamificationPage() {
 
   // Actions
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isDownloadingBadges, setIsDownloadingBadges] = useState(false);
 
   const refreshPageData = async () => {
     const sessionRes = await fetch('/api/auth/session');
@@ -286,6 +287,33 @@ export default function AdminGamificationPage() {
     );
   };
 
+  const downloadAllMonthlyBadges = async () => {
+    if (earnedByMonth.length === 0) return;
+    setIsDownloadingBadges(true);
+    try {
+      const { default: JSZip } = await import('jszip');
+      const zip = new JSZip();
+      await Promise.all(earnedByMonth.map(async (entry: any) => {
+        const rank = entry.rank ?? 1;
+        const agentFirstName = entry.agentName?.split(' ')[0] || 'Agent';
+        const url = `/api/gamification/badges/${entry.badgeKey}/image?month=${badgeMonth}&year=${badgeYear}&rank=${rank}&agentName=${encodeURIComponent(agentFirstName)}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Badge image download failed');
+        zip.file(`${entry.badgeName.replace(/\s+/g, '-')}-${agentFirstName}.png`, await response.blob());
+      }));
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `badges-${format(new Date(badgeYear, badgeMonth - 1), 'MMMM-yyyy')}.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Download complete', description: `${earnedByMonth.length} badges downloaded as a ZIP` });
+    } catch {
+      toast({ variant: 'destructive', title: 'Download failed', description: 'Could not create the badge ZIP.' });
+    } finally { setIsDownloadingBadges(false); }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -439,6 +467,10 @@ export default function AdminGamificationPage() {
                           <option key={i} value={new Date().getFullYear() - i}>{new Date().getFullYear() - i}</option>
                         ))}
                       </select>
+                      <Button size="sm" variant="outline" onClick={downloadAllMonthlyBadges} disabled={isDownloadingBadges || earnedByMonth.length === 0}>
+                        {isDownloadingBadges ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+                        Download all
+                      </Button>
                     </>
                   ) : (
                     <select

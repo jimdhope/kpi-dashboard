@@ -451,10 +451,10 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
                     if (subItem.children?.length) {
                       return (
                         <div key={subItem.href} className="ml-2">
-                          <div className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-foreground">
+                          <Link href={subItem.href} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-foreground hover:underline">
                             {SubIcon && <SubIcon className="h-4 w-4 text-muted-foreground" />}
                             <span>{subItem.label}</span>
-                          </div>
+                          </Link>
                           {subItem.children.map((child) => {
                             const ChildIcon = child.icon;
                             return (

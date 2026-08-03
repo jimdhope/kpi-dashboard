@@ -30,23 +30,28 @@ export async function GET(request: NextRequest) {
     const end = new Date(year, month, 0, 23, 59, 59, 999);
     const lastDay = new Date(year, month, 0);
 
-    // 1. Monthly leaderboard (CompetitionResult-based)
-    const results = await prisma.competitionResult.findMany({
-      where: { createdAt: { gte: start, lte: end } },
-      include: { user: { select: { name: true, email: true } } },
+    // 1. Monthly leaderboard based on achievement dates, not evaluation dates.
+    const scoreTotals = await prisma.scoreEvent.groupBy({
+      by: ["subjectAgentId"],
+      where: { scoredForDate: { gte: start, lte: end }, voidedAt: null },
+      _sum: { points: true },
     });
 
-    const pointsByUser = new Map<string, { name: string; points: number }>();
-    for (const r of results) {
-      const existing = pointsByUser.get(r.userId) ?? {
-        name: r.user.name ?? r.user.email ?? "Unknown",
-        points: 0,
-      };
-      existing.points += r.totalScore;
-      pointsByUser.set(r.userId, existing);
-    }
-    const leaderboard = Array.from(pointsByUser.entries())
-      .map(([userId, data]) => ({ userId, ...data }))
+    const users = await prisma.user.findMany({
+      where: { id: { in: scoreTotals.map((total) => total.subjectAgentId) } },
+      select: { id: true, name: true, email: true },
+    });
+    const usersById = new Map(users.map((user) => [user.id, user]));
+    const leaderboard = scoreTotals
+      .filter((total) => usersById.has(total.subjectAgentId))
+      .map((total) => {
+        const user = usersById.get(total.subjectAgentId)!;
+        return {
+          userId: user.id,
+          name: user.name ?? user.email ?? "Unknown",
+          points: total._sum.points ?? 0,
+        };
+      })
       .sort((a, b) => b.points - a.points)
       .map((entry, idx) => ({ ...entry, rank: idx + 1 }));
     const totalParticipants = leaderboard.length;
@@ -73,7 +78,13 @@ export async function GET(request: NextRequest) {
     for (const [ruleName, agentPoints] of ruleGroups) {
       const sorted = Array.from(agentPoints.entries()).sort(([, a], [, b]) => b - a);
       const ranks = new Map<string, number>();
-      sorted.forEach(([agentId], idx) => ranks.set(agentId, idx + 1));
+      let previousPoints: number | undefined;
+      let rank = 0;
+      sorted.forEach(([agentId, points], idx) => {
+        if (points !== previousPoints) rank = idx + 1;
+        ranks.set(agentId, rank);
+        previousPoints = points;
+      });
       kpiRankings.set(ruleName, ranks);
     }
 

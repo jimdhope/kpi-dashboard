@@ -68,15 +68,25 @@ export const gamificationService = {
       teamId: string | null;
     }>();
 
-    for (const entry of competition.entries) {
-      if (!entry.userId || !entry.user) continue;
-      const score = scoreMap.get(entry.userId) ?? 0;
-      const team = competition.teams.find((t) => t.agentIds.includes(entry.userId!));
-      agentScores.set(entry.userId, {
-        userId: entry.userId,
-        agentName: entry.user.name || entry.user.email || "Unknown",
-        totalScore: score,
-        wasPresent: entry.present,
+    const entriesByUserId = new Map(
+      competition.entries
+        .filter((entry): entry is typeof entry & { userId: string; user: NonNullable<typeof entry.user> } => Boolean(entry.userId && entry.user))
+        .map((entry) => [entry.userId, entry]),
+    );
+    const agentIds = new Set([...entriesByUserId.keys(), ...scoreMap.keys()]);
+    const scoredUsers = await prisma.user.findMany({
+      where: { id: { in: [...agentIds] } },
+      select: { id: true, name: true, email: true },
+    });
+
+    for (const user of scoredUsers) {
+      const entry = entriesByUserId.get(user.id);
+      const team = competition.teams.find((t) => t.agentIds.includes(user.id));
+      agentScores.set(user.id, {
+        userId: user.id,
+        agentName: user.name || user.email || "Unknown",
+        totalScore: scoreMap.get(user.id) ?? 0,
+        wasPresent: entry?.present ?? true,
         teamId: team?.id ?? null,
       });
     }
@@ -280,27 +290,31 @@ export const gamificationService = {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const results = await prisma.competitionResult.findMany({
+    const totals = await prisma.scoreEvent.groupBy({
+      by: ["subjectAgentId"],
       where: {
-        createdAt: { gte: start, lte: end },
+        scoredForDate: { gte: start, lte: end },
+        voidedAt: null,
       },
-      include: {
-        user: { select: { name: true, email: true } },
-      },
+      _sum: { points: true },
     });
 
-    const pointsByUser = new Map<string, { name: string; points: number }>();
-    for (const res of results) {
-      const existing = pointsByUser.get(res.userId) ?? {
-        name: res.user.name ?? res.user.email ?? "Unknown",
-        points: 0,
-      };
-      existing.points += res.totalScore;
-      pointsByUser.set(res.userId, existing);
-    }
+    const users = await prisma.user.findMany({
+      where: { id: { in: totals.map((total) => total.subjectAgentId) } },
+      select: { id: true, name: true, email: true },
+    });
+    const usersById = new Map(users.map((user) => [user.id, user]));
 
-    const sorted = Array.from(pointsByUser.entries())
-      .map(([userId, data], index) => ({ rank: index + 1, userId, ...data }))
+    const sorted = totals
+      .filter((total) => usersById.has(total.subjectAgentId))
+      .map((total) => {
+        const user = usersById.get(total.subjectAgentId)!;
+        return {
+          userId: user.id,
+          name: user.name ?? user.email ?? "Unknown",
+          points: total._sum.points ?? 0,
+        };
+      })
       .sort((a, b) => b.points - a.points)
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
@@ -381,7 +395,13 @@ export const gamificationService = {
       const sorted = Array.from(agentPoints.entries())
         .sort(([, a], [, b]) => b - a);
       const ranks = new Map<string, number>();
-      sorted.forEach(([agentId], idx) => ranks.set(agentId, idx + 1));
+      let previousPoints: number | undefined;
+      let rank = 0;
+      sorted.forEach(([agentId, points], idx) => {
+        if (points !== previousPoints) rank = idx + 1;
+        ranks.set(agentId, rank);
+        previousPoints = points;
+      });
       monthlyKpiRankings.set(ruleName, ranks);
     }
 
@@ -722,51 +742,23 @@ export const gamificationService = {
         isDraft: false,
         endsAt: { lte: new Date() },
       },
-      include: {
-        results: {
-          include: { user: { select: { name: true, email: true } } },
-          orderBy: { rank: "asc" },
-        },
-      },
       orderBy: { endsAt: "asc" },
     });
 
     const summaries: EvaluationSummary[] = [];
+    const evaluatedMonths = new Set<string>();
     for (const competition of competitions) {
-      let badgesAwarded = 0;
-      const badgeList: string[] = [];
-
-      for (const result of competition.results) {
-        const awarded = await badgeService.checkAndAwardBadges({
-          userId: result.userId,
-          agentName: result.user.name ?? result.user.email ?? "Unknown",
-          competitionId: competition.id,
-          competitionName: competition.name,
-          rank: result.rank,
-          totalScore: result.totalScore,
-          wasPresent: result.wasPresent,
-          previousRank: null,
-          totalParticipants: competition.results.length,
-          competitionEndsAt: competition.endsAt ?? undefined,
-        });
-
-        for (const badgeKey of awarded) {
-          badgeList.push(badgeKey);
-          badgesAwarded++;
-        }
+      summaries.push(await this.evaluateCompetitionEnd(competition.id));
+      if (competition.endsAt) {
+        evaluatedMonths.add(`${competition.endsAt.getFullYear()}-${competition.endsAt.getMonth() + 1}`);
       }
+    }
 
-      if (badgesAwarded > 0) {
-        summaries.push({
-          competitionId: competition.id,
-          competitionName: competition.name,
-          agentsProcessed: competition.results.length,
-          resultsCreated: 0,
-          badgesAwarded,
-          badgeList,
-          xpAwarded: 0,
-        });
-      }
+    // Persist monthly badges for every month covered by the completed
+    // competitions, using the same achievement-date leaderboard as the UI.
+    for (const monthKey of evaluatedMonths) {
+      const [year, month] = monthKey.split("-").map(Number);
+      await this.crownMonthlyChampion(year, month);
     }
 
     return summaries;
@@ -780,6 +772,13 @@ export const gamificationService = {
       },
       orderBy: { endsAt: "desc" },
       take: 50,
+    });
+  },
+
+  async getCompetitionPeriod(competitionId: string) {
+    return prisma.competition.findUnique({
+      where: { id: competitionId },
+      select: { endsAt: true },
     });
   },
 };

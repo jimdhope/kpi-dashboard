@@ -8,6 +8,7 @@ const schema = z.object({
   startsOn: z.string().datetime(),
   endsOn: z.string().datetime().optional().nullable(),
   reason: z.string().trim().max(500).optional().nullable(),
+  emoji: z.string().trim().max(16).optional().nullable(),
 });
 
 async function requireAbsenceManager() {
