@@ -159,9 +159,15 @@ async function sendDailyScores(
     // date-range absence. Both reduce that day's target only.
     const recordedAbsences = await prisma.absence.findMany({
       where: { startsOn: { lte: dayEnd }, OR: [{ endsOn: null }, { endsOn: { gte: dayStart } }] },
-      select: { userId: true, emoji: true },
+      select: { userId: true, emoji: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
     });
-    const absenceEmojiMap = new Map(recordedAbsences.map((absence) => [absence.userId, absence.emoji]));
+    const absenceEmojiMap = new Map<string, string>();
+    for (const absence of recordedAbsences) {
+      if (absence.emoji && !absenceEmojiMap.has(absence.userId)) {
+        absenceEmojiMap.set(absence.userId, absence.emoji);
+      }
+    }
     const absentAgentIds = new Set(
       achievements
         .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
@@ -553,9 +559,15 @@ export async function GET(
 
     const recordedAbsencesGet = await prisma.absence.findMany({
       where: { startsOn: { lte: dayEnd }, OR: [{ endsOn: null }, { endsOn: { gte: dayStart } }] },
-      select: { userId: true, emoji: true },
+      select: { userId: true, emoji: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
     });
-    const absenceEmojiMapGet = new Map(recordedAbsencesGet.map((absence) => [absence.userId, absence.emoji]));
+    const absenceEmojiMapGet = new Map<string, string>();
+    for (const absence of recordedAbsencesGet) {
+      if (absence.emoji && !absenceEmojiMapGet.has(absence.userId)) {
+        absenceEmojiMapGet.set(absence.userId, absence.emoji);
+      }
+    }
     const absentAgentIdsGet = new Set(
       achievements
         .filter(a => a.ruleId === 'na' || a.ruleName === 'N/A')
