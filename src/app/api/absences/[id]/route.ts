@@ -26,7 +26,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const startsOn = new Date(input.startsOn);
     const endsOn = input.endsOn ? new Date(input.endsOn) : null;
     if (endsOn && endsOn < startsOn) return errorResponse(400, "End date must be on or after the start date.");
-    return ok({ absence: await prisma.absence.update({ where: { id }, data: { startsOn, endsOn, reason: input.reason ?? null } }) });
+    return ok({ absence: await prisma.absence.update({ where: { id }, data: { startsOn, endsOn, reason: input.reason ?? null, emoji: input.emoji ?? null } }) });
   } catch (error) {
     if (error instanceof z.ZodError) return errorResponse(400, "Invalid absence.");
     if (error instanceof Error && error.message === "Forbidden") return errorResponse(403, "Forbidden");
