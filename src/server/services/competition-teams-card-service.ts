@@ -180,7 +180,6 @@ function buildStandingsSection(teamStandings: CompetitionTeamStanding[]): any[] 
  * Build a single agent row for the table
  */
 function buildAgentRow(agent: PodAgentStanding): any {
-  const medal = agent.rank === 1 ? '🥇' : agent.rank === 2 ? '🥈' : agent.rank === 3 ? '🥉' : '';
   const emojis = agent.absenceEmoji || scoreLogsToEmojis(agent.scoreLogs || []);
   
   return {
@@ -195,7 +194,7 @@ function buildAgentRow(agent: PodAgentStanding): any {
             items: [
               {
                 type: "TextBlock",
-                text: `${agent.teamEmoji} ${medal}${agent.agentName}`,
+                text: `${agent.teamEmoji} ${agent.agentName}`,
                 weight: "Bolder",
                 wrap: true,
               },
