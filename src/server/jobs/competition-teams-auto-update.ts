@@ -34,7 +34,8 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
         newestBonus?.createdAt,
         newestBonusEdit?.loggedAt,
       ]);
-      if (!scoreChangedAt || (competition.lastAutoTeamsScoreAt && scoreChangedAt <= competition.lastAutoTeamsScoreAt)) continue;
+      // The queue is intentionally a cadence, not a change detector: active
+      // competitions should publish their current standings every 15 minutes.
       if (!competition.podIds.length) continue;
 
       const date = now.toISOString().slice(0, 10);
@@ -46,7 +47,13 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
       const response = await sendDailyScoresFromWorker(request, competition.id);
       const result = await response.json() as { totalSent?: number; totalFailed?: number };
       if (response.ok && (result.totalSent ?? 0) > 0 && (result.totalFailed ?? 0) === 0) {
-        await prisma.competition.update({ where: { id: competition.id }, data: { lastAutoTeamsScoreAt: scoreChangedAt, lastAutoTeamsSentAt: new Date() } });
+        await prisma.competition.update({
+          where: { id: competition.id },
+          data: {
+            ...(scoreChangedAt ? { lastAutoTeamsScoreAt: scoreChangedAt } : {}),
+            lastAutoTeamsSentAt: new Date(),
+          },
+        });
       }
     }
   });

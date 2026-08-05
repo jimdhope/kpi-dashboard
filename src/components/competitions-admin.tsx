@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus } from "lucide-react";
+import { datetimeLocalValueToIso, isoToDatetimeLocalValue } from "@/components/competition-datetime";
 
 interface CompetitionsAdminProps {
   initialCompetitions: CompetitionRecord[];
@@ -61,8 +62,8 @@ export function CompetitionsAdmin({ initialCompetitions }: CompetitionsAdminProp
     setForm({
       name: competition.name,
       description: competition.description ?? "",
-      startsAt: competition.startsAt ? competition.startsAt.slice(0, 16) : "",
-      endsAt: competition.endsAt ? competition.endsAt.slice(0, 16) : "",
+      startsAt: isoToDatetimeLocalValue(competition.startsAt),
+      endsAt: isoToDatetimeLocalValue(competition.endsAt),
       rules: competition.rules.map((rule) => ({ title: rule.title, points: String(rule.points), agentCanLog: rule.agentCanLog ?? false })),
       teams: competition.teams.map((team) => ({ name: team.name })),
     });
@@ -86,8 +87,8 @@ export function CompetitionsAdmin({ initialCompetitions }: CompetitionsAdminProp
       body: JSON.stringify({
         name: form.name,
         description: form.description || null,
-        startsAt: form.startsAt || null,
-        endsAt: form.endsAt || null,
+        startsAt: datetimeLocalValueToIso(form.startsAt),
+        endsAt: datetimeLocalValueToIso(form.endsAt),
         rules: form.rules.filter((rule) => rule.title.trim()).map((rule) => ({ title: rule.title, points: Number(rule.points) || 0, agentCanLog: rule.agentCanLog })),
         teams: form.teams.filter((team) => team.name.trim()).map((team) => ({ name: team.name })),
       }),
