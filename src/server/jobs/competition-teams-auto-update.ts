@@ -34,8 +34,9 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
         newestBonus?.createdAt,
         newestBonusEdit?.loggedAt,
       ]);
-      // The queue is intentionally a cadence, not a change detector: active
-      // competitions should publish their current standings every 15 minutes.
+      if (!scoreChangedAt || (competition.lastAutoTeamsScoreAt && scoreChangedAt <= competition.lastAutoTeamsScoreAt)) {
+        continue;
+      }
       if (!competition.podIds.length) continue;
 
       const date = now.toISOString().slice(0, 10);
