@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ManagementDashboard } from "@/app/(admin)/admin/page";
-import { AgentDashboard } from "@/app/(agent)/agent/page";
+import { ManagementDashboard } from "@/components/admin/management-dashboard";
+import { AgentDashboard } from "@/components/dashboard/agent-dashboard";
 import type { AppUser } from "@/lib/contracts";
 
 export function DashboardClient({

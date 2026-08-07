@@ -3,12 +3,16 @@ import { registerTeamsWebhookWorker } from "@/server/jobs/teams-webhooks";
 import { registerGamificationEvaluationWorker } from "@/server/jobs/gamification-evaluation";
 import { getBoss } from "@/server/jobs/boss";
 import { registerCompetitionTeamsAutoUpdateWorker } from "@/server/jobs/competition-teams-auto-update";
+import { registerMemeMatchCleanupWorker } from "@/server/jobs/meme-match-cleanup";
+import { registerQuizShowCleanupWorker } from "@/server/jobs/quiz-show-cleanup";
 
 async function main() {
   await registerTeamsWebhookWorker();
   await registerTeamsAutomationScheduleWorker();
   await registerGamificationEvaluationWorker();
   await registerCompetitionTeamsAutoUpdateWorker();
+  await registerMemeMatchCleanupWorker();
+  await registerQuizShowCleanupWorker();
   // Keep the process alive for pg-boss workers.
   await new Promise(() => undefined);
 }

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Download, Upload, Trash2, AlertTriangle, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
-import DataImportPage from '@/app/(app)/settings/data-import/page';
+import DataImportPage from '@/components/settings/data-import-page';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function GeneralSettings() {

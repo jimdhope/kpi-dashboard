@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import { pipeline } from "stream/promises";
 import { createWriteStream, createReadStream, unlinkSync } from "fs";
 import { createGzip, createGunzip } from "zlib";
-import { Transform } from "stream";
+import { PassThrough, Transform } from "stream";
 import { prisma } from "@/server/db/client";
 
 interface DbConfig {
@@ -15,6 +15,7 @@ interface DbConfig {
 
 const MAX_TOOL_STDERR_BYTES = 1024 * 1024;
 const DATABASE_TOOL_TIMEOUT_MS = 30 * 60 * 1000;
+const PRISMA_TOOL_TIMEOUT_MS = 30 * 60 * 1000;
 
 function parseDatabaseUrl(): DbConfig {
   const url = process.env.DATABASE_URL;
@@ -64,6 +65,41 @@ function postgres16Compatibility(): Transform {
     flush(callback) {
       callback(null, ignoredStatements.has(remainder.trim()) ? "" : remainder);
     },
+  });
+}
+
+function trimStderr(stderr: string, toolName: string, exitCode: number | null): string {
+  const detail = stderr.trim();
+  return detail || `${toolName} exited with code ${exitCode}`;
+}
+
+async function runPrismaMigrateDeploy(): Promise<void> {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL not set");
+
+  const prismaCli = spawn("npx", ["--yes", "prisma", "migrate", "deploy"], {
+    cwd: process.cwd(),
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+
+  let stderr = "";
+  prismaCli.stderr.on("data", (d) => {
+    if (stderr.length < MAX_TOOL_STDERR_BYTES) stderr += d.toString().slice(0, MAX_TOOL_STDERR_BYTES - stderr.length);
+  });
+
+  const timeout = setTimeout(() => prismaCli.kill("SIGTERM"), PRISMA_TOOL_TIMEOUT_MS);
+
+  await new Promise<void>((resolve, reject) => {
+    prismaCli.on("close", (code) => {
+      clearTimeout(timeout);
+      if (code === 0) resolve();
+      else reject(new Error(trimStderr(stderr, "prisma migrate deploy", code)));
+    });
+    prismaCli.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(new Error(`prisma migrate deploy failed: ${err.message}`));
+    });
   });
 }
 
@@ -127,7 +163,15 @@ export const backupService = {
       if (stderr.length < MAX_TOOL_STDERR_BYTES) stderr += d.toString().slice(0, MAX_TOOL_STDERR_BYTES - stderr.length);
     });
     const timeout = setTimeout(() => psql.kill("SIGTERM"), DATABASE_TOOL_TIMEOUT_MS);
-    const inputDone = pipeline(createReadStream(/* turbopackIgnore: true */ filePath), postgres16Compatibility(), psql.stdin);
+    const input = new PassThrough();
+    input.write("DROP SCHEMA public CASCADE;\nCREATE SCHEMA public;\n");
+    const stopOnError = <T>(promise: Promise<T>): Promise<T> =>
+      promise.catch((error) => {
+        if (!psql.killed) psql.kill("SIGTERM");
+        throw error;
+      });
+    const inputDone = stopOnError(pipeline(input, psql.stdin));
+    const fileDone = stopOnError(pipeline(createReadStream(/* turbopackIgnore: true */ filePath), postgres16Compatibility(), input));
     const exitDone = new Promise<void>((resolve, reject) => {
       psql.on("close", (code) => {
         clearTimeout(timeout);
@@ -138,11 +182,18 @@ export const backupService = {
     });
 
     try {
-      await Promise.all([inputDone, exitDone]);
+      const [fileResult, inputResult, exitResult] = await Promise.allSettled([fileDone, inputDone, exitDone]);
+      // Prefer PostgreSQL's diagnostic when it exits early. Otherwise a
+      // rejected stdin pipeline commonly masks the useful error as EPIPE.
+      if (exitResult.status === "rejected") throw exitResult.reason;
+      if (inputResult.status === "rejected") throw inputResult.reason;
+      if (fileResult.status === "rejected") throw fileResult.reason;
     } catch (error) {
-      psql.kill("SIGTERM");
+      if (!psql.killed) psql.kill("SIGTERM");
       throw error;
     }
+
+    await runPrismaMigrateDeploy();
   },
 
   async restoreFromGzip(gzipPath: string): Promise<void> {

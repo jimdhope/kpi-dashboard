@@ -22,10 +22,11 @@ export function formatDuration(milliseconds?: number | null) {
   return minutes ? `${minutes}:${String(seconds).padStart(2, '0')}` : `${seconds}s`;
 }
 
-export function DailyLeaderboard({ entries, game }: { entries: DailyLeaderboardEntry[]; game: 'higher-lower' | 'daily-word' | 'sudoku' }) {
+export function DailyLeaderboard({ entries, game }: { entries: DailyLeaderboardEntry[]; game: 'higher-lower' | 'daily-word' | 'sudoku' | 'meme-match' }) {
   const result = (entry: DailyLeaderboardEntry) => {
     if (game === 'higher-lower') return `${entry.score} streak`;
     if (game === 'daily-word') return `${entry.guesses} guesses · ${formatDuration(entry.durationMs)}`;
+    if (game === 'meme-match') return `${entry.score} points`;
     return `${formatDuration(entry.score)} adjusted`;
   };
   return (

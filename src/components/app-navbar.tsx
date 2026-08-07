@@ -97,6 +97,8 @@ const navItems: NavItemConfig[] = [
       { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: Gamepad2 },
       { label: 'Daily Word', href: '/mini-games/daily-word', icon: Gamepad2 },
       { label: 'Sudoku', href: '/mini-games/sudoku', icon: Gamepad2 },
+      { label: 'Meme Match', href: '/mini-games/meme-match', icon: Gamepad2 },
+      { label: 'Quiz Show', href: '/mini-games/quiz-show', icon: Gamepad2 },
     ]
   },
   { 
@@ -167,6 +169,8 @@ const agentNavItems: NavItemConfig[] = [
       { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: ArrowUpDown },
       { label: 'Daily Word', href: '/mini-games/daily-word', icon: WholeWord },
       { label: 'Daily Sudoku', href: '/mini-games/sudoku', icon: Grid3X3 },
+      { label: 'Meme Match', href: '/mini-games/meme-match', icon: Gamepad2 },
+      { label: 'Quiz Show', href: '/mini-games/quiz-show', icon: Gamepad2 },
     ],
   },
   {

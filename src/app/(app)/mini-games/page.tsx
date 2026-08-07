@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpDown, Grid3X3, Swords, Type, Trophy } from 'lucide-react';
+import { ArrowUpDown, Grid3X3, Swords, Type, Trophy, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DailyLeaderboard, type DailyLeaderboardEntry } from '@/components/mini-games/daily-leaderboard';
@@ -19,6 +19,7 @@ export default async function MiniGamesDashboard() {
     { key: 'higher-lower:default', game: 'higher-lower' as const, title: 'Higher or Lower', description: 'One daily run. Build the longest streak.', href: '/mini-games/higher-lower', icon: ArrowUpDown, color: 'text-blue-500' },
     { key: 'daily-word:default', game: 'daily-word' as const, title: 'Daily Word', description: 'Find the five-letter word in six guesses.', href: '/mini-games/daily-word', icon: Type, color: 'text-green-500' },
     ...(['easy','medium','hard'] as const).map(level => ({ key: `sudoku:${level}`, game: 'sudoku' as const, title: `Sudoku · ${level[0].toUpperCase()}${level.slice(1)}`, description: 'Complete today’s shared 9×9 puzzle.', href: '/mini-games/sudoku', icon: Grid3X3, color: 'text-purple-500' })),
+    { key: 'meme-match', game: 'meme-match' as const, title: 'Meme Match', description: 'Compete across three rounds of GIFs, captions and votes.', href: '/mini-games/meme-match', icon: Sparkles, color: 'text-pink-500' },
   ];
   return <div className="space-y-6">
     <div><h1 className="text-3xl font-bold">Mini Games</h1><p className="text-muted-foreground">Daily challenges and top scores</p></div>
@@ -31,6 +32,7 @@ export default async function MiniGamesDashboard() {
           <CardContent><DailyLeaderboard entries={summary?.leaderboard || []} game={card.game} /></CardContent>
         </Card>;
       })}
+      <Card variant="glass" className="min-w-0 overflow-hidden"><CardHeader><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Sparkles className="h-6 w-6 text-amber-500" /><div><CardTitle>Quiz Show</CardTitle><CardDescription>Answer live questions and climb the leaderboard.</CardDescription></div></div><Button asChild size="sm"><Link href="/mini-games/quiz-show">Play</Link></Button></div></CardHeader><CardContent><p className="text-sm text-muted-foreground">Host a live quiz or join with a room code.</p></CardContent></Card>
       <Card variant="glass" className="min-w-0 overflow-hidden"><CardHeader><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Swords className="h-6 w-6 text-orange-500" /><div><CardTitle>Rock Paper Scissors</CardTitle><CardDescription>Unlimited classic matches</CardDescription></div></div><Button asChild size="sm"><Link href="/mini-games/rps">Play</Link></Button></div></CardHeader><CardContent>
         {rps.length === 0 ? <div className="py-8 text-center text-muted-foreground"><Trophy className="mx-auto mb-2 h-8 w-8 opacity-30" />No games played yet</div> : <div className="space-y-1">{rps.map(entry => <div key={entry.userId} className="flex px-3 py-2"><span className="w-8 font-bold">{entry.rank}</span><span className="flex-1">{entry.name}</span><span>{entry.score} wins</span></div>)}</div>}
       </CardContent></Card>

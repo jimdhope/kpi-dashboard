@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { use, useState, useEffect, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Leaderboard } from '@/components/leaderboard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -81,8 +81,8 @@ const assignDenseRanks = <T extends { score: number }>(items: T[]): (T & { rank:
 };
 
 
-export default function PublicPodLeaderboardPage({ params }: { params: { podId: string } }) {
-  const { podId } = params;
+export default function PublicPodLeaderboardPage({ params }: { params: Promise<{ podId: string }> }) {
+  const { podId } = use(params);
 
   const [pod, setPod] = useState<Pod | null>(null);
   const [activeCompetition, setActiveCompetition] = useState<CompetitionWithRules | null>(null);

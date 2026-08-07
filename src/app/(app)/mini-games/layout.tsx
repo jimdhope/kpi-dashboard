@@ -1,7 +1,7 @@
 'use client';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Home, Gamepad2, ArrowUpDown, Grid3X3, WholeWord } from 'lucide-react';
+import { Home, Gamepad2, ArrowUpDown, Grid3X3, WholeWord, Sparkles } from 'lucide-react';
 import { OfflineIndicator } from '@/components/offline-indicator';
 
 interface MiniGamesLayoutProps {
@@ -14,6 +14,8 @@ const miniGamesMenuItems = [
   { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: ArrowUpDown },
   { label: 'Daily Word', href: '/mini-games/daily-word', icon: WholeWord },
   { label: 'Daily Sudoku', href: '/mini-games/sudoku', icon: Grid3X3 },
+  { label: 'Meme Match', href: '/mini-games/meme-match', icon: Sparkles },
+  { label: 'Quiz Show', href: '/mini-games/quiz-show', icon: Sparkles },
 ];
 
 export default function MiniGamesLayout({ children }: MiniGamesLayoutProps) {

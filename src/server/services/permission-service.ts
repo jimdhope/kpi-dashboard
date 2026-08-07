@@ -121,6 +121,7 @@ export const permissionService = {
         "nav.activity": "MANAGE",
         "nav.settings": "MANAGE",
         "nav.integrations": "MANAGE",
+        "nav.miniGames.quizManage": "MANAGE",
       },
       campaignManager: {
         "nav.knowledgeBase": "MANAGE",
@@ -133,6 +134,7 @@ export const permissionService = {
         "nav.activity": "MANAGE",
         "nav.settings": "MANAGE",
         "nav.integrations": "MANAGE",
+        "nav.miniGames.quizManage": "NONE",
       },
       podManager: {
         "nav.knowledgeBase": "MANAGE",
@@ -145,6 +147,7 @@ export const permissionService = {
         "nav.activity": "MANAGE",
         "nav.settings": "MANAGE",
         "nav.integrations": "MANAGE",
+        "nav.miniGames.quizManage": "MANAGE",
       },
       teamLeader: {
         "nav.knowledgeBase": "MANAGE",
@@ -157,6 +160,7 @@ export const permissionService = {
         "nav.activity": "VIEW",
         "nav.settings": "MANAGE",
         "nav.integrations": "MANAGE",
+        "nav.miniGames.quizManage": "MANAGE",
       },
       competitionRunner: {
         "nav.knowledgeBase": "MANAGE",
@@ -169,6 +173,7 @@ export const permissionService = {
         "nav.activity": "VIEW",
         "nav.settings": "MANAGE",
         "nav.integrations": "MANAGE",
+        "nav.miniGames.quizManage": "NONE",
       },
       agent: {
         "nav.knowledgeBase": "VIEW",
@@ -181,6 +186,7 @@ export const permissionService = {
         "nav.activity": "VIEW",
         "nav.settings": "NONE",
         "nav.integrations": "NONE",
+        "nav.miniGames.quizManage": "NONE",
       },
     };
     const settingsChildDefaults: Record<string, Record<string, PermissionLevel>> = {
@@ -215,7 +221,7 @@ export const permissionService = {
           const settingsKey = child.key.replace("nav.settings.", "");
           const childLevel = section.key === "nav.settings"
             ? settingsChildDefaults[roleKey]?.[settingsKey] ?? level
-            : level;
+            : resources[child.key] ?? level;
           await prisma.rolePermission.upsert({
             where: { roleId_resource: { roleId, resource: child.key } },
             create: { roleId, resource: child.key, level: childLevel },

@@ -81,6 +81,32 @@ enum ScoreTargetType {
   tracker
 }
 
+enum MemeMatchPhase {
+  lobby
+  submitting
+  voting
+  reveal
+  complete
+}
+
+enum QuizShowQuestionType {
+  singleChoice
+  trueFalse
+  multipleChoice
+}
+
+enum QuizShowQuizMode {
+  saved
+  random
+}
+
+enum QuizShowPhase {
+  lobby
+  answering
+  reveal
+  complete
+}
+
 enum KpiSortOrder {
   desc
   asc
@@ -168,6 +194,14 @@ model User {
   competitionResults    CompetitionResult[]
   dailyGameAttempts     DailyGameAttempt[]
   notifications         Notification[]
+  memeMatchRoomsHosted  MemeMatchRoom[]        @relation("MemeMatchRoomHost")
+  memeMatchParticipants MemeMatchParticipant[]
+  memeMatchSubmissions  MemeMatchSubmission[]
+  memeMatchPrompts      MemeMatchPrompt[]      @relation("MemeMatchPromptAuthor")
+  quizShowQuestions     QuizShowQuestion[]    @relation("QuizShowQuestionAuthor")
+  quizShowQuizzes       QuizShowQuiz[]        @relation("QuizShowQuizAuthor")
+  quizShowRoomsHosted   QuizShowRoom[]        @relation("QuizShowRoomHost")
+  quizShowParticipants  QuizShowParticipant[]
 }
 
 model Role {
@@ -515,6 +549,267 @@ model CompetitionRuleTemplate {
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model MemeMatchPrompt {
+  id          String              @id @default(cuid())
+  text        String
+  category    String?
+  isActive    Boolean             @default(true)
+  createdById String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  createdBy   User?               @relation("MemeMatchPromptAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  rooms       MemeMatchRoom[]
+  rounds      MemeMatchRound[]
+
+  @@index([isActive, createdAt])
+  @@index([category])
+}
+
+model MemeMatchRoom {
+  id             String                  @id @default(cuid())
+  code           String                  @unique
+  hostId         String
+  phase          MemeMatchPhase           @default(lobby)
+  currentRound   Int                     @default(0)
+  totalRounds    Int                     @default(3)
+  activePromptId String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  host           User                    @relation("MemeMatchRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  activePrompt   MemeMatchPrompt?        @relation(fields: [activePromptId], references: [id], onDelete: SetNull)
+  participants   MemeMatchParticipant[]
+  rounds         MemeMatchRound[]
+  submissions    MemeMatchSubmission[]
+  votes          MemeMatchVote[]
+
+  @@index([hostId])
+  @@index([phase, createdAt])
+}
+
+model MemeMatchParticipant {
+  id           String               @id @default(cuid())
+  roomId       String
+  userId       String
+  displayOrder Int
+  score        Int                  @default(0)
+  joinedAt     DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  room         MemeMatchRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submissions  MemeMatchSubmission[]
+  votesCast    MemeMatchVote[]      @relation("MemeMatchVoteCast")
+  votesReceived MemeMatchVote[]     @relation("MemeMatchVoteTarget")
+
+  @@unique([roomId, userId])
+  @@unique([roomId, displayOrder])
+  @@index([roomId, score])
+}
+
+model MemeMatchRound {
+  id             String               @id @default(cuid())
+  roomId         String
+  roundNumber    Int
+  promptId       String
+  startedAt      DateTime             @default(now())
+  advancedToVoteAt DateTime?
+  revealedAt     DateTime?
+  completedAt    DateTime?
+  room           MemeMatchRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  prompt         MemeMatchPrompt      @relation(fields: [promptId], references: [id], onDelete: Restrict)
+  submissions    MemeMatchSubmission[]
+  votes          MemeMatchVote[]
+
+  @@unique([roomId, roundNumber])
+  @@index([roomId, roundNumber])
+}
+
+model MemeMatchSubmission {
+  id             String               @id @default(cuid())
+  roomId         String
+  roundId        String
+  participantId  String
+  userId         String
+  gifId          String
+  gifUrl         String
+  gifTitle       String?
+  previewUrl     String?
+  caption        String
+  submittedAt    DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  room           MemeMatchRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  round          MemeMatchRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  participant    MemeMatchParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes          MemeMatchVote[]
+
+  @@unique([roundId, participantId])
+  @@index([roomId, roundId])
+  @@index([userId])
+}
+
+model MemeMatchVote {
+  id            String               @id @default(cuid())
+  roomId        String
+  roundId       String
+  voterId       String
+  participantId String
+  submissionId  String
+  createdAt     DateTime             @default(now())
+  room          MemeMatchRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  round         MemeMatchRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  voter         MemeMatchParticipant @relation("MemeMatchVoteCast", fields: [voterId], references: [id], onDelete: Cascade)
+  participant   MemeMatchParticipant @relation("MemeMatchVoteTarget", fields: [participantId], references: [id], onDelete: Cascade)
+  submission    MemeMatchSubmission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, voterId])
+  @@unique([roundId, voterId, submissionId])
+  @@index([roomId, roundId])
+  @@index([submissionId])
+}
+
+model QuizShowQuestion {
+  id                 String               @id @default(cuid())
+  title              String?
+  text               String
+  category           String?
+  internalNotes      String?
+  type               QuizShowQuestionType @default(singleChoice)
+  isActive           Boolean              @default(true)
+  mediaUrl           String?
+  mediaOriginalName  String?
+  mediaContentType   String?
+  mediaSize          Int?
+  createdById        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  createdBy          User?                @relation("QuizShowQuestionAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  options            QuizShowAnswerOption[]
+  quizQuestions      QuizShowQuizQuestion[]
+  roomQuestions      QuizShowRoomQuestion[]
+
+  @@index([isActive, createdAt])
+  @@index([createdById])
+}
+
+model QuizShowAnswerOption {
+  id         String             @id @default(cuid())
+  questionId String
+  text       String
+  position   Int
+  isCorrect  Boolean            @default(false)
+  question   QuizShowQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, position])
+  @@index([questionId])
+}
+
+model QuizShowQuiz {
+  id          String             @id @default(cuid())
+  title       String
+  description String?
+  mode        QuizShowQuizMode   @default(saved)
+  isActive    Boolean            @default(true)
+  questionCount Int?
+  createdById String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdBy   User?              @relation("QuizShowQuizAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  questions   QuizShowQuizQuestion[]
+  rooms       QuizShowRoom[]
+
+  @@index([isActive, createdAt])
+  @@index([createdById])
+}
+
+model QuizShowQuizQuestion {
+  quizId     String
+  questionId String
+  position   Int
+  quiz       QuizShowQuiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  question   QuizShowQuestion   @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@id([quizId, questionId])
+  @@unique([quizId, position])
+  @@index([questionId])
+}
+
+model QuizShowRoom {
+  id                  String           @id @default(cuid())
+  code                String           @unique
+  hostId              String
+  quizId              String
+  phase               QuizShowPhase    @default(lobby)
+  currentQuestion    Int              @default(-1)
+  shuffleQuestions    Boolean          @default(false)
+  questionStartedAt  DateTime?
+  answerDeadlineAt   DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  host                User             @relation("QuizShowRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  quiz                QuizShowQuiz     @relation(fields: [quizId], references: [id], onDelete: Restrict)
+  questions           QuizShowRoomQuestion[]
+  participants        QuizShowParticipant[]
+  answers             QuizShowAnswer[]
+
+  @@index([hostId])
+  @@index([phase, createdAt])
+}
+
+model QuizShowRoomQuestion {
+  id             String             @id @default(cuid())
+  roomId         String
+  questionId     String
+  position       Int
+  room           QuizShowRoom       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  question       QuizShowQuestion   @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  answers        QuizShowAnswer[]
+
+  @@unique([roomId, position])
+  @@unique([roomId, questionId])
+  @@index([questionId])
+}
+
+model QuizShowParticipant {
+  id                  String             @id @default(cuid())
+  roomId              String
+  userId              String
+  displayOrder        Int
+  score               Int                @default(0)
+  cumulativeResponseMs Int               @default(0)
+  joinedAt            DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  room                QuizShowRoom       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers             QuizShowAnswer[]
+
+  @@unique([roomId, userId])
+  @@unique([roomId, displayOrder])
+  @@index([roomId, score])
+}
+
+model QuizShowAnswer {
+  id             String             @id @default(cuid())
+  roomId         String
+  roomQuestionId String
+  participantId  String
+  selectedOptionIds Json
+  isCorrect      Boolean
+  points         Int                @default(0)
+  responseMs     Int
+  answeredAt     DateTime           @default(now())
+  room           QuizShowRoom       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomQuestion   QuizShowRoomQuestion @relation(fields: [roomQuestionId], references: [id], onDelete: Cascade)
+  participant    QuizShowParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([roomQuestionId, participantId])
+  @@index([roomId, roomQuestionId])
+  @@index([participantId])
 }
 
 model MessageOfDay {

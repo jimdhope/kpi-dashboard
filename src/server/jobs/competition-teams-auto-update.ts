@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/server/db/client";
 import { getBoss } from "@/server/jobs/boss";
 import { QUEUES } from "@/server/jobs/queues";
-import { sendDailyScoresFromWorker } from "@/app/api/competitions/[id]/send-daily-scores/route";
+import { sendDailyScoresFromWorker } from "@/server/services/send-daily-scores-service";
 
 function latestDate(values: Array<Date | null | undefined>) {
   return values.reduce<Date | null>((latest, value) => value && (!latest || value > latest) ? value : latest, null);

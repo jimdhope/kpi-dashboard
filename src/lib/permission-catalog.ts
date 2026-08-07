@@ -42,6 +42,7 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
   { key: "nav.miniGames", label: "Mini Games", description: "Games and gamification", children: [
     { key: "nav.miniGames.play", label: "Play Games", description: "Access available mini games" },
     { key: "nav.miniGames.manage", label: "Gamification Management", description: "Manage badges and gamification" },
+    { key: "nav.miniGames.quizManage", label: "Quiz Show Management", description: "Create and manage Quiz Show questions and quizzes" },
   ]},
   { key: "nav.usefulTools", label: "Tools", description: "Operational calculators and guides", children: [
     { key: "nav.usefulTools.callFlow", label: "Call Flow", description: "Call handling guide" },
