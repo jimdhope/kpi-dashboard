@@ -1,7 +1,7 @@
 import "server-only";
 
 import { MemeMatchPhase, Prisma } from "@prisma/client";
-import { randomInt } from "crypto";
+import { randomBytes, randomInt, timingSafeEqual } from "crypto";
 import { prisma } from "@/server/db/client";
 import { authService } from "@/server/services/auth-service";
 import { permissionService } from "@/server/services/permission-service";
@@ -114,6 +114,16 @@ function makeRoomCode(length = 6) {
   let code = "";
   for (let i = 0; i < length; i++) code += ROOM_CODE_ALPHABET[randomInt(ROOM_CODE_ALPHABET.length)];
   return code;
+}
+
+function makeDisplayToken() {
+  return randomBytes(32).toString("hex");
+}
+
+function matchesDisplayToken(expected: string, supplied: string) {
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
 }
 
 function mapPhase(value: unknown): MemeMatchPhase {
@@ -262,6 +272,42 @@ function buildState(room: NonNullable<RoomBundle>, viewerUserId: string): MemeMa
       round.votes.filter((vote) => vote.voterId === participantMap.get(viewerUserId)?.id).map((vote) => vote.submissionId)
     ),
     votesCast: currentRound?.votes.length ?? 0,
+  };
+}
+
+function buildPresentationState(room: NonNullable<RoomBundle>) {
+  const currentRound = room.rounds.find((round) => round.roundNumber === room.currentRound) ?? null;
+  const reveal = room.phase === MemeMatchPhase.reveal || room.phase === MemeMatchPhase.complete;
+  const submissions = currentRound?.submissions.map((submission) => ({
+    id: submission.id,
+    roundNumber: currentRound.roundNumber,
+    gifUrl: submission.gifUrl,
+    previewUrl: submission.previewUrl,
+    caption: submission.caption,
+    anonymousLabel: displayLabel(submission.participant.displayOrder - 1),
+    ...(reveal ? { authorName: submission.participant.user.name } : {}),
+    voteCount: reveal ? submission.votes.length : 0,
+  })) ?? [];
+
+  return {
+    room: {
+      code: room.code,
+      phase: room.phase,
+      currentRound: room.currentRound,
+      totalRounds: room.totalRounds,
+    },
+    prompt: currentRound ? toPrompt(currentRound.prompt) : room.activePrompt ? toPrompt(room.activePrompt) : null,
+    participants: room.participants.map((participant) => ({
+      name: participant.user.name,
+      isHost: participant.userId === room.hostId,
+    })),
+    submittedCount: currentRound?.submissions.length ?? 0,
+    voteCount: currentRound?.votes.length ?? 0,
+    submissionCount: submissions.length,
+    submissions,
+    leaderboard: [...room.participants]
+      .sort((a, b) => b.score - a.score || a.displayOrder - b.displayOrder)
+      .map((participant) => ({ name: participant.user.name, score: participant.score })),
   };
 }
 
@@ -552,6 +598,7 @@ export const memeMatchService = {
       const room = await tx.memeMatchRoom.create({
         data: {
           code,
+          displayToken: makeDisplayToken(),
           hostId: userId,
           phase: MemeMatchPhase.lobby,
           totalRounds: DEFAULT_TOTAL_ROUNDS,
@@ -587,6 +634,19 @@ export const memeMatchService = {
     const { room } = await getRoomAndParticipant(code, userId);
     if (!room) throw new Error("Room not found.");
     return buildState(room, userId);
+  },
+
+  async getDisplayLinkToken(userId: string, code: string) {
+    const { room } = await getRoomAndParticipant(code.toUpperCase(), userId);
+    if (!room) throw new Error("Room not found.");
+    if (room.hostId !== userId) throw new Error("Forbidden");
+    return room.displayToken;
+  },
+
+  async getPresentationState(code: string, token: string) {
+    const room = await loadRoomBundle(code.toUpperCase());
+    if (!room || !matchesDisplayToken(room.displayToken, token)) throw new Error("Invalid display link.");
+    return buildPresentationState(room);
   },
 
   async searchGifs(userId: string, query: string) {

@@ -4,9 +4,18 @@ import { getSessionCookie } from "better-auth/cookies";
 import { SAFE_METHODS } from "@/server/security/authorization-policy";
 import { ADMIN_PREVIEW_COOKIE } from "@/server/auth/admin-preview-token";
 
-const PUBLIC_ROUTES = new Set(["/", "/login", "/forgot-password", "/reset-password"]);
+const PUBLIC_ROUTES = new Set([
+  "/",
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/mini-games/meme-match/display",
+  "/mini-games/quiz-show/display",
+]);
 const PUBLIC_API_PREFIXES = new Set([
   "/api/auth/",
+  "/api/mini-games/meme-match/display",
+  "/api/mini-games/quiz-show/display",
   // External Teams callbacks authenticate with their high-entropy endpoint ID.
   "/api/integrations/teams/incoming/",
 ]);

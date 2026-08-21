@@ -5,4 +5,5 @@ export const QUEUES = {
   competitionTeamsAutoUpdate: "competition-teams-auto-update",
   memeMatchCleanup: "meme-match-cleanup",
   quizShowCleanup: "quiz-show-cleanup",
+  divisionMaintenance: "division-maintenance",
 } as const;

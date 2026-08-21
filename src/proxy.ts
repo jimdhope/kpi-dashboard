@@ -20,6 +20,7 @@ export const config = {
     "/pod-manager/:path*",
     "/call-flow/:path*",
     "/meter-reading-guide/:path*",
+    "/presentation/:path*",
     "/api/:path*",
   ],
 };

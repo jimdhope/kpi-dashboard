@@ -6,14 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Trophy, BarChart3, Gamepad2, Swords, Medal, User as UserIcon, Loader2 } from "lucide-react";
-import { cn, generateInitials } from '@/lib/utils';
+import { Trophy, BarChart3, Medal, User as UserIcon, Loader2, QrCode } from "lucide-react";
+import { cn } from '@/lib/utils';
 import { endOfWeek, format, startOfWeek, subDays } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { QRCodeSVG } from 'qrcode.react';
 import type { AppUser } from '@/lib/contracts';
 import { useCompetitionScoreRefresh } from '@/hooks/use-competition-score-refresh';
+import { BeatYourBestCard } from '@/components/dashboard/beat-your-best-card';
+import { DivisionCard } from '@/components/dashboard/division-card';
 
 interface KpiDefinition {
   id: string;
@@ -83,27 +86,12 @@ interface SelfScoreEvent {
 
 interface Announcement { id: string; title: string; message: string }
 
-interface GameLeaderboardEntry {
-  userId: string;
-  name: string;
-  score: number | string;
-  rank: number;
-}
-
-interface GameLeaderboard {
-  id: string;
-  name: string;
-  scoreLabel: string;
-  entries: GameLeaderboardEntry[];
-}
-
 const COMPETITION_DASHBOARD_KEY = 'competitionDashboard_selectedCompetitionId';
 const COMPETITION_DASHBOARD_POD_KEY = 'competitionDashboard_selectedPodId';
 
-const formatGameTime = (milliseconds: number) => {
-  const seconds = Math.floor(milliseconds / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-};
+// Score events are stamped at UTC midnight (scoredForDate), so day comparisons
+// must use UTC date keys to match what the API records when a score is logged.
+const utcDayKey = (date: string | Date) => new Date(date).toISOString().slice(0, 10);
 
 export function AgentDashboard({
   initialUser = null,
@@ -120,14 +108,17 @@ export function AgentDashboard({
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [kpis, setKpis] = useState<KpiDefinition[]>([]);
   const [kpiLogs, setKpiLogs] = useState<KpiLog[]>([]);
-  const [rpsLeaderboard, setRpsLeaderboard] = useState<GameLeaderboardEntry[]>([]);
-  const [dailyGameLeaderboards, setDailyGameLeaderboards] = useState<GameLeaderboard[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [scoreQuantities, setScoreQuantities] = useState<Record<string, string>>({});
   const [submittingRuleId, setSubmittingRuleId] = useState<string | null>(null);
   const [selfScoreEvents, setSelfScoreEvents] = useState<SelfScoreEvent[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [quickScoreUrl, setQuickScoreUrl] = useState('');
+
+  useEffect(() => {
+    setQuickScoreUrl(`${window.location.origin}/agent/quick-score`);
+  }, []);
 
   // Load the pod selection on mount. Competition selection is loaded as part
   // of the initial dashboard request so only its achievements are transferred.
@@ -159,31 +150,11 @@ export function AgentDashboard({
         setUsers(data.users || []);
         setKpis(data.kpis || []);
         setKpiLogs(data.kpiLogs || []);
-        setRpsLeaderboard(data.rpsLeaderboard || []);
         setAchievements(data.achievements || []);
 
         const selected = comps.find((c: Competition) => c.id === data.achievementCompetitionId)
           ?? comps[0];
         if (selected) setSelectedCompetitionId(selected.id);
-
-        const names: Record<string, string> = {
-          'higher-lower:default': 'Higher or Lower',
-          'daily-word:default': 'Daily Word',
-          'sudoku:easy': 'Sudoku · Easy',
-          'sudoku:medium': 'Sudoku · Medium',
-          'sudoku:hard': 'Sudoku · Hard',
-        };
-        setDailyGameLeaderboards((data.dailyGames || []).map((game: any) => ({
-          id: `${game.gameKey}:${game.variant}`,
-          name: names[`${game.gameKey}:${game.variant}`] || game.gameKey,
-          scoreLabel: game.gameKey === 'higher-lower' ? 'Streak' : game.gameKey === 'daily-word' ? 'Guesses' : 'Time',
-          entries: (game.leaderboard || []).map((entry: any) => ({
-            ...entry,
-            score: game.gameKey === 'daily-word'
-              ? entry.guesses
-              : game.gameKey === 'sudoku' ? formatGameTime(entry.score) : entry.score,
-          })),
-        })));
       } catch (err) {
         console.error('Error initializing dashboard:', err);
       }
@@ -319,6 +290,29 @@ export function AgentDashboard({
     return achievements.filter((a) => a.competitionId === selectedCompetitionId);
   }, [achievements, selectedCompetitionId]);
 
+  const myScoreSummary = useMemo(() => {
+    const todayKey = utcDayKey(new Date());
+    let todayPoints = 0;
+    let competitionPoints = 0;
+    competitionAchievements.forEach((log) => {
+      if (!currentUser || log.agentId !== currentUser.id) return;
+      competitionPoints += log.points;
+      if (utcDayKey(log.date) === todayKey) todayPoints += log.points;
+    });
+    return { todayPoints, competitionPoints };
+  }, [competitionAchievements, currentUser]);
+
+  const myDailyQtyByRule = useMemo(() => {
+    const quantities: Record<string, number> = {};
+    if (!currentUser) return quantities;
+    const todayKey = utcDayKey(new Date());
+    competitionAchievements.forEach((log) => {
+      if (log.agentId !== currentUser.id || utcDayKey(log.date) !== todayKey) return;
+      quantities[log.ruleId] = (quantities[log.ruleId] ?? 0) + log.value;
+    });
+    return quantities;
+  }, [competitionAchievements, currentUser]);
+
   const achievementSummary = useMemo(() => {
     if (!competitionRules || competitionAchievements.length === 0) return [];
 
@@ -449,13 +443,6 @@ export function AgentDashboard({
     setSelectedPodId(value);
   };
 
-  const gameLeaderboards = useMemo((): GameLeaderboard[] => [{
-    id: 'rock-paper-scissors',
-    name: 'Rock Paper Scissors',
-    scoreLabel: 'Wins',
-    entries: rpsLeaderboard,
-  }, ...dailyGameLeaderboards], [rpsLeaderboard, dailyGameLeaderboards]);
-
   const agentPerformanceData = useMemo(() => {
     const weekStartsOn = 4 as const;
     if (kpis.length === 0 || kpiLogs.length === 0) {
@@ -551,13 +538,44 @@ export function AgentDashboard({
                 <CardTitle className="text-base">🏆 My daily score tracker</CardTitle>
                 <CardDescription>Self-report your successes. Entries are provisional and can be undone.</CardDescription>
               </div>
-              <div className="shrink-0 rounded-lg border bg-muted/50 px-3 py-2 text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Recent score</p>
-                <p className="text-lg font-extrabold">{selfScoreEvents.reduce((total, event) => total + event.points, 0)} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="rounded-lg border bg-muted/50 px-3 py-2 text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Today</p>
+                  <p className="text-lg font-extrabold">{myScoreSummary.todayPoints} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
+                </div>
+                <div className="rounded-lg border bg-muted/50 px-3 py-2 text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Competition</p>
+                  <p className="text-lg font-extrabold">{myScoreSummary.competitionPoints} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Show QR code to log scores on your phone">
+                      <QrCode className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>Log scores on your phone</DialogTitle>
+                      <DialogDescription>Scan with your phone camera to open Quick Score.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center gap-3 pb-2">
+                      {quickScoreUrl ? (
+                        <div className="rounded-lg border bg-white p-3">
+                          <QRCodeSVG value={quickScoreUrl} size={180} marginSize={0} />
+                        </div>
+                      ) : (
+                        <Skeleton className="h-[204px] w-[204px]" />
+                      )}
+                      <p className="break-all text-center text-xs text-muted-foreground">{quickScoreUrl}</p>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
-              {agentLogRules.map((rule: { id: string; title: string; points: number; emoji?: string | null }) => (
+              {agentLogRules.map((rule: { id: string; title: string; points: number; emoji?: string | null }) => {
+                const todayQty = myDailyQtyByRule[rule.id] ?? 0;
+                return (
                 <div key={rule.id} className="flex min-w-0 flex-col justify-between gap-3 rounded-lg border bg-background/50 p-3 transition-colors hover:bg-muted/30">
                   <div className="flex min-w-0 items-center justify-between gap-1">
                     <div className="flex min-w-0 items-center gap-1.5">
@@ -566,6 +584,7 @@ export function AgentDashboard({
                     </div>
                     <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">{rule.points} pts</span>
                   </div>
+                  <p className={cn('text-[10px] font-medium leading-none', todayQty > 0 ? 'text-foreground' : 'text-muted-foreground/50')}>Today: {todayQty}</p>
                   <div className="flex items-center justify-center gap-1">
                     <Input type="text" inputMode="numeric" pattern="[0-9]*" value={scoreQuantities[rule.id] ?? '1'} onChange={(event) => setScoreQuantities((current) => ({ ...current, [rule.id]: event.target.value }))} className="h-8 w-12 bg-background px-1 text-center text-sm" aria-label={`Quantity for ${rule.title}`} />
                     <div className="flex flex-col">
@@ -577,7 +596,8 @@ export function AgentDashboard({
                     </Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {selfScoreEvents.length > 0 && (
                 <div className="col-span-full border-t pt-3">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Your recent entries</p>
@@ -787,6 +807,20 @@ export function AgentDashboard({
           </Card>
         </Link>
 
+        {/* Beat Your Best (Beta) — hidden unless enabled in settings */}
+        <BeatYourBestCard
+          competitionId={selectedCompetitionId || null}
+          currentUserId={currentUser?.id}
+          myPodId={selfScoringPodId}
+          myPodName={availablePods.find((pod) => pod.id === selfScoringPodId)?.name ?? null}
+        />
+
+        {/* Divisions League — hidden unless enabled in settings */}
+        <DivisionCard
+          competitionId={selectedCompetitionId || null}
+          currentUserId={currentUser?.id}
+        />
+
         {/* Performance Card */}
         <Link href="/agent/performance">
           <Card variant="glass" className="glass-card-hover cursor-pointer overflow-hidden">
@@ -868,68 +902,6 @@ export function AgentDashboard({
                     </TableBody>
                   </Table>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Mini Games Card */}
-        <Link href="/mini-games">
-          <Card variant="glass" className="glass-card-hover cursor-pointer overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/20">
-                  <Gamepad2 className="h-5 w-5 text-purple-500" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Mini Games</CardTitle>
-                  <CardDescription>Top 10 scores for each game</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {gameLeaderboards.every((game) => game.entries.length === 0) ? (
-                <div className="text-center py-4">
-                  <Swords className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-xs text-muted-foreground">Play a mini game to see the leaderboards</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {gameLeaderboards.map((game) => game.entries.length > 0 && (
-                    <div key={game.id}>
-                      <div className="mb-2 flex items-center justify-between border-b pb-2">
-                        <span className="text-sm font-semibold">{game.name}</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{game.scoreLabel}</span>
-                      </div>
-                      <div className="space-y-0.5">
-                        {game.entries.slice(0, 10).map((entry) => {
-                          const isCurrentUser = entry.userId === currentUser.id;
-                          return (
-                            <div key={entry.userId} className={`flex items-center gap-2 p-1.5 rounded transition-colors ${isCurrentUser ? 'bg-purple-500/20 ring-1 ring-purple-500/50' : 'hover:bg-muted/30'}`}>
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold border ${
-                                entry.rank === 1 ? 'bg-yellow-500/30 text-yellow-400 border-yellow-500/50' :
-                                entry.rank === 2 ? 'bg-gray-400/30 text-gray-300 border-gray-400/50' :
-                                entry.rank === 3 ? 'bg-orange-400/30 text-orange-400 border-orange-400/50' :
-                                'bg-muted/30 text-muted-foreground border-muted'
-                              }`}>
-                                {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
-                              </div>
-                              <Avatar className="h-6 w-6">
-                                <AvatarFallback className="text-[8px]">{generateInitials(entry.name)}</AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <span className={`text-xs truncate block ${isCurrentUser ? 'font-semibold text-purple-400' : 'font-medium'}`}>
-                                  {isCurrentUser ? 'You' : entry.name}
-                                </span>
-                              </div>
-                              <span className={`text-xs font-bold tabular-nums ${isCurrentUser ? 'text-purple-400' : ''}`}>{entry.score}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               )}
             </CardContent>

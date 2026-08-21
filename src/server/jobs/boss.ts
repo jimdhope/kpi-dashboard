@@ -44,11 +44,17 @@ export function getBoss(): Promise<PgBoss> {
         await boss.createQueue(QUEUES.quizShowCleanup);
       }
 
+      const existingDivisionMaintenanceQueue = await boss.getQueue(QUEUES.divisionMaintenance);
+      if (!existingDivisionMaintenanceQueue) {
+        await boss.createQueue(QUEUES.divisionMaintenance);
+      }
+
       await boss.schedule(QUEUES.teamsAutomationSchedule, "* * * * *");
       await boss.schedule(QUEUES.gamificationEvaluation, "0 * * * *");
       await boss.schedule(QUEUES.competitionTeamsAutoUpdate, "*/15 * * * *");
       await boss.schedule(QUEUES.memeMatchCleanup, "0 3 * * *");
       await boss.schedule(QUEUES.quizShowCleanup, "0 4 * * *");
+      await boss.schedule(QUEUES.divisionMaintenance, "15 2 * * *");
 
       return boss;
     });

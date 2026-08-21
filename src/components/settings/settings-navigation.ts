@@ -7,10 +7,12 @@ import {
   MessageSquare,
   Shield,
   ShieldCheck,
+  TrendingUp,
   UserCircle,
   Users,
   Zap,
   Sparkles,
+  Crown,
 } from "lucide-react";
 
 export interface SettingsNavigationItem {
@@ -55,6 +57,8 @@ const teamsSettings = [
 const generalSettings = [
   setting("motd", "MOTD", "Publish Message of the Day", "/settings/general/motd", Megaphone, "settings.announcements", "MANAGE"),
   setting("feedback", "Feedback", "Review feedback submissions", "/settings/general/feedback", MessageSquare, "settings.feedback", "MANAGE"),
+  setting("beat-your-best", "Beat Your Best (Beta)", "Beat Your Best scoring toggles", "/settings/beat-your-best", TrendingUp, "competitions.manage", "MANAGE"),
+  setting("divisions", "Divisions League", "League tables, promotion/relegation, and monthly titles", "/settings/divisions", Crown, "competitions.manage", "MANAGE"),
   setting("meme-match", "Meme Match", "Manage GIF game prompts", "/settings/meme-match", Sparkles, "miniGames.manage", "MANAGE"),
   setting("meme-match-rooms", "Meme Match games", "Inspect and moderate games", "/settings/meme-match/rooms", Sparkles, "miniGames.manage", "MANAGE"),
   setting("quiz-show", "Quiz Show", "Manage Quiz Show questions and quizzes", "/settings/quiz-show", Sparkles, "miniGames.quizManage", "MANAGE"),

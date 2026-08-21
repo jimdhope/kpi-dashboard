@@ -14,7 +14,7 @@ Next.js version and are the source of truth; do not replace them separately.
 
 ## Project Overview
 - **Name:** KPI Quest
-- **Version:** 3.6.0
+- **Version:** 3.7.0
 - **Stack:** Next.js 16, React, TypeScript, Tailwind CSS, Prisma, PostgreSQL
 - **Local workspace:** `/Users/jim/Projects/KPI Quest`
 - **Production location:** `/var/www/kpi-dashboard`

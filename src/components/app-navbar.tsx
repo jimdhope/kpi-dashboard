@@ -7,12 +7,13 @@ import { usePathname } from 'next/navigation';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { PermissionMap } from '@/hooks/use-permissions';
 import { cn, generateInitials } from '@/lib/utils';
-import { 
-  Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone, 
+import {
+  Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone,
   Crown, Activity, Bell, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare,
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone, MessageSquare,
   CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen,
-  BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord, CheckCheck
+  BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord, CheckCheck,
+  TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -68,6 +69,8 @@ const navItems: NavItemConfig[] = [
       { label: 'Dashboard', href: '/competitions', icon: Home, permissionKey: 'competitions.dashboard' },
       { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, permissionKey: 'competitions.log', requiredLevel: 'MANAGE' },
       { label: 'Manage', href: '/competitions/manage', icon: Trophy, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
+      { label: 'Beat Your Best (Beta)', href: '/competitions/beat-your-best', icon: TrendingUp, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
+      { label: 'Divisions League', href: '/divisions', icon: Crown, permissionKey: 'competitions.dashboard' },
       { label: 'Certificates', href: '/competitions/certificates', icon: Award, permissionKey: 'competitions.certificates' },
       { label: 'Reports', href: '/reports', icon: FileText, permissionKey: 'reports' },
       { label: 'Gamification', href: '/admin/gamification', icon: Crown, permissionKey: 'settings', requiredLevel: 'MANAGE' },
@@ -134,6 +137,7 @@ const agentNavItems: NavItemConfig[] = [
     icon: Trophy,
     items: [
       { label: 'My Standings', href: '/agent/competitions', icon: Home, permissionKey: 'competitions.dashboard' },
+      { label: 'Divisions League', href: '/divisions', icon: Crown, permissionKey: 'competitions.dashboard' },
       { label: 'Quick Score', href: '/quick-score', icon: Zap },
       { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, permissionKey: 'competitions.log', requiredLevel: 'MANAGE' },
       { label: 'Manage', href: '/competitions/manage', icon: Trophy, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },

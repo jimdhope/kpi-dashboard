@@ -5,6 +5,7 @@ import { getBoss } from "@/server/jobs/boss";
 import { registerCompetitionTeamsAutoUpdateWorker } from "@/server/jobs/competition-teams-auto-update";
 import { registerMemeMatchCleanupWorker } from "@/server/jobs/meme-match-cleanup";
 import { registerQuizShowCleanupWorker } from "@/server/jobs/quiz-show-cleanup";
+import { registerDivisionMaintenanceWorker } from "@/server/jobs/division-maintenance";
 
 async function main() {
   await registerTeamsWebhookWorker();
@@ -13,6 +14,7 @@ async function main() {
   await registerCompetitionTeamsAutoUpdateWorker();
   await registerMemeMatchCleanupWorker();
   await registerQuizShowCleanupWorker();
+  await registerDivisionMaintenanceWorker();
   // Keep the process alive for pg-boss workers.
   await new Promise(() => undefined);
 }

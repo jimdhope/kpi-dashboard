@@ -1,4 +1,4 @@
-# KPI Quest 3.6.0
+# KPI Quest 3.7.0
 
 KPI Quest is a role-aware performance and engagement platform for teams. It combines KPI tracking, competitions, pods, achievements, daily mini-games, shared knowledge and practical workplace tools in one responsive workspace.
 
@@ -7,21 +7,23 @@ KPI Quest is a role-aware performance and engagement platform for teams. It comb
 - **Role-aware dashboards** for agents, managers and administrators at one dashboard URL
 - **KPI performance** with daily results, targets, trends, breakdowns and leaderboards
 - **Competitions** with configurable rules, live standings, pods and winner certificates
+- **Beat Your Best** and the **KPI League**: race your own form and climb three divisions with monthly titles
 - **Engagement** through achievements, levels and daily mini-games
 - **Team resources** including a knowledge base, directory, call flows and calculators
 - **Microsoft Teams workflows** for competition messages, scoring and scheduled updates
 - **Installable PWA** with a branded offline fallback and no offline storage of private data
 - **Safe operations** with role-based permissions, audit activity, backups and fail-closed migrations
 
-## What’s new in 3.6.0
+## What’s new in 3.7.0
 
-- Unified the admin and agent dashboard experience, including authorised view switching for multi-role users.
-- Added Daily Word, Higher or Lower and three Daily Sudoku difficulties alongside Rock Paper Scissors.
-- Added an installable, online-first PWA and installation guidance for supported browsers and devices.
-- Introduced a consistent dark glass design system across dashboards and application pages.
-- Improved dashboard query behaviour, navigation permissions, security headers and production container safety.
-- Removed the unused in-app notification system while preserving Microsoft Teams integrations and gamification awards.
-- Strengthened deployment safeguards with committed Prisma migrations, fail-closed startup and explicit production seeding.
+- Introduced **Beat Your Best** (shadow beta): a weekly score measured as a percentage of your rolling personal best over the last eight competitions, with a qualification floor and an unranked grace period for new agents.
+- Added the Beat Your Best dashboard card with live updates, an admin standings page and admin-only settings toggles so the feature stays invisible until switched on.
+- Introduced the **KPI League** (“Autumn Cup”): three divisions seeded from recent form, monthly division title sprints, and year-end promotion/relegation with absence protection so nobody ever leaves the competition.
+- Added division badges and tables on the agent dashboard, dedicated divisions pages, a trophy cabinet page, and divisions history APIs.
+- Added scheduled league jobs for month-end champions and reshuffle-day promotion/relegation with Microsoft Teams announcements.
+- Added the `AppSetting` foundation for runtime feature toggles administered through Settings.
+- Launched an animated in-app presentation at `/presentation/Aug-Features-Update` introducing the new features to agents (sign-in required).
+- Preserved existing scoring behaviour: weekly winners, entry logging and historical results are unchanged.
 
 ## Roles
 

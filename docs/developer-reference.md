@@ -1,6 +1,6 @@
 # Developer & Technical Reference
 
-Welcome to the **KPI Quest Developer and Technical Reference**. This document provides a comprehensive technical breakdown of KPI Quest (v3.6.0) to assist engineers in maintaining, debugging, extending, and deploying the platform.
+Welcome to the **KPI Quest Developer and Technical Reference**. This document provides a comprehensive technical breakdown of KPI Quest (v3.7.0) to assist engineers in maintaining, debugging, extending, and deploying the platform.
 
 ---
 

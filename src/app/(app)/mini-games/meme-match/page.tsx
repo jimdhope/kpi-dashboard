@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, LogOut, Play, Search, Sparkles, Trophy, Users } from 'lucide-react';
+import { Loader2, LogOut, MonitorPlay, Play, Search, Sparkles, Trophy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -146,6 +146,21 @@ export default function MemeMatchPage() {
     setSelectedGif(null);
   };
 
+  const openPresentation = async () => {
+    const displayWindow = window.open('about:blank', '_blank');
+    if (!displayWindow) {
+      toast({ variant: 'destructive', title: 'Presentation view blocked', description: 'Allow pop-ups for this site and try again.' });
+      return;
+    }
+    try {
+      const data = await jsonRequest(`/api/mini-games/meme-match/rooms/${encodeURIComponent(room?.code || '')}/display-link`);
+      displayWindow.location.href = data.url;
+    } catch (error) {
+      displayWindow.close();
+      toast({ variant: 'destructive', title: 'Could not open presentation view', description: error instanceof Error ? error.message : 'Please try again.' });
+    }
+  };
+
   const hasSubmitted = Boolean(room?.mySubmission);
   const submittedCount = room?.submissions?.length ?? 0;
   const canVote = room?.phase === 'voting';
@@ -161,7 +176,7 @@ export default function MemeMatchPage() {
   </div>;
 
   return <div className="mx-auto max-w-6xl space-y-6">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-3xl font-bold">Meme Match</h1><p className="text-muted-foreground">Room <span className="font-mono font-bold tracking-widest text-foreground">{room.code}</span> · Round {room.roundNumber} of 3</p></div><div className="rounded-lg border bg-muted/30 px-4 py-2 text-center"><p className="text-xs uppercase tracking-wider text-muted-foreground">Phase</p><p className="font-semibold capitalize">{room.phase}</p></div></div>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-3xl font-bold">Meme Match</h1><p className="text-muted-foreground">Room <span className="font-mono font-bold tracking-widest text-foreground">{room.code}</span> · Round {room.roundNumber} of 3</p></div><div className="flex items-center gap-3"><div className="rounded-lg border bg-muted/30 px-4 py-2 text-center"><p className="text-xs uppercase tracking-wider text-muted-foreground">Phase</p><p className="font-semibold capitalize">{room.phase}</p></div>{room.isHost && <Button variant="outline" onClick={() => void openPresentation()}><MonitorPlay className="mr-2 h-4 w-4" />Open presentation view</Button>}</div></div>
     {room.phase === 'lobby' && <Card variant="glass"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Waiting room</CardTitle><CardDescription>Share the code, then start when everyone is ready.</CardDescription></CardHeader><CardContent className="space-y-5"><div className="flex flex-wrap gap-2">{room.participants.map(player => <span key={player.id} className="rounded-full border px-3 py-1 text-sm">{player.name}{player.id === room.currentUserId ? ' (you)' : ''}</span>)}</div>{room.isHost ? <Button onClick={() => void act('start')} disabled={busy || room.participants.length < 4}>Start round one</Button> : <p className="text-sm text-muted-foreground">Waiting for the host to start…</p>}</CardContent></Card>}
     {room.prompt && room.phase !== 'complete' && <Card variant="glass"><CardHeader><CardDescription>Round {room.roundNumber} prompt</CardDescription><CardTitle className="text-2xl">{room.prompt.text}</CardTitle></CardHeader>{room.phase === 'submitting' && <CardContent className="space-y-5">{hasSubmitted ? <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4"><p className="font-semibold">Your meme is submitted.</p><p className="text-sm text-muted-foreground">You can update it until the host closes submissions.</p></div> : null}<div className="flex gap-2"><Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search GIPHY…" onKeyDown={e => e.key === 'Enter' && void searchGifs()} /><Button onClick={searchGifs} disabled={searching || !query.trim()}>{searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}</Button></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{gifs.map(gif => <button type="button" key={gif.id} onClick={() => setSelectedGif(gif)} className={`overflow-hidden rounded-lg border-2 text-left ${selectedGif?.id === gif.id ? 'border-primary ring-2 ring-primary/30' : 'border-transparent'}`}><img src={gif.previewUrl || gif.url} alt={gif.title} className="aspect-square w-full object-cover" /><span className="block truncate p-2 text-xs">{gif.title || 'GIF'}</span></button>)}</div>{selectedGif && <div className="space-y-3"><img src={selectedGif.url} alt="Selected GIF" className="max-h-72 rounded-lg object-contain" /><Textarea value={caption} onChange={e => setCaption(e.target.value)} maxLength={180} placeholder="Write the caption that makes this GIF hilarious…" /><Button onClick={() => void act('submit', { gifId: selectedGif.id, gifUrl: selectedGif.url, previewUrl: selectedGif.previewUrl, gifTitle: selectedGif.title, caption: caption.trim() })} disabled={busy || !caption.trim()}><Sparkles className="mr-2 h-4 w-4" />Submit meme</Button></div>}{room.isHost && <div className="flex flex-wrap items-center justify-between gap-3"><div aria-live="polite" className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">{submittedCount} of {room.participants.length}</span> players submitted</div><Button variant="outline" onClick={() => void act('advance')} disabled={busy}>Close submissions</Button></div>}</CardContent>}</Card>}
     {canVote && <Card variant="glass"><CardHeader><CardTitle>Vote for the funniest</CardTitle><CardDescription>Submissions are anonymous. Choose one meme; you cannot vote for your own.</CardDescription></CardHeader><CardContent className="space-y-5"><div className="grid gap-4 md:grid-cols-2">{(room.submissions || []).map(submission => <div key={submission.id} className="rounded-xl border p-3"><img src={submission.gifPreviewUrl || submission.gifUrl} alt="Meme submission" className="aspect-video w-full rounded-lg object-cover" /><p className="mt-3 text-lg font-semibold">{submission.caption}</p><Button className="mt-3 w-full" variant={submission.hasVoted ? 'secondary' : 'default'} disabled={busy || Boolean(submission.hasVoted)} onClick={() => void act('vote', { submissionId: submission.id })}>{submission.hasVoted ? 'Vote recorded' : 'Vote for this'}</Button></div>)}</div>{room.isHost && <div className="flex flex-wrap items-center justify-between gap-3"><div aria-live="polite" className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">{room.votesCast} of {room.participants.length}</span> players voted</div><Button variant="outline" onClick={() => void act('advance')} disabled={busy}>Close voting and reveal</Button></div>}</CardContent></Card>}

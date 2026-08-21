@@ -79,6 +79,92 @@ export const scoreEventRepository = {
     }));
   },
 
+  async getActiveTotalsAcrossCompetitions(params: {
+    competitionIds: string[];
+    podIds?: string[];
+  }): Promise<Array<{ subjectAgentId: string; competitionId: string; points: number }>> {
+    if (!params.competitionIds.length) return [];
+    const totals = await prisma.scoreEvent.groupBy({
+      by: ["subjectAgentId", "competitionId"],
+      where: {
+        competitionId: { in: params.competitionIds },
+        voidedAt: null,
+        ...(params.podIds?.length ? { podId: { in: params.podIds } } : {}),
+      },
+      _sum: { points: true },
+    });
+
+    return totals.map((total) => ({
+      subjectAgentId: total.subjectAgentId,
+      competitionId: total.competitionId,
+      points: total._sum.points ?? 0,
+    }));
+  },
+
+  async getActiveTotalsByCompetitionAndPod(params: {
+    competitionId: string;
+    podIds?: string[];
+  }): Promise<Array<{ subjectAgentId: string; podId: string; points: number }>> {
+    const totals = await prisma.scoreEvent.groupBy({
+      by: ["subjectAgentId", "podId"],
+      where: {
+        competitionId: params.competitionId,
+        voidedAt: null,
+        ...(params.podIds?.length ? { podId: { in: params.podIds } } : {}),
+      },
+      _sum: { points: true },
+    });
+
+    return totals.map((total) => ({
+      subjectAgentId: total.subjectAgentId,
+      podId: total.podId,
+      points: total._sum.points ?? 0,
+    }));
+  },
+
+  async getActiveTotalsAcrossCompetitionsAndPod(params: {
+    competitionIds: string[];
+    podIds?: string[];
+  }): Promise<Array<{ subjectAgentId: string; podId: string; points: number }>> {
+    if (!params.competitionIds.length) return [];
+    const totals = await prisma.scoreEvent.groupBy({
+      by: ["subjectAgentId", "podId"],
+      where: {
+        competitionId: { in: params.competitionIds },
+        voidedAt: null,
+        ...(params.podIds?.length ? { podId: { in: params.podIds } } : {}),
+      },
+      _sum: { points: true },
+    });
+
+    return totals.map((total) => ({
+      subjectAgentId: total.subjectAgentId,
+      podId: total.podId,
+      points: total._sum.points ?? 0,
+    }));
+  },
+
+  async getActiveTotalsByAgents(params: {
+    agentIds: string[];
+    scoredForDate?: { gte?: Date; lt?: Date };
+  }): Promise<Array<{ subjectAgentId: string; points: number }>> {
+    if (!params.agentIds.length) return [];
+    const totals = await prisma.scoreEvent.groupBy({
+      by: ["subjectAgentId"],
+      where: {
+        subjectAgentId: { in: params.agentIds },
+        voidedAt: null,
+        ...(params.scoredForDate ? { scoredForDate: params.scoredForDate } : {}),
+      },
+      _sum: { points: true },
+    });
+
+    return totals.map((total) => ({
+      subjectAgentId: total.subjectAgentId,
+      points: total._sum.points ?? 0,
+    }));
+  },
+
   async void(params: {
     id: string;
     voidedById: string;

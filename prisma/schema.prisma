@@ -570,6 +570,7 @@ model MemeMatchPrompt {
 model MemeMatchRoom {
   id             String                  @id @default(cuid())
   code           String                  @unique
+  displayToken   String                  @unique
   hostId         String
   phase          MemeMatchPhase           @default(lobby)
   currentRound   Int                     @default(0)
@@ -740,6 +741,7 @@ model QuizShowQuizQuestion {
 model QuizShowRoom {
   id                  String           @id @default(cuid())
   code                String           @unique
+  displayToken        String           @unique
   hostId              String
   quizId              String
   phase               QuizShowPhase    @default(lobby)
@@ -1392,11 +1394,94 @@ model Contact {
   departmentName String?   // Plain text department name
   createdById  String?
   createdBy    User?      @relation(fields: [createdById], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime @updatedAt
+
   tags         Tag[]
-  
+
   @@index([name])
   @@index([type])
+}
+
+// =============================================================================
+// App Settings
+// =============================================================================
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// =============================================================================
+// Divisions League
+// =============================================================================
+
+enum LeagueDivision {
+  PREMIER
+  CHAMPIONSHIP
+  LEAGUE_ONE
+}
+
+enum LeagueScopeType {
+  POD
+  CAMPAIGN
+}
+
+enum DivisionTitlePeriodType {
+  MONTH
+  BLOCK
+}
+
+// Deliberately decoupled from Pod/Campaign/User via plain string IDs so the
+// league layer stays purely additive over existing systems (ScoreEvent precedent).
+model League {
+  id         String          @id @default(cuid())
+  name       String
+  scopeType  LeagueScopeType
+  podId      String?
+  campaignId String?
+  tierCount  Int             @default(3)
+  configJson Json?
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([scopeType, isActive])
+}
+
+model DivisionAssignment {
+  id            String         @id @default(cuid())
+  leagueId      String
+  userId        String
+  division      LeagueDivision
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  assignedVia   String?
+  assignedById  String?
+  createdAt     DateTime       @default(now())
+
+  @@index([leagueId, userId, effectiveTo])
+  @@index([userId])
+  @@index([leagueId, division])
+}
+
+model DivisionTitle {
+  id           String                  @id @default(cuid())
+  leagueId     String
+  division     LeagueDivision
+  periodType   DivisionTitlePeriodType
+  periodStart  DateTime
+  periodEnd    DateTime
+  userId       String
+  userName     String?
+  points       Int
+  decidedAt    DateTime                @default(now())
+  decidedById  String?
+  note         String?
+
+  @@unique([leagueId, division, periodType, periodStart])
+  @@index([leagueId, periodStart])
+  @@index([userId])
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomInt } from "node:crypto";
+import { randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { Prisma, QuizShowPhase, QuizShowQuestionType, QuizShowQuizMode } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 
@@ -40,6 +40,16 @@ function makeRoomCode(length = 6) {
   let code = "";
   for (let i = 0; i < length; i++) code += ROOM_CODE_ALPHABET[randomInt(ROOM_CODE_ALPHABET.length)];
   return code;
+}
+
+function makeDisplayToken() {
+  return randomBytes(32).toString("hex");
+}
+
+function matchesDisplayToken(expected: string, supplied: string) {
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
 }
 
 function timerSeconds(value?: number | null) {
@@ -155,6 +165,40 @@ function buildState(room: NonNullable<RoomBundle>, viewerUserId: string, options
   };
 }
 
+function buildPresentationState(room: NonNullable<RoomBundle>) {
+  const reveal = room.phase === QuizShowPhase.reveal || room.phase === QuizShowPhase.complete;
+  const current = currentRoomQuestion(room);
+  const answerResults = answerView(room, reveal);
+
+  return {
+    room: {
+      code: room.code,
+      phase: room.phase,
+      currentQuestion: room.currentQuestion,
+      totalQuestions: room.questions.length,
+      questionStartedAt: room.questionStartedAt?.toISOString() ?? null,
+      answerDeadlineAt: room.answerDeadlineAt?.toISOString() ?? null,
+      quiz: room.quiz,
+    },
+    participants: room.participants.map((participant) => ({ name: participant.user.name, isHost: participant.userId === room.hostId })),
+    question: current ? {
+      position: current.position,
+      text: current.question.text,
+      type: current.question.type,
+      mediaUrl: current.question.mediaUrl,
+      mediaContentType: current.question.mediaContentType,
+      options: current.question.options.map((option) => publicOption(option, reveal)),
+    } : null,
+    results: answerResults ? {
+      responseCount: answerResults.responseCount,
+      distribution: reveal ? answerResults.distribution : [],
+    } : null,
+    leaderboard: [...room.participants]
+      .sort((a, b) => b.score - a.score || a.cumulativeResponseMs - b.cumulativeResponseMs || a.displayOrder - b.displayOrder)
+      .map((participant) => ({ name: participant.user.name, score: participant.score })),
+  };
+}
+
 async function recalculateQuestionScores(tx: Prisma.TransactionClient, roomQuestionId: string) {
   const answers = await tx.quizShowAnswer.findMany({ where: { roomQuestionId }, orderBy: { responseMs: "asc" } });
   const correct = answers.filter((answer) => answer.isCorrect);
@@ -252,6 +296,20 @@ export const quizShowService = {
     return buildState(room, userId);
   },
 
+  async getDisplayLinkToken(userId: string, code: string) {
+    const room = await loadRoom(code.toUpperCase());
+    ensureRoom(room);
+    if (room.hostId !== userId) throw new Error("Forbidden");
+    return room.displayToken;
+  },
+
+  async getPresentationState(code: string, token: string) {
+    const room = await loadRoom(code.toUpperCase());
+    ensureRoom(room);
+    if (!matchesDisplayToken(room.displayToken, token)) throw new Error("Invalid display link.");
+    return buildPresentationState(room);
+  },
+
   async getAdminRoom(code: string) {
     const room = await loadRoom(code.toUpperCase());
     if (!room) return null;
@@ -287,7 +345,7 @@ export const quizShowService = {
       if (!(await prisma.quizShowRoom.findUnique({ where: { code } }))) break;
       code = makeRoomCode();
     }
-    const room = await prisma.quizShowRoom.create({ data: { code, hostId: userId, quizId, shuffleQuestions, questions: { create: questions.map((question, position) => ({ questionId: question.id, position })) }, participants: { create: { userId, displayOrder: 1 } } } });
+    const room = await prisma.quizShowRoom.create({ data: { code, displayToken: makeDisplayToken(), hostId: userId, quizId, shuffleQuestions, questions: { create: questions.map((question, position) => ({ questionId: question.id, position })) }, participants: { create: { userId, displayOrder: 1 } } } });
     await writeAudit(userId, "quiz_show.room.created", room.id, { roomCode: room.code, quizId, questionCount: questions.length });
     quizShowSseService.broadcast(room.code, "room-state");
     return this.getRoomState(userId, room.code);
