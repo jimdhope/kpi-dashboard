@@ -13,6 +13,9 @@ tsconfig.typecheck.tsbuildinfo
 coverage
 dist
 
+# Runtime uploads (quiz-show media, feedback attachments)
+uploads/
+
 # Environment
 .env
 .env.local
