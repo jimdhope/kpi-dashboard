@@ -4,11 +4,13 @@ import { passkey } from "@better-auth/passkey";
 import { prisma } from "@/server/db/client";
 import { emailService } from "@/server/services/email-service";
 
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
 function publicOrigin(): string {
   const value = process.env.BETTER_AUTH_URL ?? process.env.PUBLIC_URL ?? "http://localhost:9103";
   const url = new URL(value);
   const isLocalHost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  if (process.env.NODE_ENV === "production" && !isLocalHost && url.protocol !== "https:") {
+  if (process.env.NODE_ENV === "production" && !isLocalHost && !isBuildPhase && url.protocol !== "https:") {
     throw new Error("BETTER_AUTH_URL must use HTTPS in production.");
   }
   return url.origin;
@@ -18,6 +20,7 @@ function authSecret(): string {
   const secret = process.env.BETTER_AUTH_SECRET
     ?? (process.env.NODE_ENV !== "production" ? process.env.SESSION_COOKIE_SECRET : undefined);
   if (!secret || secret.length < 32) {
+    if (isBuildPhase) return "kpi-quest-build-phase-placeholder-secret";
     throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters.");
   }
   return secret;
