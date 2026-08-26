@@ -17,37 +17,81 @@ export type DailyAchievementBackfillResult = {
  * stable idempotency key. This is additive and never alters the legacy row.
  */
 export const scoreEventMigrationService = {
+  /** Idempotency key for the synced score event of a DailyAchievement. Keyed on
+   *  (achievement id, value, points) ONLY — NOT loggedAt — so a repeated sync
+   *  for the same aggregate value dedupes instead of stacking duplicate events.
+   *  A genuine value change produces a different key (the old event is voided). */
+  dailyAchievementSyncKey(id: string, value: number, points: number): string {
+    return `legacy-daily-achievement-sync:${id}:${value}:${points}`;
+  },
+
   async syncDailyAchievementById(id: string) {
     const achievement = await prisma.dailyAchievement.findUnique({ where: { id } });
     if (!achievement) throw new Error("DailyAchievement not found");
     const reference = `DailyAchievement:${achievement.id}`;
-    const event = await prisma.scoreEvent.findFirst({ where: { externalReference: reference, voidedAt: null }, orderBy: { createdAt: "desc" } });
-    const matches = event && event.quantity === achievement.value && event.points === achievement.points
-      && event.podId === achievement.podId && event.ruleName === achievement.ruleName
-      && event.scoredForDate.getTime() === achievement.date.getTime()
-      && (event.recordedAt?.getTime() ?? null) === (achievement.loggedAt?.getTime() ?? null);
-    if (matches) return event;
-    if (event) {
-      await prisma.scoreEvent.update({ where: { id: event.id }, data: { voidedAt: new Date(), voidedById: "daily-achievement-sync", voidReason: "Daily aggregate changed during score-event transition" } });
+    const idempotencyKey = this.dailyAchievementSyncKey(achievement.id, achievement.value, achievement.points);
+
+    // 1. Already an active event for this exact aggregate value? `loggedAt` is
+    //    cosmetic (when it was edited), not a scoring fact, so it is ignored
+    //    when deciding whether the ledger already reflects this achievement.
+    const active = await prisma.scoreEvent.findFirst({ where: { externalReference: reference, voidedAt: null }, orderBy: { createdAt: "desc" } });
+    if (
+      active &&
+      active.quantity === achievement.value &&
+      active.points === achievement.points &&
+      active.podId === achievement.podId &&
+      active.ruleName === achievement.ruleName &&
+      active.scoredForDate.getTime() === achievement.date.getTime()
+    ) {
+      return active;
+    }
+
+    // 2. Void EVERY currently-active event for this achievement so the new one
+    //    replaces (not adds to) the previous total.
+    await prisma.scoreEvent.updateMany({
+      where: { externalReference: reference, voidedAt: null },
+      data: {
+        voidedAt: new Date(),
+        voidedById: "daily-achievement-sync",
+        voidReason: "Daily aggregate changed during score-event transition",
+      },
+    });
+
+    // 3. Create the replacement. A duplicate/racing call for the same value
+    //    shares this key; if it beat us to the insert, swallow the unique
+    //    violation and return the already-active event (exactly one survives).
+    try {
+      const created = await prisma.scoreEvent.create({
+        data: {
+          competitionId: achievement.competitionId,
+          ruleId: achievement.ruleId,
+          ruleName: achievement.ruleName,
+          subjectAgentId: achievement.agentId,
+          podId: achievement.podId,
+          quantity: achievement.value,
+          points: achievement.points,
+          scoredForDate: achievement.date,
+          source: "migration",
+          recordedAt: achievement.loggedAt,
+          correctionOfId: null,
+          externalReference: reference,
+          idempotencyKey,
+        },
+      });
       competitionSseService.broadcast(achievement.competitionId, {
-        type: "score_event_voided",
-        data: { competitionId: achievement.competitionId, eventId: event.id },
+        type: "score_event_recorded",
+        data: { competitionId: achievement.competitionId, eventId: created.id },
         timestamp: new Date().toISOString(),
       });
+      return created;
+    } catch (createError) {
+      const survivor = await prisma.scoreEvent.findFirst({
+        where: { externalReference: reference, voidedAt: null },
+        orderBy: { createdAt: "desc" },
+      });
+      if (survivor) return survivor;
+      throw createError;
     }
-    const created = await prisma.scoreEvent.create({ data: {
-      competitionId: achievement.competitionId, ruleId: achievement.ruleId, ruleName: achievement.ruleName,
-      subjectAgentId: achievement.agentId, podId: achievement.podId, quantity: achievement.value, points: achievement.points,
-      scoredForDate: achievement.date, source: "migration", recordedAt: achievement.loggedAt,
-      correctionOfId: event?.id ?? null, externalReference: reference,
-      idempotencyKey: `legacy-daily-achievement-sync:${achievement.id}:${achievement.value}:${achievement.points}:${achievement.loggedAt?.getTime() ?? "none"}`,
-    } });
-    competitionSseService.broadcast(achievement.competitionId, {
-      type: "score_event_recorded",
-      data: { competitionId: achievement.competitionId, eventId: created.id },
-      timestamp: new Date().toISOString(),
-    });
-    return created;
   },
 
   async syncDailyAchievementCorrections(input: { apply: boolean }) {
@@ -84,7 +128,7 @@ export const scoreEventMigrationService = {
             subjectAgentId: achievement.agentId, podId: achievement.podId, quantity: achievement.value, points: achievement.points,
             scoredForDate: achievement.date, source: "migration", recordedAt: achievement.loggedAt,
             correctionOfId: event?.id ?? null, externalReference: reference,
-            idempotencyKey: `legacy-daily-achievement-sync:${achievement.id}:${achievement.value}:${achievement.points}:${achievement.loggedAt?.getTime() ?? "none"}`,
+            idempotencyKey: scoreEventMigrationService.dailyAchievementSyncKey(achievement.id, achievement.value, achievement.points),
           },
         });
       }
