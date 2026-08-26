@@ -73,10 +73,13 @@ export async function GET(request: Request) {
         return errorResponse(400, "This agent has not broken their personal best this week");
       }
     } else if (certType === "top-improvement") {
-      const qualified = standings.standings.filter((s) => s.qualified);
-      const champion = qualified.sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0];
-      if (!champion || champion.userId !== agentId) {
-        return errorResponse(400, "This agent is not the weekly champion (top improvement)");
+      const ranked = standings.standings.filter((s) => s.ranked);
+      if (ranked.length === 0) {
+        return errorResponse(400, "No ranked players to determine a top improver");
+      }
+      const topImprover = [...ranked].sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0];
+      if (!topImprover || topImprover.userId !== agentId) {
+        return errorResponse(400, "This agent is not the top improver (highest % of personal best) this week");
       }
     }
 

@@ -29,7 +29,7 @@ interface BybStanding {
   rollingBest: number | null;
   ratio: number | null;
   rank: number | null;
-  qualified: boolean;
+  beatBest: boolean;
   ranked: boolean;
 }
 
@@ -76,10 +76,10 @@ function StatusBadge({ standing }: { standing: BybStanding }) {
   if (!standing.ranked) {
     return <Badge variant="outline" className="text-[10px]">Unranked</Badge>;
   }
-  if (standing.qualified) {
-    return <Badge variant="secondary" className="text-[10px] bg-primary/15 text-primary">In contention</Badge>;
+  if (standing.beatBest) {
+    return <Badge variant="secondary" className="text-[10px] bg-primary/15 text-primary">PB ✦</Badge>;
   }
-  return <Badge variant="outline" className="text-[10px]">Below floor</Badge>;
+  return <Badge variant="outline" className="text-[10px]">Ranked</Badge>;
 }
 
 function PersonalBestCard({
@@ -146,7 +146,7 @@ function ChampionCard({
             <div className="flex items-center gap-1.5">
               <Award className="h-4 w-4 text-yellow-400" />
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Weekly Champion
+                Top Improver
               </p>
             </div>
             <div className="mt-1 text-lg font-bold truncate">{standing.name}</div>
@@ -229,8 +229,12 @@ export default function BeatYourBestPage() {
 
   const summary = useMemo(() => {
     if (!data) return null;
-    const qualified = data.standings.filter((s) => s.qualified);
-    return { leader: qualified[0] ?? null, contenders: qualified.length };
+    const ranked = data.standings.filter((s) => s.ranked);
+    const leader = ranked.length
+      ? [...ranked].sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0]
+      : null;
+    const personalBests = ranked.filter((s) => s.beatBest).length;
+    return { leader, personalBests };
   }, [data]);
 
   const showChampions = Boolean(data && selectedPodId === ALL_PODS && data.podChampions.length > 0);
@@ -245,9 +249,9 @@ export default function BeatYourBestPage() {
 
   const certChampion = useMemo(() => {
     if (!data) return null;
-    const qualified = data.standings.filter((s) => s.qualified);
-    if (qualified.length === 0) return null;
-    return qualified.sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0];
+    const ranked = data.standings.filter((s) => s.ranked);
+    if (ranked.length === 0) return null;
+    return [...ranked].sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0];
   }, [data]);
 
   const isDownloadingCert = (userId: string) => downloadState[userId] ?? false;
@@ -427,13 +431,13 @@ export default function BeatYourBestPage() {
       ) : tab === 'certs' ? (
         /* ── Certificates Tab ────────────────────────────────────────── */
         <div className="space-y-6">
-          {/* Weekly Champion */}
+          {/* Top Improver */}
           {certChampion ? (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Award className="h-5 w-5 text-yellow-400" />
-                  Weekly Champion
+                  Top Improver
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Highest % improvement over personal best this week
@@ -457,7 +461,7 @@ export default function BeatYourBestPage() {
           ) : (
             <Card className="frosted-glass">
               <CardContent className="py-8 text-center text-muted-foreground">
-                No weekly champion this week — no qualified players have beaten their personal best yet.
+                No top improver yet — no ranked players have a percentage to compare.
               </CardContent>
             </Card>
           )}
@@ -532,7 +536,7 @@ export default function BeatYourBestPage() {
               <div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Award className="h-5 w-5 text-yellow-400" />
-                  Weekly Champion Certificate
+                  Top Improver Certificate
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Download the champion certificate for {certChampion.name}
@@ -583,8 +587,8 @@ export default function BeatYourBestPage() {
                   },
                   {
                     icon: Filter,
-                    title: 'Qualification floor',
-                    text: "You need 3+ prior scoring weeks, and at least half of this week's top raw score.",
+                    title: 'No arbitrary cut-off',
+                    text: 'You only need 3+ prior scoring weeks to be ranked — then it is purely you versus your own best.',
                   },
                   {
                     icon: Trophy,
@@ -609,22 +613,22 @@ export default function BeatYourBestPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card className="frosted-glass">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Leader</CardTitle>
+                <CardTitle className="text-sm font-medium">Top Improver</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold truncate">{summary?.leader?.name ?? '—'}</div>
                 <p className="text-xs text-muted-foreground">
-                  {summary?.leader ? `${summary.leader.ratio}% of personal form` : 'No qualified players yet'}
+                  {summary?.leader ? `${summary.leader.ratio}% of personal form` : 'No ranked players yet'}
                 </p>
               </CardContent>
             </Card>
             <Card className="frosted-glass">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">In Contention</CardTitle>
+                <CardTitle className="text-sm font-medium">Personal Bests</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary?.contenders ?? 0}</div>
-                <p className="text-xs text-muted-foreground">players above the qualification floor</p>
+                <div className="text-2xl font-bold">{summary?.personalBests ?? 0}</div>
+                <p className="text-xs text-muted-foreground">players who beat their own best this week</p>
               </CardContent>
             </Card>
             <Card className="frosted-glass">
@@ -633,7 +637,7 @@ export default function BeatYourBestPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{data.topRawPoints.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">floor is 50% of this ({Math.floor(data.topRawPoints / 2).toLocaleString()})</p>
+                <p className="text-xs text-muted-foreground">highest points logged this week</p>
               </CardContent>
             </Card>
           </div>
@@ -694,7 +698,7 @@ export default function BeatYourBestPage() {
                     </TableHeader>
                     <TableBody>
                       {data.standings.map((standing) => (
-                        <TableRow key={standing.userId} className={cn(!standing.qualified && 'opacity-70')}>
+                        <TableRow key={standing.userId} className={cn(!standing.ranked && 'opacity-70')}>
                           <TableCell className="font-bold">
                             {standing.rank !== null && standing.rank <= 3 ? (
                               <Medal className={cn('h-5 w-5', getMedalColor(standing.rank))} />

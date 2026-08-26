@@ -1,6 +1,5 @@
 export const BYB_HISTORY_WINDOW = 8;
 export const BYB_MIN_PRIOR_COMPETITIONS = 3;
-export const BYB_QUALIFICATION_FLOOR_RATIO = 0.5;
 
 export type BybEntrant = {
   userId: string;
@@ -22,7 +21,7 @@ export type BybStanding = {
   rollingBest: number | null;
   ratio: number | null;
   rank: number | null;
-  qualified: boolean;
+  beatBest: boolean;
   ranked: boolean;
 };
 
@@ -51,9 +50,10 @@ function roundRatio(ratio: number): number {
    BYB_HISTORY_WINDOW prior competitions in which they scored > 0.
  - Players are unranked with fewer than BYB_MIN_PRIOR_COMPETITIONS prior
    competitions (participated) or a rolling best of 0.
- - Ranked players must reach BYB_QUALIFICATION_FLOOR_RATIO of the current
-   week's top raw score to be eligible to win; everyone else is listed below
-   the qualified field ordered by raw points.
+ - Standings are ordered by ratio (this week's points as a % of the player's
+   rolling best), descending. A player who beat their own rolling best is
+   flagged with `beatBest` and recognised with a Personal Best certificate.
+ * The top improver (highest ratio overall) is the Top Improvement champion.
  */
 export function computeBybStandings(input: {
   currentWeek: BybEntrant[];
@@ -71,7 +71,7 @@ export function computeBybStandings(input: {
     const rollingBest = window.length ? Math.max(...window) : 0;
     const priorCompetitionCount = participated.filter(Boolean).length;
     const ranked = priorCompetitionCount >= BYB_MIN_PRIOR_COMPETITIONS && rollingBest > 0;
-    const qualified = ranked && entrant.rawPoints >= BYB_QUALIFICATION_FLOOR_RATIO * topRawPoints;
+    const beatBest = ranked && rollingBest !== null && entrant.rawPoints > rollingBest;
     const ratio = ranked ? roundRatio((entrant.rawPoints / rollingBest) * 100) : null;
 
     return {
@@ -81,7 +81,7 @@ export function computeBybStandings(input: {
       rollingBest: ranked ? rollingBest : null,
       ratio,
       rank: null,
-      qualified,
+      beatBest,
       ranked,
     };
   });
@@ -126,8 +126,8 @@ export function resolveBybPrimaryPod(pointsByPod: Map<string, number>): string |
 }
 
 /**
- * One champion per pod: the highest-standing qualified player whose primary
- * pod (by score-event attribution) is that pod. Pods without a qualified
+ * One champion per pod: the highest-standing ranked player whose primary
+ * pod (by score-event attribution) is that pod. Pods without any ranked
  * player produce no champion. Input standings may be unsorted.
  */
 export function selectBybPodChampions(input: {
@@ -153,7 +153,7 @@ export function selectBybPodChampions(input: {
 
   const championsByPod = new Map<string, BybStanding>();
   for (const standing of input.standings) {
-    if (!standing.qualified) continue;
+    if (!standing.ranked) continue;
     const podId = primaryPodByUser.get(standing.userId);
     if (!podId || !input.podNamesById.has(podId)) continue;
     const current = championsByPod.get(podId);

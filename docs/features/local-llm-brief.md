@@ -84,7 +84,7 @@ Simulated outcomes vs current system: dominant player drops 43 -> 18 wins of 83;
 2. **`beat-your-best-service.ts`** — pure computation from ScoreEvents:
    - input `competitionId`; per entrant: sum active points this competition;
    - rolling best: group that player's active points by competition across their prior competitions, take max of last 8;
-   - apply floor + history rules; return ranked list `{ userId, name, rawPoints, rollingBest, ratio, qualified }`.
+   - apply history rules; return ranked list `{ userId, name, rawPoints, rollingBest, ratio, beatBest, ranked }`.
 3. **API routes**
    - `GET /api/competitions/[id]/beat-your-best` — any signed-in user; returns standings + `enabled` flag.
    - `GET|PUT /api/settings/beat-your-best` — admin only via `requireResourceAccess("nav.competitions.manage")`.

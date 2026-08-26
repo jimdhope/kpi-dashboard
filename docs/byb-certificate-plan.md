@@ -48,7 +48,7 @@ Key things to reuse:
 
 **Cert types:**
 - **Personal Best Unlocked** — awarded to any agent whose `rawPoints > rollingBest` (ratio > 100%). Title shows "PERSONAL BEST UNLOCKED". Stats panel shows their numbers.
-- **Top Improvement** — awarded to the single agent with the highest ratio among qualified players. Title shows "TOP IMPROVEMENT". Same stats panel layout.
+- **Top Improvement** — awarded to the single agent with the highest ratio among all ranked players (no qualification floor). Title shows "TOP IMPROVEMENT". Same stats panel layout.
 
 ---
 
@@ -106,7 +106,7 @@ Add a second tab next to the existing leaderboard:
 ### 4. `src/app/(app)/competitions/beat-your-best/page.tsx` — tab state
 Add a `useState<'leaderboard' | 'certs'>` tab switcher. The certs tab fetches standings (same API) and derives cert-eligible agents client-side:
 - **Personal best breakers:** `standing.rawPoints > standing.rollingBest` (and `standing.ranked === true`)
-- **Weekly champion:** `standings.filter(s => s.qualified)` → sort by ratio desc → first
+- **Top Improver:** `standings.filter(s => s.ranked)` → sort by ratio desc → first
 
 ---
 
@@ -114,11 +114,11 @@ Add a `useState<'leaderboard' | 'certs'>` tab switcher. The certs tab fetches st
 
 ```
 User opens BYB page → selects competition → fetches /api/competitions/[id]/beat-your-best
-  → gets standings (each has: userId, name, rawPoints, rollingBest, ratio, qualified, ranked)
+  → gets standings (each has: userId, name, rawPoints, rollingBest, ratio, beatBest, ranked)
   → switches to Certs tab
     → computes:
       breakers = standings.filter(s => s.ranked && s.rawPoints > s.rollingBest)
-      champion = standings.filter(s => s.qualified).sort((a,b) => b.ratio! - a.ratio!)[0]
+      champion = standings.filter(s => s.ranked).sort((a,b) => b.ratio! - a.ratio!)[0]
     → renders list with download buttons
 
 Click download (breaker):
@@ -146,7 +146,7 @@ Query params:
 The route:
 1. Calls `beatYourBestService.getStandings(competitionId)` (cached, so cheap)
 2. Finds the standing for `agentId`
-3. Validates: for `personal-best`, agent must have `rawPoints > rollingBest`; for `top-improvement`, agent must be the top qualified ratio
+3. Validates: for `personal-best`, agent must have `rawPoints > rollingBest`; for `top-improvement`, agent must be the top ranked ratio
 4. Builds `dateRange` from competition `startsAt`/`endsAt` (same format as existing: "Aug 19 – Aug 25, 2026")
 5. Calls `bybCertificateService.render(certData)` → returns JSX
 6. Returns `new ImageResponse(jsx, { width: 1600, height: 1000, fonts: [...] })` with `Content-Disposition: attachment; filename="byb-${certType}-${agentName}.png"`
@@ -222,6 +222,6 @@ For `personal-best` certs, the big % number is the agent's ratio (e.g. 112.5%). 
 - [ ] Create `src/app/api/competitions/[id]/beat-your-best/certificate/route.ts`
 - [ ] Add tab state + certs tab UI to `beat-your-best/page.tsx`
 - [ ] Add download button per cert + "Download All" ZIP
-- [ ] Verify: breaker list matches `rawPoints > rollingBest`; champion is top qualified ratio
+- [ ] Verify: breaker list matches `rawPoints > rollingBest`; top improver is the highest ranked ratio
 - [ ] Verify: SVG renders correctly in browser (open the downloaded .svg)
 - [ ] Typecheck passes

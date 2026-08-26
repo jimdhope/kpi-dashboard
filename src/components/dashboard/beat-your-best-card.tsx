@@ -18,7 +18,7 @@ interface BybStanding {
   rawPoints: number;
   ratio: number | null;
   rank: number | null;
-  qualified: boolean;
+  beatBest: boolean;
 }
 
 interface BybCardData {

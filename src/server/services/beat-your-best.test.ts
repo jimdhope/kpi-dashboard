@@ -24,7 +24,7 @@ test("ratio is raw points over rolling best times 100", () => {
   assert.equal(result.standings[0].rollingBest, 100);
   assert.equal(result.standings[0].ratio, 110);
   assert.equal(result.standings[0].rank, 1);
-  assert.equal(result.standings[0].qualified, true);
+  assert.equal(result.standings[0].beatBest, true);
 });
 
 test("rolling best uses only the last eight scoring weeks", () => {
@@ -83,7 +83,7 @@ test("players with three prior competitions but no scoring weeks are unranked", 
   assert.equal(result.standings[0].ratio, null);
 });
 
-test("qualification floor flags eligibility but does not reorder by raw points", () => {
+test("beatBest flags only players who exceeded their rolling best, ordering stays by ratio", () => {
   const result = computeBybStandings({
     currentWeek: [
       { userId: "a", name: "Alice", rawPoints: 100 },
@@ -99,12 +99,11 @@ test("qualification floor flags eligibility but does not reorder by raw points",
   const alice = result.standings.find((standing) => standing.userId === "a")!;
   const bob = result.standings.find((standing) => standing.userId === "b")!;
   const carol = result.standings.find((standing) => standing.userId === "c")!;
-  // Carol (50 ≥ 50% of top 100) and Alice (100 ≥ 50) are qualified; Bob (49) is not.
-  assert.equal(carol.qualified, true);
-  assert.equal(alice.qualified, true);
-  assert.equal(bob.qualified, false);
-  // But ranking is by ratio: Alice (100/100 = 100%) < Bob (49/10 = 490%) < Carol (50/10 = 500%).
-  // Order must follow ratio, so Bob and Carol (high ratio) outrank Alice despite lower raw points.
+  // Beat-best is purely personal: Bob (49 > 10) and Carol (50 > 10) beat their best, Alice (100 == 100) does not.
+  assert.equal(bob.beatBest, true);
+  assert.equal(carol.beatBest, true);
+  assert.equal(alice.beatBest, false);
+  // Ranking is by ratio: Alice (100/100 = 100%) < Bob (49/10 = 490%) < Carol (50/10 = 500%).
   assert.deepEqual(
     result.standings.map((standing) => standing.userId),
     ["c", "b", "a"],
@@ -152,10 +151,8 @@ test("all ranked players order by ratio; unranked trail by raw points", () => {
   // a = 100/100 = 100%, b = 30/300 = 10%, c = 20/300 = 6.7%.
   assert.deepEqual(result.standings.map((standing) => standing.userId), ["a", "b", "c"]);
   assert.deepEqual(result.standings.map((standing) => standing.rank), [1, 2, 3]);
-  // qualified flag still set only on those reaching half the top raw score (50).
-  assert.equal(result.standings[0].qualified, true);
-  assert.equal(result.standings[1].qualified, false);
-  assert.equal(result.standings[2].qualified, false);
+  // No one beat their rolling best this week (all current points below their best).
+  assert.equal(result.standings.every((standing) => standing.beatBest === false), true);
 });
 
 test("ranking follows ratio even when a higher-ratio player has far lower absolute points", () => {
@@ -238,8 +235,9 @@ const podNamesById = new Map([
   ["pod-2", "Beta"],
 ]);
 
-test("one champion per pod from qualified players only", () => {
-  // Top raw = 100, floor = 50: Alice (100) and Bob (60) qualify, Carol (40) does not.
+test("one champion per pod from ranked players (highest ratio)", () => {
+  // All three players are ranked. Pod-1 → Alice. Pod-2 has Bob (60/80 = 75%)
+  // and Carol (40/50 = 80%); Carol's higher ratio wins the pod.
   const result = championStandings();
   const champions = selectBybPodChampions({
     standings: result.standings,
@@ -252,12 +250,23 @@ test("one champion per pod from qualified players only", () => {
   });
   assert.deepEqual(
     champions.map((champion) => [champion.podName, champion.name]),
-    [["Alpha", "Alice"], ["Beta", "Bob"]],
+    [["Alpha", "Alice"], ["Beta", "Carol"]],
   );
 });
 
-test("pods without a qualified player produce no champion", () => {
-  const result = championStandings();
+test("pods without any ranked player produce no champion", () => {
+  // Carol is the only one in pod-2 but with <3 prior competitions she is unranked,
+  // so pod-2 yields no champion — only pod-1 (Alice) does.
+  const result = computeBybStandings({
+    currentWeek: [
+      { userId: "alice", name: "Alice", rawPoints: 100 },
+      { userId: "carol", name: "Carol", rawPoints: 40 },
+    ],
+    historyByUser: new Map([
+      ["alice", history([100, 100, 100])],
+      ["carol", history([50, 50])], // only 2 prior → unranked
+    ]),
+  });
   const champions = selectBybPodChampions({
     standings: result.standings,
     podTotals: [
