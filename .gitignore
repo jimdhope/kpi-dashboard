@@ -44,3 +44,7 @@ cookies.txt
 v2/
 v3/
 v3.1/
+
+# Local-only compose overrides and agent workspace
+docker-compose.override.yml
+.hermes/
