@@ -186,6 +186,9 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
   // Round Robin state
   const [roundRobinAvailable, setRoundRobinAvailable] = useState(false);
   const [roundRobinCompetitionName, setRoundRobinCompetitionName] = useState<string | null>(null);
+  const [roundRobinCompetitionId, setRoundRobinCompetitionId] = useState<string | null>(null);
+  const [competitions, setCompetitions] = useState<Array<{ id: string; name: string; startsAt: string | null; endsAt: string | null }>>([]);
+  const [selectedRoundRobinCompetitionId, setSelectedRoundRobinCompetitionId] = useState<string | null>(null);
 
   // Load templates
   useEffect(() => {
@@ -203,21 +206,48 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
     loadTemplates();
   }, []);
 
+  // Load the competition list for the Round Robin source selector
+  useEffect(() => {
+    async function loadCompetitions() {
+      try {
+        const res = await fetch('/api/competitions');
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.competitions || [];
+          setCompetitions(list);
+          // Default the selector to the most recent competition (list is
+          // ordered by startsAt desc) so the dropdown reflects what the
+          // round robin will actually use until the user picks otherwise.
+          if (list.length > 0 && !selectedRoundRobinCompetitionId) {
+            setSelectedRoundRobinCompetitionId(list[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading competitions:', error);
+      }
+    }
+    loadCompetitions();
+  }, []);
+
   // Check if Round Robin is available when pods change
   useEffect(() => {
     async function checkRoundRobin() {
       if (formData.podIds.length === 0) {
         setRoundRobinAvailable(false);
         setRoundRobinCompetitionName(null);
+        setRoundRobinCompetitionId(null);
         return;
       }
       
       try {
-        const res = await fetch(`/api/competitions/agent-rankings?podIds=${formData.podIds.join(',')}`);
+        const competitionId = selectedRoundRobinCompetitionId;
+        const qs = `podIds=${formData.podIds.join(',')}${competitionId ? `&competitionId=${competitionId}` : ''}`;
+        const res = await fetch(`/api/competitions/agent-rankings?${qs}`);
         if (res.ok) {
           const data = await res.json();
           setRoundRobinAvailable(data.rankings && data.rankings.length > 0);
           setRoundRobinCompetitionName(data.competitionName);
+          setRoundRobinCompetitionId(data.competitionId);
         }
       } catch (error) {
         console.error('Error checking round robin availability:', error);
@@ -225,7 +255,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
       }
     }
     checkRoundRobin();
-  }, [formData.podIds]);
+  }, [formData.podIds, selectedRoundRobinCompetitionId]);
 
   useEffect(() => {
     async function fetchData() {
@@ -634,7 +664,9 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
     if (!roundRobinAvailable || teams.length === 0) return;
     
     try {
-      const res = await fetch(`/api/competitions/agent-rankings?podIds=${formData.podIds.join(',')}`);
+      const competitionId = selectedRoundRobinCompetitionId;
+      const qs = `podIds=${formData.podIds.join(',')}${competitionId ? `&competitionId=${competitionId}` : ''}`;
+      const res = await fetch(`/api/competitions/agent-rankings?${qs}`);
       if (!res.ok) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch rankings' });
         return;
@@ -1139,7 +1171,21 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
                     Create teams and assign agents from selected pods
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  {competitions.length > 0 && (
+                    <select
+                      value={selectedRoundRobinCompetitionId ?? ''}
+                      onChange={(e) => setSelectedRoundRobinCompetitionId(e.target.value || null)}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      title="Competition used to balance teams by past performance"
+                    >
+                      {competitions.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <Button 
                     type="button" 
                     variant="outline" 
