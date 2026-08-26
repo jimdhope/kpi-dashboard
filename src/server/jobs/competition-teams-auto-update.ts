@@ -14,7 +14,7 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
     const now = new Date();
     const competitions = await prisma.competition.findMany({
       where: { autoTeamsUpdates: true, isDraft: false, startsAt: { lte: now }, endsAt: { gte: now } },
-      select: { id: true, podIds: true, lastAutoTeamsScoreAt: true, updatedAt: true },
+      select: { id: true, podIds: true, lastAutoTeamsScoreAt: true, lastAutoTeamsSentAt: true, updatedAt: true },
     });
 
     for (const competition of competitions) {
@@ -37,7 +37,18 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
       // Date corrections (e.g. extending endsAt after a mis-save) must also
       // trigger a post even when no fresh score events exist, otherwise an
       // expired-then-fixed competition never resumes auto posting.
-      const changedAt = latestDate([scoreChangedAt, competition.updatedAt]);
+      //
+      // Compare updatedAt against lastAutoTeamsSENTat, NOT lastAutoTeamsScoreAt:
+      // the worker's own success-write bumps updatedAt on every send, so using
+      // the score watermark here would make every tick look "changed" forever.
+      const configChanged = Boolean(
+        competition.updatedAt &&
+        (!competition.lastAutoTeamsSentAt ||
+          competition.updatedAt > competition.lastAutoTeamsSentAt),
+      );
+      const changedAt = configChanged
+        ? latestDate([scoreChangedAt, competition.updatedAt])
+        : scoreChangedAt;
       if (
         !changedAt ||
         (competition.lastAutoTeamsScoreAt && changedAt <= competition.lastAutoTeamsScoreAt)
