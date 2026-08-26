@@ -14,7 +14,7 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
     const now = new Date();
     const competitions = await prisma.competition.findMany({
       where: { autoTeamsUpdates: true, isDraft: false, startsAt: { lte: now }, endsAt: { gte: now } },
-      select: { id: true, podIds: true, lastAutoTeamsScoreAt: true },
+      select: { id: true, podIds: true, lastAutoTeamsScoreAt: true, updatedAt: true },
     });
 
     for (const competition of competitions) {
@@ -34,10 +34,27 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
         newestBonus?.createdAt,
         newestBonusEdit?.loggedAt,
       ]);
-      if (!scoreChangedAt || (competition.lastAutoTeamsScoreAt && scoreChangedAt <= competition.lastAutoTeamsScoreAt)) {
+      // Date corrections (e.g. extending endsAt after a mis-save) must also
+      // trigger a post even when no fresh score events exist, otherwise an
+      // expired-then-fixed competition never resumes auto posting.
+      const changedAt = latestDate([scoreChangedAt, competition.updatedAt]);
+      if (
+        !changedAt ||
+        (competition.lastAutoTeamsScoreAt && changedAt <= competition.lastAutoTeamsScoreAt)
+      ) {
+        console.info("[teams-auto-update] skip", {
+          competitionId: competition.id,
+          reason: "already-sent",
+        });
         continue;
       }
-      if (!competition.podIds.length) continue;
+      if (!competition.podIds.length) {
+        console.info("[teams-auto-update] skip", {
+          competitionId: competition.id,
+          reason: "no-pods",
+        });
+        continue;
+      }
 
       const date = now.toISOString().slice(0, 10);
       const request = new NextRequest(`http://internal/competitions/${competition.id}/send-daily-scores`, {
@@ -51,7 +68,7 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
         await prisma.competition.update({
           where: { id: competition.id },
           data: {
-            ...(scoreChangedAt ? { lastAutoTeamsScoreAt: scoreChangedAt } : {}),
+            ...(changedAt ? { lastAutoTeamsScoreAt: changedAt } : {}),
             lastAutoTeamsSentAt: new Date(),
           },
         });
