@@ -84,7 +84,10 @@ export const auth = betterAuth({
   },
   advanced: {
     cookiePrefix: "kpiq",
-    useSecureCookies: process.env.NODE_ENV === "production" && process.env.ALLOW_INSECURE_COOKIES !== "true",
+    useSecureCookies:
+      process.env.NODE_ENV === "production" &&
+      process.env.ALLOW_INSECURE_COOKIES !== "true" &&
+      new URL(process.env.BETTER_AUTH_URL ?? process.env.PUBLIC_URL ?? "http://localhost:9103").protocol === "https:",
   },
   plugins: [
     passkey({
