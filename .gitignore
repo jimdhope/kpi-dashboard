@@ -25,6 +25,7 @@ uploads/
 # utility, which is bundled into the release image.
 scripts/*
 !scripts/auth-cutover.ts
+!scripts/repair-competition-end-dates.ts
 perf/
 check_*.ts
 debug_*.ts
