@@ -41,10 +41,13 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
       // Compare updatedAt against lastAutoTeamsSENTat, NOT lastAutoTeamsScoreAt:
       // the worker's own success-write bumps updatedAt on every send, so using
       // the score watermark here would make every tick look "changed" forever.
+      // The worker's own success-write bumps updatedAt, so a fixed epsilon is
+      // required: treat updatedAt as "changed" only when it exceeds the sent
+      // watermark by more than 2 seconds (Prisma writes land within ms).
       const configChanged = Boolean(
         competition.updatedAt &&
         (!competition.lastAutoTeamsSentAt ||
-          competition.updatedAt > competition.lastAutoTeamsSentAt),
+          competition.updatedAt.getTime() - competition.lastAutoTeamsSentAt.getTime() > 2000),
       );
       const changedAt = configChanged
         ? latestDate([scoreChangedAt, competition.updatedAt])
@@ -80,7 +83,10 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
           where: { id: competition.id },
           data: {
             ...(changedAt ? { lastAutoTeamsScoreAt: changedAt } : {}),
-            lastAutoTeamsSentAt: new Date(),
+            // Stamp the send with the change time itself so updatedAt (bumped by
+            // this very write) always compares >= sent watermark and can never
+            // re-trigger the gate on subsequent ticks.
+            lastAutoTeamsSentAt: changedAt ?? new Date(),
           },
         });
       }
