@@ -47,6 +47,7 @@ import {
   Shuffle,
 } from 'lucide-react';
 import { format, addDays, startOfDay } from 'date-fns';
+import { toCompetitionDateRange } from '@/lib/competition-dates';
 import type { EmojiClickData } from 'emoji-picker-react';
 import {
   Popover as DialogPopover,
@@ -387,8 +388,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
       // draftData only contains recovery/metadata data
       const draftData = {
         dailyTargets,
-        startsAt: formData.startDate.toISOString(),
-        endsAt: formData.endDate.toISOString(),
+        ...toCompetitionDateRange(formData.startDate, formData.endDate),
       };
 
       const payload = {
@@ -715,8 +715,7 @@ function WizardContent({ competitionId, draftId }: { competitionId?: string; dra
         name: formData.name,
         campaignId: formData.campaignId,
         podIds: formData.podIds,
-        startsAt: formData.startDate.toISOString(),
-        endsAt: formData.endDate.toISOString(),
+        ...toCompetitionDateRange(formData.startDate, formData.endDate),
         rules: formData.rules.filter((r) => r.name.trim()).map(r => ({
           title: r.name,
           points: r.points,
