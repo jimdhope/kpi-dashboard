@@ -83,10 +83,13 @@ export async function sendDailyScores(
     }
 
     // Read the auditable score ledger, shaped for the existing card builder.
-    const dayStart = new Date(date);
-    dayStart.setUTCHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setUTCHours(23, 59, 59, 999);
+    // scoredForDate is stored as LOCAL midnight (e.g. 2026-08-26 00:00 BST =
+    // 2026-08-25 23:00 UTC). The `date` the worker/manual UI sends is also a
+    // local calendar date, so filter by local-day boundaries — NOT UTC — or
+    // today's achievements fall one hour outside the window and the card
+    // renders blank (names + zeros).
+    const dayStart = new Date(`${date}T00:00:00`);
+    const dayEnd = new Date(`${date}T23:59:59.999`);
 
     const achievements = (await prisma.scoreEvent.findMany({
       where: {

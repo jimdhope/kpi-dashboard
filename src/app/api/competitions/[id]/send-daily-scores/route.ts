@@ -57,11 +57,10 @@ export async function GET(
       return errorResponse(404, "Competition not found");
     }
 
-    // Read the auditable score ledger, shaped for the existing card builder.
-    const dayStart = new Date(date);
-    dayStart.setUTCHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setUTCHours(23, 59, 59, 999);
+    // scoredForDate is stored as LOCAL midnight; filter by local-day
+    // boundaries to match (see POST handler).
+    const dayStart = new Date(`${date}T00:00:00`);
+    const dayEnd = new Date(`${date}T23:59:59.999`);
 
     const achievements = (await prisma.scoreEvent.findMany({
       where: {

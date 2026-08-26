@@ -80,7 +80,11 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
         continue;
       }
 
-      const date = now.toISOString().slice(0, 10);
+      // Send the LOCAL calendar date, matching how scoredForDate is stored
+      // (local midnight) and how the manual "Send to Teams" UI sends it. A UTC
+      // date here would be off by one day in BST and the card filter would
+      // find no achievements (blank card).
+      const date = now.toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
       const request = new NextRequest(`http://internal/competitions/${competition.id}/send-daily-scores`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
