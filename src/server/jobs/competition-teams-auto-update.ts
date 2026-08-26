@@ -8,6 +8,15 @@ function latestDate(values: Array<Date | null | undefined>) {
   return values.reduce<Date | null>((latest, value) => value && (!latest || value > latest) ? value : latest, null);
 }
 
+// Timestamps of the Competition rows this worker has already processed.
+// The worker's own success-writes bump Competition.updatedAt, so timestamp
+// deltas can never distinguish "someone edited the competition" from
+// "we just sent". Comparing exact values can: an edit produces a NEW
+// updatedAt; our own writes produce one we've recorded here.
+// Keyed by competition id; safe to lose on restart (worst case: one
+// extra post after a redeploy).
+const seenConfigUpdatedAt = new Map<string, number>();
+
 export async function registerCompetitionTeamsAutoUpdateWorker() {
   const boss = await getBoss();
   await boss.work(QUEUES.competitionTeamsAutoUpdate, async () => {
@@ -34,21 +43,22 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
         newestBonus?.createdAt,
         newestBonusEdit?.loggedAt,
       ]);
-      // Date corrections (e.g. extending endsAt after a mis-save) must also
-      // trigger a post even when no fresh score events exist, otherwise an
-      // expired-then-fixed competition never resumes auto posting.
-      //
-      // Compare updatedAt against lastAutoTeamsSENTat, NOT lastAutoTeamsScoreAt:
-      // the worker's own success-write bumps updatedAt on every send, so using
-      // the score watermark here would make every tick look "changed" forever.
-      // The worker's own success-write bumps updatedAt, so a fixed epsilon is
-      // required: treat updatedAt as "changed" only when it exceeds the sent
-      // watermark by more than 2 seconds (Prisma writes land within ms).
-      const configChanged = Boolean(
-        competition.updatedAt &&
-        (!competition.lastAutoTeamsSentAt ||
-          competition.updatedAt.getTime() - competition.lastAutoTeamsSentAt.getTime() > 2000),
-      );
+      // Config-change detection by exact updatedAt value, not timestamp deltas:
+      // the worker's own success-write bumps Competition.updatedAt on every
+      // send, so any comparison of updatedAt against a watermark drifts and
+      // eventually always looks "changed". An external edit (date fix, pod
+      // change, etc.) produces an updatedAt value we have never seen.
+      const currentConfigUpdatedAt = competition.updatedAt?.getTime() ?? 0;
+      const seenConfigUpdatedAtValue = seenConfigUpdatedAt.get(competition.id);
+      const configChanged =
+        seenConfigUpdatedAtValue !== undefined &&
+        seenConfigUpdatedAtValue !== currentConfigUpdatedAt;
+      // First tick after restart: adopt the current value without posting
+      // unless score activity itself justifies the send. This avoids a burst
+      // post on every deploy.
+      if (seenConfigUpdatedAtValue === undefined) {
+        seenConfigUpdatedAt.set(competition.id, currentConfigUpdatedAt);
+      }
       const changedAt = configChanged
         ? latestDate([scoreChangedAt, competition.updatedAt])
         : scoreChangedAt;
@@ -79,16 +89,17 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
       const response = await sendDailyScoresFromWorker(request, competition.id);
       const result = await response.json() as { totalSent?: number; totalFailed?: number };
       if (response.ok && (result.totalSent ?? 0) > 0 && (result.totalFailed ?? 0) === 0) {
-        await prisma.competition.update({
+        // Re-read the row's post-write updatedAt and record it so this worker
+        // never mistakes its own success-write for an external config edit.
+        const updated = await prisma.competition.update({
           where: { id: competition.id },
           data: {
             ...(changedAt ? { lastAutoTeamsScoreAt: changedAt } : {}),
-            // Stamp the send with the change time itself so updatedAt (bumped by
-            // this very write) always compares >= sent watermark and can never
-            // re-trigger the gate on subsequent ticks.
             lastAutoTeamsSentAt: changedAt ?? new Date(),
           },
+          select: { updatedAt: true },
         });
+        seenConfigUpdatedAt.set(competition.id, updated.updatedAt.getTime());
       }
     }
   });
