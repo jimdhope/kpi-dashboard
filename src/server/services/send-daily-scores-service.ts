@@ -241,8 +241,15 @@ export async function sendDailyScores(
         continue;
       }
 
-      // Show agents from achievements (and entries if they exist)
-      const agentStandings = allAgentIds
+      // Only include agents who belong to this pod, not all agents across all selected pods.
+      const podAgentIds = [...new Set(
+        podMemberships
+          .filter((m) => m.podId === pod.id)
+          .map((m) => m.userId),
+      )];
+
+      // Show agents from this pod's memberships
+      const agentStandings = podAgentIds
         .map((agentId: string) => {
           // Use agentNameMap for name lookup (handles agents not in entries)
           const agentName = agentNameMap.get(agentId) || 'Unknown Agent';
