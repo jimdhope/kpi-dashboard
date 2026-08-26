@@ -83,7 +83,7 @@ test("players with three prior competitions but no scoring weeks are unranked", 
   assert.equal(result.standings[0].ratio, null);
 });
 
-test("qualification floor excludes players below half the top raw score", () => {
+test("qualification floor flags eligibility but does not reorder by raw points", () => {
   const result = computeBybStandings({
     currentWeek: [
       { userId: "a", name: "Alice", rawPoints: 100 },
@@ -99,12 +99,20 @@ test("qualification floor excludes players below half the top raw score", () => 
   const alice = result.standings.find((standing) => standing.userId === "a")!;
   const bob = result.standings.find((standing) => standing.userId === "b")!;
   const carol = result.standings.find((standing) => standing.userId === "c")!;
+  // Carol (50 ≥ 50% of top 100) and Alice (100 ≥ 50) are qualified; Bob (49) is not.
   assert.equal(carol.qualified, true);
-  assert.equal(carol.rank, 1);
-  assert.equal(alice.rank, 2);
+  assert.equal(alice.qualified, true);
   assert.equal(bob.qualified, false);
-  assert.equal(bob.ranked, true);
-  assert.equal(bob.rank, null);
+  // But ranking is by ratio: Alice (100/100 = 100%) < Bob (49/10 = 490%) < Carol (50/10 = 500%).
+  // Order must follow ratio, so Bob and Carol (high ratio) outrank Alice despite lower raw points.
+  assert.deepEqual(
+    result.standings.map((standing) => standing.userId),
+    ["c", "b", "a"],
+  );
+  assert.deepEqual(
+    result.standings.map((standing) => standing.rank),
+    [1, 2, 3],
+  );
 });
 
 test("highest ratio wins and ties break on raw points then name", () => {
@@ -127,7 +135,7 @@ test("highest ratio wins and ties break on raw points then name", () => {
   assert.deepEqual(result.standings.map((standing) => standing.rank), [1, 2, 3, 4]);
 });
 
-test("unqualified ranked players sort by raw points below the qualified field", () => {
+test("all ranked players order by ratio; unranked trail by raw points", () => {
   const result = computeBybStandings({
     currentWeek: [
       { userId: "a", name: "Alice", rawPoints: 100 },
@@ -140,8 +148,35 @@ test("unqualified ranked players sort by raw points below the qualified field", 
       ["c", history([300, 300, 300])],
     ]),
   });
+  // Ranked players (a, b, c all have ≥3 prior scoring weeks) order by ratio:
+  // a = 100/100 = 100%, b = 30/300 = 10%, c = 20/300 = 6.7%.
   assert.deepEqual(result.standings.map((standing) => standing.userId), ["a", "b", "c"]);
-  assert.equal(result.standings[1].rank, null);
+  assert.deepEqual(result.standings.map((standing) => standing.rank), [1, 2, 3]);
+  // qualified flag still set only on those reaching half the top raw score (50).
+  assert.equal(result.standings[0].qualified, true);
+  assert.equal(result.standings[1].qualified, false);
+  assert.equal(result.standings[2].qualified, false);
+});
+
+test("ranking follows ratio even when a higher-ratio player has far lower absolute points", () => {
+  // Reproduces the reported bug: a 93.5% personal week (low absolute volume)
+  // must rank ABOVE a 52.8% personal week (high absolute volume), not below it.
+  const result = computeBybStandings({
+    currentWeek: [
+      { userId: "top", name: "TopAbs", rawPoints: 500 },
+      { userId: "mid", name: "MidAbs", rawPoints: 400 },
+      { userId: "low", name: "LowAbsHighRatio", rawPoints: 47 },
+    ],
+    historyByUser: new Map([
+      ["top", history([947, 900, 880])], // rolling best ~947 → 500/947 = 52.8%
+      ["mid", history([758, 700, 690])], // rolling best ~758 → 400/758 = 52.8%
+      ["low", history([50, 50, 50])], // rolling best 50 → 47/50 = 94.0%
+    ]),
+  });
+  // Order must be by ratio desc: low (94%) > top (52.8%) > mid (52.8%, lower raw).
+  assert.deepEqual(result.standings.map((standing) => standing.userId), ["low", "top", "mid"]);
+  assert.deepEqual(result.standings.map((standing) => standing.ratio), [94, 52.8, 52.8]);
+  assert.deepEqual(result.standings.map((standing) => standing.rank), [1, 2, 3]);
 });
 
 test("ratio rounds to one decimal place", () => {

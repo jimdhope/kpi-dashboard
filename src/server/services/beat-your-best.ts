@@ -86,22 +86,27 @@ export function computeBybStandings(input: {
     };
   });
 
-  const qualified = evaluated
-    .filter((standing) => standing.qualified)
+  // Rank every player that HAS a ratio (≥3 prior scoring weeks and a rolling
+  // best > 0) by that ratio, descending — this is what the "this week as a % of
+  // your best" leaderboard is meant to show. `qualified` (reaching half of this
+  // week's top raw score) is a separate "eligible to win" badge and must NOT
+  // reorder the list: otherwise a strong personal week with low absolute volume
+  // (high ratio, low raw points) can appear BELOW a weaker personal week with
+  // high absolute volume — inverting the displayed percentages (e.g. 3rd = 52.8%
+  // while 4th = 93.5%). Players without a ratio (unranked) trail, by raw points.
+  const ranked = evaluated
+    .filter((standing) => standing.ranked)
     .sort((a, b) => b.ratio! - a.ratio! || b.rawPoints - a.rawPoints || a.name.localeCompare(b.name));
-  const unqualifiedRanked = evaluated
-    .filter((standing) => standing.ranked && !standing.qualified)
-    .sort((a, b) => b.rawPoints - a.rawPoints || a.name.localeCompare(b.name));
   const unranked = evaluated
     .filter((standing) => !standing.ranked)
     .sort((a, b) => b.rawPoints - a.rawPoints || a.name.localeCompare(b.name));
 
-  qualified.forEach((standing, index) => {
+  ranked.forEach((standing, index) => {
     standing.rank = index + 1;
   });
 
   return {
-    standings: [...qualified, ...unqualifiedRanked, ...unranked],
+    standings: [...ranked, ...unranked],
     topRawPoints,
   };
 }
