@@ -88,19 +88,28 @@ export async function registerCompetitionTeamsAutoUpdateWorker() {
       });
       const response = await sendDailyScoresFromWorker(request, competition.id);
       const result = await response.json() as { totalSent?: number; totalFailed?: number };
-      if (response.ok && (result.totalSent ?? 0) > 0 && (result.totalFailed ?? 0) === 0) {
-        // Re-read the row's post-write updatedAt and record it so this worker
-        // never mistakes its own success-write for an external config edit.
-        const updated = await prisma.competition.update({
-          where: { id: competition.id },
-          data: {
-            ...(changedAt ? { lastAutoTeamsScoreAt: changedAt } : {}),
-            lastAutoTeamsSentAt: changedAt ?? new Date(),
-          },
-          select: { updatedAt: true },
+      // Advance the watermark regardless of delivery outcome: these are
+      // informal score updates, so a Teams failure (expired webhook, 429,
+      // outage) must not cause endless retries every 15 minutes. Failures are
+      // logged here; if reliable delivery ever matters we can revisit.
+      if (!response.ok || (result.totalFailed ?? 0) > 0) {
+        console.warn("[teams-auto-update] delivery failures", {
+          competitionId: competition.id,
+          totalSent: result.totalSent ?? 0,
+          totalFailed: result.totalFailed ?? 0,
         });
-        seenConfigUpdatedAt.set(competition.id, updated.updatedAt.getTime());
       }
+      // Re-read the row's post-write updatedAt and record it so this worker
+      // never mistakes its own success-write for an external config edit.
+      const updated = await prisma.competition.update({
+        where: { id: competition.id },
+        data: {
+          ...(changedAt ? { lastAutoTeamsScoreAt: changedAt } : {}),
+          lastAutoTeamsSentAt: changedAt ?? new Date(),
+        },
+        select: { updatedAt: true },
+      });
+      seenConfigUpdatedAt.set(competition.id, updated.updatedAt.getTime());
     }
   });
 }
