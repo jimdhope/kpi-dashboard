@@ -16,7 +16,7 @@ const PowerCutMap = dynamic(() => import("@/components/PowerCutMap"), {
 
 export default function PowerCutsPage() {
   return (
-    <div className="h-[calc(100vh-6rem)] w-full overflow-hidden bg-background">
+    <div className="fixed inset-0 top-[57px] bottom-0 bg-background overflow-hidden">
       <PowerCutMap />
     </div>
   );

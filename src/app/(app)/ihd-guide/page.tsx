@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { AppShell } from "@/components/app-shell";
 
 const IHD3_ICONS = [
   { src: "/ihd-guide/Battery_2.png", alt: "Battery", title: "Battery", desc: "Shows how much battery your IHD has when unplugged (it's designed to stay plugged in, so won't last unplugged more than a few hours). If it dies, just plug it back in and press the on/off button at the back." },
@@ -53,8 +52,7 @@ const FAQ = [
 
 export default function IHDGuidePage() {
   return (
-    <AppShell user={null} title="IHD Guide" description="In-Home Display user guide">
-      <div className="container mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
         <header className="mb-8 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-primary sm:text-5xl">
             How to use your In-Home Display
@@ -316,6 +314,5 @@ export default function IHDGuidePage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
   );
 }

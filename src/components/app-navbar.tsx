@@ -368,7 +368,7 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
   };
 
   return (
-    <nav className={cn("glass-sidebar sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 py-3", className)}>
+    <nav className={cn("glass-sidebar sticky top-0 z-[90] flex items-center justify-between px-4 md:px-6 py-3", className)}>
       <div className="flex items-center gap-2">
         {/* Mobile Menu Trigger */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

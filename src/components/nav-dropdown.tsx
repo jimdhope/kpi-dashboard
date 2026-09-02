@@ -196,7 +196,7 @@ export function NavDropdown({ items, trigger, href, align = 'left', className, o
         onMouseEnter={handleDropdownMouseEnter}
         onMouseLeave={handleDropdownMouseLeave}
         className={cn(
-          "absolute top-full mt-2 min-w-[220px] z-50",
+          "absolute top-full mt-2 min-w-[220px] z-[100]",
           "opacity-0 invisible translate-y-2 transition-all duration-200",
           isOpen && "opacity-100 visible translate-y-0"
         )}
