@@ -135,7 +135,7 @@ export default function PowerCutMap() {
   }, []);
 
   const getIncidentCoords = useCallback((inc: Incident): { lat: number; lon: number } | null => {
-    if (inc.lat != null && inc.lon != null) return { lat: inc.lat, lon: inc.lon };
+    if (inc.lat != null && inc.lon != null) return { lat: parseFloat(inc.lat as any), lon: parseFloat(inc.lon as any) };
     if (inc.postcode) {
       const firstPc = inc.postcode.split(";")[0].trim();
       return geocodePostcode(firstPc);

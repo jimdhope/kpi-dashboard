@@ -12,6 +12,8 @@ export async function GET() {
   if (data.incidents) {
     data.incidents = data.incidents.map((inc: any) => ({
       ...inc,
+      lat: inc.lat != null ? parseFloat(inc.lat) : null,
+      lon: inc.lon != null ? parseFloat(inc.lon) : null,
       startedAt: inc.started_at,
       estRestoration: inc.est_restoration,
       customersAffected: inc.customers_affected,
