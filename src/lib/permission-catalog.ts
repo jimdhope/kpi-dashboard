@@ -49,6 +49,7 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
     { key: "nav.usefulTools.meterReading", label: "Meter Reading", description: "Meter reading guide" },
     { key: "nav.usefulTools.calculators", label: "Calculators", description: "Energy and payment tools" },
     { key: "nav.usefulTools.agreedReads", label: "Agreed Reads", description: "Agreed reads tool" },
+    { key: "nav.usefulTools.powerCuts", label: "Power Cuts", description: "UK power cut map" },
   ]},
   { key: "nav.activity", label: "Activity", description: "User and organisation activity", children: [
     { key: "nav.activity.own", label: "Own Activity", description: "View the signed-in user's activity" },

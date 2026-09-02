@@ -118,6 +118,7 @@ const navItems: NavItemConfig[] = [
       { label: 'Dual Fuel', href: '/tools/dual-fuel', icon: Infinity, permissionKey: 'usefulTools.calculators' },
       { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig, permissionKey: 'usefulTools.calculators' },
       { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2, permissionKey: 'usefulTools.agreedReads' },
+      { label: 'Power Cuts', href: '/power-cuts', icon: Zap, permissionKey: 'usefulTools.powerCuts' },
     ]
   },
   { 
@@ -208,6 +209,7 @@ const agentNavItems: NavItemConfig[] = [
       { label: 'Dual Fuel', href: '/tools/dual-fuel', icon: Infinity },
       { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig },
       { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2 },
+      { label: 'Power Cuts', href: '/power-cuts', icon: Zap },
     ],
   },
 ];

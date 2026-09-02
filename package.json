@@ -82,6 +82,8 @@
     "emoji-picker-react": "^4.18.0",
     "framer-motion": "^12.43.0",
     "jszip": "^3.10.1",
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^1.0.1",
     "next": "^16.2.10",
     "nodemailer": "^9.0.1",
@@ -92,6 +94,7 @@
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.7",
     "react-hook-form": "^7.72.0",
+    "react-leaflet": "^5.0.0",
     "recharts": "^3.8.0",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.5.0",
@@ -100,6 +103,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^20.17.50",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.17",
