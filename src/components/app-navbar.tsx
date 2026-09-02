@@ -112,7 +112,7 @@ const navItems: NavItemConfig[] = [
     items: [
       { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true, permissionKey: 'usefulTools.callFlow' },
       { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen, permissionKey: 'usefulTools.meterReading' },
-      { label: 'IHD Guide', href: '/ihd-guide', icon: Tv, permissionKey: 'usefulTools.ihdGuide' },
+      { label: 'IHD Guide', href: '/ihd-guide', icon: Tv },
       { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays, permissionKey: 'usefulTools.calculators' },
       { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap, permissionKey: 'usefulTools.calculators' },
       { label: 'Burns Test', href: '/tools/burns-test', icon: Flame, permissionKey: 'usefulTools.calculators' },
