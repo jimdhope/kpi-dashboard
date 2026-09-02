@@ -11,7 +11,7 @@ import {
   Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone,
   Crown, Activity, Bell, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare,
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone, MessageSquare,
-  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen,
+  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen, Tv,
   BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord, CheckCheck,
   TrendingUp
 } from 'lucide-react';
@@ -112,6 +112,7 @@ const navItems: NavItemConfig[] = [
     items: [
       { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true, permissionKey: 'usefulTools.callFlow' },
       { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen, permissionKey: 'usefulTools.meterReading' },
+      { label: 'IHD Guide', href: '/ihd-guide', icon: Tv, permissionKey: 'usefulTools.ihdGuide' },
       { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays, permissionKey: 'usefulTools.calculators' },
       { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap, permissionKey: 'usefulTools.calculators' },
       { label: 'Burns Test', href: '/tools/burns-test', icon: Flame, permissionKey: 'usefulTools.calculators' },
@@ -203,6 +204,7 @@ const agentNavItems: NavItemConfig[] = [
     items: [
       { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true },
       { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen },
+      { label: 'IHD Guide', href: '/ihd-guide', icon: Tv },
       { label: 'Instalment Plan', href: '/tools/instalment-plan', icon: CalendarDays },
       { label: 'Energy Usage', href: '/tools/energy-usage', icon: Zap },
       { label: 'Burns Test', href: '/tools/burns-test', icon: Flame },
