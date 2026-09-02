@@ -32,16 +32,10 @@ export function IncidentList({
     });
 
   return (
-    <aside className="flex w-full shrink-0 flex-col overflow-hidden border-l border-glass-border bg-glass/50 backdrop-blur-xl md:w-[480px] md:min-w-[480px]">
+    <aside className="flex h-full w-full flex-col overflow-hidden border-l border-glass-border bg-glass/50 backdrop-blur-xl md:w-[420px] md:min-w-[420px]">
       <div className="shrink-0 border-b border-glass-border px-4 py-3 space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-card-foreground">Incidents</h2>
-          <button
-            onClick={onShowLegend}
-            className="mr-auto ml-3 rounded border border-glass-border px-2 py-0.5 text-xs text-muted-foreground lg:hidden"
-          >
-            Show legend
-          </button>
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{incidents.length}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -55,8 +49,8 @@ export function IncidentList({
                 onSearch(searchValue.trim());
               }
             }}
-            placeholder="Search postcode, DNO, area..."
-            className="flex-1 rounded border border-glass-border bg-muted px-3 py-1.5 text-xs text-card-foreground outline-none focus:border-primary"
+            placeholder="Postcode, DNO, area..."
+            className="flex-1 rounded border border-glass-border bg-muted px-3 py-1.5 text-xs text-foreground outline-none focus:border-primary"
             autoComplete="off"
           />
           <button
@@ -75,7 +69,7 @@ export function IncidentList({
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium transition-colors ${
             showResolved
               ? "bg-green-500/20 text-green-400 border border-green-500/30"
-              : "bg-muted text-muted-foreground border border-glass-border hover:border-muted-foreground"
+              : "bg-muted text-muted-foreground border border-glass-border"
           }`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${showResolved ? "bg-green-400" : "bg-muted-foreground"}`} />
@@ -86,13 +80,13 @@ export function IncidentList({
             setSearchValue("");
             onSearch("");
           }}
-          className="rounded border border-glass-border px-2 py-1 text-[0.7rem] text-muted-foreground hover:border-muted-foreground"
+          className="rounded border border-glass-border px-2 py-1 text-[0.7rem] text-muted-foreground"
         >
-          Clear search
+          Clear
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto max-h-[50vh] md:max-h-none p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
         {loading && sorted.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             <div className="text-2xl">📡</div>
@@ -155,20 +149,20 @@ export function IncidentList({
               </div>
               <div className="flex items-center justify-between text-[0.7rem] text-muted-foreground">
                 <div>
-                  <span className="text-muted-foreground">Started:</span>{" "}
-                  <span className="text-card-foreground">{started}</span>
+                  <span>Started:</span>{" "}
+                  <span className="text-foreground">{started}</span>
                   {lastUpdated && (
                     <div className="text-[0.65rem] text-muted-foreground/70">Upd: {lastUpdated}</div>
                   )}
                 </div>
                 <div className="text-right">
                   <div>
-                    <span className="text-muted-foreground">Cust:</span>{" "}
+                    <span>Cust:</span>{" "}
                     <span className="font-semibold text-primary">{cust}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Est:</span>{" "}
-                    <span className="text-card-foreground">{est}</span>
+                    <span>Est:</span>{" "}
+                    <span className="text-foreground">{est}</span>
                   </div>
                 </div>
               </div>
