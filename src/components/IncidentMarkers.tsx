@@ -10,6 +10,7 @@ import { createRoot } from "react-dom/client";
 import React from "react";
 import type { Incident } from "@/lib/types";
 import { dnoColor, statusLabel, statusColor, formatDate, statusKind } from "@/lib/ui";
+import { lookupPostcode } from "@/lib/postcodes";
 
 const DNO_URLS: Record<string, string> = {
   "UK Power Networks": "https://www.ukpowernetworks.co.uk/power-cut/list",
@@ -24,12 +25,25 @@ function extractOutwardCodes(postcode: string): string[] {
   return [...new Set(postcode.split(";").map((p) => p.trim().split(" ")[0]).filter(Boolean))];
 }
 
-function dedupeByCoords(incidents: Incident[]): Incident[] {
-  const seen = new Map<string, Incident>();
+function geocodePostcode(postcode: string): { lat: number; lon: number } | null {
+  const info = lookupPostcode(postcode.split(";")[0].trim());
+  if (info) return { lat: info.lat, lon: info.lon };
+  return null;
+}
+
+function getIncidentCoords(inc: Incident): { lat: number; lon: number } | null {
+  if (inc.lat != null && inc.lon != null) return { lat: inc.lat, lon: inc.lon };
+  if (inc.postcode) return geocodePostcode(inc.postcode);
+  return null;
+}
+
+function dedupeByCoords(incidents: Incident[]): (Incident & { lat: number; lon: number })[] {
+  const seen = new Map<string, Incident & { lat: number; lon: number }>();
   for (const inc of incidents) {
-    if (inc.lat == null || inc.lon == null) continue;
-    const key = `${Number(inc.lat).toFixed(4)},${Number(inc.lon).toFixed(4)}`;
-    if (!seen.has(key)) seen.set(key, inc);
+    const coords = getIncidentCoords(inc);
+    if (!coords) continue;
+    const key = `${coords.lat.toFixed(4)},${coords.lon.toFixed(4)}`;
+    if (!seen.has(key)) seen.set(key, { ...inc, lat: coords.lat, lon: coords.lon });
   }
   return Array.from(seen.values());
 }

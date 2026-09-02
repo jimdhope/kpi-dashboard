@@ -8,8 +8,22 @@ export async function GET(req: Request) {
   const r = await fetch(`${GW}/api/postcode?postcode=${encodeURIComponent(postcode)}`, {
     signal: AbortSignal.timeout(10000),
   });
-  const text = await r.text();
-  return new Response(text, {
+  const data = await r.json();
+  
+  // Map snake_case from data gateway to camelCase expected by UI
+  if (data.incidents) {
+    data.incidents = data.incidents.map((inc: any) => ({
+      ...inc,
+      startedAt: inc.started_at,
+      estRestoration: inc.est_restoration,
+      customersAffected: inc.customers_affected,
+      updatedAt: inc.updated_at,
+      createdAt: inc.created_at,
+      provider_raw_data: inc.raw_data,
+    }));
+  }
+  
+  return new Response(JSON.stringify(data), {
     status: r.status,
     headers: { "content-type": "application/json" },
   });
