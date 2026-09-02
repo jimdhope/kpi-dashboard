@@ -8,7 +8,8 @@ export async function GET(req: Request) {
   const r = await fetch(`${GW}/api/postcode?postcode=${encodeURIComponent(postcode)}`, {
     signal: AbortSignal.timeout(10000),
   });
-  return new Response(await r.body, {
+  const text = await r.text();
+  return new Response(text, {
     status: r.status,
     headers: { "content-type": "application/json" },
   });

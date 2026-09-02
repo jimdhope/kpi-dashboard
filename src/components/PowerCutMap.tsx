@@ -16,6 +16,8 @@ import { Legend } from "@/components/Legend";
 import { MapController } from "@/components/MapController";
 import { VERSION } from "@/lib/config";
 import { isLive, statusKind, dnoColor, statusLabel, formatDate } from "@/lib/ui";
+import { lookupPostcode } from "@/lib/postcodes";
+import { outwardCode } from "@/lib/dno";
 import { ArrowLeft, Zap } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -127,9 +129,25 @@ export default function PowerCutMap() {
     window.setTimeout(() => setToast(null), 4000);
   }, []);
 
-  const openPopup = useCallback((inc: Incident) => {
+  const geocodePostcode = useCallback((postcode: string): { lat: number; lon: number } | null => {
+    const oc = outwardCode(postcode);
+    const info = lookupPostcode(oc);
+    if (info) return { lat: info.lat, lon: info.lon };
+    return null;
+  }, []);
+
+  const getIncidentCoords = useCallback((inc: Incident): { lat: number; lon: number } | null => {
+    if (inc.lat != null && inc.lon != null) return { lat: inc.lat, lon: inc.lon };
+    if (inc.postcode) {
+      const firstPc = inc.postcode.split(";")[0].trim();
+      return geocodePostcode(firstPc);
+    }
+    return null;
+  }, [geocodePostcode]);
+
+  const openPopup = useCallback((inc: Incident, coords: { lat: number; lon: number }) => {
     const map = mapRef.current;
-    if (!map || inc.lat == null || inc.lon == null) return;
+    if (!map) return;
     
     const color = dnoColor(inc.dno);
     const dnoUrl = DNO_URLS[inc.dno];
@@ -182,18 +200,23 @@ export default function PowerCutMap() {
     `;
 
     map.closePopup();
-    L.popup({ maxWidth: 360, minWidth: 300, autoClose: false, closeOnClick: false })
-      .setLatLng([inc.lat, inc.lon])
-      .setContent(html)
-      .openOn(map);
+    setTimeout(() => {
+      L.popup({ maxWidth: 360, minWidth: 300, autoClose: false, closeOnClick: false })
+        .setLatLng([coords.lat, coords.lon])
+        .setContent(html)
+        .openOn(map);
+    }, 100);
   }, []);
 
   const flyToIncident = useCallback((inc: Incident) => {
-    if (inc.lat != null && inc.lon != null && mapRef.current) {
-      mapRef.current.flyTo([inc.lat, inc.lon], 12, { duration: 1.5 });
-      setTimeout(() => openPopup(inc), 600);
+    const coords = getIncidentCoords(inc);
+    if (coords && mapRef.current) {
+      mapRef.current.flyTo([coords.lat, coords.lon], 12, { duration: 1.5 });
+      setTimeout(() => openPopup(inc, coords), 700);
+    } else {
+      showToast("No coordinates available for this incident");
     }
-  }, [openPopup]);
+  }, [getIncidentCoords, openPopup, showToast]);
 
   const handleSearch = async (raw: string) => {
     if (!raw) {

@@ -6,7 +6,8 @@ export async function GET() {
   const r = await fetch(`${GW}/api/power-cuts`, {
     signal: AbortSignal.timeout(10000),
   });
-  return new Response(await r.body, {
+  const text = await r.text();
+  return new Response(text, {
     status: r.status,
     headers: { "content-type": "application/json" },
   });
