@@ -35,15 +35,11 @@ function p(text: string) {
   return text ? { type: "paragraph", content: [{ type: "text", text }] } : { type: "paragraph" };
 }
 
-function bold(text: string) {
-  return { type: "text", text, marks: [{ type: "bold" }] };
-}
-
 function doc(...nodes: object[]) {
   return { type: "doc", content: nodes };
 }
 
-// ─── Default templates based on Frankenstein Week post ─────────────────────
+// ─── Default templates ──────────────────────────────────────────────────────
 
 function getDefaultVeSections(): PostGeneratorSection[] {
   return [
@@ -52,11 +48,10 @@ function getDefaultVeSections(): PostGeneratorSection[] {
       wordCount: 90,
       enabled: true,
       content: JSON.stringify(doc(
-        h(2, "⚡🧪 {competitionName}! 🥓🔥"),
-        p("Good afternoon everyone,"),
-        p("Another {competitionDuration} week has come to an end, and after a week of experiments, monsters, lightning strikes, and suspicious laboratory activity, it's time to reveal the results of our {competitionName} competition."),
-        p("The race for the top spot couldn't have been much closer. Every team put in an incredible effort, with just 12 points separating first place from third place, proving that every contribution really did matter this week."),
-        p("So, let's see who brought their creation to life and claimed victory... ⚡")
+        h(2, "{competitionName}"),
+        p("It's the end of another {competitionDuration} week and after a week of {{something relating to the competition name and teams}}, it's time to reveal the results of our {competitionName} competition."),
+        p("{{comments on this week's competition without giving any scores or winner's away... closeness of the scores, fun had, that kind of thing}}"),
+        p("{{segue to next section}}")
       )),
     },
     {
@@ -65,15 +60,14 @@ function getDefaultVeSections(): PostGeneratorSection[] {
       enabled: true,
       content: JSON.stringify(doc(
         h(2, "🏆 {competitionName} RESULTS 🏆"),
-        p("After a week of electrifying performances, one team managed to rally together and storm their way to the top of the leaderboard..."),
+        p("After a week of {{word related to competition}} performances, one team managed to rally together and {{something descriptive}} to the top of the leaderboard..."),
         h(3, "🔥 Winning Team: {winningTeamName}"),
         p("👏 {winningTeamMembers}"),
-        p("With an impressive {winningTeamScore} points, {winningTeamName} united in pursuit of victory and ultimately emerged triumphant."),
-        p("A huge congratulations to all! 🎉"),
+        p("{winningTeamName} united in pursuit of victory and ultimately emerged triumphant. A huge congratulations to all! 🎉"),
         h(3, "🌟 TOP PERFORMERS OF THE WEEK 🌟"),
-        p("🥇 1st Place – {topPerformer1Name} ({topPerformer1Score} points)"),
-        p("🥈 2nd Place – {topPerformer2Name} ({topPerformer2Score} points)"),
-        p("🥉 3rd Place – {topPerformer3Name} ({topPerformer3Score} points)"),
+        p("🥇 1st Place – {topPerformer1Name}"),
+        p("🥈 2nd Place – {topPerformer2Name}"),
+        p("🥉 3rd Place – {topPerformer3Name}"),
         p("A massive congratulations to all three! 👏")
       )),
     },
@@ -82,14 +76,14 @@ function getDefaultVeSections(): PostGeneratorSection[] {
       wordCount: 90,
       enabled: true,
       content: JSON.stringify(doc(
-        h(2, "🥓🔥 THIS WEEK: {nextWeekCompetitionName}! 🔥🥓"),
-        p("The laboratory has been shut down. The villagers have returned home. And now it's time for something much more important..."),
+        h(2, "{{Relevant Emojis}} THIS WEEK: {nextWeekCompetitionName}! {{Relevant Emojis}}"),
+        p("{{description of previous comp ending in three-part 'the thing has stopped, the thing has ended, the thing is complete' type of thing, but not that style of wording}}"),
         p("{nextWeekTheme}!"),
         p("This week we're celebrating {nextWeekCompetitionName}, and three deliciously competitive teams are preparing to battle it out for leaderboard glory. Taking to the griddle this week are:"),
-        p("🥓 The Sizzle Squad"),
-        p("🥓 Bringin' Home the Bacon"),
-        p("🥓 Don't Go Bacon My Heart"),
-        p("Who will bring the heat? Who will serve up the strongest performances? And who will be celebrating victory this time next week? Only time will tell...")
+        p("{{Team 1 Emoji}} {{Team 1 Name}}"),
+        p("{{Team 2 Emoji}} {{Team 2 Name}}"),
+        p("{{Team 3 Emoji}} {{Team 3 Name}}"),
+        p("Who will {{something to do with the theme}}? Who will {{something to do with the theme}}? And who will be celebrating victory this time next week? Only time will tell...")
       )),
     },
     {
@@ -98,10 +92,7 @@ function getDefaultVeSections(): PostGeneratorSection[] {
       enabled: true,
       content: JSON.stringify(doc(
         h(2, "💙 CELEBRATING TEAMWORK 💙"),
-        p("While we celebrate our winners, it's important to recognise the wider team effort behind every competition."),
-        p("Week after week, it's inspiring to see colleagues supporting one another, sharing successes, encouraging improvement, and helping create a positive environment where everyone can thrive."),
-        p("Whether you topped the leaderboard, improved your score, or helped support your teammates along the way, you've played a part in another successful week."),
-        p("Thank you all for your contribution. 👏")
+        p("{{mini speech about celebrating wins as a team and encouraging work as not only mini teams in the competition but a team as a whole}}")
       )),
     },
     {
@@ -110,9 +101,9 @@ function getDefaultVeSections(): PostGeneratorSection[] {
       enabled: true,
       content: JSON.stringify(doc(
         h(2, "🚀 A NEW WEEK BEGINS"),
-        p("The leaderboard has been reset. The competition is ready. And another opportunity awaits."),
-        p("Congratulations once again to our winners! Good luck to everyone taking part this week."),
-        p("🥓🔥 Let's make it another fantastic week! 🔥🥓")
+        p("{{The leaderboard has been reset. The competition is ready. And another opportunity awaits. type thing}}"),
+        p("{{Congratulations once again to our winners! Good luck to everyone taking part this week. type thing}}"),
+        p("{{old Competition Relevant emojis}} {{Let's make it another fantastic week! type thing}} {{new competition relevant emojis}}")
       )),
     },
   ];
@@ -125,9 +116,10 @@ function getDefaultTeamsSections(): PostGeneratorSection[] {
       wordCount: 80,
       enabled: true,
       content: JSON.stringify(doc(
-        h(2, "🥓🔥 TEAM HARVEY – {competitionName} RESULTS 🔥🥓"),
-        p("📢 Attention Team Harvey!"),
-        p("The laboratory has been powered down. The monsters have wandered off. The torches and pitchforks have been returned to storage. And now it's time to reveal the results of {competitionName} before we fire up the grill for our tastiest competition yet! 😋")
+        h(2, "{competitionName}"),
+        p("It's the end of another {competitionDuration} week and after a week of {{something relating to the competition name and teams}}, it's time to reveal the results of our {competitionName} competition."),
+        p("{{comments on this week's competition without giving any scores or winner's away... closeness of the scores, fun had, that kind of thing}}"),
+        p("{{segue to next section}}")
       )),
     },
     {
@@ -135,18 +127,16 @@ function getDefaultTeamsSections(): PostGeneratorSection[] {
       wordCount: 120,
       enabled: true,
       content: JSON.stringify(doc(
-        h(2, "⚡🏆 {competitionName} RESULTS 🏆⚡"),
-        h(3, "📊 LEADERBOARD"),
-        p("[INSERT LEADERBOARD HERE]"),
-        p("What a close competition! Only 12 points separated first and third place, proving that every score mattered this week."),
-        h(3, "🔥 {winningTeamName} 🔥"),
+        h(2, "🏆 {competitionName} RESULTS 🏆"),
+        p("After a week of {{word related to competition}} performances, one team managed to rally together and {{something descriptive}} to the top of the leaderboard..."),
+        h(3, "🔥 Winning Team: {winningTeamName}"),
         p("👏 {winningTeamMembers}"),
-        p("Despite being the smallest team, {winningTeamName} showed that quality beats quantity. They claimed the top spot with an impressive {winningTeamScore} points. A huge congratulations! 🎉🏆"),
-        h(3, "🌟 THIS WEEK'S TOP PERFORMERS 🌟"),
-        p("🥇 {topPerformer1Name} – {topPerformer1Score} Points"),
-        p("🥈 {topPerformer2Name} – {topPerformer2Score} Points"),
-        p("🥉 {topPerformer3Name} – {topPerformer3Score} Points"),
-        p("Fantastic work! 👏👏👏")
+        p("{winningTeamName} united in pursuit of victory and ultimately emerged triumphant. A huge congratulations to all! 🎉"),
+        h(3, "🌟 TOP PERFORMERS OF THE WEEK 🌟"),
+        p("🥇 1st Place – {topPerformer1Name}"),
+        p("🥈 2nd Place – {topPerformer2Name}"),
+        p("🥉 3rd Place – {topPerformer3Name}"),
+        p("A massive congratulations to all three! 👏")
       )),
     },
     {
@@ -154,18 +144,14 @@ function getDefaultTeamsSections(): PostGeneratorSection[] {
       wordCount: 100,
       enabled: true,
       content: JSON.stringify(doc(
-        h(2, "🚀 BEAT YOUR BEST CHAMPION 🚀"),
-        p("The Beat Your Best Champion isn't about beating everyone else. It's about beating yourself. And this week's winner absolutely smashed it!"),
-        p("🏆 {bybChampionName} achieved an incredible {bybChampionScore}% of her rolling 8-week best score! 🎉"),
-        h(3, "📈 PERSONAL BEST ACHIEVERS 📈"),
-        p("A special shout-out to this week's personal best breakers:"),
-        p("🌟 {pbBreakers}"),
-        p("It takes real effort to improve upon your own best, so a huge congratulations to both of you! 👏🔥"),
-        h(2, "🥓🥪 {nextWeekCompetitionName} HAS ARRIVED! 🥪🥓"),
-        p("Three teams enter. One team leaves with bragging rights."),
-        p("🥓 TEAM 1 – Description"),
-        p("🥓 TEAM 2 – Description"),
-        p("🥓 TEAM 3 – Description")
+        h(2, "{{Relevant Emojis}} THIS WEEK: {nextWeekCompetitionName}! {{Relevant Emojis}}"),
+        p("{{description of previous comp ending in three-part 'the thing has stopped, the thing has ended, the thing is complete' type of thing, but not that style of wording}}"),
+        p("{nextWeekTheme}!"),
+        p("This week we're celebrating {nextWeekCompetitionName}, and three deliciously competitive teams are preparing to battle it out for leaderboard glory. Taking to the griddle this week are:"),
+        p("{{Team 1 Emoji}} {{Team 1 Name}}"),
+        p("{{Team 2 Emoji}} {{Team 2 Name}}"),
+        p("{{Team 3 Emoji}} {{Team 3 Name}}"),
+        p("Who will {{something to do with the theme}}? Who will {{something to do with the theme}}? And who will be celebrating victory this time next week? Only time will tell...")
       )),
     },
     {
@@ -173,13 +159,8 @@ function getDefaultTeamsSections(): PostGeneratorSection[] {
       wordCount: 60,
       enabled: true,
       content: JSON.stringify(doc(
-        h(2, "💙 SHARE THE LOVE 💙"),
-        p("Don't forget to jump onto Viva Engage:"),
-        p("🏆 Download your certificates"),
-        p("👏 Celebrate the winners"),
-        p("🎉 Congratulate your teammates"),
-        p("💙 Share some Team Harvey love"),
-        p("A little recognition goes a long way!")
+        h(2, "💙 CELEBRATING TEAMWORK 💙"),
+        p("{{mini speech about celebrating wins as a team and encouraging work as not only mini teams in the competition but a team as a whole}}")
       )),
     },
     {
@@ -187,16 +168,14 @@ function getDefaultTeamsSections(): PostGeneratorSection[] {
       wordCount: 40,
       enabled: true,
       content: JSON.stringify(doc(
-        h(2, "🚨 FINAL QUESTION 🚨"),
-        p("The grill is hot. The leaderboard is reset. The bacon is sizzling."),
-        p("The only question left is... 🥓 WHO'S GOING TO BRING HOME THE BACON? 🥓"),
-        p("Good luck everyone! Let's make it another fantastic week! 🔥🏆😄")
+        h(2, "🚀 A NEW WEEK BEGINS"),
+        p("{{The leaderboard has been reset. The competition is ready. And another opportunity awaits. type thing}}"),
+        p("{{Congratulations once again to our winners! Good luck to everyone taking part this week. type thing}}"),
+        p("{{old Competition Relevant emojis}} {{Let's make it another fantastic week! type thing}} {{new competition relevant emojis}}")
       )),
     },
   ];
 }
-
-export const DEFAULT_SECTIONS = getDefaultVeSections();
 
 const DEFAULT_VE_TEMPLATE: PostGeneratorTemplate = { sections: getDefaultVeSections() };
 const DEFAULT_TEAMS_TEMPLATE: PostGeneratorTemplate = { sections: getDefaultTeamsSections() };

@@ -99,15 +99,24 @@ export async function POST(request: Request) {
     const standings = await postGeneratorService.resolveCompetitionData(thisWeek.id);
     const top = standings.top;
 
+    // Fetch winning team members
+    const winningTeam = thisWeek.teams[0];
+    const winningTeamMembers = winningTeam?.agentIds?.length
+      ? await prisma.user.findMany({
+          where: { id: { in: winningTeam.agentIds } },
+          select: { name: true },
+        })
+      : [];
+
     // Build tokens
     const tokens: Record<string, string> = {
       competitionName: thisWeek.name,
       competitionDescription: thisWeek.description || "",
       competitionDuration: formatDuration(thisWeek.startsAt, thisWeek.endsAt),
       totalCompetitors: String(standings.total),
-      winningTeamName: thisWeek.teams[0]?.name || "",
-      winningTeamMembers: "",
-      winningTeamScore: "",
+      winningTeamName: winningTeam?.name || "",
+      winningTeamMembers: winningTeamMembers.map((m) => m.name).join(", "),
+      winningTeamScore: top[0] ? String(top[0].points) : "",
       topPerformer1Name: top[0]?.agentName || "",
       topPerformer1Score: top[0] ? String(top[0].points) : "",
       topPerformer2Name: top[1]?.agentName || "",

@@ -32,7 +32,7 @@ async function callOpenRouter(prompt: string, apiKey: string): Promise<OpenRoute
         {
           role: "system",
           content:
-            "You are a celebratory post writer for a workplace competition platform. Write engaging, professional, and concise posts. Fill in all provided data tokens. Respect word count guidance. Do not invent data. Keep the tone uplifting and workplace-appropriate.",
+            "You are a celebratory post writer for a workplace competition platform. Write engaging, professional, and concise posts. Fill in all {token} placeholders with the provided data. For {{...}} placeholders, generate creative, contextual content based on the competition name, theme, and tone of the section. Respect word count guidance. Do not invent data for {tokens}. Keep the tone uplifting and workplace-appropriate.",
         },
         { role: "user", content: prompt },
       ],
