@@ -27,11 +27,11 @@ export interface PostGeneratorSettings {
 }
 
 const DEFAULT_SECTIONS: PostGeneratorSection[] = [
-  { name: 'Introduction', wordCount: 80, content: '', enabled: true },
-  { name: 'Scores & Winners', wordCount: 100, content: '', enabled: true },
-  { name: 'New Theme & Teams', wordCount: 80, content: '', enabled: true },
-  { name: 'Pep Talk & Teamwork', wordCount: 80, content: '', enabled: true },
-  { name: 'Conclusion', wordCount: 40, content: '', enabled: true },
+  { name: "Introduction", wordCount: 90, content: "", enabled: true },
+  { name: "Scores & Winners", wordCount: 110, content: "", enabled: true },
+  { name: "New Theme & Teams", wordCount: 90, content: "", enabled: true },
+  { name: "Pep Talk & Teamwork", wordCount: 80, content: "", enabled: true },
+  { name: "Conclusion", wordCount: 45, content: "", enabled: true },
 ];
 
 export default function PostGeneratorSettingsPage() {
