@@ -27,6 +27,7 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
     { key: "nav.competitions.manage", label: "Manage", description: "Create and edit competitions" },
     { key: "nav.competitions.log", label: "Log Scores", description: "Record daily competition scores" },
     { key: "nav.competitions.certificates", label: "Certificates", description: "Generate competition certificates" },
+    { key: "nav.competitions.postGenerator", label: "Post Generator", description: "Generate weekly competition posts with AI" },
   ]},
   { key: "nav.performance", label: "Performance", description: "KPI performance data and configuration", children: [
     { key: "nav.performance.dashboard", label: "Dashboard", description: "Performance overview" },

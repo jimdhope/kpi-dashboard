@@ -63,6 +63,7 @@ const generalSettings = [
   setting("meme-match-rooms", "Meme Match games", "Inspect and moderate games", "/settings/meme-match/rooms", Sparkles, "miniGames.manage", "MANAGE"),
   setting("quiz-show", "Quiz Show", "Manage Quiz Show questions and quizzes", "/settings/quiz-show", Sparkles, "miniGames.quizManage", "MANAGE"),
   setting("quiz-show-rooms", "Quiz Show rooms", "View and delete Quiz Show rooms", "/settings/quiz-show/rooms", Sparkles, "miniGames.quizManage", "MANAGE"),
+  setting("post-generator", "Post Generator", "OpenRouter API key and post templates", "/settings/post-generator", Sparkles, "competitions.postGenerator", "MANAGE"),
 ];
 
 export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroup[] = [

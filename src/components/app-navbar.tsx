@@ -72,6 +72,7 @@ const navItems: NavItemConfig[] = [
       { label: 'Beat Your Best (Beta)', href: '/competitions/beat-your-best', icon: TrendingUp, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
       { label: 'Divisions League', href: '/divisions', icon: Crown, permissionKey: 'competitions.dashboard' },
       { label: 'Certificates', href: '/competitions/certificates', icon: Award, permissionKey: 'competitions.certificates' },
+      { label: 'Post Generator', href: '/competitions/post-generator', icon: Megaphone, permissionKey: 'competitions.postGenerator', requiredLevel: 'MANAGE' },
       { label: 'Reports', href: '/reports', icon: FileText, permissionKey: 'reports' },
       { label: 'Gamification', href: '/admin/gamification', icon: Crown, permissionKey: 'settings', requiredLevel: 'MANAGE' },
     ]
