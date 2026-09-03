@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { TemplateEditor } from '@/components/post-generator/template-editor';
 
 export interface PostGeneratorSection {
   name: string;
@@ -139,45 +141,54 @@ export default function PostGeneratorSettingsPage() {
             <CardHeader>
               <CardTitle>Templates</CardTitle>
               <CardDescription>
-                Edit the post templates for each platform.
+                Edit the post templates. Use the token buttons to insert dynamic data.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {(['ve', 'teams'] as const).map((type) => {
-                const template = type === 've' ? settings.veTemplate : settings.teamsTemplate;
-                const label = type === 've' ? 'Viva Engage' : 'Teams';
-                return (
-                  <div key={type} className="space-y-4">
-                    <h3 className="text-lg font-semibold">{label} Template</h3>
-                    {template.sections.map((section, index) => (
-                      <div key={section.name} className="border rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{section.name}</span>
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={section.enabled}
-                              onChange={(e) => updateSection(type, index, { enabled: e.target.checked })}
+              <Tabs defaultValue="ve">
+                <TabsList>
+                  <TabsTrigger value="ve">Viva Engage</TabsTrigger>
+                  <TabsTrigger value="teams">Teams</TabsTrigger>
+                </TabsList>
+                {(['ve', 'teams'] as const).map((type) => {
+                  const template = type === 've' ? settings.veTemplate : settings.teamsTemplate;
+                  return (
+                    <TabsContent key={type} value={type} className="space-y-4">
+                      {template.sections.map((section, index) => (
+                        <div key={section.name} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{section.name}</span>
+                            <label className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={section.enabled}
+                                onChange={(e) => updateSection(type, index, { enabled: e.target.checked })}
+                              />
+                              Enabled
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm text-muted-foreground">Word count:</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={500}
+                              value={section.wordCount}
+                              onChange={(e) => updateSection(type, index, { wordCount: parseInt(e.target.value) || 0 })}
+                              className="w-24"
                             />
-                            Enabled
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm text-muted-foreground">Word count:</label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={500}
-                            value={section.wordCount}
-                            onChange={(e) => updateSection(type, index, { wordCount: parseInt(e.target.value) || 0 })}
-                            className="w-24"
+                          </div>
+                          <TemplateEditor
+                            content={section.content}
+                            onChange={(content) => updateSection(type, index, { content })}
+                            placeholder={`Write ${section.name.toLowerCase()} content...`}
                           />
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
+                      ))}
+                    </TabsContent>
+                  );
+                })}
+              </Tabs>
               <Button onClick={saveTemplates} disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save Templates'}
               </Button>
