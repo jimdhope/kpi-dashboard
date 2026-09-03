@@ -92,7 +92,7 @@ export function formatDate(dateStr: string | null | undefined): string {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleString("en-GB", {
-      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London",
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
     });
   } catch {
     return dateStr || "Unknown";
