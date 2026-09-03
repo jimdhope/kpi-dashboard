@@ -2,6 +2,20 @@ export const dynamic = "force-dynamic";
 
 import { pool } from "@/lib/db";
 
+function mapIncident(row: any) {
+  return {
+    ...row,
+    lat: row.lat != null ? parseFloat(row.lat) : null,
+    lon: row.lon != null ? parseFloat(row.lon) : null,
+    startedAt: row.started_at,
+    estRestoration: row.est_restoration,
+    customersAffected: row.customers_affected,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+    provider_raw_data: row.raw_data,
+  };
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const postcode = searchParams.get("postcode") || "";
@@ -30,7 +44,7 @@ export async function GET(req: Request) {
     count: active.length,
     activeCount: active.length,
     resolvedCount: resolved.length,
-    incidents: [...active, ...resolved],
+    incidents: [...active.map(mapIncident), ...resolved.map(mapIncident)],
     timestamp: Date.now(),
   }), {
     status: 200,
