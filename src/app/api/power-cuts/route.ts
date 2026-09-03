@@ -1,30 +1,15 @@
 export const dynamic = "force-dynamic";
 
-const GW = process.env.DATA_GATEWAY_URL || "http://10.0.0.245:4000";
+import { pool } from "@/lib/db";
 
 export async function GET() {
-  const r = await fetch(`${GW}/api/power-cuts`, {
-    signal: AbortSignal.timeout(10000),
-  });
-  const data = await r.json();
-  
-  // Map snake_case from data gateway to camelCase expected by UI
-  if (data.incidents) {
-    data.incidents = data.incidents.map((inc: any) => ({
-      ...inc,
-      lat: inc.lat != null ? parseFloat(inc.lat) : null,
-      lon: inc.lon != null ? parseFloat(inc.lon) : null,
-      startedAt: inc.started_at,
-      estRestoration: inc.est_restoration,
-      customersAffected: inc.customers_affected,
-      updatedAt: inc.updated_at,
-      createdAt: inc.created_at,
-      provider_raw_data: inc.raw_data,
-    }));
-  }
-  
-  return new Response(JSON.stringify(data), {
-    status: r.status,
+  const { rows } = await pool.query(`
+    SELECT * FROM incidents 
+    WHERE status NOT IN ('restored', 'resolved', 'completed', 'fixed', 'closed', 'fully_resolved')
+    ORDER BY updated_at DESC
+  `);
+  return new Response(JSON.stringify({ incidents: rows, activeCount: rows.length, resolvedCount: 0, timestamp: Date.now() }), {
+    status: 200,
     headers: { "content-type": "application/json" },
   });
 }

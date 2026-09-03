@@ -30,6 +30,11 @@ services:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/kpi_quest_v3
       - NODE_ENV=production
       - PORT=9103
+      - PG_HOST=172.17.0.1
+      - PG_PORT=5432
+      - PG_DATABASE=dashboard
+      - PG_USER=postgres
+      - PG_PASSWORD=postgres
       - DB_HOST=postgres
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
