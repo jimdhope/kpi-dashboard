@@ -50,17 +50,22 @@ export const scoreEventMigrationService = {
       }
 
       // 2. Void EVERY currently-active event for this achievement so the new one
-      //    replaces (not adds to) the previous total. Clear the idempotencyKey
-      //    so it can be reused — the unique constraint otherwise blocks
-      //    re-creating an event for a value that was previously voided.
+      //    replaces (not adds to) the previous total.
       await tx.scoreEvent.updateMany({
         where: { externalReference: reference, voidedAt: null },
         data: {
           voidedAt: new Date(),
           voidedById: "daily-achievement-sync",
           voidReason: "Daily aggregate changed during score-event transition",
-          idempotencyKey: null,
         },
+      });
+
+      // 3. Clear idempotencyKeys from ALL voided events for this achievement
+      //    (including ones voided earlier). The unique constraint otherwise
+      //    blocks re-creating an event for a value that was previously voided.
+      await tx.scoreEvent.updateMany({
+        where: { externalReference: reference, voidedAt: { not: null } },
+        data: { idempotencyKey: null },
       });
 
       // 3. Create the replacement. A racing call for the same value shares this
