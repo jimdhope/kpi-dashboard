@@ -31,67 +31,74 @@ export const scoreEventMigrationService = {
     const reference = `DailyAchievement:${achievement.id}`;
     const idempotencyKey = this.dailyAchievementSyncKey(achievement.id, achievement.value, achievement.points);
 
-    // 1. Already an active event for this exact aggregate value? `loggedAt` is
-    //    cosmetic (when it was edited), not a scoring fact, so it is ignored
-    //    when deciding whether the ledger already reflects this achievement.
-    const active = await prisma.scoreEvent.findFirst({ where: { externalReference: reference, voidedAt: null }, orderBy: { createdAt: "desc" } });
-    if (
-      active &&
-      active.quantity === achievement.value &&
-      active.points === achievement.points &&
-      active.podId === achievement.podId &&
-      active.ruleName === achievement.ruleName &&
-      active.scoredForDate.getTime() === achievement.date.getTime()
-    ) {
-      return active;
-    }
+    // Run void+create in a transaction so concurrent syncs for the same
+    // achievement can't interleave and leave no surviving active event.
+    return await prisma.$transaction(async (tx) => {
+      // 1. Already an active event for this exact aggregate value? `loggedAt` is
+      //    cosmetic (when it was edited), not a scoring fact, so it is ignored
+      //    when deciding whether the ledger already reflects this achievement.
+      const active = await tx.scoreEvent.findFirst({ where: { externalReference: reference, voidedAt: null }, orderBy: { createdAt: "desc" } });
+      if (
+        active &&
+        active.quantity === achievement.value &&
+        active.points === achievement.points &&
+        active.podId === achievement.podId &&
+        active.ruleName === achievement.ruleName &&
+        active.scoredForDate.getTime() === achievement.date.getTime()
+      ) {
+        return active;
+      }
 
-    // 2. Void EVERY currently-active event for this achievement so the new one
-    //    replaces (not adds to) the previous total.
-    await prisma.scoreEvent.updateMany({
-      where: { externalReference: reference, voidedAt: null },
-      data: {
-        voidedAt: new Date(),
-        voidedById: "daily-achievement-sync",
-        voidReason: "Daily aggregate changed during score-event transition",
-      },
-    });
-
-    // 3. Create the replacement. A duplicate/racing call for the same value
-    //    shares this key; if it beat us to the insert, swallow the unique
-    //    violation and return the already-active event (exactly one survives).
-    try {
-      const created = await prisma.scoreEvent.create({
+      // 2. Void EVERY currently-active event for this achievement so the new one
+      //    replaces (not adds to) the previous total. Clear the idempotencyKey
+      //    so it can be reused — the unique constraint otherwise blocks
+      //    re-creating an event for a value that was previously voided.
+      await tx.scoreEvent.updateMany({
+        where: { externalReference: reference, voidedAt: null },
         data: {
-          competitionId: achievement.competitionId,
-          ruleId: achievement.ruleId,
-          ruleName: achievement.ruleName,
-          subjectAgentId: achievement.agentId,
-          podId: achievement.podId,
-          quantity: achievement.value,
-          points: achievement.points,
-          scoredForDate: achievement.date,
-          source: "migration",
-          recordedAt: achievement.loggedAt,
-          correctionOfId: null,
-          externalReference: reference,
-          idempotencyKey,
+          voidedAt: new Date(),
+          voidedById: "daily-achievement-sync",
+          voidReason: "Daily aggregate changed during score-event transition",
+          idempotencyKey: null,
         },
       });
-      competitionSseService.broadcast(achievement.competitionId, {
-        type: "score_event_recorded",
-        data: { competitionId: achievement.competitionId, eventId: created.id },
-        timestamp: new Date().toISOString(),
-      });
-      return created;
-    } catch (createError) {
-      const survivor = await prisma.scoreEvent.findFirst({
-        where: { externalReference: reference, voidedAt: null },
-        orderBy: { createdAt: "desc" },
-      });
-      if (survivor) return survivor;
-      throw createError;
-    }
+
+      // 3. Create the replacement. A racing call for the same value shares this
+      //    key; if it beat us to the insert, swallow the unique violation and
+      //    return the already-active event (exactly one survives).
+      try {
+        const created = await tx.scoreEvent.create({
+          data: {
+            competitionId: achievement.competitionId,
+            ruleId: achievement.ruleId,
+            ruleName: achievement.ruleName,
+            subjectAgentId: achievement.agentId,
+            podId: achievement.podId,
+            quantity: achievement.value,
+            points: achievement.points,
+            scoredForDate: achievement.date,
+            source: "migration",
+            recordedAt: achievement.loggedAt,
+            correctionOfId: null,
+            externalReference: reference,
+            idempotencyKey,
+          },
+        });
+        competitionSseService.broadcast(achievement.competitionId, {
+          type: "score_event_recorded",
+          data: { competitionId: achievement.competitionId, eventId: created.id },
+          timestamp: new Date().toISOString(),
+        });
+        return created;
+      } catch (createError) {
+        const survivor = await tx.scoreEvent.findFirst({
+          where: { externalReference: reference, voidedAt: null },
+          orderBy: { createdAt: "desc" },
+        });
+        if (survivor) return survivor;
+        throw createError;
+      }
+    });
   },
 
   async syncDailyAchievementCorrections(input: { apply: boolean }) {
