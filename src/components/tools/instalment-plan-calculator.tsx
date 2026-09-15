@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
+import { Toggle } from '@/components/ui/toggle';
 import { format, addDays, getDay, parseISO, startOfDay, isValid } from 'date-fns';
 
 interface SuggestedPlan {
@@ -146,17 +147,15 @@ export function InstalmentPlanCalculator() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {atpQuestions.map((q, i) => (
-              <label key={i} className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 rounded p-2 -mx-2 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={!!checkedItems[i]}
-                  onChange={() => toggleCheck(i)}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span className={`text-sm ${checkedItems[i] ? 'line-through text-muted-foreground' : ''}`}>{q}</span>
-              </label>
+              <Toggle
+                key={i}
+                checked={!!checkedItems[i]}
+                onChange={() => toggleCheck(i)}
+                label={q}
+                checkedLabel={q}
+              />
             ))}
           </div>
         </CardContent>
