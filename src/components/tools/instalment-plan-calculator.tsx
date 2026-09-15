@@ -56,19 +56,15 @@ export function InstalmentPlanCalculator() {
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
   
   const atpQuestions = [
-    "Bill account to date and confirm account balance",
-    "Ask customer if they can clear the balance on the account today",
-    "If not able to clear the balance ask if they can make a partial payment today",
-    "Advise customer: gas and electricity are priority bills. Can try to help by going through current tariff options and setting up an instalment plan tailored to their circumstances. Other payment methods: Direct Debit, cash monthly, or prepayment meter.",
-    "Advise customer of current tariff options / perform tariff change and confirm ongoing usage amount",
+    "Has the Account been billed to date?",
+    "Can the customer clear the balance or make a partial payment today?",
+    "Advise customer of available payment methods (Direct Debit, Prepayment & Cash Monthly)",
+    "Have you gone through the tariff options with the customer?",
     "Advise customer that you are going to take them through some repayment options",
     "Advise customer that if an instalment plan is agreed and it goes over 12 months we will notify Credit Reference Agencies and it could affect their credit score.",
-    "Advise of repayment amount over 12 months",
-    "Advise of repayment amount over 18 months",
-    "Advise of repayment amount over 24 months",
-    "Ask if any of the three options are affordable",
+    "Advise of repayment amount over 12 months, 18 months & 24 months and Ask if any of the three options are affordable",
     "If not discuss affordability start with the current ongoing usage as that is not changeable and ask what is affordable on top of this each month.",
-    "Once amount agreed confirm with customer if they would be able to afford on top of monthly usage and would it effect any other priority bills (Rent/mortgage, Council Tax, Food etc)",
+    "Once amount agreed confirm if the new payment amount will affect any other priority bills (Rent/mortgage, Council Tax, Food etc)",
     "Confirm the instalment plan start date, End Date, Number of payments and final payment amount",
     "Offer to sign post to Step Change and Scottish Power Hardship Fund",
     "Offer to send Energy Efficiency advice.",
@@ -150,7 +146,7 @@ export function InstalmentPlanCalculator() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2">
             {atpQuestions.map((q, i) => (
               <label key={i} className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 rounded p-2 -mx-2 transition-colors">
                 <input
