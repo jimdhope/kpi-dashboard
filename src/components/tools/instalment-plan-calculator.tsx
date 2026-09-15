@@ -53,6 +53,33 @@ function addMonths(date: Date, months: number): Date {
 }
 
 export function InstalmentPlanCalculator() {
+  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
+  
+  const atpQuestions = [
+    "Bill account to date and confirm account balance",
+    "Ask customer if they can clear the balance on the account today",
+    "If not able to clear the balance ask if they can make a partial payment today",
+    "Advise customer: gas and electricity are priority bills. Can try to help by going through current tariff options and setting up an instalment plan tailored to their circumstances. Other payment methods: Direct Debit, cash monthly, or prepayment meter.",
+    "Advise customer of current tariff options / perform tariff change and confirm ongoing usage amount",
+    "Advise customer that you are going to take them through some repayment options",
+    "Advise customer that if an instalment plan is agreed and it goes over 12 months we will notify Credit Reference Agencies and it could affect their credit score.",
+    "Advise of repayment amount over 12 months",
+    "Advise of repayment amount over 18 months",
+    "Advise of repayment amount over 24 months",
+    "Ask if any of the three options are affordable",
+    "If not discuss affordability start with the current ongoing usage as that is not changeable and ask what is affordable on top of this each month.",
+    "Once amount agreed confirm with customer if they would be able to afford on top of monthly usage and would it effect any other priority bills (Rent/mortgage, Council Tax, Food etc)",
+    "Confirm the instalment plan start date, End Date, Number of payments and final payment amount",
+    "Offer to sign post to Step Change and Scottish Power Hardship Fund",
+    "Offer to send Energy Efficiency advice.",
+    "Ensure the Priority Service Register is updated with any new information making sure to read out any consent scripts",
+  ];
+
+  const toggleCheck = (idx: number) => {
+    setCheckedItems(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  const checkedCount = Object.values(checkedItems).filter(Boolean).length;
   const [accountType, setAccountType] = useState<'single' | 'twoAccounts'>('single');
   const [accountNumber, setAccountNumber] = useState('');
   const [currentBalance, setCurrentBalance] = useState('');
@@ -114,6 +141,31 @@ export function InstalmentPlanCalculator() {
 
   return (
     <div className="space-y-6">
+      {/* ATP Ability to Pay Questions Checklist */}
+      <Card className="frosted-glass">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Ability to Pay — Call Guide</span>
+            <span className="text-sm font-normal text-muted-foreground">{checkedCount} / {atpQuestions.length} completed</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {atpQuestions.map((q, i) => (
+              <label key={i} className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 rounded p-2 -mx-2 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={!!checkedItems[i]}
+                  onChange={() => toggleCheck(i)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span className={`text-sm ${checkedItems[i] ? 'line-through text-muted-foreground' : ''}`}>{q}</span>
+              </label>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-4 space-y-6">
           {/* Account type toggle */}
