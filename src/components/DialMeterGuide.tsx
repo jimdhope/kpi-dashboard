@@ -369,11 +369,6 @@ export function DialMeterGuide() {
             <span className="text-sm font-sans font-normal text-muted-foreground ml-2">kWh</span>
           </div>
         </div>
-
-        {/* ---- Instructions --------------------------------------------------- */}
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Drag the needles on the dials to set the reading. Use +/− to fine-tune each dial.
-        </p>
       </CardContent>
     </Card>
   );
