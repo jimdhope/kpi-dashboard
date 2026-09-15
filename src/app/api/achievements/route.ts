@@ -31,12 +31,11 @@ export async function GET(request: Request) {
     if (competitionId) where.competitionId = competitionId;
     if (podId) where.podId = podId;
     if (date) {
-      // Filter by date: match the entire day in UTC to avoid timezone issues with string comparisons
-      const dayStart = new Date(date);
-      dayStart.setUTCHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setUTCHours(23, 59, 59, 999);
-      
+      // Filter by local calendar day to match how scoredForDate is stored
+      // (local midnight, not UTC). Parse as local date components.
+      const [y, m, d] = date.split("-").map(Number);
+      const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+      const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999);
       where.scoredForDate = { gte: dayStart, lte: dayEnd };
     }
 
@@ -85,10 +84,9 @@ export async function POST(request: Request) {
      const payload = createSchema.parse(await request.json());
      const user = await requireCompetitionScoreLogger({ competitionId: payload.competitionId, podId: payload.podId });
  
-     const targetDate = new Date(payload.date);
-     targetDate.setUTCHours(0, 0, 0, 0);
-     const dayEnd = new Date(payload.date);
-     dayEnd.setUTCHours(23, 59, 59, 999);
+     const [py, pm, pd] = payload.date.split("-").map(Number);
+     const targetDate = new Date(py, pm - 1, pd, 0, 0, 0, 0);
+     const dayEnd = new Date(py, pm - 1, pd, 23, 59, 59, 999);
  
      // Calculate points. If ruleId is 'na', points are 0.
      let calculatedPoints = 0;

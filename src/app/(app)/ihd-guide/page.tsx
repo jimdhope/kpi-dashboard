@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
+import { Download } from "lucide-react";
 
 const IHD3_ICONS = [
   { src: "/ihd-guide/Battery_2.png", alt: "Battery", title: "Battery", desc: "Shows how much battery your IHD has when unplugged (it's designed to stay plugged in, so won't last unplugged more than a few hours). If it dies, just plug it back in and press the on/off button at the back." },
@@ -38,7 +40,7 @@ const GEO_ICONS = [
 
 const FAQ = [
   { q: "What does my IHD do?", a: "Your IHD tells you how much your energy is costing over a period of time. By having access to your smart meter readings, the IHD is also able to show how your current usage compares to your historic usage; brand new smart meters need a bit of time to build up a picture of your usage to do this. IHDs help you monitor your energy usage, and can be used to see where you might save on energy by changing how you use energy, or by investing in efficient appliances." },
-  { q: "Why won't my IHD switch on / why is the screen blank?", a: "We've written a useful blog on how to resolve your IHD issues and easy ways to check how much energy you're using." },
+  { q: "Why won't my IHD switch on / why is the screen blank?", a: "If your IHD screen is blank, it may have run out of battery or entered power-saving mode. Plug it back in and press the on/off button at the back to wake it up. If it still doesn't show anything after a minute, try unplugging it, waiting 10 seconds, and plugging it in again." },
   { q: "Do I have to leave my IHD plugged in?", a: "No. It has an in-built rechargeable battery that enables you to walk around the house and turn your appliances off and on to see how much energy they use. IHDs aren't designed to be unplugged for long periods - most generally have a few hours charge - so remember to plug it in again when you're done." },
   { q: "How much electricity does an IHD use?", a: "A tiny amount. Our IHDs use about 4-5kWh of electricity a year. Based on current prices, that's a few pence every week." },
   { q: "Does my IHD show the prices including VAT?", a: "Yes. All the prices and unit rates shown on your IHD screen include VAT." },
@@ -116,6 +118,13 @@ export default function IHDGuidePage() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">Try to set a realistic weekly or monthly budget to keep an eye on your energy use. Please note, if you go over budget, your supply won't stop - it's just a helpful tool to see how your actual usage compares with your ideal usage.</p>
                 </Card>
+
+                <div className="mt-4">
+                  <a href="/IHD3.pdf" download className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                    <Download className="h-4 w-4" />
+                    Download IHD 3 Guide (PDF)
+                  </a>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -154,6 +163,13 @@ export default function IHDGuidePage() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">Try to set a realistic weekly or monthly budget to keep an eye on your energy use. Please note, if you go over budget, your supply won't stop - it's just a helpful tool to see how your actual usage compares with your ideal usage.</p>
                 </Card>
+
+                <div className="mt-4">
+                  <a href="/IHD6.pdf" download className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                    <Download className="h-4 w-4" />
+                    Download IHD 6 Guide (PDF)
+                  </a>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -192,6 +208,13 @@ export default function IHDGuidePage() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">Try to set a realistic budget to keep an eye on your energy use. Please note, if you go over budget, your supply won't stop - it's just a helpful tool to see how your actual usage compares with your ideal usage.</p>
                 </Card>
+
+                <div className="mt-4">
+                  <a href="/IHD_geo.pdf" download className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                    <Download className="h-4 w-4" />
+                    Download GEO IHD Guide (PDF)
+                  </a>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -303,14 +326,18 @@ export default function IHDGuidePage() {
         <Card className="mt-8">
           <CardContent className="p-6">
             <h2 className="text-2xl font-semibold mb-6">In-Home Display FAQs</h2>
-            <div className="space-y-4">
+            <Accordion type="single" collapsible className="w-full">
               {FAQ.map((item, i) => (
-                <Card key={i} className="p-4">
-                  <h3 className="font-semibold mb-2">{item.q}</h3>
-                  <p className="text-sm text-muted-foreground">{item.a}</p>
-                </Card>
+                <AccordionItem key={i} value={`faq-${i}`}>
+                  <AccordionTrigger className="text-left p-0">
+                    <h3 className="font-semibold text-base">{item.q}</h3>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-sm text-muted-foreground pt-2">{item.a}</p>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </CardContent>
         </Card>
       </div>

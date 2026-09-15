@@ -11,8 +11,9 @@ const correctionSchema = z.object({
 
 function dayRange(value: string | null) {
   if (!value) return undefined;
-  const start = new Date(`${value}T00:00:00.000Z`);
-  const end = new Date(`${value}T23:59:59.999Z`);
+  const [y, m, d] = value.split("-").map(Number);
+  const start = new Date(y, m - 1, d, 0, 0, 0, 0);
+  const end = new Date(y, m - 1, d, 23, 59, 59, 999);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new Error("Invalid date");
   return { gte: start, lte: end };
 }

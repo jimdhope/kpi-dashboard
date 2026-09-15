@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { pool } from "@/lib/db";
+import { lookupPostcode } from "@/lib/postcodes";
 
 const CENTRES: Record<string, [number, number]> = {
   AB: [-2.0, 57.0], AL: [-0.4, 51.8], B: [-2.0, 52.5],
@@ -48,6 +49,8 @@ const CENTRES: Record<string, [number, number]> = {
 };
 
 function geocode(postcode: string): { lon: number; lat: number } {
+  const info = lookupPostcode(postcode);
+  if (info) return { lon: info.lon, lat: info.lat };
   const n = postcode.toUpperCase().replace(/\s/g, "");
   const outward = n.match(/^([A-Z]{1,2}\d{1,2}[A-Z]?)/)?.[1] || n.slice(0, 3);
   if (CENTRES[outward]) return { lon: CENTRES[outward][0], lat: CENTRES[outward][1] };
