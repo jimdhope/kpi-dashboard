@@ -130,7 +130,7 @@ export function AgreedReadsCalculator() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} disabled={(date) => startDate ? date < startDate : false} initialFocus />
+                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
