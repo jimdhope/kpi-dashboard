@@ -151,14 +151,22 @@ export default function AgentPerformancePage() {
           const logDate = new Date(log.date);
           return logDate >= week.start && logDate <= week.end;
         });
-        weeklyValues[week.label] = weekLogs.reduce((sum, log) => sum + (log.value || 0), 0);
+        if (kpi.type === 'percentage' || kpi.type === 'scoreOutOf') {
+          weeklyValues[week.label] = weekLogs.length > 0
+            ? weekLogs.reduce((sum, log) => sum + (log.value || 0), 0) / weekLogs.length
+            : 0;
+        } else {
+          weeklyValues[week.label] = weekLogs.reduce((sum, log) => sum + (log.value || 0), 0);
+        }
       });
 
       return {
         kpi,
         weeklyValues,
         weekLabels: weeks.map(w => w.label),
-        total: Object.values(weeklyValues).reduce((sum, val) => sum + val, 0),
+        total: (kpi.type === 'percentage' || kpi.type === 'scoreOutOf')
+          ? kpiLogs.length > 0 ? kpiLogs.reduce((sum, log) => sum + (log.value || 0), 0) / kpiLogs.length : 0
+          : Object.values(weeklyValues).reduce((sum, val) => sum + val, 0),
       };
     }).sort((a, b) => b.total - a.total);
   }, [logs, kpis]);
@@ -188,6 +196,8 @@ export default function AgentPerformancePage() {
       });
     }
 
+    const selectedKpi = kpis.find(k => k.id === selectedKpiId);
+    const isAvgType = selectedKpi && (selectedKpi.type === 'percentage' || selectedKpi.type === 'scoreOutOf');
     return weeks.map(week => {
       const weekLogs = kpiLogs.filter(log => {
         const logDate = new Date(log.date);
@@ -195,7 +205,9 @@ export default function AgentPerformancePage() {
       });
       return {
         week: week.label,
-        value: weekLogs.reduce((sum, log) => sum + (log.value || 0), 0),
+        value: isAvgType
+          ? weekLogs.length > 0 ? weekLogs.reduce((sum, log) => sum + (log.value || 0), 0) / weekLogs.length : 0
+          : weekLogs.reduce((sum, log) => sum + (log.value || 0), 0),
       } as ChartDataPoint;
     });
   }, [selectedKpiId, kpis, logs]);

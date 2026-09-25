@@ -245,7 +245,7 @@ export default function AdditionalLeaderboardPage() {
                 finalScore = weeklyAverages.length > 0
                     ? weeklyAverages.reduce((s, avg) => s + avg, 0) / weeklyAverages.length
                     : 0;
-      } else if (kpi && kpi.type === 'percentage') {
+      } else if (kpi && (kpi.type === 'percentage' || kpi.type === 'scoreOutOf')) {
         finalScore = agentData.count > 0 ? agentData.totalValue / agentData.count : 0;
       } else {
         finalScore = agentData.totalValue;

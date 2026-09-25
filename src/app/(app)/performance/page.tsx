@@ -233,7 +233,7 @@ export default function PerformanceDashboard() {
             agentScores[agentId] = weeklyAverages.length > 0
                 ? weeklyAverages.reduce((s, avg) => s + avg, 0) / weeklyAverages.length
                 : 0;
-        } else if (kpi.type === 'percentage') {
+        } else if (kpi.type === 'percentage' || kpi.type === 'scoreOutOf') {
           agentScores[agentId] = data.count > 0 ? data.sum / data.count : 0;
         } else {
           agentScores[agentId] = data.sum;
