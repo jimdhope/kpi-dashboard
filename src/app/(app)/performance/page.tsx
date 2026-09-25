@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { AppPod } from '@/lib/contracts';
-import { TeamsSendButton } from "@/components/teams-send-button";
 
 type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
 type KpiSortOrder = 'desc' | 'asc';
@@ -154,6 +153,24 @@ export default function PerformanceDashboard() {
     link.href = href;
     const kpi = kpis.find(k => k.id === kpiId);
     link.download = `performance-certificate-${kpi?.initials || 'kpi'}-${timeframe}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  };
+
+  const handleDownloadAll = async () => {
+    const params = new URLSearchParams({ timeframe, all: "true" });
+    if (selectedPodId !== "all") params.set("podId", selectedPodId);
+
+    const response = await fetch(`/api/performance/certificate?${params}`);
+    if (!response.ok) throw new Error("Failed to generate certificates");
+    
+    const blob = await response.blob();
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = `performance-certificates-${timeframe}.zip`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -326,9 +343,13 @@ export default function PerformanceDashboard() {
           <h1 className="text-3xl font-bold">Performance Dashboard</h1>
           <p className="text-muted-foreground">KPI Performance Leaderboards</p>
         </div>
-        <TeamsSendButton category="daily_summary">
-          Share Summary
-        </TeamsSendButton>
+        <button
+          onClick={handleDownloadAll}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors border border-primary/20"
+        >
+          <Download className="h-4 w-4" />
+          Download All Certificates
+        </button>
       </div>
 
       <Card className="frosted-glass">

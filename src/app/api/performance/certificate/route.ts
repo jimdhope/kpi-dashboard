@@ -1,19 +1,51 @@
 import { performanceDashboardService } from "@/server/services/performance-dashboard-service";
 import { renderPerformanceCertificateSvg } from "@/server/services/performance-certificate-service";
 import { errorResponse, ok } from "@/server/http";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const archiver = require("archiver");
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const kpiId = searchParams.get("kpiId");
+    const all = searchParams.get("all") === "true";
     const timeframe = searchParams.get("timeframe") || "last6weeks";
     const podId = searchParams.get("podId") || undefined;
+
+    const dashboardData = await performanceDashboardService.getData(podId);
+
+    if (all) {
+      const zip = archiver("zip", { zlib: { level: 9 } });
+      const chunks: Buffer[] = [];
+      zip.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+      await new Promise<void>((resolve, reject) => {
+        zip.on("error", reject);
+        zip.on("end", resolve);
+
+        for (const kpi of dashboardData.kpis) {
+          const certData = computeCertDataForKpi(dashboardData, kpi.id, timeframe);
+          const svg = renderPerformanceCertificateSvg(certData);
+          const filename = `performance-certificate-${kpi.initials || kpi.name.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.svg`;
+          zip.append(svg, { name: filename });
+        }
+
+        zip.finalize();
+      });
+
+      const zipBuffer = Buffer.concat(chunks);
+      return new Response(zipBuffer, {
+        headers: {
+          "Content-Type": "application/zip",
+          "Content-Disposition": `attachment; filename="performance-certificates-${timeframe}.zip"`,
+        },
+      });
+    }
 
     if (!kpiId) {
       return errorResponse(400, "kpiId is required");
     }
 
-    const dashboardData = await performanceDashboardService.getData(podId);
     const certData = computeCertDataForKpi(dashboardData, kpiId, timeframe);
     const svg = renderPerformanceCertificateSvg(certData);
 
@@ -68,8 +100,6 @@ function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashbo
     entries,
   };
 }
-
-const RANKS = ["1st", "2nd", "3rd", "4th", "5th"] as const;
 
 function isLogInTimeframe(dateStr: string, timeframe: string): boolean {
   const logDate = new Date(dateStr);
