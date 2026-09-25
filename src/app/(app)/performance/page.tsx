@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, TrendingUp, TrendingDown, Filter } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Filter, Download } from "lucide-react";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -137,6 +137,27 @@ export default function PerformanceDashboard() {
   const handleTimeframeChange = (tf: string) => {
     setTimeframe(tf as Timeframe);
     localStorage.setItem(PERFORMANCE_TIMEFRAME_KEY, tf);
+  };
+
+  const handleDownloadCert = async (kpiId: string) => {
+    const params = new URLSearchParams({ timeframe });
+    if (selectedPodId !== 'all') params.set('podId', selectedPodId);
+    params.set('kpiId', kpiId);
+
+    const response = await fetch(`/api/performance/certificate?${params}`);
+    if (!response.ok) throw new Error('Failed to generate certificate');
+    const data = await response.json();
+
+    const blob = new Blob([data.svg], { type: 'image/svg+xml' });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    const kpi = kpis.find(k => k.id === kpiId);
+    link.download = `performance-certificate-${kpi?.initials || 'kpi'}-${timeframe}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
   };
 
   const filteredLogs = useMemo(() => {
@@ -390,6 +411,14 @@ export default function PerformanceDashboard() {
                       </>
                     )}
                   </div>
+                  <button
+                    onClick={() => handleDownloadCert(kpi.id)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-slate-100 text-xs font-medium transition-colors border border-slate-700/50"
+                    title={`Download ${kpi.name} certificate`}
+                  >
+                    <Download className="h-3 w-3" />
+                    Certificate
+                  </button>
                 </div>
               </CardHeader>
               <CardContent className="pt-2">
