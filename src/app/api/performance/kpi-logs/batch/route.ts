@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { kpiLogService, UnauthorizedError, ForbiddenError, ValidationError, NotFoundError, InternalError } from "@/server/services/kpi-log-service";
 
 const logSchema = z.object({
+  id: z.string().min(1, "Log ID is required").optional(),
   kpiId: z.string().min(1, "KPI ID is required"),
   userId: z.string().optional(),
   value: z.number().min(0, "Value must be non-negative"),
@@ -19,8 +20,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { logs } = batchSchema.parse(body);
 
-    const createdLogs = await kpiLogService.createBatch(
+    const savedLogs = await kpiLogService.createBatch(
       logs.map(log => ({
+        id: log.id,
         kpiId: log.kpiId,
         userId: log.userId,
         value: log.value,
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
       }))
     );
 
-    return NextResponse.json({ logs: createdLogs }, { status: 201 });
+    return NextResponse.json({ logs: savedLogs }, { status: 200 });
   } catch (error) {
     console.error("POST /api/performance/kpi-logs/batch error:", error);
 

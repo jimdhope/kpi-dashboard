@@ -1,5 +1,5 @@
-const CACHE_VERSION = "kpi-quest-shell-v3";
-const STATIC_CACHE = "kpi-quest-static-v3";
+const CACHE_VERSION = "kpi-quest-shell-v4";
+const STATIC_CACHE = "kpi-quest-static-v4";
 const OFFLINE_ASSETS = [
   "/offline.html",
   "/logo.svg",

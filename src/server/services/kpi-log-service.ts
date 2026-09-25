@@ -39,6 +39,34 @@ export class InternalError extends Error {
   }
 }
 
+type KpiValueDefinition = {
+  name: string;
+  type: string;
+  maxValue: { toNumber(): number } | null;
+};
+
+type KpiLogInput = {
+  id?: string;
+  kpiId: string;
+  userId?: string;
+  value: number;
+  date: Date;
+  loggedAt?: Date;
+};
+
+function validateKpiValue(kpi: KpiValueDefinition | null, value: number) {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new ValidationError("Value must be a finite non-negative number");
+  }
+
+  if (kpi?.type === "scoreOutOf" && kpi.maxValue) {
+    const maxValue = kpi.maxValue.toNumber();
+    if (value > maxValue) {
+      throw new ValidationError(`${kpi.name} cannot be greater than ${maxValue}`);
+    }
+  }
+}
+
 export const kpiLogService = {
   async canManageTarget(currentUser: Awaited<ReturnType<typeof authService.requireCurrentUser>>, targetUserId: string) {
     if (targetUserId === currentUser.id) return true;
@@ -99,12 +127,12 @@ export const kpiLogService = {
         throw new ValidationError("KPI ID is required");
       }
 
-      if (typeof input.value !== "number" || isNaN(input.value)) {
-        throw new ValidationError("Value must be a valid number");
-      }
-
-      // Get KPI details for activity logging
+      // Get KPI details for validation and activity logging
       const kpi = await kpiRepository.getById(input.kpiId);
+      if (!kpi) {
+        throw new NotFoundError("KPI not found");
+      }
+      validateKpiValue(kpi, input.value);
 
       const log = await kpiLogRepository.create({
         kpiId: input.kpiId,
@@ -128,6 +156,7 @@ export const kpiLogService = {
       if (error instanceof UnauthorizedError) throw error;
       if (error instanceof ForbiddenError) throw error;
       if (error instanceof ValidationError) throw error;
+      if (error instanceof NotFoundError) throw error;
       console.error("kpiLogService.create error:", error);
       throw new InternalError(
         error instanceof Error ? error.message : "Failed to create KPI log"
@@ -135,58 +164,89 @@ export const kpiLogService = {
     }
   },
 
-  async createBatch(
-    logs: Array<{
-      kpiId: string;
-      userId?: string;
-      value: number;
-      date: Date;
-      loggedAt?: Date;
-    }>
-  ): Promise<KpiLogRecord[]> {
+  async createBatch(logs: KpiLogInput[]): Promise<KpiLogRecord[]> {
     try {
       const currentUser = await authService.requireCurrentUser();
       const results: KpiLogRecord[] = [];
 
-      // Get all KPI details for activity logging
-      const kpiIds = [...new Set(logs.map(l => l.kpiId))];
-      const kpis = await Promise.all(kpiIds.map(id => kpiRepository.getById(id)));
-      const kpiMap = new Map(kpis.filter(Boolean).map(k => [k!.id, k!]));
+      // Get all KPI details before writing so validation cannot leave a partial batch.
+      const kpiIds = [...new Set(logs.map((log) => log.kpiId))];
+      const kpis = await Promise.all(kpiIds.map((id) => kpiRepository.getById(id)));
+      const kpiMap = new Map(kpis.filter(Boolean).map((kpi) => [kpi!.id, kpi!]));
 
+      const prepared: Array<{
+        input: KpiLogInput;
+        userId: string;
+        kpi: KpiValueDefinition;
+        existing?: KpiLogRecord;
+      }> = [];
+
+      // Validate every entry and resolve its target before performing writes.
       for (const log of logs) {
-        const userId = log.userId || currentUser.id;
+        if (!log.kpiId) {
+          throw new ValidationError("KPI ID is required for all logs");
+        }
+
+        let userId: string;
+        let existing: KpiLogRecord | undefined;
+
+        if (log.id) {
+          existing = await kpiLogRepository.getById(log.id);
+          if (!existing) {
+            throw new NotFoundError(`KPI log not found: ${log.id}`);
+          }
+          if (existing.kpiId !== log.kpiId) {
+            throw new ValidationError("A KPI log cannot be moved to a different KPI");
+          }
+          if (!existing.userId) {
+            throw new ForbiddenError();
+          }
+          if (log.userId && log.userId !== existing.userId) {
+            throw new ValidationError("A KPI log cannot be moved to a different user");
+          }
+          userId = existing.userId;
+        } else {
+          userId = log.userId || currentUser.id;
+        }
 
         if (!(await kpiLogService.canManageTarget(currentUser, userId))) {
           throw new ForbiddenError();
         }
 
-        if (!log.kpiId) {
-          throw new ValidationError("KPI ID is required for all logs");
+        const kpi = kpiMap.get(existing?.kpiId || log.kpiId);
+        if (!kpi) {
+          throw new NotFoundError(`KPI not found: ${log.kpiId}`);
         }
+        validateKpiValue(kpi, log.value);
 
-        if (typeof log.value !== "number" || isNaN(log.value)) {
-          throw new ValidationError("All values must be valid numbers");
-        }
+        prepared.push({ input: log, userId, kpi, existing });
+      }
 
-        const created = await kpiLogRepository.create({
-          kpiId: log.kpiId,
-          userId,
-          value: log.value,
-          date: log.date,
-          loggedAt: log.loggedAt,
-        });
+      for (const item of prepared) {
+        const { input, existing, userId, kpi } = item;
+        const saved = existing
+          ? await kpiLogRepository.update(existing.id, {
+              value: input.value,
+              date: input.date,
+              loggedAt: input.loggedAt,
+            })
+          : await kpiLogRepository.create({
+              kpiId: input.kpiId,
+              userId,
+              value: input.value,
+              date: input.date,
+              loggedAt: input.loggedAt,
+            });
 
-        // Log activity for each log
-        const kpi = kpiMap.get(log.kpiId);
         await activityService.logKpiUpdated({
-          kpiId: log.kpiId,
-          kpiName: kpi?.name || 'Unknown KPI',
-          newValue: log.value,
+          kpiId: input.kpiId,
+          kpiName: kpi.name,
+          newValue: input.value,
           userId,
           userName: currentUser.name,
         });
 
-        results.push(created);
+        results.push(saved);
       }
 
       return results;
@@ -194,9 +254,10 @@ export const kpiLogService = {
       if (error instanceof UnauthorizedError) throw error;
       if (error instanceof ForbiddenError) throw error;
       if (error instanceof ValidationError) throw error;
+      if (error instanceof NotFoundError) throw error;
       console.error("kpiLogService.createBatch error:", error);
       throw new InternalError(
-        error instanceof Error ? error.message : "Failed to create KPI logs"
+        error instanceof Error ? error.message : "Failed to save KPI logs"
       );
     }
   },

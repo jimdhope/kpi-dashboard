@@ -6,13 +6,17 @@ export default async function PerformanceLogPage() {
   const session = await authService.getCurrentSession();
   if (!session.user) throw new Error("Unauthorized");
 
-  const [pods, kpis] = await Promise.all([
+  const [pods, rawKpis] = await Promise.all([
     prisma.pod.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.kpi.findMany({ 
-      select: { id: true, name: true, initials: true, type: true }, 
-      orderBy: { name: "asc" } 
+    prisma.kpi.findMany({
+      select: { id: true, name: true, initials: true, type: true, maxValue: true },
+      orderBy: { name: "asc" }
     }),
   ]);
+  const kpis = rawKpis.map((kpi) => ({
+    ...kpi,
+    maxValue: kpi.maxValue?.toNumber() ?? null,
+  }));
 
   return (
     <div className="space-y-6">

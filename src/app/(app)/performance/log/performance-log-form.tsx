@@ -15,7 +15,7 @@ import { CalendarIcon, Filter, CheckSquare, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Pod { id: string; name: string; }
-interface Kpi { id: string; name: string; initials: string; type: string; }
+interface Kpi { id: string; name: string; initials: string; type: string; maxValue: number | null; }
 interface Agent { id: string; name: string; }
 
 interface KpiInputState {
@@ -155,7 +155,7 @@ export function PerformanceLogForm({
     setMessage(null);
 
     const toDelete: string[] = [];
-    const toSave: { userId: string; kpiId: string; value: number; date: string; loggedAt: string }[] = [];
+    const toSave: { logId?: string; userId: string; kpiId: string; value: number; date: string; loggedAt: string }[] = [];
 
     for (const userId in inputs) {
       for (const kpiId in inputs[userId]) {
@@ -171,7 +171,7 @@ export function PerformanceLogForm({
         // Field has a numeric value → save it
         const num = parseFloat(entry.value);
         if (isNaN(num)) continue;
-        toSave.push({ userId, kpiId, value: num, date: startOfDayUTC(selectedDate).toISOString(), loggedAt: new Date().toISOString() });
+        toSave.push({ logId: entry.logId, userId, kpiId, value: num, date: startOfDayUTC(selectedDate).toISOString(), loggedAt: new Date().toISOString() });
       }
     }
 
@@ -190,19 +190,34 @@ export function PerformanceLogForm({
         ));
       }
 
-      // Perform saves
+      // Perform saves. Existing rows include their logId so the server updates
+      // them in place instead of appending a second record for the same day.
+      const savedIds = new Map<string, string>();
       if (toSave.length > 0) {
         const res = await fetch("/api/performance/kpi-logs/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ logs: toSave }),
+          body: JSON.stringify({
+            logs: toSave.map(({ logId, ...log }) => ({ id: logId, ...log })),
+          }),
         });
-        if (!res.ok) throw new Error("Failed to save");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to save");
+        }
+        const savedLogs = (data.logs || []) as KpiLogResponse[];
+        savedLogs.forEach((log, index) => {
+          const input = toSave[index];
+          if (input) {
+            savedIds.set(`${input.userId}:${input.kpiId}`, log.id);
+          }
+        });
       }
 
       setMessage({ type: "success", text: "All scores saved successfully." });
 
-      // Update state: remove deleted entries, reset initialValues of saved entries
+      // Update state: remove deleted entries, reset initialValues, and retain
+      // the server ID for both updated and newly-created rows.
       setInputs((prev) => {
         const next = { ...prev };
         for (const userId in next) {
@@ -212,7 +227,11 @@ export function PerformanceLogForm({
             if (toDelete.includes(entry.logId || '')) {
               delete next[userId][kpiId];
             } else if (entry.value !== entry.initialValue) {
-              next[userId][kpiId] = { ...entry, initialValue: entry.value, logId: undefined };
+              next[userId][kpiId] = {
+                ...entry,
+                initialValue: entry.value,
+                logId: savedIds.get(`${userId}:${kpiId}`) || entry.logId,
+              };
             }
           }
           if (Object.keys(next[userId]).length === 0) {
@@ -221,8 +240,11 @@ export function PerformanceLogForm({
         }
         return next;
       });
-    } catch {
-      setMessage({ type: "error", text: "Failed to save scores. Please try again." });
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to save scores. Please try again.",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -336,6 +358,7 @@ export function PerformanceLogForm({
                             placeholder="—"
                             value={inputs[agent.id]?.[kpi.id]?.value ?? ""}
                             min={0}
+                            max={kpi.type === "scoreOutOf" && kpi.maxValue !== null ? kpi.maxValue : undefined}
                             step="0.01"
                             onChange={(e) => handleInputChange(agent.id, kpi.id, e.target.value)}
                             className="h-8 text-center"

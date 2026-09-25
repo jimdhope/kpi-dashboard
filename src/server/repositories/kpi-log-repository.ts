@@ -62,6 +62,80 @@ export const kpiLogRepository = {
     };
   },
 
+  async getById(id: string): Promise<KpiLogRecord | undefined> {
+    const log = await prisma.kpiLog.findUnique({
+      where: { id },
+      include: {
+        kpi: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!log) return undefined;
+
+    return {
+      id: log.id,
+      kpiId: log.kpiId,
+      kpiName: log.kpi.name,
+      userId: log.userId,
+      userName: log.user?.name ?? null,
+      value: toNumber(log.value),
+      date: log.date.toISOString(),
+      loggedAt: log.loggedAt.toISOString(),
+      createdAt: log.createdAt.toISOString(),
+    };
+  },
+
+  async update(
+    id: string,
+    input: { value: number; date: Date; loggedAt?: Date }
+  ): Promise<KpiLogRecord> {
+    const log = await prisma.kpiLog.update({
+      where: { id },
+      data: {
+        value: input.value,
+        date: input.date,
+        ...(input.loggedAt ? { loggedAt: input.loggedAt } : {}),
+      },
+      include: {
+        kpi: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return {
+      id: log.id,
+      kpiId: log.kpiId,
+      kpiName: log.kpi.name,
+      userId: log.userId,
+      userName: log.user?.name ?? null,
+      value: toNumber(log.value),
+      date: log.date.toISOString(),
+      loggedAt: log.loggedAt.toISOString(),
+      createdAt: log.createdAt.toISOString(),
+    };
+  },
+
   async list(filters?: {
     podId?: string;
     startDate?: string;
