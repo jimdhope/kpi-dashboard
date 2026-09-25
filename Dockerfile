@@ -12,6 +12,9 @@ RUN npm ci
 # Copy source
 COPY . .
 
+# Clear Next.js build cache so source changes are always picked up
+RUN rm -rf /app/.next
+
 # Generate Prisma client (needs a DATABASE_URL)
 ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/kpi_quest_v3"
 # Install esbuild in the builder stage so it's Linux-native, not the host's macOS binary
@@ -19,7 +22,8 @@ RUN npm install --save-dev esbuild@0.25.0 && \
     npx prisma generate
 
 # Build Next.js app
-RUN BETTER_AUTH_SECRET=build-only-secret-not-used-at-runtime-000000000000 \
+RUN rm -rf /app/.next && \
+    BETTER_AUTH_SECRET=build-only-secret-not-used-at-runtime-000000000000 \
     BETTER_AUTH_URL=http://localhost:9103 \
     PASSKEY_RP_ID=localhost \
     npm run build

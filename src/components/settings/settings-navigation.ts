@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import {
+  BarChart3,
   Calendar,
   Database,
   Hash,
