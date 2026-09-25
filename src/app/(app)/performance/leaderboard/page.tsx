@@ -236,9 +236,15 @@ export default function AdditionalLeaderboardPage() {
             const d = new Date(log.date);
             return d >= weekStart && d <= weekEnd;
           });
-          weeklyAverages.push(weekLogs.length > 0 ? weekLogs.reduce((s, log) => s + log.value, 0) / weekLogs.length : 0);
-        }
-        finalScore = weeklyAverages.reduce((s, avg) => s + avg, 0) / 6;
+          if (weekLogs.length > 0) {
+                        weeklyAverages.push(
+                            weekLogs.reduce((s, log) => s + log.value, 0) / weekLogs.length,
+                        );
+                    }
+                }
+                finalScore = weeklyAverages.length > 0
+                    ? weeklyAverages.reduce((s, avg) => s + avg, 0) / weeklyAverages.length
+                    : 0;
       } else if (kpi && kpi.type === 'percentage') {
         finalScore = agentData.count > 0 ? agentData.totalValue / agentData.count : 0;
       } else {

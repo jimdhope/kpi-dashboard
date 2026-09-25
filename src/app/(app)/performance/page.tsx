@@ -224,9 +224,15 @@ export default function PerformanceDashboard() {
               const d = new Date(log.date);
               return d >= weekStart && d <= weekEnd;
             });
-            weeklyAverages.push(weekLogs.length > 0 ? weekLogs.reduce((s, log) => s + log.value, 0) / weekLogs.length : 0);
-          }
-          agentScores[agentId] = weeklyAverages.reduce((s, avg) => s + avg, 0) / 6;
+            if (weekLogs.length > 0) {
+                    weeklyAverages.push(
+                        weekLogs.reduce((s, log) => s + log.value, 0) / weekLogs.length,
+                    );
+                }
+            }
+            agentScores[agentId] = weeklyAverages.length > 0
+                ? weeklyAverages.reduce((s, avg) => s + avg, 0) / weeklyAverages.length
+                : 0;
         } else if (kpi.type === 'percentage') {
           agentScores[agentId] = data.count > 0 ? data.sum / data.count : 0;
         } else {
