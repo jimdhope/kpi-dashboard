@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, BarChart3, Medal, User as UserIcon, Loader2, QrCode } from "lucide-react";
-import { cn } from '@/lib/utils';
+import { cn, isAverageKpiType } from '@/lib/utils';
 import { endOfWeek, format, startOfWeek, subDays } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -877,7 +877,7 @@ export function AgentDashboard({
                           {agentPerformanceData.weekHeaders.map((week) => {
                             const weeklyData = agentPerformanceData.weeklyScores[week]?.[kpi.id];
                             const score = weeklyData
-                              ? (kpi.type === 'percentage' ? weeklyData.value / weeklyData.count : weeklyData.value)
+                              ? (isAverageKpiType(kpi.type) ? weeklyData.value / weeklyData.count : weeklyData.value)
                               : undefined;
                             return (
                               <TableCell key={week} className={cn('text-center text-[11px] py-1 px-1 border-l bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 tabular-nums font-medium', getCellClass(score, kpi))}>

@@ -13,3 +13,12 @@ export function generateInitials(name: string): string {
   }
   return name.substring(0, 2).toUpperCase();
 }
+
+/**
+ * KPI types whose entries describe a rate or bounded score, so several entries
+ * in a window must be averaged rather than totalled. `number` KPIs (ES Sales,
+ * Smart Bookings, ...) are cumulative counts and stay summed.
+ */
+export function isAverageKpiType(type: string | null | undefined): boolean {
+  return type === 'percentage' || type === 'scoreOutOf';
+}

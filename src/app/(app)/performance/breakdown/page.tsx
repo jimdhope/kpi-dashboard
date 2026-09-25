@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Filter, BarChartHorizontal, User, LayoutGrid } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AppPod, AppUser } from '@/lib/contracts';
-import { cn } from '@/lib/utils';
+import { cn, isAverageKpiType } from '@/lib/utils';
 
 type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
 type KpiSortOrder = 'desc' | 'asc';
@@ -236,7 +236,7 @@ export default function KpiBreakdownPage() {
     kpiType: AdditionalKpiType,
     avgWeeks: string[]
   ): number {
-    const useWeeklyAverage = kpiType === 'percentage' || kpiType === 'scoreOutOf';
+    const useWeeklyAverage = isAverageKpiType(kpiType);
     let total = 0;
     avgWeeks.forEach(week => {
       const data = weeklyScores[week]?.[kpiId];
@@ -575,8 +575,8 @@ export default function KpiBreakdownPage() {
                                   const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
                                   let score: number | undefined;
                                   if (weeklyData) {
-                                    score = kpi.type === 'percentage' 
-                                      ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0) 
+                                    score = isAverageKpiType(kpi.type)
+                                      ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0)
                                       : weeklyData.value;
                                   }
                                   const cellClass = getScoreCellClass(score, kpi);
@@ -676,8 +676,8 @@ export default function KpiBreakdownPage() {
                                   const weeklyData = agentData.weeklyScores[week]?.[kpi.id];
                                   let score: number | undefined;
                                   if (weeklyData) {
-                                    score = kpi.type === 'percentage' 
-                                      ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0) 
+                                    score = isAverageKpiType(kpi.type)
+                                      ? (weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0)
                                       : weeklyData.value;
                                   }
                                   const cellClass = getScoreCellClass(score, kpi);
@@ -753,7 +753,7 @@ export default function KpiBreakdownPage() {
                             let score: number | undefined;
 
                             if (weeklyData) {
-                              if (kpi.type === 'percentage') {
+                              if (isAverageKpiType(kpi.type)) {
                                   score = weeklyData.count > 0 ? weeklyData.value / weeklyData.count : 0;
                               } else {
                                   score = weeklyData.value;

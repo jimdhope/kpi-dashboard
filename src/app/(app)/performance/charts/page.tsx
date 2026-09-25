@@ -19,6 +19,7 @@ import {
   Line,
 } from 'recharts';
 import type { AppPod, AppUser } from '@/lib/contracts';
+import { isAverageKpiType } from '@/lib/utils';
 
 type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
 
@@ -257,13 +258,13 @@ export default function PerformanceChartsPage() {
             const count = Number(dataPoint[countKey]) || 0;
 
             if (totalValue !== undefined && count > 0) {
-                 let finalValue: number;
-                 if (selectedAgentId === 'all') {
-                    finalValue = totalValue / count;
-                } else {
-                    finalValue = totalValue;
-                }
-                 processedDataPoint[valueKey] = parseFloat(finalValue.toFixed(2));
+                // percentage and scoreOutOf describe a rate or bounded score, so
+                // they are averaged across their entries even for a single agent.
+                // `number` KPIs are cumulative totals and stay summed.
+                const finalValue = isAverageKpiType(kpiInfo.type)
+                    ? totalValue / count
+                    : totalValue;
+                processedDataPoint[valueKey] = parseFloat(finalValue.toFixed(2));
             }
         });
         return processedDataPoint as unknown as ChartDataPoint;
@@ -281,7 +282,17 @@ export default function PerformanceChartsPage() {
             }
         });
     });
-    const finalRightAxisMax = Math.ceil(maxRightAxisValue);
+    // A scoreOutOf KPI shares the right axis with cumulative `number` KPIs, so
+    // its own scale can be dwarfed (or run off the top) by a larger neighbour.
+    // Floor the axis at each scoreOutOf KPI's maxValue so the full range, e.g.
+    // 0-5 for CSAT, is always visible. maxValue arrives as a string from the
+    // Prisma Decimal, hence Number().
+    const scoreOutOfFloor = finalNumberKpis.reduce((max, kpi) => {
+        if (kpi.type !== 'scoreOutOf') return max;
+        const maxValue = Number(kpi.maxValue);
+        return Number.isFinite(maxValue) && maxValue > max ? maxValue : max;
+    }, 0);
+    const finalRightAxisMax = Math.max(Math.ceil(maxRightAxisValue), Math.ceil(scoreOutOfFloor));
 
     return { chartData: finalChartData, tableData: relevantLogs, percentageKpis: finalPercentageKpis, numberKpis: finalNumberKpis, rightAxisMax: finalRightAxisMax > 0 ? finalRightAxisMax : 100 };
 
