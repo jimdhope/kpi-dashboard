@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import sharp from "sharp";
 
 export interface PerformanceCertData {
   kpiName: string;
@@ -33,6 +34,11 @@ export function renderPerformanceCertificateSvg(data: PerformanceCertData): stri
     svg = svg.replace(new RegExp(key, "g"), value);
   }
   return svg;
+}
+
+export async function renderPerformanceCertificatePng(data: PerformanceCertData): Promise<Buffer> {
+  const svg = renderPerformanceCertificateSvg(data);
+  return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 function escapeXml(value: string): string {

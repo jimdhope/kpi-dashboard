@@ -7,7 +7,7 @@
             <path d="M902.314,135C919.802,135 934,143.29 934,153.5L934,190.5C934,200.71 919.802,209 902.314,209L91.686,209C74.198,209 60,200.71 60,190.5L60,153.5C60,143.29 74.198,135 91.686,135L902.314,135Z" style="fill:rgb(66,129,164);"/>
         </g>
         <g transform="matrix(1,0,0,1,644.5,614.116136)">
-            <text id="score-5th" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_5TH}}</text>
+            <text id="score-5th" x="280px" y="250px" text-anchor="end" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_5TH}}</text>
         </g>
         <g transform="matrix(1,0,0,1,-8.5,614.116136)">
             <text id="name-5th" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{NAME_5TH}}</text>
@@ -18,7 +18,7 @@
             <path d="M902.314,135C919.802,135 934,143.29 934,153.5L934,190.5C934,200.71 919.802,209 902.314,209L91.686,209C74.198,209 60,200.71 60,190.5L60,153.5C60,143.29 74.198,135 91.686,135L902.314,135Z" style="fill:rgb(66,129,164);"/>
         </g>
         <g transform="matrix(1,0,0,1,647.5,450.794917)">
-            <text id="score-4th" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_4TH}}</text>
+            <text id="score-4th" x="280px" y="250px" text-anchor="end" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_4TH}}</text>
         </g>
         <g transform="matrix(1,0,0,1,-5.5,450.794917)">
             <text id="name-4th" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{NAME_4TH}}</text>
@@ -29,7 +29,7 @@
             <path d="M902.314,135C919.802,135 934,143.29 934,153.5L934,190.5C934,200.71 919.802,209 902.314,209L91.686,209C74.198,209 60,200.71 60,190.5L60,153.5C60,143.29 74.198,135 91.686,135L902.314,135Z" style="fill:rgb(153,107,79);"/>
         </g>
         <g transform="matrix(1,0,0,1,647.5,294.050236)">
-            <text id="score-3rd" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_3RD}}</text>
+            <text id="score-3rd" x="280px" y="250px" text-anchor="end" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_3RD}}</text>
         </g>
         <g transform="matrix(1,0,0,1,-5.5,294.050236)">
             <text id="name-3rd" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{NAME_3RD}}</text>
@@ -40,7 +40,7 @@
             <path d="M902.314,135C919.802,135 934,143.29 934,153.5L934,190.5C934,200.71 919.802,209 902.314,209L91.686,209C74.198,209 60,200.71 60,190.5L60,153.5C60,143.29 74.198,135 91.686,135L902.314,135Z" style="fill:rgb(150,150,150);"/>
         </g>
         <g transform="matrix(1,0,0,1,644.782104,137.305555)">
-            <text id="score-2nd" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_2ND}}</text>
+            <text id="score-2nd" x="280px" y="250px" text-anchor="end" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_2ND}}</text>
         </g>
         <g transform="matrix(1,0,0,1,-8.217896,137.305555)">
             <text id="name-2nd" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{NAME_2ND}}</text>
@@ -51,7 +51,7 @@
             <path d="M902.314,135C919.802,135 934,143.29 934,153.5L934,190.5C934,200.71 919.802,209 902.314,209L91.686,209C74.198,209 60,200.71 60,190.5L60,153.5C60,143.29 74.198,135 91.686,135L902.314,135Z" style="fill:rgb(159,143,94);"/>
         </g>
         <g transform="matrix(1,0,0,1,646,-25.834813)">
-            <text id="score-1st" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_1ST}}</text>
+            <text id="score-1st" x="280px" y="250px" text-anchor="end" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{SCORE_1ST}}</text>
         </g>
         <g transform="matrix(1,0,0,1,-7,-25.834813)">
             <text id="name-1st" x="96px" y="250px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:62.5px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2.08px;">{{NAME_1ST}}</text>

@@ -1,6 +1,6 @@
 import { performanceDashboardService } from "@/server/services/performance-dashboard-service";
-import { renderPerformanceCertificateSvg } from "@/server/services/performance-certificate-service";
-import { errorResponse, ok } from "@/server/http";
+import { renderPerformanceCertificatePng, type PerformanceCertData } from "@/server/services/performance-certificate-service";
+import { errorResponse } from "@/server/http";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const archiver = require("archiver");
 
@@ -17,18 +17,18 @@ export async function GET(request: Request) {
     if (all) {
       const zip = archiver("zip", { zlib: { level: 9 } });
       const chunks: Buffer[] = [];
-      zip.on("data", (chunk: Buffer) => chunks.push(chunk));
 
       await new Promise<void>((resolve, reject) => {
+        zip.on("data", (chunk: Buffer) => chunks.push(chunk));
         zip.on("error", reject);
         zip.on("end", resolve);
 
-        for (const kpi of dashboardData.kpis) {
+        dashboardData.kpis.forEach(async (kpi) => {
           const certData = computeCertDataForKpi(dashboardData, kpi.id, timeframe);
-          const svg = renderPerformanceCertificateSvg(certData);
-          const filename = `performance-certificate-${kpi.initials || kpi.name.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.svg`;
-          zip.append(svg, { name: filename });
-        }
+          const png = await renderPerformanceCertificatePng(certData);
+          const filename = `performance-certificate-${kpi.initials || kpi.name.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.png`;
+          zip.append(png, { name: filename });
+        });
 
         zip.finalize();
       });
@@ -47,16 +47,21 @@ export async function GET(request: Request) {
     }
 
     const certData = computeCertDataForKpi(dashboardData, kpiId, timeframe);
-    const svg = renderPerformanceCertificateSvg(certData);
+    const png = await renderPerformanceCertificatePng(certData);
 
-    return ok({ svg, certData });
+    return new Response(Buffer.from(png), {
+      headers: {
+        "Content-Type": "image/png",
+        "Content-Disposition": `attachment; filename="performance-certificate-${certData.kpiName.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.png"`,
+      },
+    });
   } catch (error) {
     console.error("GET /api/performance/certificate error:", error);
     return errorResponse(500, "Failed to generate certificate.");
   }
 }
 
-function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashboardService.getData>>, kpiId: string, timeframe: string) {
+function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashboardService.getData>>, kpiId: string, timeframe: string): PerformanceCertData {
   const kpi = data.kpis.find((k) => k.id === kpiId);
   if (!kpi) throw new Error("KPI not found");
 
