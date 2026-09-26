@@ -17,31 +17,31 @@
     <!-- 5th place (blue) — score only, right-aligned just past bar edge -->
     <g transform="translate(0,575)">
         <path d="M902.314,135 C919.802,135 934,143.29 934,153.5 L934,190.5 C934,200.71 919.802,209 902.314,209 L91.686,209 C74.198,209 60,200.71 60,190.5 L60,153.5 C60,143.29 74.198,135 91.686,135 Z" style="fill:rgb(66,129,164);"/>
-        <text x="975" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_5TH}}</text>
+        <text x="930" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_5TH}}</text>
     </g>
 
     <!-- 4th place (blue) — score only -->
     <g transform="translate(0,475)">
         <path d="M902.314,135 C919.802,135 934,143.29 934,153.5 L934,190.5 C934,200.71 919.802,209 902.314,209 L91.686,209 C74.198,209 60,200.71 60,190.5 L60,153.5 C60,143.29 74.198,135 91.686,135 Z" style="fill:rgb(66,129,164);"/>
-        <text x="975" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_4TH}}</text>
+        <text x="930" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_4TH}}</text>
     </g>
 
     <!-- 3rd place (bronze) — score only -->
     <g transform="translate(0,375)">
         <path d="M902.314,135 C919.802,135 934,143.29 934,153.5 L934,190.5 C934,200.71 919.802,209 902.314,209 L91.686,209 C74.198,209 60,200.71 60,190.5 L60,153.5 C60,143.29 74.198,135 91.686,135 Z" style="fill:rgb(153,107,79);"/>
-        <text x="975" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_3RD}}</text>
+        <text x="930" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_3RD}}</text>
     </g>
 
     <!-- 2nd place (silver) — score only -->
     <g transform="translate(0,275)">
         <path d="M902.314,135 C919.802,135 934,143.29 934,153.5 L934,190.5 C934,200.71 919.802,209 902.314,209 L91.686,209 C74.198,209 60,200.71 60,190.5 L60,153.5 C60,143.29 74.198,135 91.686,135 Z" style="fill:rgb(150,150,150);"/>
-        <text x="975" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_2ND}}</text>
+        <text x="930" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_2ND}}</text>
     </g>
 
     <!-- 1st place (gold) — name + score -->
     <g transform="translate(0,175)">
         <path d="M902.314,135 C919.802,135 934,143.29 934,153.5 L934,190.5 C934,200.71 919.802,209 902.314,209 L91.686,209 C74.198,209 60,200.71 60,190.5 L60,153.5 C60,143.29 74.198,135 91.686,135 Z" style="fill:rgb(159,143,94);"/>
         <text x="96" y="185" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{NAME_1ST}}</text>
-        <text x="975" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_1ST}}</text>
+        <text x="930" y="185" text-anchor="end" style="font-family:'ArialMT','Arial',sans-serif;font-size:40px;fill:rgb(248,248,248);stroke:rgb(13,10,11);stroke-width:2px;">{{SCORE_1ST}}</text>
     </g>
 </svg>

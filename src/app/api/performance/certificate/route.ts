@@ -94,7 +94,7 @@ function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashbo
     .slice(0, 5)
     .map((entry, index) => ({
       rank: (["1st", "2nd", "3rd", "4th", "5th"][index]) as "1st" | "2nd" | "3rd" | "4th" | "5th",
-      name: entry.name,
+      name: entry.name.split(" ")[0], // first name only
       score: formatScore(kpi, entry.score),
     }));
 
