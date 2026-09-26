@@ -101,7 +101,6 @@ function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashbo
   return {
     kpiName: kpi.name,
     unitDirection,
-    unit,
     entries,
   };
 }
