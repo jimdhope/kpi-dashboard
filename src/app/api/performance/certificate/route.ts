@@ -23,14 +23,14 @@ export async function GET(request: Request) {
         zip.on("error", reject);
         zip.on("end", resolve);
 
-        dashboardData.kpis.forEach(async (kpi) => {
-          const certData = computeCertDataForKpi(dashboardData, kpi.id, timeframe);
-          const png = await renderPerformanceCertificatePng(certData);
-          const filename = `performance-certificate-${kpi.initials || kpi.name.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.png`;
-          zip.append(png, { name: filename });
-        });
-
-        zip.finalize();
+        Promise.all(
+          dashboardData.kpis.map(async (kpi) => {
+            const certData = computeCertDataForKpi(dashboardData, kpi.id, timeframe);
+            const png = await renderPerformanceCertificatePng(certData);
+            const filename = `performance-certificate-${kpi.initials || kpi.name.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.png`;
+            zip.append(png, { name: filename });
+          }),
+        ).then(() => zip.finalize());
       });
 
       const zipBuffer = Buffer.concat(chunks);

@@ -144,15 +144,14 @@ export default function PerformanceDashboard() {
     params.set('kpiId', kpiId);
 
     const response = await fetch(`/api/performance/certificate?${params}`);
-    if (!response.ok) throw new Error('Failed to generate certificate');
-    const data = await response.json();
-
-    const blob = new Blob([data.svg], { type: 'image/svg+xml' });
+    if (!response.ok) throw new Error("Failed to generate certificate");
+    
+    const blob = await response.blob();
     const href = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = href;
-    const kpi = kpis.find(k => k.id === kpiId);
-    link.download = `performance-certificate-${kpi?.initials || 'kpi'}-${timeframe}.svg`;
+    const kpi = kpis.find((k) => k.id === kpiId);
+    link.download = `performance-certificate-${kpi?.initials || "kpi"}-${timeframe}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
