@@ -65,7 +65,7 @@ function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashbo
   const kpi = data.kpis.find((k) => k.id === kpiId);
   if (!kpi) throw new Error("KPI not found");
 
-  const unitDirection = kpi.sortOrder === "asc" ? ("Higher" as const) : ("Lower" as const);
+  const unitDirection = kpi.sortOrder === "asc" ? ("Lower" as const) : ("Higher" as const);
   let unit = "";
   if (kpi.type === "percentage") {
     unit = "%";
@@ -90,11 +90,11 @@ function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashbo
 
   const entries = Object.entries(userScores)
     .map(([, d]) => ({ name: d.name, score: d.count > 0 ? d.sum / d.count : 0 }))
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => (unitDirection === "Higher" ? b.score - a.score : a.score - b.score))
     .slice(0, 5)
     .map((entry, index) => ({
       rank: (["1st", "2nd", "3rd", "4th", "5th"][index]) as "1st" | "2nd" | "3rd" | "4th" | "5th",
-      name: entry.name.split(" ")[0], // first name only
+      name: entry.name, // full name — template has name slot for every rank
       score: formatScore(kpi, entry.score),
     }));
 
