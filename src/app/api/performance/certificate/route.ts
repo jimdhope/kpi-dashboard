@@ -66,35 +66,65 @@ function computeCertDataForKpi(data: Awaited<ReturnType<typeof performanceDashbo
   if (!kpi) throw new Error("KPI not found");
 
   const unitDirection = kpi.sortOrder === "asc" ? ("Lower" as const) : ("Higher" as const);
-  let unit = "";
-  if (kpi.type === "percentage") {
-    unit = "%";
-  } else if (kpi.type === "scoreOutOf" && kpi.maxValue !== null) {
-    unit = ` / ${Number(kpi.maxValue).toFixed(0)}`;
-  }
 
   const kpiLogs = data.logs
     .filter((log) => log.kpiId === kpiId)
     .filter((log) => isLogInTimeframe(log.loggedAt, timeframe));
 
-  const userScores: Record<string, { sum: number; count: number; name: string }> = {};
-  for (const log of kpiLogs) {
-    if (!log.userId) continue;
-    if (!userScores[log.userId]) {
-      const user = data.users.find((u) => u.id === log.userId);
-      userScores[log.userId] = { sum: 0, count: 0, name: user?.name || "Unknown" };
+  // Match dashboard logic exactly: weekly averages for "number" type in last6weeks
+  let userScores: Record<string, { score: number; name: string }>;
+
+  if (timeframe === "last6weeks" && kpi.type === "number") {
+    // Weekly averages, then average of weekly averages (same as dashboard)
+    const weeklyData: Record<string, Record<string, { sum: number; count: number }>> = {};
+    for (const log of kpiLogs) {
+      if (!log.userId) continue;
+      const logDate = new Date(log.loggedAt);
+      const dayOfWeek = logDate.getDay();
+      const weekStart = new Date(logDate);
+      weekStart.setDate(logDate.getDate() - dayOfWeek);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekKey = weekStart.toISOString();
+      if (!weeklyData[log.userId]) weeklyData[log.userId] = {};
+      if (!weeklyData[log.userId][weekKey]) weeklyData[log.userId][weekKey] = { sum: 0, count: 0 };
+      weeklyData[log.userId][weekKey].sum += Number(log.value);
+      weeklyData[log.userId][weekKey].count += 1;
     }
-    userScores[log.userId].sum += Number(log.value);
-    userScores[log.userId].count += 1;
+    userScores = {};
+    for (const userId of Object.keys(weeklyData)) {
+      const weeklyAvgs = Object.values(weeklyData[userId]).map((d) => d.count > 0 ? d.sum / d.count : 0);
+      const user = data.users.find((u) => u.id === userId);
+      userScores[userId] = { score: weeklyAvgs.length > 0 ? weeklyAvgs.reduce((s, a) => s + a, 0) / weeklyAvgs.length : 0, name: user?.name || "Unknown" };
+    }
+  } else {
+    userScores = {};
+    for (const log of kpiLogs) {
+      if (!log.userId) continue;
+      if (!userScores[log.userId]) {
+        const user = data.users.find((u) => u.id === log.userId);
+        userScores[log.userId] = { score: 0, name: user?.name || "Unknown" };
+      }
+      userScores[log.userId].score += Number(log.value);
+      (userScores[log.userId] as any)._count = (userScores[log.userId] as any)._count || 0;
+      (userScores[log.userId] as any)._count += 1;
+    }
+    // Convert to simple average for non-number types
+    const simpleScores: Record<string, { score: number; name: string }> = {};
+    for (const userId of Object.keys(userScores)) {
+      const d = userScores[userId] as any;
+      const user = data.users.find((u) => u.id === userId);
+      simpleScores[userId] = { score: d._count > 0 ? d.score / d._count : 0, name: user?.name || "Unknown" };
+    }
+    userScores = simpleScores;
   }
 
   const entries = Object.entries(userScores)
-    .map(([, d]) => ({ name: d.name, score: d.count > 0 ? d.sum / d.count : 0 }))
+    .map(([, d]) => ({ name: d.name, score: d.score }))
     .sort((a, b) => (unitDirection === "Higher" ? b.score - a.score : a.score - b.score))
     .slice(0, 5)
     .map((entry, index) => ({
       rank: (["1st", "2nd", "3rd", "4th", "5th"][index]) as "1st" | "2nd" | "3rd" | "4th" | "5th",
-      name: entry.name, // full name — template has name slot for every rank
+      name: entry.name.split(" ")[0], // first name only
       score: formatScore(kpi, entry.score),
     }));
 
