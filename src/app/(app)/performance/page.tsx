@@ -109,24 +109,8 @@ export default function PerformanceDashboard() {
   const handlePodChange = (id: string) => { setSelectedPodId(id); localStorage.setItem('performanceDashboard_selectedPodId', id); };
   const handleTimeframeChange = (tf: string) => { setTimeframe(tf as Timeframe); localStorage.setItem('performanceDashboard_timeframe', tf); };
 
-  const handleDownloadCert = async (kpiId: string) => {
-    const params = new URLSearchParams({ timeframe });
-    if (selectedPodId !== 'all') params.set('podId', selectedPodId);
-    params.set('kpiId', kpiId);
-    const res = await fetch(`/api/performance/certificate?${params}`);
-    if (!res.ok) throw new Error("Failed to generate certificate");
-    const blob = await res.blob();
-    const href = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = href;
-    const kpi = kpis.find(k => k.id === kpiId);
-    link.download = `performance-certificate-${kpi?.initials || "kpi"}-${timeframe}.png`;
-    link.click();
-    URL.revokeObjectURL(href);
-  };
-
   const handleDownloadAll = async () => {
-    const params = new URLSearchParams({ timeframe, all: "true" });
+    const params = new URLSearchParams({ timeframe });
     if (selectedPodId !== "all") params.set("podId", selectedPodId);
     const res = await fetch(`/api/performance/certificate?${params}`);
     if (!res.ok) throw new Error("Failed to generate certificates");
@@ -266,14 +250,6 @@ export default function PerformanceDashboard() {
                           <span className={cn("font-bold tabular-nums", entry.rank <= 3 ? 'text-foreground' : 'text-primary')}>
                             {formatLeaderboardScore(kpi, entry.score)}
                           </span>
-                          <button
-                            onClick={() => handleDownloadCert(kpi.id)}
-                            className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded border border-slate-500/50 bg-slate-800/60 text-slate-300 transition-colors hover:bg-slate-700/80 hover:text-slate-100"
-                            title={`Download ${kpi.name} certificate`}
-                            aria-label={`Download ${kpi.name} certificate`}
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </button>
                         </div>
                       </div>
                     ))}

@@ -18,74 +18,53 @@ type CertRank = (typeof RANK_ORDINALS)[number];
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const kpiId = searchParams.get("kpiId");
-    const all = searchParams.get("all") === "true";
     const timeframe: PerformanceTimeframe = normalizeTimeframe(searchParams.get("timeframe"));
     const podId = searchParams.get("podId") || undefined;
 
     const dashboardData = await performanceDashboardService.getData(podId);
-    const certificates = buildCertificateData(dashboardData, timeframe);
+    const files = buildCertificateFiles(dashboardData, timeframe);
 
-    if (all) {
-      const zip = archiver("zip", { zlib: { level: 9 } });
-      const chunks: Buffer[] = [];
+    const zip = archiver("zip", { zlib: { level: 9 } });
+    const chunks: Buffer[] = [];
 
-      await new Promise<void>((resolve, reject) => {
-        zip.on("data", (chunk: Buffer) => chunks.push(chunk));
-        zip.on("error", reject);
-        zip.on("end", resolve);
+    await new Promise<void>((resolve, reject) => {
+      zip.on("data", (chunk: Buffer) => chunks.push(chunk));
+      zip.on("error", reject);
+      zip.on("end", resolve);
 
-        Promise.all(
-          dashboardData.kpis.map(async (kpi) => {
-            const certData = certificates.get(kpi.id);
-            if (!certData) return;
-            const png = await renderPerformanceCertificatePng(certData);
-            const filename = `performance-certificate-${kpi.initials || kpi.name.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.png`;
-            zip.append(png, { name: filename });
-          }),
-        ).then(() => zip.finalize());
-      });
+      Promise.all(
+        files.map(async ({ filename, certData }) => {
+          const png = await renderPerformanceCertificatePng(certData);
+          zip.append(png, { name: filename });
+        }),
+      ).then(() => zip.finalize());
+    });
 
-      const zipBuffer = Buffer.concat(chunks);
-      return new Response(zipBuffer, {
-        headers: {
-          "Content-Type": "application/zip",
-          "Content-Disposition": `attachment; filename="performance-certificates-${timeframe}.zip"`,
-        },
-      });
-    }
-
-    if (!kpiId) {
-      return errorResponse(400, "kpiId is required");
-    }
-
-    const certData = certificates.get(kpiId);
-    if (!certData) {
-      return errorResponse(404, "KPI not found");
-    }
-
-    const png = await renderPerformanceCertificatePng(certData);
-
-    return new Response(Buffer.from(png), {
+    return new Response(Buffer.concat(chunks), {
       headers: {
-        "Content-Type": "image/png",
-        "Content-Disposition": `attachment; filename="performance-certificate-${certData.kpiName.replace(/\s+/g, "-").toLowerCase()}-${timeframe}.png"`,
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="performance-certificates-${timeframe}.zip"`,
       },
     });
   } catch (error) {
     console.error("GET /api/performance/certificate error:", error);
-    return errorResponse(500, "Failed to generate certificate.");
+    return errorResponse(500, "Failed to generate certificates.");
   }
+}
+
+/** KPI names can carry stray whitespace, so trim before slugging. */
+function slugify(value: string): string {
+  return value.trim().replace(/\s+/g, "-").toLowerCase();
 }
 
 /**
  * Ranks the same leaderboards the dashboard renders, using the shared scoring
  * module, so a certificate can never disagree with the score on screen.
  */
-function buildCertificateData(
+function buildCertificateFiles(
   data: Awaited<ReturnType<typeof performanceDashboardService.getData>>,
   timeframe: PerformanceTimeframe,
-): Map<string, PerformanceCertData> {
+): { filename: string; certData: PerformanceCertData }[] {
   // `maxValue` is a Prisma Decimal here but a JSON string on the client, so
   // normalise it to the plain shape the shared scoring module expects.
   const kpis: ScoringKpi[] = data.kpis.map((kpi) => ({
@@ -104,18 +83,16 @@ function buildCertificateData(
     timeframe,
   });
 
-  return new Map(
-    leaderboards.map(({ kpi, entries }) => [
-      kpi.id,
-      {
-        kpiName: kpi.name,
-        unitDirection: kpi.sortOrder === "asc" ? "Lower" : "Higher",
-        entries: entries.map((entry) => ({
-          rank: (RANK_ORDINALS[entry.rank - 1] ?? `${entry.rank}th`) as CertRank,
-          name: entry.agentName.split(" ")[0],
-          score: formatDownloadScore(kpi, entry.score),
-        })),
-      } satisfies PerformanceCertData,
-    ]),
-  );
+  return leaderboards.map(({ kpi, entries }) => ({
+    filename: `performance-certificate-${kpi.initials || slugify(kpi.name)}-${timeframe}.png`,
+    certData: {
+      kpiName: kpi.name,
+      unitDirection: kpi.sortOrder === "asc" ? "Lower" : "Higher",
+      entries: entries.map((entry) => ({
+        rank: (RANK_ORDINALS[entry.rank - 1] ?? `${entry.rank}th`) as CertRank,
+        name: entry.agentName.split(" ")[0],
+        score: formatDownloadScore(kpi, entry.score),
+      })),
+    },
+  }));
 }
