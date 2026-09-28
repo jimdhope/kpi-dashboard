@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { startOfWeek, endOfWeek, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -9,6 +8,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, TrendingUp, TrendingDown, Filter, Download } from "lucide-react";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateInitials, cn } from '@/lib/utils';
+import {
+  buildKpiLeaderboards,
+  formatLeaderboardScore,
+  type PerformanceTimeframe,
+} from '@/lib/performance-scoring';
 import type { AppPod } from '@/lib/contracts';
 
 type AdditionalKpiType = 'number' | 'percentage' | 'scoreOutOf';
@@ -37,23 +41,7 @@ interface AppUser {
   name: string;
 }
 
-interface LeaderboardEntry {
-  agentId: string;
-  agentName: string;
-  score: number;
-  rank: number;
-}
-
-interface KpiLeaderboard {
-  kpi: AdditionalKpi;
-  entries: LeaderboardEntry[];
-}
-
-type Timeframe = 'thisWeek' | 'thisMonth' | 'last6weeks' | 'allTime';
-
-const RANK_LABELS: Record<number, string> = {
-  1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th',
-};
+type Timeframe = PerformanceTimeframe;
 
 const getMedalStyle = (rank: number) => {
   switch (rank) {
@@ -151,103 +139,10 @@ export default function PerformanceDashboard() {
     URL.revokeObjectURL(href);
   };
 
-  const filteredLogs = useMemo(() => {
-    if (logs.length === 0 || kpis.length === 0) return [];
-    const now = new Date();
-    let start: Date, end: Date = now;
-    switch (timeframe) {
-      case 'thisWeek':
-        start = startOfWeek(now, { weekStartsOn: 1 });
-        end = endOfWeek(now, { weekStartsOn: 1 });
-        break;
-      case 'thisMonth':
-        start = startOfMonth(now);
-        end = endOfMonth(now);
-        break;
-      case 'last6weeks': {
-        const maxDates: Record<string, Date> = {};
-        logs.forEach(log => {
-          const d = new Date(log.date);
-          if (!maxDates[log.kpiId] || d > maxDates[log.kpiId]) maxDates[log.kpiId] = d;
-        });
-        return logs.filter(log => {
-          const max = maxDates[log.kpiId];
-          if (!max) return false;
-          const ld = new Date(log.date);
-          const ws = subDays(max, 42);
-          return ld >= ws && ld <= max;
-        });
-      }
-      case 'allTime':
-      default:
-        if (logs.length === 0) return [];
-        const sorted = [...logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        start = new Date(sorted[0].date);
-        end = new Date(sorted[sorted.length - 1].date);
-        break;
-    }
-    return logs.filter(log => {
-      const ld = new Date(log.date);
-      return ld >= start && ld <= end;
-    });
-  }, [logs, timeframe, kpis]);
-
-  const kpiLeaderboards = useMemo((): KpiLeaderboard[] => {
-    if (kpis.length === 0) return [];
-    return kpis.map(kpi => {
-      const kpiLogs = filteredLogs.filter(log => log.kpiId === kpi.id);
-      const useWeeklyAvg = timeframe === 'last6weeks' && (kpi.type === 'percentage' || kpi.type === 'scoreOutOf');
-      const kpiMaxDate = useWeeklyAvg ? kpiLogs.reduce<Date | null>((latest, log) => {
-        const d = new Date(log.date);
-        return !latest || d > latest ? d : latest;
-      }, null) : null;
-
-      const agentData: Record<string, { sum: number; count: number }> = {};
-      kpiLogs.forEach(log => {
-        if (!log.userId) return;
-        if (!agentData[log.userId]) agentData[log.userId] = { sum: 0, count: 0 };
-        agentData[log.userId].sum += log.value;
-        agentData[log.userId].count += 1;
-      });
-
-      const agentScores: Record<string, number> = {};
-      Object.entries(agentData).forEach(([agentId, data]) => {
-        if (useWeeklyAvg && kpiMaxDate) {
-          const agentLogs = kpiLogs.filter(log => log.userId === agentId);
-          const weeklyAvgs: number[] = [];
-          for (let i = 0; i < 6; i++) {
-            const we = new Date(kpiMaxDate);
-            we.setDate(kpiMaxDate.getDate() - i * 7);
-            we.setHours(23, 59, 59, 999);
-            const ws = new Date(we);
-            ws.setDate(we.getDate() - 6);
-            ws.setHours(0, 0, 0, 0);
-            const wl = agentLogs.filter(log => {
-              const d = new Date(log.date);
-              return d >= ws && d <= we;
-            });
-            if (wl.length > 0) weeklyAvgs.push(wl.reduce((s, l) => s + l.value, 0) / wl.length);
-          }
-          agentScores[agentId] = weeklyAvgs.length > 0 ? weeklyAvgs.reduce((s, a) => s + a, 0) / weeklyAvgs.length : 0;
-        } else if (kpi.type === 'percentage' || kpi.type === 'scoreOutOf') {
-          agentScores[agentId] = data.count > 0 ? data.sum / data.count : 0;
-        } else {
-          agentScores[agentId] = data.sum;
-        }
-      });
-
-      const entries = Object.keys(agentScores).map(agentId => {
-        const agent = agents.find(a => a.id === agentId);
-        return { agentId, agentName: agent?.name || 'Unknown', score: agentScores[agentId] } as LeaderboardEntry;
-      });
-
-      const sorted = entries.sort((a, b) => kpi.sortOrder === 'asc' ? a.score - b.score : b.score - a.score);
-      return {
-        kpi,
-        entries: sorted.slice(0, 5).map((e, i) => ({ ...e, rank: i + 1 })),
-      };
-    });
-  }, [kpis, filteredLogs, agents, timeframe]);
+  const kpiLeaderboards = useMemo(
+    () => buildKpiLeaderboards({ kpis, logs, users: agents, timeframe }),
+    [kpis, logs, agents, timeframe],
+  );
 
   const getTimeframeLabel = () => {
     switch (timeframe) {
@@ -369,15 +264,15 @@ export default function PerformanceDashboard() {
                         </div>
                         <div className="text-right">
                           <span className={cn("font-bold tabular-nums", entry.rank <= 3 ? 'text-foreground' : 'text-primary')}>
-                            {kpi.type === 'percentage' ? `${entry.score.toFixed(1)}%` : entry.score.toLocaleString()}
+                            {formatLeaderboardScore(kpi, entry.score)}
                           </span>
                           <button
                             onClick={() => handleDownloadCert(kpi.id)}
-                            className="ml-2 px-1.5 py-0.5 rounded text-xs font-bold border border-slate-500/50 bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-slate-100 transition-colors"
+                            className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded border border-slate-500/50 bg-slate-800/60 text-slate-300 transition-colors hover:bg-slate-700/80 hover:text-slate-100"
                             title={`Download ${kpi.name} certificate`}
-                            style={{ minWidth: "32px", textAlign: "center" }}
+                            aria-label={`Download ${kpi.name} certificate`}
                           >
-                            {RANK_LABELS[entry.rank] || `${entry.rank}th`}
+                            <Download className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
