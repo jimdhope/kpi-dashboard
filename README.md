@@ -1,18 +1,16 @@
-# KPI Quest 3.7.0
+# KPI Quest
 
-KPI Quest is a role-aware performance and engagement platform for teams. It combines KPI tracking, competitions, pods, achievements, daily mini-games, shared knowledge and practical workplace tools in one responsive workspace.
+KPI Quest is a role-aware performance and engagement platform for teams. It combines KPI tracking,
+competitions, pods, achievements, and shared knowledge in one responsive workspace.
 
-## Highlights
+## What's in it
 
-- **Role-aware dashboards** for agents, managers and administrators at one dashboard URL
-- **KPI performance** with daily results, targets, trends, breakdowns and leaderboards
-- **Competitions** with configurable rules, live standings, pods and winner certificates
-- **Beat Your Best** and the **KPI League**: race your own form and climb three divisions with monthly titles
-- **Engagement** through achievements, levels and daily mini-games
-- **Team resources** including a knowledge base, directory, call flows and calculators
-- **Microsoft Teams workflows** for competition messages, scoring and scheduled updates
-- **Installable PWA** with a branded offline fallback and no offline storage of private data
-- **Safe operations** with role-based permissions, audit activity, backups and fail-closed migrations
+- **Performance tracking** with live dashboards and KPI breakdowns
+- **Competitions** with custom scoring rules and live leaderboards
+- **Pods and divisions** with seasonal league play
+- **Achievements, badges, and certificates** to recognise progress
+- **Knowledge base and directory** tools for everyday work
+- **Microsoft Teams integration** for inbound scoring and outbound updates
 
 ## What’s new in 3.7.0
 
@@ -48,32 +46,27 @@ Navigation and server-side access checks are permission-aware. Multi-role users 
 
 The Next.js application serves the user interface and authenticated request handlers. Prisma connects the app to PostgreSQL, while a separate worker process handles queued and scheduled work. The PWA service worker is deliberately limited to the offline shell, branding and immutable framework assets; authenticated HTML, APIs, sessions and mutations are never cached.
 
-## Local development
+## Local development on this machine
 
-### Requirements
-
-- Node.js 22.15 or newer
-- PostgreSQL 16
-- npm
-
-Copy the environment template and provide local values:
+This checkout runs on OrbStack with PostgreSQL `kpi_quest_v3`. The session config lives in
+`.env.local`, and the local setup follows the same steps documented in the repository's AGENTS.md.
 
 ```bash
-cp .env.example .env.local
-npm ci
 npm run db:generate
-npx prisma migrate deploy
-npm run db:seed
 npm run dev
 ```
 
-KPI Quest runs at `http://localhost:9103`. Seeding is intentional: set a strong `SEED_ADMIN_PASSWORD` before running it. Start the background worker separately when testing scheduled or queued workflows:
+For scheduled or queued workflows, start the background worker separately:
 
 ```bash
 npm run jobs:work
 ```
 
-`npm run db:push` is reserved for disposable local prototypes. Application schema changes require a reviewed, committed Prisma migration.
+`npm run db:push` is reserved for disposable local prototypes. Application schema changes require a
+reviewed, committed Prisma migration.
+
+This repository is still being trimmed to match the current product surface. Older mini-game and
+presentation pathways have been removed, and related references are being cleaned up.
 
 ## Environment variables
 
@@ -96,7 +89,22 @@ npm run jobs:work
 
 Keep secrets outside source control. Production must use unique, randomly generated values.
 
-## Recommended Docker deployment
+## Validation
+
+Run checks proportional to the change. Framework, authentication, database, dependency and deployment changes require at least:
+
+```bash
+npm run typecheck
+npm run build
+npm run test:unit
+npm audit --omit=dev
+npx prisma validate
+npx prisma migrate status
+```
+
+Docker-related changes should also receive a standard image build and production-like smoke test before release.
+
+## Docker deployment
 
 The standard deployment contains three services:
 
@@ -148,21 +156,6 @@ Never use `prisma db push --accept-data-loss`, migration reset or automatic data
 
 Authorised administrators can create and restore full application backups through **Settings → General**. Restores replace application data and should only use a verified backup. Keep external copies of release backups until the associated update has passed its verification period.
 
-## Validation
-
-Run checks proportional to the change. Framework, authentication, database, dependency and deployment changes require at least:
-
-```bash
-npm run typecheck
-npm run test:unit
-npm run build
-npm audit --omit=dev
-npx prisma validate
-npx prisma migrate status
-```
-
-Docker-related changes should also receive a standard image build and production-like smoke test before release.
-
 ## Useful commands
 
 ```bash
@@ -174,6 +167,7 @@ npm run jobs:work    # Background worker
 npm run db:generate  # Generate Prisma Client
 npm run db:migrate   # Create/apply a local development migration
 npm run db:seed      # Intentional database seed
+npm run db:push      # Disposable local schema prototypes only
 ```
 
-Additional operator and developer documentation is available in [`docs/`](docs/).
+Additional operator and developer documentation is available in `docs/`.
