@@ -25,7 +25,8 @@
     "db:push": "prisma db push",
     "db:seed": "node --import tsx/esm prisma/seed.ts",
     "auth:cutover": "node --import tsx/esm scripts/auth-cutover.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:energy": "node --import tsx/esm --test src/lib/energy.test.ts"
   },
   "dependencies": {
     "@better-auth/passkey": "1.6.23",
@@ -103,6 +104,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.180.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
