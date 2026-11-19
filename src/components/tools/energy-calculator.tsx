@@ -7,8 +7,6 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Info,
-  RefreshCw,
-  ShieldCheck,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -51,41 +49,6 @@ interface FileInfo {
   spanDays: number | null;
 }
 
-const SAMPLE_EXPORT_DATA: Array<{ date: string; reading: number }> = [
-  { date: '2026-10-20', reading: 44498 },
-  { date: '2026-10-21', reading: 44506 },
-  { date: '2026-10-22', reading: 44514 },
-  { date: '2026-10-23', reading: 44529 },
-  { date: '2026-10-24', reading: 44536 },
-  { date: '2026-10-25', reading: 44542 },
-  { date: '2026-10-26', reading: 44576 },
-  { date: '2026-10-27', reading: 44587 },
-  { date: '2026-10-28', reading: 44596 },
-  { date: '2026-10-29', reading: 44609 },
-  { date: '2026-10-30', reading: 44614 },
-  { date: '2026-10-31', reading: 44620 },
-  { date: '2026-11-01', reading: 44625 },
-  { date: '2026-11-02', reading: 44654 },
-  { date: '2026-11-03', reading: 44669 },
-  { date: '2026-11-04', reading: 44682 },
-  { date: '2026-11-05', reading: 44690 },
-  { date: '2026-11-06', reading: 44707 },
-  { date: '2026-11-07', reading: 44715 },
-  { date: '2026-11-08', reading: 44729 },
-  { date: '2026-11-09', reading: 44759 },
-  { date: '2026-11-10', reading: 44768 },
-  { date: '2026-11-11', reading: 44775 },
-  { date: '2026-11-12', reading: 44781 },
-  { date: '2026-11-13', reading: 44797 },
-  { date: '2026-11-14', reading: 44815 },
-  { date: '2026-11-15', reading: 44822 },
-  { date: '2026-11-16', reading: 44828 },
-  { date: '2026-11-17', reading: 44834 },
-  { date: '2026-11-18', reading: 44863 },
-  { date: '2026-11-19', reading: 44870 },
-];
-
-const SAMPLE_FILE_NAME = 'EXPORT.xlsx (Sample)';
 
 function emptyReadings(): Record<Fuel, Record<string, MeterReading>> {
   return { electric: {}, gas: {} };
@@ -96,7 +59,7 @@ function emptyFiles(): Record<Fuel, FileInfo[]> {
 }
 
 export function EnergyCalculator() {
-  const [mode, setMode] = useState<Mode>('upload');
+  const [mode, setMode] = useState<Mode>('manual');
   const [fuelType, setFuelType] = useState<FuelType>('electric');
   const [numRates, setNumRates] = useState<1 | 2 | 3>(1);
   const [currency, setCurrency] = useState<Currency>('£');
@@ -271,27 +234,6 @@ export function EnergyCalculator() {
     setFileInfos((current) => ({ ...current, [fuel]: [] }));
   }, []);
 
-  const loadSample = useCallback(() => {
-    const sample: Record<string, MeterReading> = {};
-    for (const row of SAMPLE_EXPORT_DATA) {
-      sample[row.date] = {
-        date: row.date,
-        fuel: 'electric',
-        register1: row.reading,
-        register2: 0,
-        register3: 0,
-        total: row.reading,
-        sourceFile: SAMPLE_FILE_NAME,
-      };
-    }
-    setReadings((current) => ({ ...current, electric: sample }));
-    setFileInfos((current) => ({
-      ...current,
-      electric: [{ name: SAMPLE_FILE_NAME, readingCount: SAMPLE_EXPORT_DATA.length, spanDays: 30 }],
-    }));
-    setMessage({ type: 'info', text: `Loaded sample ${SAMPLE_FILE_NAME} (${SAMPLE_EXPORT_DATA.length} electric readings, one month).` });
-  }, []);
-
   const exportCsv = useCallback(() => {
     if (dailyRows.length === 0) return;
     const csv = dailyRowsToCsv(dailyRows, selection, currency);
@@ -311,33 +253,12 @@ export function EnergyCalculator() {
 
   return (
     <div className="space-y-6">
-      <Card className="frosted-glass">
-        <CardHeader>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
-                <span className="rounded-xl bg-primary/15 p-2 text-primary">
-                  <FileSpreadsheet className="h-5 w-5" aria-hidden="true" />
-                </span>
-                Energy Calculator
-              </CardTitle>
-              <CardDescription>
-                Upload monthly meter exports or enter readings manually — switch fuels, tiers and currency, all calculated in your browser.
-              </CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
-                100% client-side — zero server upload or storage
-              </Badge>
-              <Button variant="outline" size="sm" onClick={loadSample}>
-                <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                Load sample EXPORT.xlsx
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="space-y-2">
+        <p className="text-lg font-semibold tracking-tight">Energy Calculator</p>
+        <p className="text-sm text-muted-foreground">
+          Upload monthly meter exports or enter readings manually — switch fuels, tiers and currency.
+        </p>
+      </div>
 
       {message && (
         <div
@@ -702,10 +623,9 @@ export function EnergyCalculator() {
               <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
                 <FileSpreadsheet className="mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
                 <h3 className="mb-1 text-lg font-semibold">No readings loaded</h3>
-                <p className="mb-4 max-w-sm text-sm text-muted-foreground">
-                  Upload at least two daily electricity or gas readings — or load the sample export to explore the tool.
+                <p className="mb-3 max-w-sm text-sm text-muted-foreground">
+                  Upload at least two daily electricity or gas readings to see usage and costs.
                 </p>
-                <Button variant="outline" onClick={loadSample}>Load sample EXPORT.xlsx</Button>
               </div>
             </Card>
           )}
@@ -716,9 +636,6 @@ export function EnergyCalculator() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Summary</CardTitle>
-                <Badge variant="secondary" className="text-[11px] uppercase tracking-wider">
-                  {mode === 'upload' ? 'Upload' : 'Manual'}
-                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
