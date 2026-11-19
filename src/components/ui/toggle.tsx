@@ -18,8 +18,8 @@ export function Toggle({ checked, onChange, label, checkedLabel }: ToggleProps) 
       aria-checked={checked}
       onClick={onChange}
       className={cn(
-        "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
-        checked ? "bg-primary/10 text-foreground" : "bg-muted/50 text-muted-foreground hover:bg-muted"
+        "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-[15px] font-medium transition-colors",
+        checked ? "bg-primary/10 text-foreground" : "bg-muted/50 text-foreground hover:bg-muted"
       )}
     >
       <span className={cn("flex-1", checked && "line-through opacity-60")}>
