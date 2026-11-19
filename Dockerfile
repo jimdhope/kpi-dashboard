@@ -39,6 +39,15 @@ RUN npm install --prefix /opt/esbuild esbuild@0.25.0 && \
 RUN /opt/esbuild/node_modules/.bin/esbuild scripts/auth-cutover.ts --bundle --platform=node --format=cjs \
     --external:@prisma/client --external:pg '--external:*.node' --outfile=/app/auth-cutover.cjs
 
+# npm installs every optional platform binary for Next's SWC compiler. This image
+# is Linux/Alpine only, so drop the ones that can never load here. Doing it in the
+# builder keeps them out of the copied layer entirely — deleting them in the
+# runner would leave the bytes in the layer and only hide them.
+RUN rm -rf /app/node_modules/@next/swc-darwin-* \
+             /app/node_modules/@next/swc-win32-* \
+             /app/node_modules/@next/swc-freebsd-* \
+             /app/node_modules/@next/swc-linux-arm64-gnu
+
 # Keep migration tooling separate from the application's dependency tree.
 FROM node:22.15.0-alpine AS migration-tools
 RUN npm install --prefix /opt/prisma --omit=dev prisma@7.8.0 tsx@4.23.1 dotenv@17.3.1
@@ -56,20 +65,30 @@ ENV NODE_PATH="/opt/prisma/node_modules:${NODE_PATH}"
 # produce SQL that PostgreSQL 16 cannot restore.
 RUN apk add --no-cache netcat-openbsd bash fontconfig ttf-dejavu font-noto-emoji postgresql16-client
 
+# Create the runtime user up front so every COPY below can set ownership directly.
+# COPY --chown avoids a later `chown -R`, which would duplicate the whole
+# application into a second image layer.
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
 # Copy standalone build output from builder
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/worker.cjs ./worker.cjs
-COPY --from=builder /app/auth-cutover.cjs ./auth-cutover.cjs
+COPY --chown=nextjs:nodejs --from=builder /app/.next/standalone ./
+COPY --chown=nextjs:nodejs --from=builder /app/.next/static ./.next/static
+COPY --chown=nextjs:nodejs --from=builder /app/public ./public
+COPY --chown=nextjs:nodejs --from=builder /app/prisma ./prisma
+COPY --chown=nextjs:nodejs --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --chown=nextjs:nodejs --from=builder /app/package.json ./
+COPY --chown=nextjs:nodejs --from=builder /app/worker.cjs ./worker.cjs
+COPY --chown=nextjs:nodejs --from=builder /app/auth-cutover.cjs ./auth-cutover.cjs
 # Copy app node_modules so "dotenv/config" resolves for the seed script
-COPY --from=builder /app/node_modules ./node_modules
+COPY --chown=nextjs:nodejs --from=builder /app/node_modules ./node_modules
 
 # Prisma's migration command is deliberately isolated from the web dependency tree.
-COPY --from=migration-tools /opt/prisma/node_modules /opt/prisma/node_modules
+COPY --chown=nextjs:nodejs --from=migration-tools /opt/prisma/node_modules /opt/prisma/node_modules
+
+# /app itself is root-owned by WORKDIR; hand it over so the runtime user can
+# create the feedback upload directory.
+RUN mkdir -p /app/uploads && chown nextjs:nodejs /app /app/uploads
 
 # Create database initialization script
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
@@ -108,13 +127,6 @@ RUN echo '#!/bin/bash' > /worker-entrypoint.sh && \
 
 # Install su-exec for running commands as different user
 RUN apk add --no-cache su-exec
-
-# Create non-root user for ownership (optional - can run as root)
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
-
-# Change ownership
-RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
