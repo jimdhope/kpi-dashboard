@@ -253,13 +253,6 @@ export function EnergyCalculator() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <p className="text-lg font-semibold tracking-tight">Energy Calculator</p>
-        <p className="text-sm text-muted-foreground">
-          Upload monthly meter exports or enter readings manually — switch fuels, tiers and currency.
-        </p>
-      </div>
-
       {message && (
         <div
           role="status"
