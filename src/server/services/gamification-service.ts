@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/client";
 import type { Prisma } from "@prisma/client";
 import { badgeService } from "@/server/services/badge-service";
+import { activityService } from "@/server/services/activity-service";
 import { evaluateCriteria, type RuleContext } from "./rule-evaluator";
 
 const LEVEL_THRESHOLDS = [

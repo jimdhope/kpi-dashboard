@@ -4,6 +4,7 @@ import { authService } from "@/server/services/auth-service";
 import { competitionSseService } from "@/server/services/competition-sse-service";
 import { prisma } from "@/server/db/client";
 import { requireCompetitionEditor } from "@/server/services/authorization";
+import { activityService } from "@/server/services/activity-service";
 
 export const competitionEntryService = {
   async listByCompetition(competitionId: string) {
