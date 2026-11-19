@@ -1,27 +1,19 @@
 import { prisma } from "@/server/db/client";
-import { kpiLogRepository } from "@/server/repositories/kpi-log-repository";
-import { kpiRepository } from "@/server/repositories/kpi-repository";
 import { podRepository } from "@/server/repositories/pod-repository";
 import { userRepository } from "@/server/repositories/user-repository";
 import { authService } from "@/server/services/auth-service";
 import { competitionService } from "@/server/services/competition-service";
-import { dailyGameService } from "@/server/services/daily-game-service";
 import { permissionService } from "@/server/services/permission-service";
-import { rpsService } from "@/server/services/rps-service";
 
 export const agentDashboardService = {
   async getData(requestedCompetitionId?: string | null) {
     const user = await authService.requireCurrentUser();
     const permissions = await permissionService.getPermissionsForRoles(user.roles);
     const hasAdminDataAccess = permissions["nav.settings"] === "MANAGE";
-    const [competitions, pods, users, kpis, kpiLogs, rpsLeaderboard, dailyGames] = await Promise.all([
+    const [competitions, pods, users] = await Promise.all([
       competitionService.listCompetitions(),
       hasAdminDataAccess ? podRepository.list() : podRepository.listForUser(user.id),
       hasAdminDataAccess ? userRepository.list() : userRepository.listByPodIds(user.podIds ?? []),
-      kpiRepository.list(),
-      kpiLogRepository.listByUserId(user.id),
-      rpsService.leaderboard(),
-      dailyGameService.summaries(user.id),
     ]);
 
     const now = new Date();
@@ -49,10 +41,6 @@ export const agentDashboardService = {
       competitions,
       pods,
       users,
-      kpis,
-      kpiLogs,
-      rpsLeaderboard,
-      dailyGames,
       achievementCompetitionId: selectedCompetition?.id ?? null,
       achievements: scoreEvents.map((event) => ({
         id: event.id,

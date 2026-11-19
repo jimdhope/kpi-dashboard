@@ -1,7 +1,6 @@
 import { competitionEntryRepository } from "@/server/repositories/competition-entry-repository";
 import { competitionRepository } from "@/server/repositories/competition-repository";
 import { authService } from "@/server/services/auth-service";
-import { activityService } from "@/server/services/activity-service";
 import { competitionSseService } from "@/server/services/competition-sse-service";
 import { prisma } from "@/server/db/client";
 import { requireCompetitionEditor } from "@/server/services/authorization";

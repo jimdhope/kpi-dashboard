@@ -27,23 +27,9 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
     { key: "nav.competitions.manage", label: "Manage", description: "Create and edit competitions" },
     { key: "nav.competitions.log", label: "Log Scores", description: "Record daily competition scores" },
     { key: "nav.competitions.certificates", label: "Certificates", description: "Generate competition certificates" },
-    { key: "nav.competitions.postGenerator", label: "Post Generator", description: "Generate weekly competition posts with AI" },
-  ]},
-  { key: "nav.performance", label: "Performance", description: "KPI performance data and configuration", children: [
-    { key: "nav.performance.dashboard", label: "Dashboard", description: "Performance overview" },
-    { key: "nav.performance.breakdown", label: "KPI Breakdown", description: "Detailed KPI results" },
-    { key: "nav.performance.charts", label: "Charts", description: "Performance trend charts" },
-    { key: "nav.performance.leaderboard", label: "Leaderboard", description: "Performance rankings" },
-    { key: "nav.performance.kpis", label: "KPI Setup", description: "Create and configure KPIs" },
-    { key: "nav.performance.log", label: "Log Performance", description: "Record performance data" },
   ]},
   { key: "nav.reports", label: "Reports", description: "Reporting and exports", children: [
     { key: "nav.reports.overview", label: "Reports Dashboard", description: "View organisation reports" },
-  ]},
-  { key: "nav.miniGames", label: "Mini Games", description: "Games and gamification", children: [
-    { key: "nav.miniGames.play", label: "Play Games", description: "Access available mini games" },
-    { key: "nav.miniGames.manage", label: "Gamification Management", description: "Manage badges and gamification" },
-    { key: "nav.miniGames.quizManage", label: "Quiz Show Management", description: "Create and manage Quiz Show questions and quizzes" },
   ]},
   { key: "nav.usefulTools", label: "Tools", description: "Operational calculators and guides", children: [
     { key: "nav.usefulTools.callFlow", label: "Call Flow", description: "Call handling guide" },
@@ -52,10 +38,6 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
     { key: "nav.usefulTools.calculators", label: "Calculators", description: "Energy and payment tools" },
     { key: "nav.usefulTools.agreedReads", label: "Agreed Reads", description: "Agreed reads tool" },
     { key: "nav.usefulTools.powerCuts", label: "Power Cuts", description: "UK power cut map" },
-  ]},
-  { key: "nav.activity", label: "Activity", description: "User and organisation activity", children: [
-    { key: "nav.activity.own", label: "Own Activity", description: "View the signed-in user's activity" },
-    { key: "nav.activity.all", label: "All Activity", description: "View activity across permitted users" },
   ]},
   { key: "nav.settings", label: "Settings", description: "Organisation and account configuration", children: [
     { key: "nav.settings.campaigns", label: "Campaigns", description: "Manage campaigns" },

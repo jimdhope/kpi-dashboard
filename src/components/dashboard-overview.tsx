@@ -67,7 +67,6 @@ export function DashboardOverview({ summary }: DashboardOverviewProps) {
                 { href: "/pods", title: "Pods & memberships", desc: "Assign users to pods under the new Postgres ownership model." },
                 { href: "/competitions/manage", title: "Manage Competitions", desc: "Configure rules, teams, and standings on the V3 backend." },
               ] : []),
-              { href: "/performance", title: "Performance", desc: "Log KPI values and inspect new Postgres-backed rollups." },
               { href: "/competitions", title: "Competitions", desc: "Log competition scores and inspect live standings." }
             ].map((link) => (
               <Link key={link.href} href={link.href} className="flex flex-col p-3 rounded-lg hover:bg-glass/60 border border-transparent hover:border-glass-border transition-colors">

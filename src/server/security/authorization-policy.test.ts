@@ -16,12 +16,12 @@ test("permission levels enforce none, view, and manage boundaries", () => {
 });
 
 test("view pages and their management pages require the expected levels", () => {
-  assert.deepEqual(getPagePermissionRequirement("/performance"), {
-    resource: "performance",
-    minLevel: "VIEW",
+  assert.deepEqual(getPagePermissionRequirement("/competitions/manage"), {
+    resource: "competitions.manage",
+    minLevel: "MANAGE",
   });
-  assert.deepEqual(getPagePermissionRequirement("/performance/log"), {
-    resource: "performance.log",
+  assert.deepEqual(getPagePermissionRequirement("/competitions/log"), {
+    resource: "competitions.log",
     minLevel: "MANAGE",
   });
   assert.deepEqual(getPagePermissionRequirement("/knowledge-base/example/edit"), {
@@ -59,14 +59,6 @@ test("read and write methods receive the correct API permission level", () => {
 });
 
 test("self-service APIs retain view-level mutation access", () => {
-  assert.deepEqual(getApiPermissionRequirement("/api/performance/kpi-logs", "POST"), {
-    resource: "performance",
-    minLevel: "VIEW",
-  });
-  assert.deepEqual(getApiPermissionRequirement("/api/mini-games/daily-word", "POST"), {
-    resource: "miniGames",
-    minLevel: "VIEW",
-  });
   assert.deepEqual(getApiPermissionRequirement("/api/kb/articles/article-id/comments", "POST"), {
     resource: "knowledgeBase",
     minLevel: "VIEW",
@@ -89,7 +81,6 @@ test("privileged API families reject view-only mutations at the policy boundary"
   const managedMutations = [
     ["/api/settings/general", "PATCH", "settings"],
     ["/api/integrations/teams-webhooks", "POST", "integrations"],
-    ["/api/kpis", "DELETE", "performance"],
     ["/api/directory/contacts", "POST", "directory"],
     ["/api/achievements", "POST", "competitions"],
     ["/api/task-logs", "POST", "competitions"],

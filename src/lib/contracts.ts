@@ -13,11 +13,8 @@ export const NAV_RESOURCES = [
   "knowledgeBase",
   "directory",
   "competitions",
-  "performance",
   "reports",
-  "miniGames",
   "usefulTools",
-  "activity",
   "settings",
   "integrations",
 ] as const;

@@ -6,9 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, BarChart3, Medal, User as UserIcon, Loader2, QrCode } from "lucide-react";
-import { cn, isAverageKpiType } from '@/lib/utils';
-import { endOfWeek, format, startOfWeek, subDays } from 'date-fns';
+import { Trophy, Medal, Loader2, QrCode } from "lucide-react";
+import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -16,30 +15,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import type { AppUser } from '@/lib/contracts';
 import { useCompetitionScoreRefresh } from '@/hooks/use-competition-score-refresh';
 import { BeatYourBestCard } from '@/components/dashboard/beat-your-best-card';
-import { DivisionCard } from '@/components/dashboard/division-card';
 
-interface KpiDefinition {
-  id: string;
-  name: string;
-  initials: string;
-  type: string;
-  maxValue?: number;
-  sortOrder?: 'asc' | 'desc';
-  passFailCriteriaEnabled?: boolean;
-  passFailOperator?: 'gte' | 'lte';
-  passFailValue?: number;
-}
-
-interface KpiLog {
-  id: string;
-  kpiId: string;
-  kpiName: string;
-  userId: string | null;
-  userName: string | null;
-  value: number;
-  date: string;
-  loggedAt: string;
-}
 
 interface Competition {
   id: string;
@@ -106,8 +82,6 @@ export function AgentDashboard({
   const [pods, setPods] = useState<Pod[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [kpis, setKpis] = useState<KpiDefinition[]>([]);
-  const [kpiLogs, setKpiLogs] = useState<KpiLog[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>('');
   const [selectedPodId, setSelectedPodId] = useState<string>('all');
   const [scoreQuantities, setScoreQuantities] = useState<Record<string, string>>({});
@@ -148,8 +122,6 @@ export function AgentDashboard({
         setCompetitions(comps);
         setPods(data.pods || []);
         setUsers(data.users || []);
-        setKpis(data.kpis || []);
-        setKpiLogs(data.kpiLogs || []);
         setAchievements(data.achievements || []);
 
         const selected = comps.find((c: Competition) => c.id === data.achievementCompetitionId)
@@ -443,58 +415,6 @@ export function AgentDashboard({
     setSelectedPodId(value);
   };
 
-  const agentPerformanceData = useMemo(() => {
-    const weekStartsOn = 4 as const;
-    if (kpis.length === 0 || kpiLogs.length === 0) {
-      return { kpis: [] as KpiDefinition[], weekHeaders: [] as string[], weeklyScores: {} as Record<string, Record<string, { value: number; count: number }>>, kpiWeekHeaders: {} as Record<string, string[]> };
-    }
-
-    const maxDateByKpi: Record<string, Date> = {};
-    kpiLogs.forEach((log) => {
-      const date = new Date(log.date);
-      if (!maxDateByKpi[log.kpiId] || date > maxDateByKpi[log.kpiId]) maxDateByKpi[log.kpiId] = date;
-    });
-
-    const filteredLogs = kpiLogs.filter((log) => {
-      const maxDate = maxDateByKpi[log.kpiId];
-      const date = new Date(log.date);
-      return maxDate && date >= subDays(maxDate, 42) && date <= maxDate;
-    });
-    const activeKpiIds = new Set(filteredLogs.map((log) => log.kpiId));
-    const activeKpis = kpis
-      .filter((kpi) => activeKpiIds.has(kpi.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    const weeklyScores: Record<string, Record<string, { value: number; count: number }>> = {};
-    const weeks = new Set<string>();
-
-    filteredLogs.forEach((log) => {
-      const week = format(startOfWeek(new Date(log.date), { weekStartsOn }), 'MMM dd, yyyy');
-      weeks.add(week);
-      weeklyScores[week] ||= {};
-      weeklyScores[week][log.kpiId] ||= { value: 0, count: 0 };
-      weeklyScores[week][log.kpiId].value += log.value;
-      weeklyScores[week][log.kpiId].count += 1;
-    });
-
-    const availableWeeks = Array.from(weeks).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    const maxWeekDate = new Date(availableWeeks[availableWeeks.length - 1]);
-    const weekHeaders = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(maxWeekDate);
-      date.setDate(date.getDate() - (6 - index) * 7);
-      return format(date, 'MMM dd, yyyy');
-    });
-    const kpiWeekHeaders: Record<string, string[]> = {};
-    activeKpis.forEach((kpi) => {
-      kpiWeekHeaders[kpi.id] = Array.from(new Set(
-        filteredLogs
-          .filter((log) => log.kpiId === kpi.id)
-          .map((log) => format(startOfWeek(new Date(log.date), { weekStartsOn }), 'MMM dd, yyyy'))
-      )).sort((a, b) => new Date(a).getTime() - new Date(b).getTime()).slice(-6);
-    });
-
-    return { kpis: activeKpis, weekHeaders, weeklyScores, kpiWeekHeaders };
-  }, [kpis, kpiLogs]);
-
   if (isLoading || !currentUser) {
     return (
       <div className="space-y-6">
@@ -505,15 +425,6 @@ export function AgentDashboard({
       </div>
     );
   }
-
-  const getCellClass = (value: number | undefined, kpi: KpiDefinition): string => {
-    if (value === undefined) return '';
-    if (!kpi.passFailCriteriaEnabled || kpi.passFailValue === undefined || kpi.passFailValue === null) return '';
-    const passed = kpi.passFailOperator === 'gte'
-      ? value >= kpi.passFailValue
-      : value <= kpi.passFailValue;
-    return passed ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50';
-  };
 
   return (
     <div className="space-y-6">
@@ -815,98 +726,6 @@ export function AgentDashboard({
           myPodName={availablePods.find((pod) => pod.id === selfScoringPodId)?.name ?? null}
         />
 
-        {/* Divisions League — hidden unless enabled in settings */}
-        <DivisionCard
-          competitionId={selectedCompetitionId || null}
-          currentUserId={currentUser?.id}
-        />
-
-        {/* Performance Card */}
-        <Link href="/agent/performance">
-          <Card variant="glass" className="glass-card-hover cursor-pointer overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/20">
-                  <BarChart3 className="h-5 w-5 text-blue-500" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Performance</CardTitle>
-                  <CardDescription>6-week KPI breakdown</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="overflow-hidden p-0">
-              {agentPerformanceData.kpis.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No KPI data available</p>
-              ) : (
-                <div>
-                  <div className="bg-gray-200 dark:bg-gray-700 py-3 px-4 border-y text-base font-semibold flex items-center gap-2">
-                    <UserIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-gray-800 dark:text-gray-100">{currentUser.name}</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-100 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600">
-                        <TableHead className="w-[140px] text-xs font-bold uppercase text-gray-700 dark:text-gray-200">KPI</TableHead>
-                        {agentPerformanceData.weekHeaders.map((week) => (
-                          <TableHead key={week} className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-gray-700 dark:text-gray-200">
-                            {format(endOfWeek(new Date(week), { weekStartsOn: 4 }), 'dd/MM')}
-                          </TableHead>
-                        ))}
-                        <TableHead className="text-center text-[10px] px-1 font-bold whitespace-nowrap uppercase text-primary border-l-2 border-primary">AVG</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {agentPerformanceData.kpis.map((kpi, index) => (
-                        <TableRow key={kpi.id} className={`h-8 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${index % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
-                          <TableCell className="text-[11px] font-semibold py-1 px-3 border-r bg-gray-100/30 dark:bg-gray-700/30 text-gray-800 dark:text-gray-200 break-words max-w-[140px]">
-                            <div className="flex items-center gap-1">
-                              <span className="break-words">{kpi.name}</span>
-                              <span className={cn('text-[9px] font-medium shrink-0', kpi.sortOrder === 'asc' ? 'text-blue-500' : 'text-green-500')}>
-                                {kpi.sortOrder === 'asc' ? '↓' : '↑'}
-                              </span>
-                              {kpi.type === 'scoreOutOf' && kpi.maxValue !== undefined && (
-                                <span className="text-[9px] text-muted-foreground shrink-0">/{kpi.maxValue}</span>
-                              )}
-                              {kpi.type !== 'scoreOutOf' && kpi.passFailCriteriaEnabled && kpi.passFailValue !== undefined && (
-                                <span className="text-[9px] text-muted-foreground shrink-0">/{kpi.passFailValue}{kpi.type === 'percentage' ? '%' : ''}</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          {agentPerformanceData.weekHeaders.map((week) => {
-                            const weeklyData = agentPerformanceData.weeklyScores[week]?.[kpi.id];
-                            const score = weeklyData
-                              ? (isAverageKpiType(kpi.type) ? weeklyData.value / weeklyData.count : weeklyData.value)
-                              : undefined;
-                            return (
-                              <TableCell key={week} className={cn('text-center text-[11px] py-1 px-1 border-l bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 tabular-nums font-medium', getCellClass(score, kpi))}>
-                                {score !== undefined ? (kpi.type === 'percentage' ? `${score.toFixed(0)}%` : score.toLocaleString()) : '-'}
-                              </TableCell>
-                            );
-                          })}
-                          <TableCell className="text-center text-[11px] py-1 px-1 border-l-2 border-primary font-bold tabular-nums bg-primary/5 text-primary">
-                            {(() => {
-                              const averageWeeks = agentPerformanceData.kpiWeekHeaders[kpi.id] || [];
-                              const total = averageWeeks.reduce((sum, week) => {
-                                const data = agentPerformanceData.weeklyScores[week]?.[kpi.id];
-                                if (!data) return sum;
-                                return sum + ((kpi.type === 'percentage' || kpi.type === 'scoreOutOf') ? data.value / data.count : data.value);
-                              }, 0);
-                              const average = (kpi.type === 'percentage' || kpi.type === 'scoreOutOf') ? total / 6 : total;
-                              return kpi.type === 'percentage' ? `${average.toFixed(1)}%` : average.toLocaleString(undefined, { maximumFractionDigits: 2 });
-                            })()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
       </div>
     </div>
   );

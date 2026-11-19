@@ -8,7 +8,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import type { PermissionMap } from '@/hooks/use-permissions';
 import { cn, generateInitials } from '@/lib/utils';
 import {
-  Trophy, Target, BarChart3, Gamepad2, User, ChevronDown, Shield, Megaphone,
+  Trophy, Target, BarChart3, User, ChevronDown, Shield, Megaphone,
   Crown, Activity, Bell, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare,
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone, MessageSquare,
   CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen, Tv, Gauge,
@@ -53,13 +53,6 @@ const navItems: NavItemConfig[] = [
       { label: 'Directory', href: '/directory', icon: Contact, permissionKey: 'directory' },
     ]
   },
-  {
-    key: 'activity',
-    label: 'Activity',
-    href: '/agent/activity',
-    icon: Activity,
-    items: [],
-  },
   { 
     key: 'competitions',
     label: 'Competitions', 
@@ -70,39 +63,9 @@ const navItems: NavItemConfig[] = [
       { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, permissionKey: 'competitions.log', requiredLevel: 'MANAGE' },
       { label: 'Manage', href: '/competitions/manage', icon: Trophy, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
       { label: 'Beat Your Best (Beta)', href: '/competitions/beat-your-best', icon: TrendingUp, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
-      { label: 'Divisions League', href: '/divisions', icon: Crown, permissionKey: 'competitions.dashboard' },
       { label: 'Certificates', href: '/competitions/certificates', icon: Award, permissionKey: 'competitions.certificates' },
-      { label: 'Post Generator', href: '/competitions/post-generator', icon: Megaphone, permissionKey: 'competitions.postGenerator', requiredLevel: 'MANAGE' },
       { label: 'Reports', href: '/reports', icon: FileText, permissionKey: 'reports' },
       { label: 'Gamification', href: '/admin/gamification', icon: Crown, permissionKey: 'settings', requiredLevel: 'MANAGE' },
-    ]
-  },
-  { 
-    key: 'performance',
-    label: 'Performance', 
-    href: '/performance', 
-    icon: BarChart3,
-    items: [
-      { label: 'Dashboard', href: '/performance', icon: Home, permissionKey: 'performance.dashboard' },
-      { label: 'Setup KPIs', href: '/performance/kpis', icon: Settings, permissionKey: 'performance.kpis', requiredLevel: 'MANAGE' },
-      { label: 'Log Scores', href: '/performance/log', icon: CheckSquare, permissionKey: 'performance.log', requiredLevel: 'MANAGE' },
-      { label: 'KPI Breakdown', href: '/performance/breakdown', icon: BarChart3, permissionKey: 'performance.breakdown' },
-      { label: 'Performance Charts', href: '/performance/charts', icon: LineChart, permissionKey: 'performance.charts' },
-    ]
-  },
-  { 
-    key: 'miniGames',
-    label: 'Mini Games', 
-    href: '/mini-games', 
-    icon: Gamepad2,
-    items: [
-      { label: 'Dashboard', href: '/mini-games', icon: Home, permissionKey: 'miniGames.play' },
-      { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
-      { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: Gamepad2 },
-      { label: 'Daily Word', href: '/mini-games/daily-word', icon: Gamepad2 },
-      { label: 'Sudoku', href: '/mini-games/sudoku', icon: Gamepad2 },
-      { label: 'Meme Match', href: '/mini-games/meme-match', icon: Gamepad2 },
-      { label: 'Quiz Show', href: '/mini-games/quiz-show', icon: Gamepad2 },
     ]
   },
   { 
@@ -140,22 +103,13 @@ const agentNavItems: NavItemConfig[] = [
     href: '/agent/competitions',
     icon: Trophy,
     items: [
+      { label: 'Boxes', href: '/boxes', icon: Boxes, permissionKey: 'competitions.dashboard' },
       { label: 'My Standings', href: '/agent/competitions', icon: Home, permissionKey: 'competitions.dashboard' },
-      { label: 'Divisions League', href: '/divisions', icon: Crown, permissionKey: 'competitions.dashboard' },
       { label: 'Quick Score', href: '/quick-score', icon: Zap },
       { label: 'Log Scores', href: '/competitions/log', icon: CheckSquare, permissionKey: 'competitions.log', requiredLevel: 'MANAGE' },
       { label: 'Manage', href: '/competitions/manage', icon: Trophy, permissionKey: 'competitions.manage', requiredLevel: 'MANAGE' },
       { label: 'Certificates', href: '/competitions/certificates', icon: Award, permissionKey: 'competitions.certificates' },
-    ],
-  },
-  {
-    key: 'performance',
-    label: 'Performance',
-    href: '/agent/performance',
-    icon: BarChart3,
-    items: [
-      { label: 'My Performance', href: '/agent/performance', icon: BarChart3 },
-    ],
+    ]
   },
   {
     key: 'knowledgeBase',
@@ -165,31 +119,7 @@ const agentNavItems: NavItemConfig[] = [
     items: [
       { label: 'Browse Articles', href: '/knowledge-base', icon: BookOpen },
       { label: 'Directory', href: '/directory', icon: Contact, permissionKey: 'directory' },
-    ],
-  },
-  {
-    key: 'miniGames',
-    label: 'Mini Games',
-    href: '/mini-games',
-    icon: Gamepad2,
-    items: [
-      { label: 'RPS Game', href: '/mini-games/rps', icon: Gamepad2 },
-      { label: 'Higher or Lower', href: '/mini-games/higher-lower', icon: ArrowUpDown },
-      { label: 'Daily Word', href: '/mini-games/daily-word', icon: WholeWord },
-      { label: 'Daily Sudoku', href: '/mini-games/sudoku', icon: Grid3X3 },
-      { label: 'Meme Match', href: '/mini-games/meme-match', icon: Gamepad2 },
-      { label: 'Quiz Show', href: '/mini-games/quiz-show', icon: Gamepad2 },
-    ],
-  },
-  {
-    key: 'activity',
-    label: 'My Activity',
-    href: '/agent/activity',
-    icon: Activity,
-    items: [
-      { label: 'My Activity', href: '/agent/activity', icon: Activity },
-      { label: 'Feedback', href: '/feedback', icon: MessageSquare },
-    ],
+    ]
   },
   {
     key: 'settings',
@@ -215,7 +145,7 @@ const agentNavItems: NavItemConfig[] = [
       { label: 'Tariff Comparison', href: '/tools/tariff-comparison', icon: BarChartBig },
       { label: 'Agreed Reads', href: '/tools/agreed-reads', icon: FileCheck2 },
       { label: 'Power Cuts', href: '/power-cuts', icon: Zap },
-    ],
+    ]
   },
 ];
 
@@ -618,7 +548,7 @@ export function AppNavBar({ user, navVariant = 'default', className, initialPerm
           <Search className="w-4 h-4" />
           <span className="text-xs">Search</span>
           <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded border border-glass-border bg-glass/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            <span className="text-xs">⌘</span>K
+            <span className="text-xs">&#x2318;</span>K
           </kbd>
         </Button>
         
