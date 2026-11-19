@@ -37,6 +37,7 @@ import {
   type MeterReading,
 } from '@/lib/energy';
 import { EnergyDailyBreakdown } from '@/components/tools/energy-daily-breakdown';
+import { EnergyExportGuide } from '@/components/tools/energy-export-guide';
 
 type Mode = 'upload' | 'manual';
 type FuelType = 'electric' | 'gas' | 'both';
@@ -295,20 +296,27 @@ export function EnergyCalculator() {
                     { value: 'upload', title: 'Upload meter export files', hint: 'Multi-file, one fuel per file, day-by-day breakdown' },
                     { value: 'manual', title: 'Manual entry', hint: 'Start/end readings or direct kWh for a date range' },
                   ].map((option) => (
-                    <label
+                    <div
                       key={option.value}
                       className={
                         mode === option.value
-                          ? 'flex cursor-pointer items-start gap-3 rounded-xl border-2 border-primary bg-primary/5 p-3.5 transition'
-                          : 'flex cursor-pointer items-start gap-3 rounded-xl border-2 border-border p-3.5 transition hover:border-primary/50'
+                          ? 'relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-primary bg-primary/5 p-3.5 transition'
+                          : 'relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-border p-3.5 transition hover:border-primary/50'
                       }
                     >
-                      <RadioGroupItem value={option.value} className="mt-0.5" />
-                      <span>
-                        <span className="block text-sm font-semibold">{option.title}</span>
-                        <span className="block text-xs text-muted-foreground">{option.hint}</span>
-                      </span>
-                    </label>
+                      <label className="flex flex-1 cursor-pointer items-start gap-3 pr-9">
+                        <RadioGroupItem value={option.value} className="mt-0.5" />
+                        <span>
+                          <span className="block text-sm font-semibold">{option.title}</span>
+                          <span className="block text-xs text-muted-foreground">{option.hint}</span>
+                        </span>
+                      </label>
+                      {option.value === 'upload' && (
+                        <div className="absolute right-3 top-3">
+                          <EnergyExportGuide />
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </RadioGroup>
               </div>
