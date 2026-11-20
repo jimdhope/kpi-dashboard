@@ -11,7 +11,7 @@ import {
   Trophy, Target, BarChart3, User, ChevronDown, Shield, Megaphone,
   Crown, Activity, Bell, Search, Menu, Settings, LayoutDashboard, Home, CheckSquare,
   Award, LineChart, SettingsIcon, Users, FileText, Wrench, Phone, MessageSquare,
-  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen, Tv, Gauge,
+  CalendarDays, Zap, Flame, Infinity, BarChartBig, FileCheck2, BookOpen, Tv, Gauge, GraduationCap,
   BookMarked, Contact, Building2, Briefcase, ArrowUpDown, Grid3X3, WholeWord, CheckCheck,
   TrendingUp
 } from 'lucide-react';
@@ -75,6 +75,7 @@ const navItems: NavItemConfig[] = [
     icon: Wrench,
     items: [
       { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true, permissionKey: 'usefulTools.callFlow' },
+      { label: 'Co-Pilot Phrases', href: '/tools/co-pilot-prompts', icon: GraduationCap, permissionKey: 'usefulTools.calculators' },
       { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen, permissionKey: 'usefulTools.meterReading' },
       { label: 'IHD Guide', href: '/ihd-guide', icon: Tv },
       { label: 'Dial Meter Guide', href: '/tools/dial-meter', icon: Gauge },
@@ -134,6 +135,7 @@ const agentNavItems: NavItemConfig[] = [
     icon: Wrench,
     items: [
       { label: 'Call Flow', href: '/call-flow', icon: Phone, openInNewTab: true },
+      { label: 'Co-Pilot Phrases', href: '/tools/co-pilot-prompts', icon: GraduationCap },
       { label: 'Meter Reading Guide', href: '/meter-reading-guide', icon: BookOpen },
       { label: 'IHD Guide', href: '/ihd-guide', icon: Tv },
       { label: 'Dial Meter Guide', href: '/tools/dial-meter', icon: Gauge },
